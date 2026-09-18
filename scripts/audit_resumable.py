@@ -63,15 +63,20 @@ def main() -> None:
                                   options=q.get("options", []))
                          for q in row["questions"]]
             # If the gateway's rate-limit window outlasts the adapter's backoff,
-            # sleep it off and retry instead of losing the whole run.
+            # or a call stalls (timeout), sleep it off and retry instead of
+            # losing the whole run.
             for attempt in range(4):
                 try:
                     judgments = judge.decide(row["state"], questions)
                     break
                 except Exception as e:
-                    if "rate-limited" in str(e).lower() and attempt < 3:
+                    transient = ("rate-limited" in str(e).lower()
+                                 or "timeout" in type(e).__name__.lower()
+                                 or "timed out" in str(e).lower())
+                    if transient and attempt < 3:
                         wait = (attempt + 1) * 600
-                        print(f"  rate-limited at row {idx}; sleeping {wait}s "
+                        print(f"  transient error at row {idx} "
+                              f"({type(e).__name__}); sleeping {wait}s "
                               f"(attempt {attempt + 1}/3)", flush=True)
                         time.sleep(wait)
                     else:
