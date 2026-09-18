@@ -35,6 +35,7 @@ for (const item of input.items) {
       model,
       state: item.state,
       questions: item.questions,
+      maxRetries: 1, // gateway free tier is rate-limited; outer backoff handles it
       ...(providerOptions ? { providerOptions } : {}),
     });
     out.push({
