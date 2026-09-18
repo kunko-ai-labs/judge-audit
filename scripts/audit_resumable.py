@@ -14,6 +14,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
@@ -61,7 +62,20 @@ def main() -> None:
                                   instructions=q.get("instructions", ""),
                                   options=q.get("options", []))
                          for q in row["questions"]]
-            judgments = judge.decide(row["state"], questions)
+            # If the gateway's rate-limit window outlasts the adapter's backoff,
+            # sleep it off and retry instead of losing the whole run.
+            for attempt in range(4):
+                try:
+                    judgments = judge.decide(row["state"], questions)
+                    break
+                except Exception as e:
+                    if "rate-limited" in str(e).lower() and attempt < 3:
+                        wait = (attempt + 1) * 600
+                        print(f"  rate-limited at row {idx}; sleeping {wait}s "
+                              f"(attempt {attempt + 1}/3)", flush=True)
+                        time.sleep(wait)
+                    else:
+                        raise
             rec = {"idx": idx,
                    "judgments": [{"question": j.question, "decision": j.decision,
                                   "confidence": j.confidence, "latency_s": j.latency_s,
