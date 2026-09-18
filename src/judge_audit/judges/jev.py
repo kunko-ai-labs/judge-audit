@@ -107,7 +107,7 @@ class JevJudge(Judge):
             if proc.returncode != 0:
                 last_err = proc.stderr.decode()[-300:]
                 if _is_rate_limit(last_err):
-                    time.sleep(min(2 ** attempt * 3 + random.uniform(0, 2), 90))
+                    time.sleep(min(2 ** attempt * 10 + random.uniform(0, 5), 300))
                     _throttle()
                     continue
                 raise RuntimeError(f"jev bridge failed: {last_err}")
@@ -115,7 +115,8 @@ class JevJudge(Judge):
             if not res.get("ok"):
                 last_err = str(res.get("error"))
                 if _is_rate_limit(last_err):
-                    time.sleep(min(2 ** attempt * 3 + random.uniform(0, 2), 90))
+                    # Free-tier windows look long (minutes); back off hard.
+                    time.sleep(min(2 ** attempt * 10 + random.uniform(0, 5), 300))
                     _throttle()
                     continue
                 raise RuntimeError(f"jev evaluate error: {last_err}")
