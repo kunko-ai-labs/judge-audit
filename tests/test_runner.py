@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from judge_audit.judges.base import Judge, Judgment, Question
 from judge_audit.judges.simulated import SimulatedJudge
 from judge_audit.runner import load_jsonl, run_audit, summarize, write_judgments
@@ -26,7 +28,7 @@ def test_run_audit_records_everything_and_summarises(labels_path):
     res = run_audit(ConstantJudge("quote_request", 0.9), rows, labels_path=str(labels_path))
     assert res.n == 12 and res.accuracy == 1.0
     assert res.ece == 0.1  # says 0.9, is right 100% of the time: under-confident by 0.1
-    assert res.total_cost_usd == 0.012
+    assert res.total_cost_usd == pytest.approx(0.012)
     assert len(res.records) == 12
     assert res.run["judge"] == {"name": "constant", "model": "unit-test"}
     assert res.run["dataset"]["rows"] == 12 and len(res.run["dataset"]["sha256"]) == 64

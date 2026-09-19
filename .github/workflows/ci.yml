@@ -35,7 +35,7 @@ jobs:
           test -s audit-report.md && test -s report.html && test -s audit-judgments.jsonl
       - name: Exit-code contract with the installed binary
         run: |
-          expect() { want=$1; shift; "$@"; rc=$?; [ "$rc" -eq "$want" ] || { echo "expected exit $want, got $rc: $*"; exit 1; }; }
+          expect() { want=$1; shift; rc=0; "$@" || rc=$?; [ "$rc" -eq "$want" ] || { echo "expected exit $want, got $rc: $*"; exit 1; }; }
           expect 0 judge-audit check examples/email-routing/labels.jsonl --judge simulated --baseline baseline.json
           expect 2 judge-audit run does-not-exist.jsonl --judge simulated
           expect 2 judge-audit run examples/email-routing/labels.jsonl --judge jev
