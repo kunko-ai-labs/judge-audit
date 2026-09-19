@@ -10,7 +10,7 @@ First public release.
 ### Added
 - **Jev adapter** through the Vercel AI Gateway evaluate API (Node bridge) and the direct TypeSafe HTTP API; per-option descriptions are passed as `criteria`. `JEV_ENDPOINT` points the direct client at any Jev-compatible server (OpenJev), key optional.
 - **`llm` adapter**: any chat model as a judge with verbalized confidence — Claude through the official SDK (`[anthropic]` extra), or any OpenAI-compatible endpoint (OpenAI, Ollama, vLLM). Prices for known models; unknown models report cost 0 and say so.
-- **Three independent audits of Jev**, each with its dataset generator, raw checkpoint under `docs/runs/`, report and JSON: clean business emails (n=200), adversarial emails (n=200: prompt injection, homoglyphs, ambiguity, PII, social engineering), task routing (n=120) with the option-description ablation.
+- **Three independent audits of Jev**, each with its dataset generator, raw checkpoint under `docs/runs/`, report and JSON: clean business emails (n=200), adversarial emails (n=200: prompt injection, homoglyphs, ambiguity, PII, social engineering), task routing (n=120, bare option labels: 66.7 %, ECE 0.318, never chose the strong model) and the same 120 rows with one-line option descriptions (97.5 %, ECE 0.053) — see `docs/audit-jev-router-ablation.md`.
 - **Provenance** in every report and JSON: model, backend, timestamp, dataset SHA-256, judge-audit version. The resumable driver records it as the first line of each checkpoint.
 - `--judgments`: per-decision evidence written as JSONL by `judge-audit run`.
 - `scripts/verify_published.py`: recomputes every published audit from its checkpoint; runs in CI.

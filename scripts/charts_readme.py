@@ -73,10 +73,12 @@ def hero_router() -> Path:
         ax.set_title(f"{title}\nchose the strong model {n_strong}/{d['n']} times · "
                      f"ECE {d['overall']['ece']:.2f}", fontsize=10.5, color=INK, loc="left")
     axes[0][0].set_ylabel("share", color=INK2)
-    axes[0][0].legend(frameon=False, loc="upper left", fontsize=9, bbox_to_anchor=(0, 1.0))
+    handles, labels = axes[0][0].get_legend_handles_labels()
+    fig.legend(handles, labels, frameon=False, loc="upper right", fontsize=9, ncol=2,
+               bbox_to_anchor=(0.99, 0.985))
     fig.suptitle("Jev as a task router: how sure it is vs how often it is right",
                  fontsize=13, color=INK, x=0.01, ha="left", y=0.99)
-    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    fig.tight_layout(rect=(0, 0, 1, 0.94))
     out = ASSETS / "hero-router.png"
     fig.savefig(out, dpi=130, facecolor="white")
     plt.close(fig)

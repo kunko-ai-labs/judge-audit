@@ -191,6 +191,11 @@ def main():
     plt.close(fig)
 
     metrics = {
+        "judge": "jev (adversarial email audit)",
+        "run": {"judge": {"name": "jev", "model": "typesafe-ai/jev", "backend": "gateway"},
+                "note": "original run time not recorded in this checkpoint",
+                "checkpoint": args.checkpoint,
+                "dataset": {"path": args.labels}},
         "n": n,
         "accuracy": overall_acc,
         "ece": overall_ece,

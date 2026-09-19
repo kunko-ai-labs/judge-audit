@@ -29,9 +29,9 @@ Enter
 Sleep 4s
 Type "clear"
 Enter
-Type "# Same audit, real vendor: Jev's routing run (raw checkpoint committed in the repo)"
+Type "# Same audit, real vendor: Jev as a task router (raw checkpoint committed in the repo)"
 Enter
-Type "sed -n '5,16p' $JA/docs/audit-jev-router.md"
+Type "sed -n '9,15p' $JA/docs/audit-jev-router.md"
 Enter
 Sleep 6s
 Type "# CI gate: fail the build when the judge gets less honest than the baseline"
