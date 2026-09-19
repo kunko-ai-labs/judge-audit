@@ -33,6 +33,9 @@ class SimulatedJudge(Judge):
             for qname, label in r.get("labels", {}).items():
                 self.oracle[(r["state"], qname)] = str(label)
 
+    def describe(self) -> dict:
+        return {"name": self.name, "seed": self.seed, "tag": SIMULATED_TAG}
+
     def decide(self, state: str, questions: list[Question]) -> list[Judgment]:
         out: list[Judgment] = []
         for q in questions:

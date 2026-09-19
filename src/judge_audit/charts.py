@@ -27,7 +27,7 @@ def reliability_diagram_png(result, path: str | None = None) -> bytes:
     ax.plot([0, 1], [0, 1], "--", color="gray", label="perfectly honest")
     sizes = [max(20, min(400, n * 2)) for n in ns]
     ax.scatter(xs, ys, s=sizes, alpha=0.7, label="judge")
-    for x, y, n in zip(xs, ys, ns):
+    for x, y, n in zip(xs, ys, ns, strict=True):
         ax.annotate(str(n), (x, y), fontsize=8, ha="center", va="bottom")
     ax.set_xlabel("mean confidence in bin")
     ax.set_ylabel("accuracy in bin")

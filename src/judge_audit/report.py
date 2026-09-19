@@ -6,6 +6,32 @@ import json
 from .runner import AuditResult
 
 
+def provenance_lines(run: dict) -> list[str]:
+    """Who, what, when — so a reader can tell a real vendor run from a demo."""
+    if not run:
+        return []
+    j = run.get("judge", {})
+    ds = run.get("dataset", {})
+    parts = [f"judge `{j.get('name', '?')}`"]
+    if j.get("model"):
+        parts.append(f"model `{j['model']}`")
+    if j.get("backend"):
+        parts.append(f"backend `{j['backend']}`")
+    if j.get("seed") is not None:
+        parts.append(f"seed {j['seed']}")
+    if run.get("timestamp_utc"):
+        parts.append(f"run {run['timestamp_utc']}")
+    elif run.get("recomputed_utc"):
+        parts.append(f"recomputed {run['recomputed_utc']} (original run time not recorded)")
+    if run.get("judge_audit_version"):
+        parts.append(f"judge-audit {run['judge_audit_version']}")
+    lines = ["_" + " · ".join(parts) + "_"]
+    if ds:
+        lines.append(f"_dataset `{ds.get('path')}` · {ds.get('rows')} rows · "
+                     f"sha256 `{str(ds.get('sha256', ''))[:12]}…`_")
+    return lines
+
+
 def render_markdown(result: AuditResult) -> str:
     d = result.to_dict()
     lines = [
@@ -13,6 +39,8 @@ def render_markdown(result: AuditResult) -> str:
         "",
         f"**n={d['n']}** · accuracy **{d['accuracy']:.1%}** · ECE **{d['ece']:.4f}**",
         f"· cost **${d['total_cost_usd']:.4f}** · p50 **{d['p50_latency_s']}s** · p99 **{d['p99_latency_s']}s**",
+        "",
+        *provenance_lines(d.get("run", {})),
         "",
         "## Can I automate this?",
         "",
@@ -42,12 +70,12 @@ def render_markdown(result: AuditResult) -> str:
 
 def render_html(result: AuditResult, tag: str = "") -> str:
     """Self-contained HTML report with base64-embedded charts. No network needed."""
-    from .charts import (accuracy_coverage_png, png_to_data_uri,
-                         reliability_diagram_png)
+    from .charts import accuracy_coverage_png, png_to_data_uri, reliability_diagram_png
     d = result.to_dict()
     rel = png_to_data_uri(reliability_diagram_png(result))
     acc = png_to_data_uri(accuracy_coverage_png(result))
     banner = f'<div class="banner">⚠️ {tag}</div>' if tag else ""
+    prov = "<br>".join(line.strip("_") for line in provenance_lines(d.get("run", {})))
     curve_rows = "".join(
         f"<tr><td>{r['coverage']:.0%}</td><td>{r['accuracy']:.1%}</td>"
         f"<td>{r['min_confidence']:.2f}</td><td>{r['n']}</td></tr>"
@@ -63,11 +91,12 @@ def render_html(result: AuditResult, tag: str = "") -> str:
 .metric{{font-size:1.1rem}}.metric b{{font-size:1.6rem}}
 table{{border-collapse:collapse;width:100%;margin:1rem 0}}td,th{{border:1px solid #ddd;padding:.4rem .6rem;text-align:right}}
 th{{background:#f5f5f5}}img{{max-width:100%;border:1px solid #eee;border-radius:8px;margin:1rem 0}}
-h2{{margin-top:2.5rem}}</style></head><body>
+h2{{margin-top:2.5rem}}.prov{{color:#666;font-size:.9rem}}</style></head><body>
 {banner}
 <h1>Audit report — {d['judge']}</h1>
 <p class="metric"><b>{d['n']}</b> decisions · accuracy <b>{d['accuracy']:.1%}</b> · ECE <b>{d['ece']:.4f}</b><br>
 cost <b>${d['total_cost_usd']:.4f}</b> · p50 <b>{d['p50_latency_s']}s</b> · p99 <b>{d['p99_latency_s']}s</b></p>
+<p class="prov">{prov}</p>
 <h2>Can I automate this?</h2>
 <p>Zero observed errors through the most confident <b>{d['zero_error_coverage']['coverage']:.1%}</b>
 ({d['zero_error_coverage']['n']} decisions, confidence ≥ {d['zero_error_coverage']['threshold']}).<br>

@@ -17,6 +17,9 @@ class Question:
     type: QuestionType
     instructions: str
     options: list[str] = field(default_factory=list)  # for CHOICE
+    # Optional option -> human description. Judges that accept per-option
+    # criteria (Jev via the AI SDK) receive these instead of the bare label.
+    descriptions: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -36,3 +39,7 @@ class Judge:
 
     def decide(self, state: str, questions: list[Question]) -> list[Judgment]:
         raise NotImplementedError
+
+    def describe(self) -> dict:
+        """Metadata recorded in every audit (model, backend, version...)."""
+        return {"name": self.name}

@@ -11,11 +11,11 @@ checkpoint JSONL and produces:
 """
 import argparse
 import json
-import math
 import os
 from collections import defaultdict
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
@@ -54,7 +54,11 @@ def load(labels_path, ckpt_path):
         }
     rows = []
     for line in open(ckpt_path):
+        if not line.strip():
+            continue
         d = json.loads(line)
+        if d["idx"] < 0:  # run-metadata header written by audit_resumable.py
+            continue
         j = d["judgments"][0]
         lab = labels[d["idx"]]
         rows.append({

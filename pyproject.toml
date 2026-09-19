@@ -1,18 +1,70 @@
-[build-system]
-requires = ["setuptools>=68"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "judge-audit"
-version = "0.1.0"
-description = "Independent calibration audits for AI judges"
+version = "0.2.0"
+description = "Independent calibration audits for AI judges: is the confidence honest, what can you automate, what does it cost."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = { text = "Apache-2.0" }
 authors = [{ name = "Kunko AI Labs" }]
+keywords = [
+    "ai-judge", "llm-as-judge", "calibration", "ece", "selective-prediction",
+    "evaluation", "ai-act", "governance", "jev", "typesafe", "shadow-mode",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Testing",
+    "Environment :: Console",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/kunko-ai-labs/judge-audit"
+Repository = "https://github.com/kunko-ai-labs/judge-audit"
+Documentation = "https://github.com/kunko-ai-labs/judge-audit/tree/main/docs"
+Changelog = "https://github.com/kunko-ai-labs/judge-audit/blob/main/CHANGELOG.md"
+Issues = "https://github.com/kunko-ai-labs/judge-audit/issues"
+Security = "https://github.com/kunko-ai-labs/judge-audit/blob/main/SECURITY.md"
 
 [project.scripts]
 judge-audit = "judge_audit.cli:main"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[project.optional-dependencies]
+charts = ["matplotlib>=3.7"]
+dev = ["pytest>=8.0", "ruff>=0.5", "matplotlib>=3.7"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/judge_audit"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["src/judge_audit/judges/bridge/node_modules"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/judge_audit/report.py" = ["E501"]  # inline HTML/CSS template
+"scripts/*" = ["E501"]                  # long human-readable strings
+"examples/*" = ["E501"]                 # dataset templates

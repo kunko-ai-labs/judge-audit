@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install
+        run: pip install -e ".[dev]"
+      - name: Lint (ruff)
+        run: ruff check src/ tests/ scripts/ examples/
+      - name: Test (pytest)
+        run: pytest -q
+      - name: Smoke — audit with the simulated judge, no key needed
+        run: |
+          judge-audit --version
+          judge-audit run examples/email-routing/labels.jsonl --judge simulated --json baseline.json
+          judge-audit run examples/email-routing/labels.jsonl --judge simulated --format html --out report.html
+          test -s audit-report.md && test -s report.html && test -s audit-judgments.jsonl
+      - name: Exit-code contract with the installed binary
+        run: |
+          set +e
+          judge-audit check examples/email-routing/labels.jsonl --judge simulated --baseline baseline.json; test $? -eq 0
+          judge-audit run does-not-exist.jsonl --judge simulated; test $? -eq 2
+          judge-audit run examples/email-routing/labels.jsonl --judge jev; test $? -eq 2
+          echo '{"ece": 0.0, "accuracy": 1.0}' > strict.json
+          judge-audit check examples/email-routing/labels.jsonl --judge simulated --baseline strict.json; test $? -eq 1
+      - name: Published audits recompute from their raw checkpoints
+        run: |
+          python scripts/verify_published.py
+
+  datasets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Datasets are reproducible from their seeded generators
+        run: |
+          for d in email-routing email-routing-adversarial task-routing; do
+            (cd examples/$d && python generate.py >/dev/null)
+          done
+          git diff --exit-code -- examples/

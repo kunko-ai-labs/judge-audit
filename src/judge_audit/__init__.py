@@ -1,5 +1,8 @@
 """judge-audit: independent calibration audits for AI judges."""
-from .judges.base import Judge, Question, Judgment, QuestionType
+from .judges.base import Judge, Judgment, Question, QuestionType
 from .runner import AuditResult, run_audit
 
-__all__ = ["Judge", "Question", "Judgment", "QuestionType", "AuditResult", "run_audit"]
+__version__ = "0.2.0"
+
+__all__ = ["Judge", "Question", "Judgment", "QuestionType", "AuditResult", "run_audit",
+           "__version__"]

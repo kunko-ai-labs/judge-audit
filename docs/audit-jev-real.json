@@ -194,5 +194,16 @@
   },
   "total_cost_usd": 0.003709,
   "p50_latency_s": 0.863,
-  "p99_latency_s": 7.494
+  "p99_latency_s": 7.494,
+  "run": {
+    "judge": {
+      "name": "jev",
+      "model": "typesafe-ai/jev",
+      "backend": "gateway"
+    },
+    "judge_audit_version": "0.2.0",
+    "recomputed_utc": "2026-09-19T09:09:12+00:00",
+    "note": "original run time not recorded in this checkpoint",
+    "checkpoint": "docs/runs/audit-jev-real.ckpt.jsonl"
+  }
 }

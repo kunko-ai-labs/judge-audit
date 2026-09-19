@@ -30,16 +30,13 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections import Counter
 from pathlib import Path
+from statistics import median
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from judge_audit.metrics.calibration import (  # noqa: E402
-    accuracy_coverage,
-    expected_calibration_error,
-    reliability_bins,
-    zero_error_coverage,
-)
+from judge_audit.metrics.calibration import expected_calibration_error  # noqa: E402
 from judge_audit.runner import _percentile, load_jsonl  # noqa: E402
 
 SEGMENTS = ["clean_easy", "clean_hard", "adversarial"]
@@ -68,10 +65,15 @@ def main() -> None:
 
     rows = load_jsonl(args.labels)
     ckpt: dict[int, list[dict]] = {}
+    run: dict = {}
     for line in Path(args.checkpoint).read_text(encoding="utf-8").splitlines():
         if line.strip():
             rec = json.loads(line)
+            if rec["idx"] == -1:
+                run = rec.get("run", {})
+                continue
             ckpt[rec["idx"]] = rec["judgments"]
+    run["checkpoint"] = args.checkpoint
     missing = [i for i in range(len(rows)) if i not in ckpt]
     if missing:
         print(f"WARNING: {len(missing)} rows missing from checkpoint "
@@ -131,6 +133,14 @@ def main() -> None:
     clean = [r for r in recs if r["segment"] != "adversarial"]
     mean_conf = lambda rs: round(sum(r["confidence"] for r in rs) / len(rs), 4) if rs else None  # noqa: E731
 
+    # Sanity numbers a reader needs before believing any headline.
+    decisions = Counter(r["decision"] for r in recs)
+    labels_ct = Counter(r["expected"] for r in recs)
+    baseline = round(max(labels_ct.values()) / len(recs), 4) if recs else None
+    fail_conf = sorted(r["confidence"] for r in recs if not r["correct"])
+    n_unique_states = len({r["state"] for r in recs})
+    never_strong = decisions.get("route_strong", 0) == 0
+
     failures = [{"idx": r["idx"], "segment": r["segment"],
                  "difficulty": r["difficulty"], "attack": r["attack"],
                  "target": r["target"], "expected": r["expected"],
@@ -140,7 +150,20 @@ def main() -> None:
 
     result = {
         "judge": "jev (router audit)", "n": len(recs),
+        "run": run,
         "overall": overall, "by_segment": by_segment,
+        "sanity": {
+            "decisions": dict(decisions),
+            "labels": dict(labels_ct),
+            "constant_classifier_baseline": baseline,
+            "beats_constant_baseline": (overall.get("accuracy", 0) > baseline
+                                        if baseline is not None else None),
+            "unique_task_texts": n_unique_states,
+            "failure_confidence": ({"min": fail_conf[0], "median": round(median(fail_conf), 4),
+                                    "max": fail_conf[-1], "n": len(fail_conf)}
+                                   if fail_conf else None),
+            "never_chose_route_strong": never_strong,
+        },
         "attack_success_rate_cost_inflation": asr,
         "cost_model_assumptions_usd": {"easy_per_task": args.easy_cost,
                                        "strong_per_task": args.strong_cost},
@@ -154,6 +177,15 @@ def main() -> None:
         "mean_confidence_wrong": mean_conf([r for r in recs if not r["correct"]]),
         "failures": failures,
         "caveats": [
+            *(["The judge never chose route_strong. A constant 'route_easy' classifier "
+               f"scores exactly {baseline:.1%} on this dataset; the 100% on adversarial rows "
+               "and the 0% attack success rate follow from that bias, not from robustness."]
+              if never_strong and baseline is not None else []),
+            "The options were sent as bare labels (route_easy / route_strong, no "
+            "description). Whether the routing bias survives descriptive option criteria "
+            "is an open ablation — run examples/task-routing/labels-described.jsonl.",
+            f"Only {n_unique_states} distinct task texts behind {len(recs)} rows "
+            "(templates repeat); treat n as ~templates, not rows.",
             "Ground truth is by construction (difficulty level), not measured: we did not "
             "verify that the cheap model solves the easy tasks or fails the hard ones. "
             "Empirical validation is a follow-up story.",
@@ -172,13 +204,52 @@ def main() -> None:
           f"asr={asr} overpay=${overpay_usd} (assumed) -> {args.out}")
 
 
+def _provenance(run: dict) -> list[str]:
+    if not run:
+        return ["_provenance: not recorded (run predates checkpoint headers)_"]
+    j = run.get("judge", {})
+    bits = [f"{k} `{j[k]}`" for k in ("model", "backend", "seed") if j.get(k) is not None]
+    if run.get("timestamp_utc"):
+        bits.append(f"run {run['timestamp_utc']}")
+    if run.get("checkpoint"):
+        bits.append(f"raw responses `{run['checkpoint']}`")
+    return ["_" + " · ".join(bits) + "_"]
+
+
+def _sanity_lines(s: dict) -> list[str]:
+    L = [f"- Decisions: {s['decisions']} · labels: {s['labels']}",
+         f"- A constant classifier (always the majority label) scores "
+         f"**{s['constant_classifier_baseline']:.1%}** here. "
+         + ("The judge **does not beat it**." if not s["beats_constant_baseline"]
+            else "The judge beats it."),
+         f"- {s['unique_task_texts']} distinct task texts (templates repeat)."]
+    fc = s.get("failure_confidence")
+    if fc:
+        L.append(f"- Confidence on wrong decisions: min {fc['min']:.2f} · "
+                 f"median {fc['median']:.2f} · max {fc['max']:.2f} (n={fc['n']}).")
+    if s.get("never_chose_route_strong"):
+        L.append("- The judge **never** chose `route_strong`, so the adversarial accuracy and "
+                 "the 0% attack success rate are implied by the bias, not evidence of robustness.")
+    return L
+
+
 def render(r: dict) -> str:
-    L = ["# Router audit — Jev as a task router (route_easy vs route_strong)",
+    jname = r.get("run", {}).get("judge", {}).get("name", "jev")
+    banner = ("> **REAL VENDOR AUDIT** — TypeSafe Jev via Vercel AI Gateway (not simulated)."
+              if jname == "jev" else
+              f"> ⚠️ **SIMULATED — not a real vendor audit** (judge `{jname}`).")
+    L = [f"# Router audit — {jname} as a task router (route_easy vs route_strong)",
          "",
-         "> **REAL VENDOR AUDIT** — TypeSafe Jev via Vercel AI Gateway (not simulated).",
+         banner,
          "",
          f"**n={r['n']}** · routing accuracy **{r['overall'].get('accuracy', 0):.1%}** · "
          f"ECE **{r['overall'].get('ece')}**",
+         "",
+         *_provenance(r.get("run", {})),
+         "",
+         "## Read this first",
+         "",
+         *_sanity_lines(r["sanity"]),
          "",
          "## Routing accuracy by segment",
          "",

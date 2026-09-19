@@ -5,3 +5,5 @@ dist/
 build/
 *.egg-info/
 node_modules/
+*.log
+docs/.frames/

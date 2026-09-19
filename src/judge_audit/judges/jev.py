@@ -58,24 +58,36 @@ def _is_rate_limit(text: str) -> bool:
 class JevJudge(Judge):
     name = "jev"
 
-    def __init__(self, api_key: str | None = None, model: str = "typesafe-ai/jev",
-                 backend: str = "gateway"):
-        self.backend = backend
-        self.model = model
-        if backend == "gateway":
+    def __init__(self, api_key: str | None = None, model: str | None = None,
+                 backend: str | None = None):
+        self.backend = backend or os.environ.get("JEV_BACKEND", "gateway")
+        self.model = model or os.environ.get("JEV_MODEL", "typesafe-ai/jev")
+        if self.backend == "gateway":
             self.api_key = api_key or os.environ.get("AI_GATEWAY_API_KEY", "")
             if not self.api_key:
                 raise RuntimeError(
-                    "Set AI_GATEWAY_API_KEY (Vercel dashboard → AI Gateway → API Keys). "
-                    "Jev is only reachable through the gateway's evaluation API.")
+                    "AI_GATEWAY_API_KEY is not set. Jev is only reachable through the "
+                    "Vercel AI Gateway evaluate API (dashboard → AI Gateway → API Keys). "
+                    "See docs/real-audits.md. To try the harness without a key: "
+                    "--judge simulated")
             if not _BRIDGE.exists():
                 raise RuntimeError(f"evaluate bridge not found: {_BRIDGE}")
-        elif backend == "typesafe":
+            if not (_BRIDGE.parent / "node_modules").exists():
+                raise RuntimeError(
+                    "the Node bridge has no dependencies installed. Run: "
+                    f"npm install --prefix {_BRIDGE.parent}  (needs Node >= 20)")
+        elif self.backend == "typesafe":
             self.api_key = api_key or os.environ.get("TYPESAFE_API_KEY", "")
             if not self.api_key:
-                raise RuntimeError("Set TYPESAFE_API_KEY (waitlist: https://typesafe.ai)")
+                raise RuntimeError("TYPESAFE_API_KEY is not set (waitlist: https://typesafe.ai)")
         else:
-            raise ValueError(f"unknown backend '{backend}' (gateway | typesafe)")
+            raise ValueError(f"unknown backend '{self.backend}' (gateway | typesafe)")
+
+    def describe(self) -> dict:
+        return {"name": self.name, "model": self.model, "backend": self.backend,
+                "bridge": "vercel-ai-sdk/experimental_evaluate" if self.backend == "gateway"
+                else "typesafe-systemone-http",
+                "input_price_per_mtok_usd": INPUT_PRICE_PER_MTOK}
 
     # ------------------------------------------------------------------ public
     def decide(self, state: str, questions: list[Question]) -> list[Judgment]:
@@ -151,7 +163,9 @@ class JevJudge(Judge):
         base: dict = {"type": q.type.value, "instructions": q.instructions}
         if q.type is QuestionType.CHOICE and q.options:
             # AI SDK choice questions take a criteria map: option -> description.
-            base["criteria"] = {opt: opt for opt in q.options}
+            # Without descriptions the judge only sees the bare label, which is
+            # exactly what the router ablation (docs/audit-jev-router.md) tests.
+            base["criteria"] = {opt: q.descriptions.get(opt, opt) for opt in q.options}
         return base
 
     @staticmethod
@@ -179,6 +193,7 @@ class JevJudge(Judge):
                     "type": q.type.value,
                     "instructions": q.instructions,
                     **({"options": q.options} if q.options else {}),
+                    **({"descriptions": q.descriptions} if q.descriptions else {}),
                 }
                 for q in questions
             },

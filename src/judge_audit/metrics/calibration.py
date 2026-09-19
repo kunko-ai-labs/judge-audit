@@ -7,13 +7,13 @@ def expected_calibration_error(confidences: list[float], correct: list[bool],
     """ECE with equal-width bins. 0.0 = perfectly honest."""
     bins: list[list[bool]] = [[] for _ in range(n_bins)]
     conf_bins: list[list[float]] = [[] for _ in range(n_bins)]
-    for c, ok in zip(confidences, correct):
+    for c, ok in zip(confidences, correct, strict=True):
         i = min(int(c * n_bins), n_bins - 1)
         bins[i].append(ok)
         conf_bins[i].append(c)
     ece = 0.0
     n = len(correct)
-    for b, cb in zip(bins, conf_bins):
+    for b, cb in zip(bins, conf_bins, strict=True):
         if not b:
             continue
         acc = sum(b) / len(b)
