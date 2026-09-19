@@ -41,9 +41,9 @@ Security = "https://github.com/kunko-ai-labs/judge-audit/blob/main/SECURITY.md"
 judge-audit = "judge_audit.cli:main"
 
 [project.optional-dependencies]
-charts = ["matplotlib>=3.7"]
+charts = ["matplotlib>=3.10.9"]
 anthropic = ["anthropic>=1.0"]
-dev = ["pytest>=8.0", "ruff>=0.5", "matplotlib>=3.7"]
+dev = ["pytest>=8.0", "ruff>=0.5", "matplotlib>=3.10.9"]
 
 [build-system]
 requires = ["hatchling"]
