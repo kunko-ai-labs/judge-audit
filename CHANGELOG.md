@@ -3,6 +3,11 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
+## [0.2.1] — 2026-09-19
+
+### Changed
+- Package renamed on PyPI to `kunko-judge-audit` (`judge-audit` was already taken). The CLI (`judge-audit`) and the module (`judge_audit`) are unchanged. First release actually published to PyPI.
+
 ## [0.2.0] — 2026-09-19
 
 First public release.

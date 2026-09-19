@@ -16,12 +16,12 @@ Everyone is shipping judgment models — TypeSafe's Jev, LLM-as-judge, guardrail
 ![judge-audit run on a labeled dataset, then the CI gate](docs/demo.gif)
 
 ```bash
-pip install judge-audit                 # every release ships Sigstore-signed build provenance
+pip install kunko-judge-audit           # every release ships Sigstore-signed build provenance
 judge-audit run examples/email-routing/labels.jsonl --judge simulated   # no API key needed
 judge-audit check examples/email-routing/labels.jsonl --judge simulated --baseline audit-result.json
 ```
 
-▶ [35-second walkthrough video](https://github.com/kunko-ai-labs/judge-audit/releases/download/v0.2.0/demo.mp4)
+▶ [35-second walkthrough video](https://github.com/kunko-ai-labs/judge-audit/releases/download/v0.2.1/demo.mp4)
 
 `simulated` is a seeded simulator so you can see the whole pipeline in ten seconds; every report it touches is stamped **SIMULATED**. To audit a real vendor, see [docs/real-audits.md](docs/real-audits.md).
 

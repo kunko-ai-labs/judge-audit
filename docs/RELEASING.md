@@ -16,4 +16,4 @@ Trusted Publishing means no API token is stored anywhere: PyPI trusts the OIDC i
 
 1. On PyPI (2FA required), while the project does not exist yet, add a **pending publisher** at https://pypi.org/manage/account/publishing/: owner `kunko-ai-labs`, repository `judge-audit`, workflow `release.yml`, environment `pypi`.
 2. In the repo: Settings → Environments → **New environment** `pypi`; restrict it to tags `v*` and require your review before deployment.
-3. Push the tag. The first publish creates the project on PyPI under the pending publisher.
+3. Push the tag. The first publish creates the project on PyPI under the pending publisher. The PyPI project is `kunko-judge-audit` (`judge-audit` was taken); the CLI and the import stay `judge-audit` / `judge_audit`.
