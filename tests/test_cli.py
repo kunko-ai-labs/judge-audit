@@ -49,3 +49,16 @@ def test_jev_without_key_is_exit_2_with_guidance(labels_path, tmp_path, monkeypa
 def test_version(tmp_path):
     r = run("--version", cwd=tmp_path)
     assert r.returncode == 0 and r.stdout.startswith("judge-audit ")
+
+
+def test_empty_baseline_is_exit_2(labels_path, tmp_path):
+    (tmp_path / "empty.json").write_text("{}")
+    r = run("check", str(labels_path), "--judge", "simulated", "--baseline", "empty.json",
+            cwd=tmp_path)
+    assert r.returncode == 2 and "baseline" in r.stderr
+
+
+def test_bad_jev_backend_is_exit_2(labels_path, tmp_path, monkeypatch):
+    monkeypatch.setenv("JEV_BACKEND", "foo")
+    r = run("run", str(labels_path), "--judge", "jev", cwd=tmp_path)
+    assert r.returncode == 2 and "unknown backend" in r.stderr

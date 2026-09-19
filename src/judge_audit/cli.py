@@ -67,7 +67,7 @@ def main(argv: list[str] | None = None) -> None:
         _die(f"{args.labels} has no rows")
     try:
         judge, tag = _judge(args.judge, rows)
-    except RuntimeError as e:
+    except (RuntimeError, ValueError) as e:
         _die(f"judge '{args.judge}' is not configured: {e}")
 
     result = run_audit(judge, rows, labels_path=args.labels)
@@ -96,8 +96,8 @@ def main(argv: list[str] | None = None) -> None:
         try:
             failures = check_drift(result, args.baseline,
                                    args.max_ece_drift, args.max_acc_drop)
-        except (OSError, ValueError) as e:
-            _die(f"cannot read baseline {args.baseline}: {e}")
+        except (OSError, ValueError, KeyError) as e:
+            _die(f"cannot use baseline {args.baseline}: {e}")
         if failures:
             print("DRIFT DETECTED:", file=sys.stderr)
             for fl in failures:

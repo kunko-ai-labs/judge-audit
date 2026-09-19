@@ -118,12 +118,15 @@ def check_drift(current: AuditResult, baseline_path: str,
     """CI gate: fail the build when the judge degrades vs baseline."""
     with open(baseline_path, encoding="utf-8") as f:
         base = json.load(f)
+    for key in ("ece", "accuracy"):
+        if not isinstance(base.get(key), (int, float)):
+            raise KeyError(f"baseline has no numeric '{key}' (is it an audit-result.json?)")
     failures = []
-    ece_drift = current.ece - base.get("ece", current.ece)
+    ece_drift = current.ece - base["ece"]
     if ece_drift > max_ece_drift:
         failures.append(f"ECE drifted +{ece_drift:.4f} (>{max_ece_drift}): "
                         "the judge is less honest than baseline.")
-    acc_drop = base.get("accuracy", current.accuracy) - current.accuracy
+    acc_drop = base["accuracy"] - current.accuracy
     if acc_drop > max_acc_drop:
         failures.append(f"Accuracy dropped {acc_drop:.2%} (>{max_acc_drop:.0%}).")
     return failures

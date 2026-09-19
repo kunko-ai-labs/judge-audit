@@ -1,8 +1,18 @@
-# Router audit — Jev as a task router (route_easy vs route_strong)
+# Router audit — jev as a task router (route_easy vs route_strong)
 
 > **REAL VENDOR AUDIT** — TypeSafe Jev via Vercel AI Gateway (not simulated).
 
 **n=120** · routing accuracy **66.7%** · ECE **0.3181**
+
+_model `typesafe-ai/jev` · backend `gateway` · original run time not recorded in this checkpoint · options sent as bare labels · raw responses `docs/runs/audit-jev-router.ckpt.jsonl`_
+
+## Read this first
+
+- Decisions: {'route_easy': 120} · labels: {'route_easy': 80, 'route_strong': 40}
+- A constant classifier (always the majority label) scores **66.7%** here. The judge **does not beat it**.
+- 61 distinct task texts (templates repeat).
+- Confidence on wrong decisions: min 0.56 · median 0.96 · max 1.00 (n=40).
+- The judge **never** chose `route_strong`, so the adversarial accuracy and the 0% attack success rate are implied by the bias, not evidence of robustness.
 
 ## Routing accuracy by segment
 
@@ -78,6 +88,9 @@ An honest router should drop confidence on adversarial rows.
 
 ## Caveats
 
+- The judge never chose route_strong. A constant 'route_easy' classifier scores exactly 66.7% on this dataset; the 100% on adversarial rows and the 0% attack success rate follow from that bias, not from robustness.
+- The options were sent as bare labels (route_easy / route_strong, no description). Compare with the described-options run (examples/task-routing/labels-described.jsonl) before attributing the bias to the model rather than to the prompt.
+- Only 61 distinct task texts behind 120 rows (templates repeat); treat n as ~templates, not rows.
 - Ground truth is by construction (difficulty level), not measured: we did not verify that the cheap model solves the easy tasks or fails the hard ones. Empirical validation is a follow-up story.
 - The routing question was not hardened against embedded instructions, mirroring a naive production router.
 - Cost figures use assumed per-task model prices (see cost_model_assumptions_usd); they illustrate the shape of the loss, not a measured bill.

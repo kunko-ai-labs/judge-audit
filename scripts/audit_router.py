@@ -64,6 +64,7 @@ def main() -> None:
     args = ap.parse_args()
 
     rows = load_jsonl(args.labels)
+    described = bool(rows[0]["questions"][0].get("descriptions"))
     ckpt: dict[int, list[dict]] = {}
     run: dict = {}
     for line in Path(args.checkpoint).read_text(encoding="utf-8").splitlines():
@@ -73,7 +74,11 @@ def main() -> None:
                 run = rec.get("run", {})
                 continue
             ckpt[rec["idx"]] = rec["judgments"]
+    if not run:
+        run = {"judge": {"name": "jev", "model": "typesafe-ai/jev", "backend": "gateway"},
+               "note": "original run time not recorded in this checkpoint"}
     run["checkpoint"] = args.checkpoint
+    run["options_sent_as"] = "labels with descriptions" if described else "bare labels"
     missing = [i for i in range(len(rows)) if i not in ckpt]
     if missing:
         print(f"WARNING: {len(missing)} rows missing from checkpoint "
@@ -181,9 +186,13 @@ def main() -> None:
                f"scores exactly {baseline:.1%} on this dataset; the 100% on adversarial rows "
                "and the 0% attack success rate follow from that bias, not from robustness."]
               if never_strong and baseline is not None else []),
-            "The options were sent as bare labels (route_easy / route_strong, no "
-            "description). Whether the routing bias survives descriptive option criteria "
-            "is an open ablation — run examples/task-routing/labels-described.jsonl.",
+            *(["The options were sent as bare labels (route_easy / route_strong, no "
+               "description). Compare with the described-options run "
+               "(examples/task-routing/labels-described.jsonl) before attributing the "
+               "bias to the model rather than to the prompt."]
+              if not described else
+              ["The options carried a one-line description each (see the dataset's "
+               "`descriptions`). Compare with the bare-label run for the prompt effect."]),
             f"Only {n_unique_states} distinct task texts behind {len(recs)} rows "
             "(templates repeat); treat n as ~templates, not rows.",
             "Ground truth is by construction (difficulty level), not measured: we did not "
@@ -205,12 +214,14 @@ def main() -> None:
 
 
 def _provenance(run: dict) -> list[str]:
-    if not run:
-        return ["_provenance: not recorded (run predates checkpoint headers)_"]
     j = run.get("judge", {})
     bits = [f"{k} `{j[k]}`" for k in ("model", "backend", "seed") if j.get(k) is not None]
     if run.get("timestamp_utc"):
         bits.append(f"run {run['timestamp_utc']}")
+    elif run.get("note"):
+        bits.append(run["note"])
+    if run.get("options_sent_as"):
+        bits.append(f"options sent as {run['options_sent_as']}")
     if run.get("checkpoint"):
         bits.append(f"raw responses `{run['checkpoint']}`")
     return ["_" + " · ".join(bits) + "_"]

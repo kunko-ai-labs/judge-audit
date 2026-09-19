@@ -35,12 +35,14 @@ jobs:
           test -s audit-report.md && test -s report.html && test -s audit-judgments.jsonl
       - name: Exit-code contract with the installed binary
         run: |
-          set +e
-          judge-audit check examples/email-routing/labels.jsonl --judge simulated --baseline baseline.json; test $? -eq 0
-          judge-audit run does-not-exist.jsonl --judge simulated; test $? -eq 2
-          judge-audit run examples/email-routing/labels.jsonl --judge jev; test $? -eq 2
+          expect() { want=$1; shift; "$@"; rc=$?; [ "$rc" -eq "$want" ] || { echo "expected exit $want, got $rc: $*"; exit 1; }; }
+          expect 0 judge-audit check examples/email-routing/labels.jsonl --judge simulated --baseline baseline.json
+          expect 2 judge-audit run does-not-exist.jsonl --judge simulated
+          expect 2 judge-audit run examples/email-routing/labels.jsonl --judge jev
           echo '{"ece": 0.0, "accuracy": 1.0}' > strict.json
-          judge-audit check examples/email-routing/labels.jsonl --judge simulated --baseline strict.json; test $? -eq 1
+          expect 1 judge-audit check examples/email-routing/labels.jsonl --judge simulated --baseline strict.json
+          echo '{}' > empty.json
+          expect 2 judge-audit check examples/email-routing/labels.jsonl --judge simulated --baseline empty.json
       - name: Published audits recompute from their raw checkpoints
         run: |
           python scripts/verify_published.py
