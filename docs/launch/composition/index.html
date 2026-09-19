@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #0b0f14; }
+      #root {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        background: #0b0f14;
+        color: #e6edf3;
+        font-family: ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+        overflow: hidden;
+      }
+      .clip { position: absolute; inset: 0; }
+      .scene { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      .mono { font-family: Menlo, Monaco, Consolas, "Courier New", monospace; }
+      .kicker { font-size: 44px; font-weight: 300; letter-spacing: 0.02em; color: #e6edf3; margin-bottom: 44px; text-align: center; }
+      .caption { font-size: 36px; font-weight: 300; color: #8b98a5; margin-top: 40px; letter-spacing: 0.01em; text-align: center; }
+
+      /* scene 1 — hook */
+      .hook-kicker { font-size: 52px; font-weight: 300; color: #8b98a5; letter-spacing: 0.02em; margin-bottom: 18px; }
+      .hook-num { font-size: 260px; font-weight: 500; letter-spacing: -0.04em; line-height: 1; color: #e6edf3; }
+      .hook-sub { font-size: 64px; font-weight: 300; color: #e6edf3; margin-top: 18px; letter-spacing: 0.01em; }
+      .hook-q { font-size: 44px; font-weight: 300; color: #8b98a5; margin-top: 34px; letter-spacing: 0.01em; }
+
+      /* terminal / cards */
+      .card { width: 1400px; background: #131a22; border: 1px solid #263140; border-radius: 18px; box-shadow: 0 30px 80px rgba(0,0,0,0.45); overflow: hidden; }
+      .card-bar { height: 56px; display: flex; align-items: center; padding: 0 28px; gap: 12px; background: #0f151c; border-bottom: 1px solid #263140; color: #8b98a5; font-size: 22px; }
+      .dot { width: 14px; height: 14px; border-radius: 50%; background: #2c3a4a; }
+      .code { padding: 38px 44px; font-size: 32px; line-height: 1.6; color: #e6edf3; }
+      .line { display: flex; white-space: pre; }
+      .prompt { color: #3fb950; }
+      .ch { display: none; }
+      .cursor { display: inline-block; width: 18px; height: 36px; background: #e6edf3; vertical-align: -6px; margin-left: 2px; }
+      .k { color: #79c0ff; }
+      .bad { color: #f85149; font-weight: 600; }
+      .hl { background: rgba(248,81,73,0.14); border-radius: 6px; padding: 0 10px; margin: 0 -10px; }
+
+      /* scene 3 — two audit cards */
+      .pair { position: relative; width: 1600px; height: 400px; }
+      .audit { position: absolute; top: 0; width: 780px; background: #161b22; border: 1px solid #30363d; border-radius: 14px; overflow: hidden; }
+      #s3-red { left: 410px; }
+      #s3-green { left: 820px; border-color: #2e5a3a; }
+      .audit-head { display: flex; align-items: center; gap: 16px; padding: 16px 28px; background: #1c2129; border-bottom: 1px solid #30363d; color: #8b98a5; font-size: 24px; }
+      .audit-head .pill { background: #30363d; color: #c9d1d9; font-size: 18px; padding: 2px 10px; border-radius: 8px; border: 1px solid #444c56; }
+      .audit-body { padding: 30px 40px 36px; }
+      .audit-title { font-size: 34px; font-weight: 600; letter-spacing: -0.01em; margin-bottom: 24px; color: #e6edf3; }
+      .row { font-size: 30px; color: #c9d1d9; line-height: 1.6; }
+      .row b { font-weight: 700; }
+      .red b { color: #f85149; }
+      .green b { color: #3fb950; }
+      .muted { font-size: 26px; color: #8b98a5; line-height: 1.5; margin-top: 18px; }
+      .green-title { font-size: 26px; font-weight: 500; color: #8b98a5; line-height: 1.5; margin-bottom: 20px; }
+      .pair-caption { font-size: 36px; font-weight: 300; color: #e6edf3; margin-top: 44px; text-align: center; letter-spacing: 0.01em; }
+
+      /* scene 4 */
+      .big { font-size: 74px; font-weight: 300; letter-spacing: 0.01em; line-height: 1.35; text-align: center; }
+      .big .em { font-weight: 500; }
+      .foot { position: absolute; bottom: 110px; left: 0; right: 0; text-align: center; font-size: 28px; color: #8b98a5; letter-spacing: 0.08em; }
+
+      /* outro */
+      .wordmark { font-size: 120px; font-weight: 500; letter-spacing: -0.02em; }
+      .wordmark .dash { color: #3fb950; }
+      .tagline { font-size: 44px; font-weight: 300; color: #c9d1d9; margin-top: 26px; letter-spacing: 0.01em; text-align: center; }
+      .install { font-size: 34px; color: #79c0ff; margin-top: 54px; }
+      .small { font-size: 24px; color: #8b98a5; margin-top: 26px; letter-spacing: 0.04em; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="24" data-width="1920" data-height="1080">
+
+      <!-- Scene 1 — the hook (0.0–4.7, crossfades out at 4.0) -->
+      <div id="s1" class="clip" data-layout-allow-overlap data-start="0" data-duration="4.7" data-track-index="0">
+        <div class="scene" data-layout-allow-overlap>
+          <div id="s1-kicker" class="hook-kicker">Your AI judge says</div>
+          <div id="s1-num" class="hook-num mono">96 %</div>
+          <div id="s1-sub" class="hook-sub">confident.</div>
+          <div id="s1-q" class="hook-q">Is it right 96 % of the time?</div>
+        </div>
+      </div>
+
+      <!-- Scene 2 — the run (4.0–9.7) -->
+      <div id="s2" class="clip" data-layout-allow-overlap data-start="4.0" data-duration="5.7" data-track-index="1">
+        <div class="scene" data-layout-allow-overlap>
+          <div id="s2-card" class="card mono">
+            <div class="card-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span>terminal</span></div>
+            <div class="code">
+              <div class="line"><span class="prompt">$ </span><span id="s2-cmd"><span class="ch">j</span><span class="ch">u</span><span class="ch">d</span><span class="ch">g</span><span class="ch">e</span><span class="ch">-</span><span class="ch">a</span><span class="ch">u</span><span class="ch">d</span><span class="ch">i</span><span class="ch">t</span><span class="ch"> </span><span class="ch">r</span><span class="ch">u</span><span class="ch">n</span><span class="ch"> </span><span class="ch">t</span><span class="ch">a</span><span class="ch">s</span><span class="ch">k</span><span class="ch">s</span><span class="ch">.</span><span class="ch">j</span><span class="ch">s</span><span class="ch">o</span><span class="ch">n</span><span class="ch">l</span><span class="ch"> </span><span class="ch">-</span><span class="ch">-</span><span class="ch">j</span><span class="ch">u</span><span class="ch">d</span><span class="ch">g</span><span class="ch">e</span><span class="ch"> </span><span class="ch">j</span><span class="ch">e</span><span class="ch">v</span></span><span id="s2-cursor" class="cursor"></span></div>
+              <div id="s2-out" class="line"><span>judge=<span class="k">jev</span> n=<span class="k">120</span> accuracy=<span class="k">66.7%</span> <span id="s2-ece">ece=<span class="bad">0.3181</span></span></span></div>
+            </div>
+          </div>
+          <div id="s2-caption" class="caption">Shadow mode. Your humans already decided. The judge must match them.</div>
+        </div>
+      </div>
+
+      <!-- Scene 3 — verdict and reveal (9.0–17.7) -->
+      <div id="s3" class="clip" data-layout-allow-overlap data-start="9.0" data-duration="8.7" data-track-index="2">
+        <div class="scene" data-layout-allow-overlap>
+          <div id="s3-pair" class="pair">
+            <div id="s3-red" class="audit">
+              <div class="audit-head"><span>docs/audit-jev-router.md</span><span class="pill">jev</span></div>
+              <div class="audit-body">
+                <div id="s3-title" class="audit-title">Read this first</div>
+                <div id="s3-l1" class="row red">Hard tasks routed to the cheap model: <b>40 / 40</b></div>
+                <div id="s3-l2" class="row red">Median confidence on those mistakes: <b>0.96</b></div>
+                <div id="s3-l3" class="muted">= a coin glued to “easy”. Accuracy 66.7 % is the constant-classifier baseline.</div>
+              </div>
+            </div>
+            <div id="s3-green" class="audit">
+              <div class="audit-head"><span>docs/audit-jev-router-ablation.md</span><span class="pill">jev</span></div>
+              <div class="audit-body">
+                <div class="green-title">Same judge. Same 120 tasks. Two descriptive sentences on the options.</div>
+                <div class="row green"><b>37 / 40</b> routed right</div>
+                <div class="row green">Confidence when wrong: <b>0.59</b></div>
+                <div class="row green">Attack success: <b>0 / 40</b></div>
+              </div>
+            </div>
+          </div>
+          <div id="s3-caption" class="pair-caption">The failure was the prompt. Only a calibration audit shows it.</div>
+        </div>
+      </div>
+
+      <!-- Scene 4 — three lines (17.0–21.7) -->
+      <div id="s4" class="clip" data-layout-allow-overlap data-start="17.0" data-duration="4.7" data-track-index="3">
+        <div class="scene" data-layout-allow-overlap>
+          <div id="s4-l1" class="big"><span class="em">Calibration</span>, not accuracy.</div>
+          <div id="s4-l2" class="big">Every number from a committed <span class="em">raw checkpoint</span>.</div>
+          <div id="s4-l3" class="big">Any judge: Jev, OpenJev, Claude, <span class="em">yours</span>.</div>
+          <div id="s4-foot" class="foot mono">ECE · ZERO-ERROR COVERAGE · COST · P99 · DRIFT GATE</div>
+        </div>
+      </div>
+
+      <!-- Scene 5 — outro (21.0–24.0) -->
+      <div id="s5" class="clip" data-layout-allow-overlap data-start="21.0" data-duration="3.0" data-track-index="4">
+        <div class="scene" data-layout-allow-overlap>
+          <div id="s5-mark" class="wordmark mono">judge<span class="dash">-</span>audit</div>
+          <div id="s5-tag" class="tagline">When it says 90 %, is it right 90 % of the time?</div>
+          <div id="s5-install" class="install mono">pip install kunko-judge-audit</div>
+          <div id="s5-small" class="small mono">kunko-ai-labs/judge-audit · Apache-2.0</div>
+        </div>
+      </div>
+
+      <!-- Audio -->
+      <audio id="music" src="assets/music/judge-audit-bed.mp3"
+             data-start="0" data-duration="24" data-volume="0.35" data-track-index="10"
+             data-automation='{"version":1,"lanes":[{"target":"volume","points":[{"t":0,"v":0},{"t":1,"v":1},{"t":22,"v":1},{"t":24,"v":0}]}]}'></audio>
+      <audio id="sfx-impact" src="assets/sfx/impact/impactSoft_medium_000.ogg" data-start="9.5" data-duration="0.5" data-volume="0.7" data-track-index="11"></audio>
+      <audio id="sfx-error" src="assets/sfx/interface/error_005.ogg" data-start="10.3" data-duration="0.5" data-volume="0.8" data-track-index="12"></audio>
+      <audio id="sfx-bong" src="assets/sfx/interface/bong_001.ogg" data-start="21.2" data-duration="0.5" data-volume="0.6" data-track-index="13"></audio>
+    </div>
+
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      const E = "power2.out";
+
+      // Scene 1 — hook
+      tl.fromTo("#s1-kicker", { opacity: 0, y: 18 }, { opacity: 1, y: 0, duration: 0.6, ease: E }, 0.1);
+      tl.fromTo("#s1-num", { opacity: 0, scale: 0.96 }, { opacity: 1, scale: 1, duration: 0.6, ease: E }, 0.5);
+      tl.fromTo("#s1-sub", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: E }, 2.2);
+      tl.fromTo("#s1-q", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, ease: E }, 3.0);
+      tl.to("#s1 > .scene", { opacity: 0, duration: 0.7, ease: "power1.inOut" }, 4.0);
+
+      // Scene 2 — the run: typed prompt over 1.4s, output at 6.0, red highlight at 6.6
+      tl.fromTo("#s2 > .scene", { opacity: 0 }, { opacity: 1, duration: 0.7, ease: "power1.inOut" }, 4.0);
+      tl.fromTo("#s2-card", { y: 30 }, { y: 0, duration: 0.7, ease: E }, 4.0);
+      tl.fromTo("#s2-cmd .ch", { display: "none" }, { display: "inline-block", duration: 0.01, stagger: 1.4 / 39 }, 4.4);
+      tl.fromTo("#s2-cursor", { opacity: 1 }, { opacity: 0, duration: 0.2 }, 6.0);
+      tl.fromTo("#s2-out", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.4, ease: E }, 6.0);
+      tl.fromTo("#s2-ece", { backgroundColor: "rgba(248,81,73,0)" }, { backgroundColor: "rgba(248,81,73,0.16)", duration: 0.4 }, 6.6);
+      tl.fromTo("#s2-caption", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5, ease: E }, 7.0);
+      tl.to("#s2 > .scene", { opacity: 0, duration: 0.7, ease: "power1.inOut" }, 9.0);
+
+      // Scene 3 — verdict card, then the reveal card slides in at 13.0
+      tl.fromTo("#s3 > .scene", { opacity: 0 }, { opacity: 1, duration: 0.7, ease: "power1.inOut" }, 9.0);
+      tl.fromTo("#s3-red", { y: 40, x: 0 }, { y: 0, x: 0, duration: 0.8, ease: E }, 9.0);
+      tl.fromTo("#s3-title", { opacity: 0 }, { opacity: 1, duration: 0.4 }, 9.2);
+      tl.fromTo("#s3-l1", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.35, ease: "power3.out" }, 9.5);
+      tl.fromTo("#s3-l2", { opacity: 0, x: -16 }, { opacity: 1, x: 0, duration: 0.35, ease: "power3.out" }, 10.3);
+      tl.fromTo("#s3-l3", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.4, ease: E }, 11.2);
+      tl.to("#s3-red", { x: -410, duration: 0.6, ease: "power2.inOut" }, 13.0);
+      tl.fromTo("#s3-green", { opacity: 0, x: 60 }, { opacity: 1, x: 0, duration: 0.6, ease: "power2.out" }, 13.0);
+      tl.fromTo("#s3-caption", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5, ease: E }, 15.0);
+      tl.to("#s3 > .scene", { opacity: 0, duration: 0.7, ease: "power1.inOut" }, 17.0);
+
+      // Scene 4 — three lines on the beat
+      tl.fromTo("#s4 > .scene", { opacity: 0 }, { opacity: 1, duration: 0.6, ease: "power1.inOut" }, 17.0);
+      tl.fromTo("#s4-l1", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.4, ease: E }, 17.3);
+      tl.fromTo("#s4-l2", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.4, ease: E }, 18.5);
+      tl.fromTo("#s4-l3", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.4, ease: E }, 19.7);
+      tl.fromTo("#s4-foot", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 20.2);
+      tl.to("#s4 > .scene", { opacity: 0, duration: 0.7, ease: "power1.inOut" }, 21.0);
+
+      // Scene 5 — outro
+      tl.fromTo("#s5 > .scene", { opacity: 0 }, { opacity: 1, duration: 0.7, ease: "power1.inOut" }, 21.0);
+      tl.fromTo("#s5-mark", { scale: 0.96 }, { scale: 1, duration: 0.6, ease: E }, 21.1);
+      tl.fromTo("#s5-tag", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.5, ease: E }, 21.7);
+      tl.fromTo("#s5-install", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 22.3);
+      tl.fromTo("#s5-small", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 22.7);
+
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

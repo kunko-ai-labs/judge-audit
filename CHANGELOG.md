@@ -3,9 +3,10 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
-## [Unreleased]
+## [0.3.0] — 2026-09-19
 
 ### Added
+- Launch video (`docs/launch/`): 24 s, landscape and vertical cuts, built with the brag recipe on Hyperframes from the real router numbers; reproducible compositions and the procedural music bed committed. Attached to the release.
 - **MCP server** `judge-audit-mcp` (`[mcp]` extra): tools `run_audit`, `check_drift`, `list_judges` over stdio, so Claude Code, Cursor or any MCP client can audit a judge in place. Same engine as the CLI; simulated results carry the SIMULATED tag; unconfigured judges and missing files come back as structured errors. `docs/integrations.md`. (#20)
 
 ## [0.2.1] — 2026-09-19

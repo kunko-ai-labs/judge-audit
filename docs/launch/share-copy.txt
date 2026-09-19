@@ -1,0 +1,7 @@
+Your AI judge says it is 96 % confident. Is it right 96 % of the time?
+
+judge-audit runs any judge in shadow mode against decisions your humans already made and answers the questions that matter before you automate: is the confidence honest (ECE), what share can you automate at zero observed errors, what does it cost, has it drifted.
+
+First independent audits of TypeSafe Jev are in the repo — every number recomputes from a committed raw response. The router one is the story: 0/40 hard tasks routed right at 0.96 confidence, then 37/40 after two descriptive sentences. The failure was the prompt. Only a calibration audit shows it.
+
+Open source, Apache-2.0. pip install kunko-judge-audit

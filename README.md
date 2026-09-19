@@ -21,7 +21,7 @@ judge-audit run examples/email-routing/labels.jsonl --judge simulated   # no API
 judge-audit check examples/email-routing/labels.jsonl --judge simulated --baseline audit-result.json
 ```
 
-▶ [35-second walkthrough video](https://github.com/kunko-ai-labs/judge-audit/releases/download/v0.2.1/demo.mp4)
+▶ [24-second launch video](https://github.com/kunko-ai-labs/judge-audit/releases/download/v0.3.0/brag.mp4) · [vertical cut](https://github.com/kunko-ai-labs/judge-audit/releases/download/v0.3.0/brag-vertical.mp4)
 
 `simulated` is a seeded simulator so you can see the whole pipeline in ten seconds; every report it touches is stamped **SIMULATED**. To audit a real vendor, see [docs/real-audits.md](docs/real-audits.md).
 

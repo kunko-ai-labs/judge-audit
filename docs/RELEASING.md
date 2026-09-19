@@ -6,7 +6,7 @@ Release branches, one per version, off `main`:
 2. PR `release/vX.Y.Z` → `main`; wait for CI (tests on 3.10–3.12, the exit-code contract, `verify_published.py`, dataset regeneration).
 3. Squash-merge. Tag on `main`: `git tag -a vX.Y.Z -m "vX.Y.Z" && git push origin vX.Y.Z`, then move the floating tag: `git tag -f vX.Y && git push -f origin vX.Y`.
 4. `release.yml` runs on the tag: builds sdist + wheel, checks the tag matches the version, attests build provenance (Sigstore), creates the GitHub release if it does not exist yet (generated notes you can edit), attaches the files, and publishes to PyPI through Trusted Publishing.
-5. Attach the launch video (`docs/demo.mp4`, regenerated from the tape with `ffmpeg`) to the release and edit the notes. Delete the release branch.
+5. Attach the launch videos (`docs/launch/brag.mp4`, `docs/launch/brag-vertical.mp4`; re-render per `docs/launch/README.md`) to the release and edit the notes. Delete the release branch.
 
 Audits are not releases: a new audit (new checkpoint + report) lands through an `audit/*` branch and a normal PR, any time.
 
