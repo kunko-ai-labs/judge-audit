@@ -1,54 +1,54 @@
-# judge-audit — visión: el Moody's de los jueces IA
+# judge-audit — vision: the Moody's of AI judges
 
-## La tesis en una frase
+## The thesis in one sentence
 
-Cada vendor publica sus propios benchmarks. Ninguna empresa regulada puede
-desplegar un juez basándose en la palabra del vendor. Alguien tiene que ser
-la autoridad independiente que califica a los jueces. Ese alguien somos nosotros.
+Every vendor publishes its own benchmarks. No regulated company can deploy a
+judge on the vendor's word. Someone has to be the independent authority that
+rates judges. That someone is Kunko AI Labs.
 
-## Por qué ahora
+## Why now
 
-- TypeSafe sale de stealth (15/09/2026, $40M) con la afirmación central de
-  "confianza calibrada" vía RLCD. Afirmación estadística, testeable, sin
-  verificación independiente.
-- El benchmark manual de nikhilmudholkar (1.565 emails, 111k views) demuestra
-  que la comunidad *quiere* auditorías independientes. Lo hizo a mano, una vez.
-- LangChain ya integra Jev (`langchain-typesafe`, AutoModeMiddleware): el
-  ecosistema de consumidores crece; el de verificadores está vacío.
+- TypeSafe comes out of stealth (2026-09-15, $40M) with "calibrated confidence"
+  via RLCD as its central claim. A statistical, testable claim, with no
+  independent verification.
+- nikhilmudholkar's manual benchmark (1,565 emails, 111k views) shows the
+  community *wants* independent audits. He did it by hand, once.
+- LangChain already integrates Jev (`langchain-typesafe`, AutoModeMiddleware):
+  the consumer ecosystem is growing; the verifier ecosystem is empty.
 
-## Las cuatro capas (de open-source a compañía)
+## The four layers (from open source to company)
 
-### 1. Harness open-source (esto, ahora)
-`judge-audit run` — shadow mode contra decisiones humanas etiquetadas.
-Métricas: ECE, reliability bins, curva accuracy-coverage, zero-error coverage,
-coste real, p99. CI gate anti-drift. Juez intercambiable (Jev hoy, cualquiera mañana).
+### 1. Open-source harness (this, now)
+`judge-audit run` — shadow mode against human-labeled decisions.
+Metrics: ECE, reliability bins, accuracy-coverage curve, zero-error coverage,
+real cost, p99. Anti-drift CI gate. Swappable judge (Jev today, anything tomorrow).
 
-### 2. Judge Arena — el leaderboard de la honestidad (distribución)
-Ranking público y continuo de jueces por **calibración**, no por accuracy.
-Los leaderboards son máquinas de distribución (Chatbot Arena lo demostró).
-Cada participante aporta su dataset (opt-in, anonimizado) → el dataset agregado
-se convierte en el moat. Tesis de la casa: el moat es distribución + data gravity.
+### 2. Judge Arena — the honesty leaderboard (distribution)
+A public, continuously updated ranking of judges by **calibration**, not accuracy.
+Leaderboards are distribution machines (Chatbot Arena proved it).
+Each participant contributes its dataset (opt-in, anonymised) → the aggregated
+dataset becomes the moat. House thesis: the moat is distribution + data gravity.
 
-### 3. Evidence dossier para AI Act (ingresos)
-Las empresas europeas que despliegan jueces necesitan evidencia para:
+### 3. Evidence dossier for the AI Act (revenue)
+European companies deploying judges need evidence for:
 Art. 12 (logging), Art. 14 (human oversight), Art. 15 (accuracy/robustness).
-Vendemos el *dossier de evidencia* generado automáticamente, no una certificación.
-Posicionamiento obligatorio: `adapted`, nunca "certificado/conforme".
+We sell the automatically generated *evidence dossier*, not a certification.
+Mandatory positioning: `adapted`, never "certified/compliant".
 
-### 4. Monitor continuo (recurrencia)
-"Datadog para jueces": vigilancia de calibración en producción, alerta cuando
-el drift supera el umbral, con el umbral de escalado a humano como producto.
+### 4. Continuous monitor (recurring)
+"Datadog for judges": calibration monitoring in production, alert when drift
+crosses the threshold, with the human-escalation threshold as the product.
 
-## Cuña España/UE
+## The Spain / EU wedge
 
-Primer auditoría de jueces "AI Act-ready" en español. Sectores regulados
-(banca, seguros, legal) *tienen* que demostrar oversight humano: no les vendemos
-el juez, les vendemos la prueba de que su juez es de fiar. Jueces propios
-especializados en español como fase 2 (idea 29 del backlog).
+The first "AI Act-ready" judge audit in Spanish. Regulated sectors (banking,
+insurance, legal — banca, seguros, legal) *have* to demonstrate human oversight:
+we do not sell them the judge, we sell them the proof that their judge can be
+trusted. Own judges specialised in Spanish as phase 2 (backlog idea 29).
 
-## Sinergia con Agent Assurance
+## Synergy with Agent Assurance
 
-- Agent Assurance = capa determinística (declared vs observed, bloquea).
-- judge-audit = capa probabilística (¿es honesto el juez?, audita).
-- Juntas: el stack europeo de "agent assurance" completo. Determinista donde se
-  puede probar, probabilístico donde hay que medir.
+- Agent Assurance = the deterministic layer (declared vs observed, blocks).
+- judge-audit = the probabilistic layer (is the judge honest?, audits).
+- Together: the complete European "agent assurance" stack. Deterministic where
+  it can be proven, probabilistic where it has to be measured.

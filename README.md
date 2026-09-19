@@ -1,6 +1,6 @@
 # judge-audit
 
-[![CI](https://github.com/kunko-ai-labs/judge-audit/actions/workflows/ci.yml/badge.svg)](https://github.com/kunko-ai-labs/judge-audit/actions/workflows/ci.yml) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE) [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
+[![CI](https://github.com/kunko-ai-labs/judge-audit/actions/workflows/ci.yml/badge.svg)](https://github.com/kunko-ai-labs/judge-audit/actions/workflows/ci.yml) [![Release](https://github.com/kunko-ai-labs/judge-audit/actions/workflows/release.yml/badge.svg)](https://github.com/kunko-ai-labs/judge-audit/actions/workflows/release.yml) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE) [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
 
 **Independent calibration audits for AI judges. When a judge says 90 %, is it right 90 % of the time?**
 
@@ -16,10 +16,12 @@ Everyone is shipping judgment models — TypeSafe's Jev, LLM-as-judge, guardrail
 ![judge-audit run on a labeled dataset, then the CI gate](docs/demo.gif)
 
 ```bash
-pip install judge-audit
+pip install judge-audit                 # every release ships Sigstore-signed build provenance
 judge-audit run examples/email-routing/labels.jsonl --judge simulated   # no API key needed
 judge-audit check examples/email-routing/labels.jsonl --judge simulated --baseline audit-result.json
 ```
+
+▶ [35-second walkthrough video](https://github.com/kunko-ai-labs/judge-audit/releases/download/v0.2.0/demo.mp4)
 
 `simulated` is a seeded simulator so you can see the whole pipeline in ten seconds; every report it touches is stamped **SIMULATED**. To audit a real vendor, see [docs/real-audits.md](docs/real-audits.md).
 

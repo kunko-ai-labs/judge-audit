@@ -36,5 +36,6 @@ Title `type(scope): [ID] Description`. Squash-merged; the title becomes the comm
 
 ## Branches
 
-- `main` — releasable at all times; tags `vX.Y.Z`.
+- `main` — releasable at all times; tags `vX.Y.Z`. Protected: linear history, CI required, no force-push.
+- `release/vX.Y.Z` — one per release, off `main`; version bump + changelog; PR into `main`, then tag. See [docs/RELEASING.md](docs/RELEASING.md).
 - `feat/*`, `fix/*`, `docs/*`, `audit/*` — short-lived, PR into `main`.
