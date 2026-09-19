@@ -54,6 +54,6 @@ class MyJudge(Judge):
 
 Register it in `src/judge_audit/cli.py` (`JUDGES` + `_judge`), add a test with the network mocked (see `tests/test_llm_judge.py`), and send a PR.
 
-## MCP / API
+## MCP
 
-A `judge-audit-mcp` server (tools: `run_audit`, `check_drift`) so agents and IDEs can audit a judge in place is roadmap v0.3 — see the issue tracker.
+`judge-audit-mcp` exposes the same engine to any MCP client (`run_audit`, `check_drift`, `list_judges`), so an agent can audit the judge it is about to rely on from inside its own session. Setup for Claude Code and Cursor in [integrations.md](integrations.md).

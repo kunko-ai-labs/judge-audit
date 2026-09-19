@@ -30,6 +30,7 @@ jobs:
       - name: Smoke — audit with the simulated judge, no key needed
         run: |
           judge-audit --version
+          judge-audit-mcp --help > /dev/null
           judge-audit run examples/email-routing/labels.jsonl --judge simulated --json baseline.json
           judge-audit run examples/email-routing/labels.jsonl --judge simulated --format html --out report.html
           test -s audit-report.md && test -s report.html && test -s audit-judgments.jsonl

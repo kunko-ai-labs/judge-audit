@@ -3,6 +3,11 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
+## [Unreleased]
+
+### Added
+- **MCP server** `judge-audit-mcp` (`[mcp]` extra): tools `run_audit`, `check_drift`, `list_judges` over stdio, so Claude Code, Cursor or any MCP client can audit a judge in place. Same engine as the CLI; simulated results carry the SIMULATED tag; unconfigured judges and missing files come back as structured errors. `docs/integrations.md`. (#20)
+
 ## [0.2.1] — 2026-09-19
 
 ### Changed

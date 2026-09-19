@@ -53,6 +53,8 @@ Honest limits: every dataset is synthetic and seeded (generators in `examples/`)
 
 Exit codes: `0` ok · `1` drift detected · `2` usage or configuration error (the message says what to fix).
 
+**From inside an agent:** `pip install "kunko-judge-audit[mcp]"` then `claude mcp add judge-audit -- judge-audit-mcp` (or the equivalent in Cursor). The agent gets `run_audit`, `check_drift` and `list_judges` and can audit the judge it is about to rely on without leaving the session. See [docs/integrations.md](docs/integrations.md).
+
 ## Judge interface
 
 Anything that maps `(state, questions) -> (decision, confidence)` plugs in:
@@ -86,7 +88,7 @@ Accuracy tells you who wins a benchmark. Calibration tells you what you can auto
 
 ## Roadmap
 
-MCP server so agents audit their own judge in place → Score questions + MCE (the regulator's number) → Judge Arena (Jev vs OpenJev vs Claude vs open models on the same datasets, published) → AI Act evidence dossier. Details and reasons in [docs/ROADMAP.md](docs/ROADMAP.md); the live backlog is the issues.
+Score questions + MCE (the regulator's number) → Judge Arena (Jev vs OpenJev vs Claude vs open models on the same datasets, published) → AI Act evidence dossier. Details and reasons in [docs/ROADMAP.md](docs/ROADMAP.md); the live backlog is the issues.
 
 ## FAQ
 
