@@ -8,7 +8,8 @@ All notable changes to this project are documented here. The format follows
 First public release.
 
 ### Added
-- **Jev adapter** through the Vercel AI Gateway evaluate API (Node bridge) and the direct TypeSafe endpoint; per-option descriptions are passed as SDK criteria.
+- **Jev adapter** through the Vercel AI Gateway evaluate API (Node bridge) and the direct TypeSafe HTTP API; per-option descriptions are passed as `criteria`. `JEV_ENDPOINT` points the direct client at any Jev-compatible server (OpenJev), key optional.
+- **`llm` adapter**: any chat model as a judge with verbalized confidence — Claude through the official SDK (`[anthropic]` extra), or any OpenAI-compatible endpoint (OpenAI, Ollama, vLLM). Prices for known models; unknown models report cost 0 and say so.
 - **Three independent audits of Jev**, each with its dataset generator, raw checkpoint under `docs/runs/`, report and JSON: clean business emails (n=200), adversarial emails (n=200: prompt injection, homoglyphs, ambiguity, PII, social engineering), task routing (n=120) with the option-description ablation.
 - **Provenance** in every report and JSON: model, backend, timestamp, dataset SHA-256, judge-audit version. The resumable driver records it as the first line of each checkpoint.
 - `--judgments`: per-decision evidence written as JSONL by `judge-audit run`.
@@ -17,6 +18,9 @@ First public release.
 - `judge-audit --version`; exit-code contract `0 / 1 (drift) / 2 (usage or configuration)`.
 - Tests (metrics on hand-checked inputs, runner, CLI contract, published-audit reproducibility, dataset regeneration), CI matrix 3.10–3.12, ruff.
 - LICENSE (Apache-2.0), CONTRIBUTING, SECURITY, CODEOWNERS, Dependabot, roadmap, this changelog.
+
+### Fixed
+- The direct TypeSafe backend sent `options` and read answers at the top level; the documented API takes `criteria` and returns them under `answers`. It had never been exercised.
 
 ### Changed
 - License from MIT (declared, no file) to Apache-2.0 (file included), aligned with the rest of Kunko AI Labs.

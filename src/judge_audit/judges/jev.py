@@ -7,8 +7,10 @@ Two backends:
   - "gateway"  (default): via Vercel AI Gateway + AI SDK `evaluate` API.
                  Needs a Vercel AI Gateway API key (AI_GATEWAY_API_KEY).
                  Jev is NOT reachable via /v1/chat/completions.
-  - "typesafe": direct TypeSafe API (https://api.typesafe.ai/v1/systemone).
-                 Needs TYPESAFE_API_KEY (waitlist).
+  - "typesafe": direct TypeSafe HTTP API (https://api.typesafe.ai/v1/systemone).
+                 Needs TYPESAFE_API_KEY (waitlist). Set JEV_ENDPOINT to point the
+                 same client at any Jev-compatible server (OpenJev and friends
+                 implement this API); the key is then optional.
 
 The audited "confidence" is P(chosen option) from the per-option
 probability distribution — the actual probabilistic claim. TypeSafe's
@@ -21,12 +23,14 @@ import os
 import random
 import subprocess
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
 from .base import Judge, Judgment, Question, QuestionType
 
 TYPESAFE_ENDPOINT = "https://api.typesafe.ai/v1/systemone"
+DIRECT_MODEL = "jev-latest"
 INPUT_PRICE_PER_MTOK = 0.042  # USD, per TypeSafe's published pricing (output free)
 
 _BRIDGE = Path(__file__).with_name("bridge") / "jev_bridge.mjs"
@@ -77,17 +81,25 @@ class JevJudge(Judge):
                     "the Node bridge has no dependencies installed. Run: "
                     f"npm install --prefix {_BRIDGE.parent}  (needs Node >= 20)")
         elif self.backend == "typesafe":
+            self.endpoint = os.environ.get("JEV_ENDPOINT", TYPESAFE_ENDPOINT)
             self.api_key = api_key or os.environ.get("TYPESAFE_API_KEY", "")
-            if not self.api_key:
+            if model is None and "JEV_MODEL" not in os.environ:
+                self.model = DIRECT_MODEL
+            if self.endpoint == TYPESAFE_ENDPOINT and not self.api_key:
                 raise RuntimeError("TYPESAFE_API_KEY is not set (waitlist: https://typesafe.ai)")
+            if self.endpoint != TYPESAFE_ENDPOINT:
+                self.name = os.environ.get("JEV_NAME", "jev-compatible")
         else:
             raise ValueError(f"unknown backend '{self.backend}' (gateway | typesafe)")
 
     def describe(self) -> dict:
-        return {"name": self.name, "model": self.model, "backend": self.backend,
-                "bridge": "vercel-ai-sdk/experimental_evaluate" if self.backend == "gateway"
-                else "typesafe-systemone-http",
-                "input_price_per_mtok_usd": INPUT_PRICE_PER_MTOK}
+        d = {"name": self.name, "model": self.model, "backend": self.backend,
+             "bridge": "vercel-ai-sdk/experimental_evaluate" if self.backend == "gateway"
+             else "typesafe-systemone-http",
+             "input_price_per_mtok_usd": INPUT_PRICE_PER_MTOK}
+        if self.backend == "typesafe":
+            d["endpoint"] = self.endpoint
+        return d
 
     # ------------------------------------------------------------------ public
     def decide(self, state: str, questions: list[Question]) -> list[Judgment]:
@@ -185,50 +197,62 @@ class JevJudge(Judge):
 
     # ----------------------------------------------------------------- direct
     def _decide_typesafe(self, state: str, questions: list[Question]) -> list[Judgment]:
-        payload = {
-            "model": self.model,
-            "state": state,
-            "questions": {
-                q.name: {
-                    "type": q.type.value,
-                    "instructions": q.instructions,
-                    **({"options": q.options} if q.options else {}),
-                    **({"descriptions": q.descriptions} if q.descriptions else {}),
-                }
-                for q in questions
-            },
-        }
-        req = urllib.request.Request(
-            TYPESAFE_ENDPOINT,
-            data=json.dumps(payload).encode(),
-            headers={"Authorization": f"Bearer {self.api_key}",
-                     "Content-Type": "application/json"},
-        )
+        payload = {"model": self.model, "state": state,
+                   "questions": {q.name: self._direct_question(q) for q in questions}}
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        req = urllib.request.Request(self.endpoint, data=json.dumps(payload).encode(),
+                                     headers=headers)
         t0 = time.monotonic()
-        with urllib.request.urlopen(req, timeout=60) as resp:
-            body = json.load(resp)
+        try:
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                body = json.load(resp)
+        except urllib.error.HTTPError as e:
+            detail = e.read().decode(errors="replace")[:300]
+            if e.code in (429, 503, 529):
+                raise _RateLimited(f"{self.endpoint} returned {e.code}: {detail}") from e
+            raise RuntimeError(f"{self.endpoint} returned {e.code}: {detail}") from e
         latency = time.monotonic() - t0
+        answers = body.get("answers") or {}
+        usage = body.get("usage") or {}
+        in_tok = usage.get("input_tokens", 0)
+        cost = in_tok / 1e6 * INPUT_PRICE_PER_MTOK if self.endpoint == TYPESAFE_ENDPOINT else 0.0
 
         out: list[Judgment] = []
         for q in questions:
-            ans = body.get(q.name, {})
+            ans = answers.get(q.name) or {}
             decision, confidence = self._parse_direct(q, ans)
-            in_tok = body.get("usage", {}).get("input_tokens", 0)
             out.append(Judgment(
                 question=q.name, decision=decision, confidence=confidence,
                 latency_s=latency / max(len(questions), 1),
-                cost_usd=in_tok / 1e6 * INPUT_PRICE_PER_MTOK,
-                raw=ans,
+                cost_usd=cost / max(len(questions), 1),
+                raw={"answer": ans, "typesafe_confidence": ans.get("confidence"),
+                     "usage": usage, "model": body.get("model")},
             ))
         return out
+
+    @staticmethod
+    def _direct_question(q: Question) -> dict:
+        """Wire shape of https://docs.typesafe.ai/api: criteria carries the options."""
+        base: dict = {"type": q.type.value, "instructions": q.instructions}
+        if q.type is QuestionType.CHOICE and q.options:
+            base["criteria"] = {opt: q.descriptions.get(opt) for opt in q.options}
+        elif q.type is QuestionType.SCORE and q.options:
+            base["criteria"] = list(q.options)
+        return base
 
     @staticmethod
     def _parse_direct(q: Question, ans: dict) -> tuple[str, float]:
         if q.type is QuestionType.NOUL:
             p = float(ans.get("noul", 0.5))
             return ("true" if p >= 0.5 else "false"), max(p, 1 - p)
+        probs = ans.get("probabilities") or {}
         if q.type is QuestionType.CHOICE:
-            probs = ans.get("probabilities", {}) or {}
-            best = max(probs, key=lambda k: probs[k]) if probs else ""
-            return best, float(ans.get("confidence", probs.get(best, 0.0) if best else 0.0))
-        return str(ans.get("score", ans.get("level", ""))), float(ans.get("confidence", 0.5))
+            if probs:
+                best = max(probs, key=lambda k: probs[k])
+                return best, float(probs[best])
+            return str(ans.get("choice", "")), float(ans.get("confidence", 0.5))
+        # SCORE: probability-weighted value; confidence is P(most likely level)
+        conf = float(max(probs.values())) if probs else float(ans.get("confidence", 0.5))
+        return str(ans.get("score", "")), conf

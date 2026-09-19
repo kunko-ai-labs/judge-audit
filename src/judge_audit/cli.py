@@ -11,11 +11,12 @@ from typing import NoReturn
 
 from . import __version__
 from .judges.jev import JevJudge
+from .judges.llm import LLMJudge
 from .judges.simulated import SIMULATED_TAG, SimulatedJudge
 from .report import check_drift, render_html, render_markdown
 from .runner import load_jsonl, run_audit, write_judgments
 
-JUDGES = ("jev", "simulated")
+JUDGES = ("jev", "llm", "simulated")
 
 
 def _die(msg: str) -> NoReturn:
@@ -26,6 +27,8 @@ def _die(msg: str) -> NoReturn:
 def _judge(name: str, rows: list | None = None):
     if name == "jev":
         return JevJudge(), ""
+    if name == "llm":
+        return LLMJudge(), ""
     if name == "simulated":
         return SimulatedJudge(rows or []), SIMULATED_TAG
     _die(f"unknown judge '{name}' (available: {', '.join(JUDGES)})")
@@ -41,7 +44,8 @@ def _parser() -> argparse.ArgumentParser:
     r = sub.add_parser("run", help="audit a judge against a labeled JSONL file")
     r.add_argument("labels", help="JSONL: {state, questions:[...], labels:{...}}")
     r.add_argument("--judge", default="jev", choices=JUDGES,
-                   help="jev needs AI_GATEWAY_API_KEY; simulated needs nothing")
+                   help="jev: AI_GATEWAY_API_KEY (or JEV_ENDPOINT) · llm: any chat model, "
+                        "see docs/judges.md · simulated: nothing")
     r.add_argument("--format", choices=["md", "html"], default="md")
     r.add_argument("--out", default=None, help="report path (default audit-report.md|html)")
     r.add_argument("--json", default="audit-result.json", help="metrics + run metadata")

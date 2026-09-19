@@ -65,7 +65,7 @@ class MyJudge(Judge):
         ...  # return Judgment(question=q.name, decision="spam", confidence=0.93)
 ```
 
-Ships with `JevJudge` (TypeSafe, via Vercel AI Gateway or the direct API) and `SimulatedJudge`. A generic LLM-as-judge adapter is [next on the roadmap](docs/ROADMAP.md).
+Ships with three: `jev` (TypeSafe Jev — and, via `JEV_ENDPOINT`, any Jev-compatible server such as OpenJev), `llm` (any chat model with a confidence prompt: Claude through the official SDK, or anything OpenAI-compatible — OpenAI, Ollama, vLLM) and `simulated`. Run the same dataset through several and you have the first row of the Judge Arena. Details in [docs/judges.md](docs/judges.md).
 
 ## Why calibration, not accuracy
 
@@ -84,7 +84,7 @@ Accuracy tells you who wins a benchmark. Calibration tells you what you can auto
 
 ## Roadmap
 
-LLM-as-judge adapter (audit what people actually run) → Score questions + MCE (the regulator's number) → Judge Arena (a public calibration leaderboard) → AI Act evidence dossier. Details and reasons in [docs/ROADMAP.md](docs/ROADMAP.md); the live backlog is the issues.
+MCP server so agents audit their own judge in place → Score questions + MCE (the regulator's number) → Judge Arena (Jev vs OpenJev vs Claude vs open models on the same datasets, published) → AI Act evidence dossier. Details and reasons in [docs/ROADMAP.md](docs/ROADMAP.md); the live backlog is the issues.
 
 ## FAQ
 
