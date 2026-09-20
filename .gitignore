@@ -7,3 +7,4 @@ build/
 node_modules/
 *.log
 docs/.frames/
+.DS_Store
