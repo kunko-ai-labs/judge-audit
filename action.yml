@@ -1,5 +1,5 @@
 name: "judge-audit"
-description: "Independent calibration audit for AI judges: is the confidence honest, what can you automate at zero observed errors, has it drifted since the baseline."
+description: "Calibration audit for AI judges: is the confidence honest, what can you automate, has it drifted. Fails the build on drift."
 author: "Kunko AI Labs"
 branding:
   icon: "check-circle"
