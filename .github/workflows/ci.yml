@@ -47,6 +47,10 @@ jobs:
       - name: Published audits recompute from their raw checkpoints
         run: |
           python scripts/verify_published.py
+      - name: Arena table recomputes from its checkpoints
+        run: |
+          python scripts/arena_report.py
+          git diff --exit-code -- docs/arena-2026-09.md docs/arena-2026-09.json
 
   datasets:
     runs-on: ubuntu-latest

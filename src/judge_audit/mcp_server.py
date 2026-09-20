@@ -58,6 +58,13 @@ JUDGE_INFO: dict[str, dict[str, object]] = {
                 "LLM_PROVIDER=openai-compatible + LLM_BASE_URL + LLM_MODEL (+ LLM_API_KEY)",
                 "LLM_EFFORT (anthropic only, optional)"],
     },
+    "nli": {
+        "description": "Local zero-shot NLI encoder (DeBERTa-class): the small-model baseline. "
+                       "Confidence is the entailment softmax over options; cannot follow "
+                       "instructions by design.",
+        "env": ["extra [nli] (transformers + torch)",
+                "NLI_MODEL, NLI_HYPOTHESIS, NLI_DEVICE (optional)"],
+    },
     "simulated": {
         "description": "Seeded simulator to see the pipeline without a key. Not a real "
                        "vendor audit; every result is tagged SIMULATED.",

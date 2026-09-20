@@ -8,22 +8,32 @@ the point of measuring it.
 
 Providers:
   anthropic          official SDK (`pip install 'judge-audit[anthropic]'`), ANTHROPIC_API_KEY
-  openai-compatible  any /chat/completions endpoint: OpenAI, Ollama, vLLM, LM Studio...
-                     LLM_BASE_URL (e.g. https://api.openai.com/v1), LLM_API_KEY (optional
-                     for local servers)
+  openai-compatible  any /chat/completions endpoint: OpenAI, Ollama, vLLM, LM Studio, Gemini's
+                     OpenAI endpoint... LLM_BASE_URL (e.g. https://api.openai.com/v1),
+                     LLM_API_KEY (optional for local servers)
+  custom             your own transport: LLM_PROVIDER_MODULE=/path/to/module.py exposing
+                     `call(model, system, user) -> (text, input_tokens, output_tokens)` and,
+                     optionally, `describe(model) -> dict` and `price(model) -> (in, out)`.
+                     For hosted platforms without an OpenAI-compatible endpoint.
 
-Environment: LLM_PROVIDER, LLM_MODEL, LLM_BASE_URL, LLM_API_KEY, LLM_EFFORT (anthropic only).
+Environment: LLM_PROVIDER, LLM_MODEL, LLM_MODEL_LABEL (what reports show; defaults to LLM_MODEL),
+LLM_BASE_URL, LLM_API_KEY, LLM_EFFORT (anthropic only), LLM_PROVIDER_MODULE (custom only).
 """
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
+import random
 import re
 import time
 import urllib.error
 import urllib.request
 
 from .base import Judge, Judgment, Question, QuestionType
+
+# HTTP statuses worth waiting out: rate limit, overloaded, unavailable, gateway timeout.
+TRANSIENT = {429, 503, 529, 502, 504}
 
 # USD per million tokens (input, output). Unknown models report cost 0 and say so.
 PRICES: dict[str, tuple[float, float]] = {
@@ -32,6 +42,8 @@ PRICES: dict[str, tuple[float, float]] = {
     "claude-haiku-4-5": (1.0, 5.0),
     "gpt-5": (1.25, 10.0),
     "gpt-5-mini": (0.25, 2.0),
+    "gemini-3-flash-preview": (0.30, 2.50),
+    "gemini-3.6-flash": (0.30, 2.50),
 }
 
 SYSTEM = (
@@ -93,6 +105,19 @@ class LLMJudge(Judge):
             self._client = (anthropic.Anthropic(api_key=api_key) if api_key
                             else anthropic.Anthropic())
             self._anthropic = anthropic
+        elif self.provider == "custom":
+            self.model = model or os.environ.get("LLM_MODEL", "")
+            path = os.environ.get("LLM_PROVIDER_MODULE", "")
+            if not path or not os.path.exists(path):
+                raise RuntimeError("LLM_PROVIDER_MODULE must point to a Python file exposing "
+                                   "call(model, system, user)")
+            if not self.model:
+                raise RuntimeError("LLM_MODEL is not set")
+            spec = importlib.util.spec_from_file_location("judge_audit_custom_provider", path)
+            self._custom = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(self._custom)
+            if not callable(getattr(self._custom, "call", None)):
+                raise RuntimeError(f"{path} has no call(model, system, user)")
         elif self.provider == "openai-compatible":
             self.model = model or os.environ.get("LLM_MODEL", "")
             self.api_key = api_key or os.environ.get("LLM_API_KEY", "")
@@ -103,23 +128,36 @@ class LLMJudge(Judge):
             if not self.model:
                 raise RuntimeError("LLM_MODEL is not set (e.g. gpt-5-mini, llama3.1)")
         else:
-            raise ValueError(f"unknown provider '{self.provider}' (anthropic | openai-compatible)")
-        self.name = f"llm:{self.model}"
+            raise ValueError(f"unknown provider '{self.provider}' "
+                             "(anthropic | openai-compatible | custom)")
+        self.label = os.environ.get("LLM_MODEL_LABEL") or self.model
+        self.name = f"llm:{self.label}"
 
     def describe(self) -> dict:
-        d = {"name": self.name, "provider": self.provider, "model": self.model,
+        d = {"name": self.name, "provider": self.provider, "model": self.label,
              "confidence_method": "verbalized (model-reported probability)"}
-        if self.base_url:
+        if self.provider == "custom":
+            extra = getattr(self._custom, "describe", None)
+            if callable(extra):
+                d.update(extra(self.model))
+        elif self.base_url:
             d["base_url"] = self.base_url
         if self.effort:
             d["effort"] = self.effort
         return d
+
+    def _price(self) -> tuple[float, float] | None:
+        if self.provider == "custom" and callable(getattr(self._custom, "price", None)):
+            return self._custom.price(self.model)
+        return PRICES.get(self.model)
 
     # ---------------------------------------------------------------- calls
     def _call(self, user: str) -> tuple[str, int, int]:
         """Returns (text, input_tokens, output_tokens)."""
         if self.provider == "anthropic":
             return self._call_anthropic(user)
+        if self.provider == "custom":
+            return self._custom.call(self.model, SYSTEM, user)
         return self._call_openai_compatible(user)
 
     def _call_anthropic(self, user: str) -> tuple[str, int, int]:
@@ -149,14 +187,22 @@ class LLMJudge(Judge):
             headers["Authorization"] = f"Bearer {self.api_key}"
         req = urllib.request.Request(f"{self.base_url}/chat/completions",
                                      data=json.dumps(body).encode(), headers=headers)
-        try:
-            with urllib.request.urlopen(req, timeout=120) as r:
-                data = json.load(r)
-        except urllib.error.HTTPError as e:
-            detail = e.read().decode(errors="replace")[:300]
-            if e.code == 429:
-                raise RuntimeError(f"rate-limited by {self.base_url}: {detail}") from e
-            raise RuntimeError(f"{self.base_url} returned {e.code}: {detail}") from e
+        last = ""
+        for attempt in range(5):
+            try:
+                with urllib.request.urlopen(req, timeout=120) as r:
+                    data = json.load(r)
+                break
+            except urllib.error.HTTPError as e:
+                detail = e.read().decode(errors="replace")[:300]
+                if e.code in TRANSIENT:
+                    last = f"{e.code}: {detail}"
+                    time.sleep(min(2 ** attempt * 5 + random.uniform(0, 3), 120))
+                    continue
+                raise RuntimeError(f"{self.base_url} returned {e.code}: {detail}") from e
+        else:
+            # "rate-limited" is what scripts/audit_resumable.py looks for before sleeping.
+            raise RuntimeError(f"rate-limited by {self.base_url} after retries ({last})")
         text = data["choices"][0]["message"]["content"]
         usage = data.get("usage") or {}
         return text, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
@@ -166,7 +212,7 @@ class LLMJudge(Judge):
         t0 = time.monotonic()
         text, in_tok, out_tok = self._call(_render(state, questions))
         latency = time.monotonic() - t0
-        price = PRICES.get(self.model)
+        price = self._price()
         cost = (in_tok * price[0] + out_tok * price[1]) / 1e6 if price else 0.0
         try:
             answers = _extract_json(text).get("answers", {})

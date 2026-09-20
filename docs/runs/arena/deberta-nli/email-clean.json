@@ -1,0 +1,219 @@
+{
+  "judge": "nli",
+  "n": 200,
+  "accuracy": 0.865,
+  "ece": 0.1765,
+  "reliability_bins": [
+    {
+      "bin": "0.0-0.1",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.1-0.2",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.2-0.3",
+      "avg_confidence": 0.2365,
+      "accuracy": 0.8889,
+      "n": 9
+    },
+    {
+      "bin": "0.3-0.4",
+      "avg_confidence": 0.3692,
+      "accuracy": 0.5455,
+      "n": 11
+    },
+    {
+      "bin": "0.4-0.5",
+      "avg_confidence": 0.4622,
+      "accuracy": 0.3333,
+      "n": 15
+    },
+    {
+      "bin": "0.5-0.6",
+      "avg_confidence": 0.5549,
+      "accuracy": 0.875,
+      "n": 24
+    },
+    {
+      "bin": "0.6-0.7",
+      "avg_confidence": 0.65,
+      "accuracy": 0.8,
+      "n": 30
+    },
+    {
+      "bin": "0.7-0.8",
+      "avg_confidence": 0.7478,
+      "accuracy": 0.9429,
+      "n": 35
+    },
+    {
+      "bin": "0.8-0.9",
+      "avg_confidence": 0.8408,
+      "accuracy": 1.0,
+      "n": 27
+    },
+    {
+      "bin": "0.9-1.0",
+      "avg_confidence": 0.9539,
+      "accuracy": 1.0,
+      "n": 49
+    }
+  ],
+  "accuracy_coverage": [
+    {
+      "coverage": 0.05,
+      "accuracy": 1.0,
+      "n": 10,
+      "min_confidence": 0.9792
+    },
+    {
+      "coverage": 0.1,
+      "accuracy": 1.0,
+      "n": 20,
+      "min_confidence": 0.9655
+    },
+    {
+      "coverage": 0.15,
+      "accuracy": 1.0,
+      "n": 30,
+      "min_confidence": 0.961
+    },
+    {
+      "coverage": 0.2,
+      "accuracy": 1.0,
+      "n": 40,
+      "min_confidence": 0.9226
+    },
+    {
+      "coverage": 0.25,
+      "accuracy": 1.0,
+      "n": 50,
+      "min_confidence": 0.8968
+    },
+    {
+      "coverage": 0.3,
+      "accuracy": 1.0,
+      "n": 60,
+      "min_confidence": 0.8525
+    },
+    {
+      "coverage": 0.35,
+      "accuracy": 1.0,
+      "n": 70,
+      "min_confidence": 0.8093
+    },
+    {
+      "coverage": 0.4,
+      "accuracy": 1.0,
+      "n": 80,
+      "min_confidence": 0.7912
+    },
+    {
+      "coverage": 0.45,
+      "accuracy": 1.0,
+      "n": 90,
+      "min_confidence": 0.7479
+    },
+    {
+      "coverage": 0.5,
+      "accuracy": 1.0,
+      "n": 100,
+      "min_confidence": 0.7402
+    },
+    {
+      "coverage": 0.55,
+      "accuracy": 0.9818,
+      "n": 110,
+      "min_confidence": 0.7015
+    },
+    {
+      "coverage": 0.6,
+      "accuracy": 0.9667,
+      "n": 120,
+      "min_confidence": 0.6697
+    },
+    {
+      "coverage": 0.65,
+      "accuracy": 0.9538,
+      "n": 130,
+      "min_confidence": 0.6392
+    },
+    {
+      "coverage": 0.7,
+      "accuracy": 0.9429,
+      "n": 140,
+      "min_confidence": 0.6103
+    },
+    {
+      "coverage": 0.75,
+      "accuracy": 0.9467,
+      "n": 150,
+      "min_confidence": 0.5553
+    },
+    {
+      "coverage": 0.8,
+      "accuracy": 0.9375,
+      "n": 160,
+      "min_confidence": 0.5411
+    },
+    {
+      "coverage": 0.85,
+      "accuracy": 0.9176,
+      "n": 170,
+      "min_confidence": 0.4802
+    },
+    {
+      "coverage": 0.9,
+      "accuracy": 0.8833,
+      "n": 180,
+      "min_confidence": 0.4179
+    },
+    {
+      "coverage": 0.95,
+      "accuracy": 0.8684,
+      "n": 190,
+      "min_confidence": 0.3511
+    },
+    {
+      "coverage": 1.0,
+      "accuracy": 0.865,
+      "n": 200,
+      "min_confidence": 0.2252
+    }
+  ],
+  "zero_error_coverage": {
+    "coverage": 0.515,
+    "n": 103,
+    "threshold": 0.7368
+  },
+  "total_cost_usd": 0.0,
+  "p50_latency_s": 0.321,
+  "p99_latency_s": 0.768,
+  "run": {
+    "judge_audit_version": "0.3.1",
+    "judge": {
+      "name": "nli:deberta-v3-base-zeroshot-v2.0",
+      "provider": "local",
+      "model": "deberta-v3-base-zeroshot-v2.0",
+      "model_id": "MoritzLaurer/deberta-v3-base-zeroshot-v2.0",
+      "confidence_method": "NLI entailment softmax over options",
+      "hypothesis_template": "This text is about {}.",
+      "device": "mps"
+    },
+    "python": "3.12.8",
+    "dataset": {
+      "path": "examples/email-routing/labels.jsonl",
+      "sha256": "c5b4c111290aa657236ea520a8043b14ce23e9b26af01a6c5e7ec9b87082e1cf",
+      "rows": 200
+    },
+    "recomputed_utc": "2026-09-20T18:50:38+00:00",
+    "note": "original run time not recorded in this checkpoint",
+    "checkpoint": "docs/runs/arena/deberta-nli/email-clean.ckpt.jsonl"
+  }
+}

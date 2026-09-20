@@ -59,9 +59,9 @@ def test_check_drift_empty_baseline_is_a_structured_error(labels_path, tmp_path)
     assert "error" in out and "baseline" in out["error"]
 
 
-def test_list_judges_names_all_three():
+def test_list_judges_names_all_four():
     out = mcp_server.list_judges()
-    assert {j["name"] for j in out["judges"]} == {"jev", "llm", "simulated"}
+    assert {j["name"] for j in out["judges"]} == {"jev", "llm", "nli", "simulated"}
     assert all("description" in j and "env" in j for j in out["judges"])
     assert out["simulated_tag"] == SIMULATED_TAG
 

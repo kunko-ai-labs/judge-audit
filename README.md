@@ -44,6 +44,20 @@ Same judge (TypeSafe Jev, via Vercel AI Gateway), three jobs, every raw response
 
 Honest limits: every dataset is synthetic and seeded (generators in `examples/`); n is small; ground truth for routing is by construction, not by running the cheap model. Read the *Caveats* section of each report before quoting it.
 
+## The Arena: same datasets, other judges
+
+Every judge below ran the same four datasets through the same harness; raw responses under [`docs/runs/arena/`](docs/runs/arena/), full table in [docs/arena-2026-09.md](docs/arena-2026-09.md), regenerated in CI. Emails under attack (n=200) and the described-options router (n=120):
+
+| judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | conf drop under injection | router (described) | cost-inflation attacks that land | cost / 200 |
+|---|---|---|---|---|---|---|---|---|---|
+| Jev (TypeSafe) | option probability | 95.5% | 0.039 | **73%** | 0.93 / 0.60 | +0.28 | 97.5% | 0/40 | $0.004 |
+| Claude Sonnet 4.5 | verbalized | 96.5% | 0.016 | **2%** | 0.96 / 0.88 | +0.03 | 88.3% | 6/40 | $0.454 |
+| Llama 3.3 70B | verbalized | 90.5% | 0.015 | **0%** | 0.90 / 0.82 | +0.06 | 86.7% | 16/40 | $0.041 |
+| llama3.2 3B (local) | verbalized | 72.5% | 0.154 | **0%** | 0.87 / 0.91 | -0.03 | 59.2% | 9/40 | $0.000 |
+| DeBERTa-v3 NLI zero-shot (local) | NLI entailment softmax over options | 59.5% | 0.125 | **8%** | 0.73 / 0.56 | +0.09 | 49.2% | 39/40 | $0.000 |
+
+**Read the zero-error coverage column.** Claude Sonnet 4.5 is slightly *more accurate* than Jev under attack and has a lower ECE — yet you could automate 2 % of its decisions with no observed error, against 73 % with Jev, because its confidence barely moves when it is wrong (0.88). A judge that says 0.60 when it is guessing is worth more than one that says 0.88. The 3B chat model is *more* confident when wrong than when right; its number is decoration. The small NLI encoder cannot be prompt-injected (it does not read instructions) but routes at coin-flip level. Chat-model confidence here is verbalized (the model writes a number); Jev's is the probability of the chosen option, not the API's `confidence` field, which is a rescaling of that probability ([analysis](https://bernoulli.app/articles/is-jev-confident)) and calibrates worse on our data (ECE 0.13 vs 0.05 on the router).
+
 ## How it works
 
 1. **Labeled dataset** — JSONL rows `{state, questions, labels}`. Your humans already decided; the judge must reproduce them.
@@ -79,7 +93,7 @@ class MyJudge(Judge):
         ...  # return Judgment(question=q.name, decision="spam", confidence=0.93)
 ```
 
-Ships with three: `jev` (TypeSafe Jev — and, via `JEV_ENDPOINT`, any Jev-compatible server such as OpenJev), `llm` (any chat model with a confidence prompt: Claude through the official SDK, or anything OpenAI-compatible — OpenAI, Ollama, vLLM) and `simulated`. Run the same dataset through several and you have the first row of the Judge Arena. Details in [docs/judges.md](docs/judges.md).
+Ships with four: `jev` (TypeSafe Jev — and, via `JEV_ENDPOINT`, any Jev-compatible server such as OpenJev), `llm` (any chat model with a confidence prompt: Claude through the official SDK, anything OpenAI-compatible — OpenAI, Gemini, Ollama, vLLM — or your own transport), `nli` (a local zero-shot encoder, the small-model baseline) and `simulated`. Details in [docs/judges.md](docs/judges.md).
 
 ## Why calibration, not accuracy
 
@@ -98,7 +112,7 @@ Accuracy tells you who wins a benchmark. Calibration tells you what you can auto
 
 ## Roadmap
 
-Score questions + MCE (the regulator's number) → Judge Arena (Jev vs OpenJev vs Claude vs open models on the same datasets, published) → AI Act evidence dossier. Details and reasons in [docs/ROADMAP.md](docs/ROADMAP.md); the live backlog is the issues.
+Score questions + MCE (the regulator's number) → Judge Arena as a living leaderboard with a submission spec (the first table is above) → AI Act evidence dossier. Details and reasons in [docs/ROADMAP.md](docs/ROADMAP.md); the live backlog is the issues.
 
 ## FAQ
 

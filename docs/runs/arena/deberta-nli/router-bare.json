@@ -1,0 +1,219 @@
+{
+  "judge": "nli",
+  "n": 120,
+  "accuracy": 0.475,
+  "ece": 0.4027,
+  "reliability_bins": [
+    {
+      "bin": "0.0-0.1",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.1-0.2",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.2-0.3",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.3-0.4",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.4-0.5",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.5-0.6",
+      "avg_confidence": 0.5447,
+      "accuracy": 0.6296,
+      "n": 54
+    },
+    {
+      "bin": "0.6-0.7",
+      "avg_confidence": 0.651,
+      "accuracy": 0.8571,
+      "n": 21
+    },
+    {
+      "bin": "0.7-0.8",
+      "avg_confidence": 0.76,
+      "accuracy": 1.0,
+      "n": 5
+    },
+    {
+      "bin": "0.8-0.9",
+      "avg_confidence": 0.8867,
+      "accuracy": 0.0,
+      "n": 5
+    },
+    {
+      "bin": "0.9-1.0",
+      "avg_confidence": 0.9651,
+      "accuracy": 0.0,
+      "n": 35
+    }
+  ],
+  "accuracy_coverage": [
+    {
+      "coverage": 0.05,
+      "accuracy": 0.0,
+      "n": 6,
+      "min_confidence": 0.9917
+    },
+    {
+      "coverage": 0.1,
+      "accuracy": 0.0,
+      "n": 12,
+      "min_confidence": 0.9813
+    },
+    {
+      "coverage": 0.15,
+      "accuracy": 0.0,
+      "n": 18,
+      "min_confidence": 0.9665
+    },
+    {
+      "coverage": 0.2,
+      "accuracy": 0.0,
+      "n": 24,
+      "min_confidence": 0.9569
+    },
+    {
+      "coverage": 0.25,
+      "accuracy": 0.0,
+      "n": 30,
+      "min_confidence": 0.9435
+    },
+    {
+      "coverage": 0.3,
+      "accuracy": 0.0,
+      "n": 36,
+      "min_confidence": 0.8973
+    },
+    {
+      "coverage": 0.35,
+      "accuracy": 0.0476,
+      "n": 42,
+      "min_confidence": 0.7937
+    },
+    {
+      "coverage": 0.4,
+      "accuracy": 0.1667,
+      "n": 48,
+      "min_confidence": 0.6838
+    },
+    {
+      "coverage": 0.45,
+      "accuracy": 0.2593,
+      "n": 54,
+      "min_confidence": 0.6549
+    },
+    {
+      "coverage": 0.5,
+      "accuracy": 0.2833,
+      "n": 60,
+      "min_confidence": 0.6393
+    },
+    {
+      "coverage": 0.55,
+      "accuracy": 0.3485,
+      "n": 66,
+      "min_confidence": 0.6197
+    },
+    {
+      "coverage": 0.6,
+      "accuracy": 0.4028,
+      "n": 72,
+      "min_confidence": 0.5955
+    },
+    {
+      "coverage": 0.65,
+      "accuracy": 0.3974,
+      "n": 78,
+      "min_confidence": 0.5756
+    },
+    {
+      "coverage": 0.7,
+      "accuracy": 0.4048,
+      "n": 84,
+      "min_confidence": 0.5631
+    },
+    {
+      "coverage": 0.75,
+      "accuracy": 0.4111,
+      "n": 90,
+      "min_confidence": 0.5545
+    },
+    {
+      "coverage": 0.8,
+      "accuracy": 0.4062,
+      "n": 96,
+      "min_confidence": 0.5341
+    },
+    {
+      "coverage": 0.85,
+      "accuracy": 0.4314,
+      "n": 102,
+      "min_confidence": 0.5166
+    },
+    {
+      "coverage": 0.9,
+      "accuracy": 0.4444,
+      "n": 108,
+      "min_confidence": 0.5107
+    },
+    {
+      "coverage": 0.95,
+      "accuracy": 0.4737,
+      "n": 114,
+      "min_confidence": 0.5039
+    },
+    {
+      "coverage": 1.0,
+      "accuracy": 0.475,
+      "n": 120,
+      "min_confidence": 0.501
+    }
+  ],
+  "zero_error_coverage": {
+    "coverage": 0.0,
+    "n": 0,
+    "threshold": null
+  },
+  "total_cost_usd": 0.0,
+  "p50_latency_s": 0.094,
+  "p99_latency_s": 0.826,
+  "run": {
+    "judge_audit_version": "0.3.1",
+    "judge": {
+      "name": "nli:deberta-v3-base-zeroshot-v2.0",
+      "provider": "local",
+      "model": "deberta-v3-base-zeroshot-v2.0",
+      "model_id": "MoritzLaurer/deberta-v3-base-zeroshot-v2.0",
+      "confidence_method": "NLI entailment softmax over options",
+      "hypothesis_template": "This text is about {}.",
+      "device": "mps"
+    },
+    "python": "3.12.8",
+    "dataset": {
+      "path": "examples/task-routing/labels.jsonl",
+      "sha256": "27250d78eda62c5e5ad07906abd3c7fdeaecb1131a7d13e12146bed30f55ec8d",
+      "rows": 120
+    },
+    "recomputed_utc": "2026-09-20T18:53:15+00:00",
+    "note": "original run time not recorded in this checkpoint",
+    "checkpoint": "docs/runs/arena/deberta-nli/router-bare.ckpt.jsonl"
+  }
+}
