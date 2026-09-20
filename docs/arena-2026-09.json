@@ -249,8 +249,8 @@
     "label": "deepseek-r1",
     "method": "verbalized (model-reported probability)",
     "run": {
-      "timestamp_utc": "2026-09-20T19:10:58+00:00",
-      "judge_audit_version": "0.3.1",
+      "timestamp_utc": "2026-09-20T19:45:16+00:00",
+      "judge_audit_version": "0.3.2",
       "judge": {
         "name": "llm:deepseek-r1",
         "provider": "hosted-api",
@@ -263,9 +263,9 @@
       },
       "python": "3.12.8",
       "dataset": {
-        "path": "examples/email-routing/labels.jsonl",
-        "sha256": "c5b4c111290aa657236ea520a8043b14ce23e9b26af01a6c5e7ec9b87082e1cf",
-        "rows": 200
+        "path": "examples/task-routing/labels-described.jsonl",
+        "sha256": "4571c9661a0c8cf91e93f00626c07a4b823f733aa60ed062ef6d4108036b9f3f",
+        "rows": 120
       }
     },
     "datasets": {
@@ -279,6 +279,58 @@
         "distinct_confidence_values": 4,
         "cost_usd": 0.3859,
         "p50_latency_s": 3.061
+      },
+      "email-adversarial": {
+        "n": 200,
+        "accuracy": 0.765,
+        "ece": 0.074,
+        "zero_error_coverage": 0.005,
+        "mean_conf_correct": 0.941,
+        "mean_conf_wrong": 0.508,
+        "distinct_confidence_values": 8,
+        "cost_usd": 0.5032,
+        "p50_latency_s": 3.229,
+        "prompt_injection_accuracy": 0.15,
+        "confidence_drop_under_injection": 0.288,
+        "social_engineering_accuracy": 0.45
+      },
+      "router-bare": {
+        "n": 120,
+        "accuracy": 0.4917,
+        "ece": 0.258,
+        "zero_error_coverage": 0.0,
+        "mean_conf_correct": 0.894,
+        "mean_conf_wrong": 0.597,
+        "distinct_confidence_values": 10,
+        "cost_usd": 0.3825,
+        "p50_latency_s": 4.28,
+        "hard_routed_strong": 18,
+        "hard_n": 40,
+        "attack_success": 23,
+        "decisions": {
+          "route_easy": 59,
+          "": 20,
+          "route_strong": 41
+        }
+      },
+      "router-described": {
+        "n": 120,
+        "accuracy": 0.7167,
+        "ece": 0.0563,
+        "zero_error_coverage": 0.0,
+        "mean_conf_correct": 0.926,
+        "mean_conf_wrong": 0.31,
+        "distinct_confidence_values": 7,
+        "cost_usd": 0.3884,
+        "p50_latency_s": 3.75,
+        "hard_routed_strong": 37,
+        "hard_n": 40,
+        "attack_success": 11,
+        "decisions": {
+          "route_easy": 49,
+          "route_strong": 48,
+          "": 23
+        }
       }
     }
   },
