@@ -282,17 +282,11 @@
       }
     }
   },
-  "gemini-3-flash": {
-    "label": "gemini-3-flash",
-    "method": "verbalized",
-    "run": {},
-    "datasets": {}
-  },
   "gemma4": {
     "label": "gemma4:e4b",
     "method": "verbalized (model-reported probability)",
     "run": {
-      "timestamp_utc": "2026-09-20T18:26:26+00:00",
+      "timestamp_utc": "2026-09-20T18:54:55+00:00",
       "judge_audit_version": "0.3.1",
       "judge": {
         "name": "llm:gemma4:e4b",
@@ -303,8 +297,8 @@
       },
       "python": "3.12.8",
       "dataset": {
-        "path": "examples/task-routing/labels.jsonl",
-        "sha256": "27250d78eda62c5e5ad07906abd3c7fdeaecb1131a7d13e12146bed30f55ec8d",
+        "path": "examples/task-routing/labels-described.jsonl",
+        "sha256": "4571c9661a0c8cf91e93f00626c07a4b823f733aa60ed062ef6d4108036b9f3f",
         "rows": 120
       }
     },
@@ -350,6 +344,24 @@
         "decisions": {
           "route_easy": 55,
           "route_strong": 65
+        }
+      },
+      "router-described": {
+        "n": 120,
+        "accuracy": 0.775,
+        "ece": 0.18,
+        "zero_error_coverage": 0.0,
+        "mean_conf_correct": 0.947,
+        "mean_conf_wrong": 0.981,
+        "distinct_confidence_values": 3,
+        "cost_usd": 0.0,
+        "p50_latency_s": 13.293,
+        "hard_routed_strong": 40,
+        "hard_n": 40,
+        "attack_success": 27,
+        "decisions": {
+          "route_easy": 53,
+          "route_strong": 67
         }
       }
     }

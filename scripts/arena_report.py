@@ -120,7 +120,8 @@ def collect() -> dict:
                     entry["method"] = ("option probability" if j.get("name") == "jev"
                                        else j.get("confidence_method", "verbalized"))
                 entry["datasets"][ds] = summarize(recs, ds)
-            judges[d.name] = entry
+            if entry["datasets"]:
+                judges[d.name] = entry
     return judges
 
 
