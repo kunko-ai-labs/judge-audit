@@ -126,6 +126,56 @@ def hero_arc() -> Path:
     return out
 
 
+ARENA_LABELS = {"jev": "Jev", "claude-sonnet-4.5": "Claude Sonnet 4.5", "llama-3.3-70b": "Llama 3.3 70B",
+                "deepseek-r1": "DeepSeek R1", "gemma4": "gemma4 (local)", "llama32": "llama3.2 3B (local)",
+                "deberta-nli": "DeBERTa NLI (local)"}
+
+
+def hero_arena() -> Path | None:
+    """Zero-error coverage under attack: the automation budget each judge earns."""
+    arena = _load("arena-2026-09.json")
+    if not arena:
+        return None
+    rows = []
+    for slug, j in arena.items():
+        s = j["datasets"].get("email-adversarial")
+        if s:
+            rows.append((ARENA_LABELS.get(slug, j["label"]), s["zero_error_coverage"], s["accuracy"],
+                         s["mean_conf_wrong"], j["method"].startswith("option")))
+    rows.sort(key=lambda r: r[1], reverse=True)
+    fig, ax = plt.subplots(figsize=(9.6, 4.9))
+    _style(ax)
+    ax.xaxis.grid(True, color="#e8e7e2", linewidth=0.8)
+    ax.yaxis.grid(False)
+    ys = list(range(len(rows)))[::-1]
+    colors = [C_ACC if native else C_CONF for *_, native in rows]
+    ax.barh(ys, [r[1] for r in rows], color=colors, height=0.62, zorder=3)
+    for y, (_label, cov, acc, cw, _) in zip(ys, rows, strict=True):
+        ax.text(cov + 0.012, y, f"{cov:.0%}", va="center", fontsize=10, color=INK, fontweight="bold")
+        # right margin, outside the plot: the two numbers that explain the bar
+        ax.text(1.03, y, f"acc {acc:.0%} · conf when wrong {cw:.2f}", va="center", ha="left",
+                fontsize=8.5, color=INK2, transform=ax.get_yaxis_transform(), clip_on=False)
+    ax.set_yticks(ys)
+    ax.set_yticklabels([r[0] for r in rows], fontsize=10)
+    ax.set_xlim(0, 1.0)
+    ax.set_xticks([0, 0.25, 0.5, 0.75, 1.0])
+    ax.set_xticklabels(["0", "25%", "50%", "75%", "100%"])
+    ax.set_xlabel("share of decisions you could automate with zero observed errors "
+                  "(most confident first)", color=INK2, fontsize=9.5)
+    ax.set_title("200 emails under attack: the automation budget each judge earns",
+                 fontsize=12.5, color=INK, loc="left", pad=30)
+    from matplotlib.patches import Patch
+    ax.legend(handles=[Patch(color=C_ACC, label="confidence = option probability"),
+                       Patch(color=C_CONF, label="confidence = verbalized by a chat model")],
+              frameon=False, loc="lower left", bbox_to_anchor=(0, 1.0), ncol=2, fontsize=8.5)
+    fig.subplots_adjust(left=0.19, right=0.72, top=0.82, bottom=0.14)
+    out = ASSETS / "hero-arena.png"
+    fig.savefig(out, dpi=130, facecolor="white")
+    plt.close(fig)
+    return out
+
+
 if __name__ == "__main__":
-    for p in (hero_router(), hero_arc()):
-        print("wrote", p.relative_to(ROOT))
+    for p in (hero_router(), hero_arc(), hero_arena()):
+        if p:
+            print("wrote", p.relative_to(ROOT))

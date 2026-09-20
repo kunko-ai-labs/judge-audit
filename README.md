@@ -13,6 +13,8 @@ Everyone is shipping judgment models — TypeSafe's Jev, LLM-as-judge, guardrail
 | What does it really cost, and how bad is the latency tail? | $ per decision, p50 / p99 | The demo is cheap; the tail is what pages you |
 | Has it drifted since last week? | `judge-audit check` CI gate | Vendors update models without telling you |
 
+![200 emails under attack: the share of decisions each judge lets you automate with zero observed errors](docs/assets/hero-arena.png)
+
 ![judge-audit run on a labeled dataset, then the CI gate](docs/demo.gif)
 
 ```bash
@@ -46,7 +48,7 @@ Honest limits: every dataset is synthetic and seeded (generators in `examples/`)
 
 ## The Arena: same datasets, other judges
 
-Every judge below ran the same four datasets through the same harness; raw responses under [`docs/runs/arena/`](docs/runs/arena/), full table in [docs/arena-2026-09.md](docs/arena-2026-09.md), regenerated in CI. Emails under attack (n=200) and the described-options router (n=120):
+Every judge below ran the same four datasets through the same harness; raw responses under [`docs/runs/arena/`](docs/runs/arena/), full table in [docs/arena-2026-09.md](docs/arena-2026-09.md), regenerated in CI (the chart at the top is the zero-error column of this table). Emails under attack (n=200) and the described-options router (n=120):
 
 | judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | conf drop under injection | router (described) | cost-inflation attacks that land | cost / 200 |
 |---|---|---|---|---|---|---|---|---|---|

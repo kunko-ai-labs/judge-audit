@@ -6,6 +6,7 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- README hero chart `docs/assets/hero-arena.png`: zero-error coverage per judge under attack, drawn from the Arena JSON by `scripts/charts_readme.py`; demo gif retaped to show the Arena table.
 - **Judge Arena** (`docs/arena-2026-09.md`, `scripts/arena_report.py`, `scripts/arena_run.sh`): the four published datasets run through several judges with every raw response under `docs/runs/arena/`; per judge: accuracy, ECE, zero-error coverage, confidence when right vs wrong, distinct confidence values, prompt-injection confidence drop, routing behaviour. Regenerated and diffed in CI.
 - **`nli` judge**: local zero-shot NLI encoder (default `MoritzLaurer/deberta-v3-base-zeroshot-v2.0`, MIT) as the small-model baseline — real softmax confidence, cannot follow instructions by construction, no cost. `pip install 'kunko-judge-audit[nli]'`.
 - **`llm` judge**: `custom` provider (`LLM_PROVIDER_MODULE=/path/to/module.py` exposing `call(model, system, user)`) for hosted platforms without an OpenAI-compatible endpoint; `LLM_MODEL_LABEL` sets the name reports show; transient HTTP errors (429/502/503/504/529) are retried with backoff.

@@ -29,11 +29,11 @@ Enter
 Sleep 4s
 Type "clear"
 Enter
-Type "# Same audit, real vendor: Jev as a task router (raw checkpoint committed in the repo)"
+Type "# Same datasets, seven judges (raw responses committed): who earns an automation budget?"
 Enter
-Type "sed -n '9,15p' $JA/docs/audit-jev-router.md"
+Type "grep -A 9 'under attack' $JA/docs/arena-2026-09.md | cut -d'|' -f2,4-7 | sed 's/ (model-reported probability)//'"
 Enter
-Sleep 6s
+Sleep 7s
 Type "# CI gate: fail the build when the judge gets less honest than the baseline"
 Enter
 Type "judge-audit check $JA/examples/email-routing/labels.jsonl --judge simulated --baseline audit-result.json; echo exit=$?"
