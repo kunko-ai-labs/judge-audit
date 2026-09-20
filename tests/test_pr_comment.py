@@ -39,8 +39,8 @@ def test_numbers_are_formatted_for_humans():
 
 
 def test_drift_failure_is_rendered_with_its_reasons():
-    drift = {"ok": False, "failures": ["ECE drifted +0.0359 (>0.02): the judge is less honest "
-                                       "than baseline.", "Accuracy dropped 14.50% (>1%)."],
+    ece_line = "ECE drifted +0.0359 (>0.02): the judge is less honest than baseline."
+    drift = {"ok": False, "failures": [ece_line, "Accuracy dropped 14.50% (>1%)."],
              "baseline": "strict.json", "max_ece_drift": 0.02, "max_acc_drop": 0.01}
     md = pr_comment.build(RESULT, drift, artifact_url="https://example.test/run/1")
     assert "❌ **Drift detected** vs `strict.json`" in md

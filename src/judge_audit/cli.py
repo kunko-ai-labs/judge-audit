@@ -73,6 +73,7 @@ def main(argv: list[str] | None = None) -> None:
         _die(f"cannot read {args.labels}: {e}")
     if not rows:
         _die(f"{args.labels} has no rows")
+    tag = ""
     try:
         judge, tag = _judge(args.judge, rows)
     except (RuntimeError, ValueError) as e:
@@ -101,6 +102,7 @@ def main(argv: list[str] | None = None) -> None:
         print(f"judge={result.judge} n={result.n} accuracy={result.accuracy:.1%} "
               f"ece={result.ece:.4f} cost=${result.total_cost_usd:.4f} -> {out}")
     else:
+        failures: list[str] = []
         try:
             failures = check_drift(result, args.baseline,
                                    args.max_ece_drift, args.max_acc_drop)
