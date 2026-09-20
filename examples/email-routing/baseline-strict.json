@@ -1,0 +1,5 @@
+{
+  "ece": 0.0,
+  "accuracy": 1.0,
+  "note": "deliberately unreachable baseline: the self-demo asserts that check detects drift against it"
+}

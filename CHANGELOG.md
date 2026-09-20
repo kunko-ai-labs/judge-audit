@@ -3,6 +3,13 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
+## [Unreleased]
+
+### Added
+- **GitHub Action** (`action.yml`, Marketplace): `mode: run | check`, inputs `labels`, `judge`, `baseline`, `max-ece-drift`, `max-acc-drop`, `comment`, `fail-on-drift`; outputs `accuracy`, `ece`, `zero-error-coverage`, `n`, `drift`. Report in the job summary, one sticky PR comment updated on every push (`scripts/pr_comment.py`), report + result + drift verdict + per-decision evidence uploaded as an artifact. Judge credentials come from the job `env`; the Action reads no secret. `.github/workflows/judge-audit.yml` dogfoods it: must pass on the committed baseline, must detect drift against an unreachable one.
+- `judge-audit check --out/--json/--drift`: the gate can now also write the report, the metrics and a machine-readable verdict (`{ok, failures, ece, accuracy, baseline, thresholds}`).
+- `examples/email-routing/baseline-simulated.json` and `baseline-strict.json`: committed baselines for the self-demo.
+
 ## [0.3.0] — 2026-09-19
 
 ### Added

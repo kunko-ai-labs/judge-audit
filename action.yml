@@ -1,0 +1,183 @@
+name: "judge-audit"
+description: "Independent calibration audit for AI judges: is the confidence honest, what can you automate at zero observed errors, has it drifted since the baseline."
+author: "Kunko AI Labs"
+branding:
+  icon: "check-circle"
+  color: "blue"
+
+inputs:
+  labels:
+    description: "Path to the labeled JSONL file ({state, questions, labels} per row): the decisions your humans already made"
+    required: true
+  judge:
+    description: "Judge to audit: 'simulated' (no credentials), 'jev' (AI_GATEWAY_API_KEY or JEV_ENDPOINT in the job env), 'llm' (ANTHROPIC_API_KEY or LLM_* in the job env). The Action never reads a secret itself; the CLI reads the env you give the job"
+    required: false
+    default: "simulated"
+  mode:
+    description: "'check' audits and gates on drift against a baseline (default); 'run' audits and reports without a gate"
+    required: false
+    default: "check"
+  baseline:
+    description: "Path to the audit-result.json of a previous run (required when mode is 'check')"
+    required: false
+    default: ""
+  max-ece-drift:
+    description: "Fail when ECE grows by more than this vs the baseline (check mode)"
+    required: false
+    default: "0.02"
+  max-acc-drop:
+    description: "Fail when accuracy drops by more than this vs the baseline (check mode)"
+    required: false
+    default: "0.01"
+  comment:
+    description: "On pull requests, post one sticky comment with the audit table and update it on every push (needs permissions: pull-requests: write)"
+    required: false
+    default: "true"
+  fail-on-drift:
+    description: "In check mode, fail the job when drift is detected. Set to 'false' to only report (the 'drift' output still says what happened)"
+    required: false
+    default: "true"
+  python-version:
+    description: "Python used to install and run judge-audit"
+    required: false
+    default: "3.12"
+
+outputs:
+  accuracy:
+    description: "Share of decisions matching the human label"
+    value: ${{ steps.read.outputs.accuracy }}
+  ece:
+    description: "Expected calibration error (0 = perfectly honest confidence)"
+    value: ${{ steps.read.outputs.ece }}
+  zero-error-coverage:
+    description: "Most-confident share of decisions with no observed error"
+    value: ${{ steps.read.outputs.zero_error_coverage }}
+  n:
+    description: "Number of judged decisions"
+    value: ${{ steps.read.outputs.n }}
+  drift:
+    description: "'true' when check mode detected drift vs the baseline, 'false' otherwise ('' in run mode)"
+    value: ${{ steps.read.outputs.drift }}
+  report-path:
+    description: "Path of the markdown report"
+    value: "judge-audit-report.md"
+  result-path:
+    description: "Path of the metrics + provenance JSON"
+    value: "judge-audit-result.json"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Install judge-audit
+      shell: bash
+      # The repository at the checked-out SHA, nothing else. No network of its own beyond pip
+      # and the judge endpoint configured through the job's env.
+      run: pip install "${{ github.action_path }}"
+
+    - name: Resolve command
+      shell: bash
+      # One place decides the CLI invocation, so the report, the outputs and the comment agree.
+      run: |
+        case "${{ inputs.mode }}" in
+          run)
+            cmd=(judge-audit run "${{ inputs.labels }}" --judge "${{ inputs.judge }}"
+                 --out judge-audit-report.md --json judge-audit-result.json
+                 --judgments judge-audit-judgments.jsonl) ;;
+          check)
+            if [ -z "${{ inputs.baseline }}" ]; then
+              echo "::error::mode: check needs a baseline (the audit-result.json of a previous run)"; exit 2
+            fi
+            cmd=(judge-audit check "${{ inputs.labels }}" --judge "${{ inputs.judge }}"
+                 --baseline "${{ inputs.baseline }}"
+                 --max-ece-drift "${{ inputs.max-ece-drift }}" --max-acc-drop "${{ inputs.max-acc-drop }}"
+                 --out judge-audit-report.md --json judge-audit-result.json --drift judge-audit-drift.json) ;;
+          *)
+            echo "::error::unknown mode '${{ inputs.mode }}' (run | check)"; exit 2 ;;
+        esac
+        printf '%q ' "${cmd[@]}" > .judge-audit-cmd
+        echo "command: $(cat .judge-audit-cmd)"
+
+    - name: Run judge-audit (markdown -> job summary)
+      shell: bash
+      run: |
+        set +e
+        eval "$(cat .judge-audit-cmd)"
+        code=$?
+        set -e
+
+        if [ -f judge-audit-report.md ]; then
+          cat judge-audit-report.md >> "$GITHUB_STEP_SUMMARY"
+        else
+          echo "judge-audit produced no report (exit $code). Check the labels path and the judge's env." \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+        fi
+
+        # exit 2 = usage/configuration error, not a verdict: fail loudly and now.
+        if [ "$code" -eq 2 ]; then exit 2; fi
+        # exit 1 = drift detected: recorded, enforced in the final step.
+        if [ "$code" -ne 0 ]; then echo "JA_DRIFT=1" >> "$GITHUB_ENV"; fi
+
+    - name: Read outputs
+      id: read
+      shell: bash
+      run: |
+        python3 - <<'PY' >> "$GITHUB_OUTPUT"
+        import json, os
+        r = json.load(open("judge-audit-result.json"))
+        print(f"accuracy={r['accuracy']}")
+        print(f"ece={r['ece']}")
+        print(f"zero_error_coverage={r['zero_error_coverage']['coverage']}")
+        print(f"n={r['n']}")
+        drift = ""
+        if os.path.exists("judge-audit-drift.json"):
+            drift = "false" if json.load(open("judge-audit-drift.json"))["ok"] else "true"
+        print(f"drift={drift}")
+        PY
+
+    - name: Upload report, result and per-decision evidence
+      id: upload
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: judge-audit-${{ inputs.mode }}-${{ github.job }}
+        path: |
+          judge-audit-report.md
+          judge-audit-result.json
+          judge-audit-drift.json
+          judge-audit-judgments.jsonl
+        if-no-files-found: ignore
+
+    - name: Comment on the pull request
+      # Skipped on pull requests from forks: their token cannot write comments.
+      if: ${{ inputs.comment == 'true' && github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork }}
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        REPO: ${{ github.repository }}
+        PR: ${{ github.event.pull_request.number }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      # One comment per labels file, updated on every push instead of a new one.
+      run: |
+        marker="<!-- judge-audit:${{ inputs.labels }} -->"
+        drift=(); [ -f judge-audit-drift.json ] && drift=(--drift judge-audit-drift.json)
+        python3 "${{ github.action_path }}/scripts/pr_comment.py" judge-audit-result.json \
+          "${drift[@]}" --artifact-url "$RUN_URL" --marker "$marker" > judge-audit-comment.md
+        id=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
+              --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | head -1 || true)
+        if [ -n "$id" ]; then
+          gh api -X PATCH "repos/$REPO/issues/comments/$id" -F body=@judge-audit-comment.md > /dev/null
+          echo "updated comment $id"
+        else
+          gh pr comment "$PR" --body-file judge-audit-comment.md
+        fi
+
+    - name: Fail if drift was detected
+      if: ${{ env.JA_DRIFT == '1' && inputs.fail-on-drift == 'true' }}
+      shell: bash
+      run: |
+        echo "judge-audit: the judge drifted vs ${{ inputs.baseline }} (see the job summary)." >&2
+        exit 1

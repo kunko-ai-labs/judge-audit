@@ -53,6 +53,16 @@ Honest limits: every dataset is synthetic and seeded (generators in `examples/`)
 
 Exit codes: `0` ok · `1` drift detected · `2` usage or configuration error (the message says what to fix).
 
+**In CI:** the [GitHub Action](docs/integrations.md#github-action) runs the audit on every push or pull request and fails the build on drift:
+
+```yaml
+- uses: kunko-ai-labs/judge-audit@v0.3      # or pin the release's commit SHA
+  with: { labels: audits/labels.jsonl, judge: jev, baseline: audits/baseline.json }
+  env: { AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }} }
+```
+
+One sticky PR comment with the audit table (n, accuracy, ECE, zero-error coverage, cost, p99, verdict vs baseline), the report in the job summary, evidence as an artifact. Outputs `accuracy`, `ece`, `zero-error-coverage`, `drift` for anything downstream.
+
 **From inside an agent:** `pip install "kunko-judge-audit[mcp]"` then `claude mcp add judge-audit -- judge-audit-mcp` (or the equivalent in Cursor). The agent gets `run_audit`, `check_drift` and `list_judges` and can audit the judge it is about to rely on without leaving the session. See [docs/integrations.md](docs/integrations.md).
 
 ## Judge interface

@@ -58,6 +58,10 @@ def _parser() -> argparse.ArgumentParser:
     c.add_argument("--baseline", required=True, help="audit-result.json of a previous run")
     c.add_argument("--max-ece-drift", type=float, default=0.02)
     c.add_argument("--max-acc-drop", type=float, default=0.01)
+    c.add_argument("--out", default=None, help="also write the markdown report here")
+    c.add_argument("--json", default=None, help="also write metrics + run metadata here")
+    c.add_argument("--drift", default=None,
+                   help="write the verdict here: {ok, failures, ece, accuracy, baseline}")
     return ap
 
 
@@ -102,6 +106,22 @@ def main(argv: list[str] | None = None) -> None:
                                    args.max_ece_drift, args.max_acc_drop)
         except (OSError, ValueError, KeyError) as e:
             _die(f"cannot use baseline {args.baseline}: {e}")
+        if args.out:
+            content = render_markdown(result)
+            if tag:
+                content = f"> ⚠️ **{tag}**\n\n" + content
+            with open(args.out, "w", encoding="utf-8") as f:
+                f.write(content)
+        if args.json:
+            with open(args.json, "w", encoding="utf-8") as f:
+                json.dump(result.to_dict(), f, indent=2)
+        if args.drift:
+            with open(args.drift, "w", encoding="utf-8") as f:
+                json.dump({"ok": not failures, "failures": failures, "ece": result.ece,
+                           "accuracy": result.accuracy, "n": result.n,
+                           "baseline": args.baseline,
+                           "max_ece_drift": args.max_ece_drift,
+                           "max_acc_drop": args.max_acc_drop}, f, indent=2)
         if failures:
             print("DRIFT DETECTED:", file=sys.stderr)
             for fl in failures:

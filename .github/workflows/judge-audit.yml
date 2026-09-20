@@ -1,0 +1,102 @@
+# Dogfooding: runs this repo's own Action against the bundled example dataset.
+# Every job here is an assertion, not a demo. If the gate stops detecting drift,
+# CI goes red — a green run means "the Action still passes what it should and
+# still detects what it should".
+name: judge-audit (self-demo)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  run-simulated:
+    name: run — simulated judge on the email dataset (must PASS, SIMULATED tag in the summary)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: audit
+        uses: ./
+        with:
+          mode: run
+          labels: examples/email-routing/labels.jsonl
+          judge: simulated
+          comment: "false"
+      - name: Assert outputs and the SIMULATED tag
+        run: |
+          test "${{ steps.audit.outputs.n }}" = "200"
+          test -n "${{ steps.audit.outputs.ece }}" && test -n "${{ steps.audit.outputs.accuracy }}"
+          test -z "${{ steps.audit.outputs.drift }}"
+          grep -q "SIMULATED" judge-audit-report.md
+          test -s judge-audit-judgments.jsonl
+
+  check-passes:
+    name: check — against the committed baseline (must PASS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: gate
+        uses: ./
+        with:
+          mode: check
+          labels: examples/email-routing/labels.jsonl
+          judge: simulated
+          baseline: examples/email-routing/baseline-simulated.json
+          comment: "false"
+      - name: Assert no drift was reported
+        run: test "${{ steps.gate.outputs.drift }}" = "false"
+
+  check-detects-drift:
+    name: check — against an unreachable baseline (must DETECT drift)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: fail-on-drift=false only reports
+        id: report
+        uses: ./
+        with:
+          mode: check
+          labels: examples/email-routing/labels.jsonl
+          judge: simulated
+          baseline: examples/email-routing/baseline-strict.json
+          fail-on-drift: "false"
+          comment: "false"
+      - name: Assert drift was detected and the job still passed
+        run: |
+          test "${{ steps.report.outputs.drift }}" = "true" || { echo "::error::drift output is '${{ steps.report.outputs.drift }}', expected true"; exit 1; }
+          grep -q '"ok": false' judge-audit-drift.json
+      - name: fail-on-drift=true must fail the job
+        id: gate
+        continue-on-error: true
+        uses: ./
+        with:
+          mode: check
+          labels: examples/email-routing/labels.jsonl
+          judge: simulated
+          baseline: examples/email-routing/baseline-strict.json
+          comment: "false"
+      - name: Assert the gate tripped
+        if: steps.gate.outcome != 'failure'
+        run: |
+          echo "::error::the drift gate did NOT fail against an unreachable baseline (outcome=${{ steps.gate.outcome }})"
+          exit 1
+
+  pr-comment:
+    name: pull request — sticky comment with the audit table
+    if: github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./
+        with:
+          mode: check
+          labels: examples/email-routing/labels.jsonl
+          judge: simulated
+          baseline: examples/email-routing/baseline-simulated.json
