@@ -67,7 +67,7 @@ Regenerate the baseline deliberately (`judge-audit run … --json audits/baselin
 
 ### Running third-party code in your CI — what you should check
 
-- **Pin by commit SHA**, not by tag. Tags can move; a SHA cannot. Get the SHA of any release with `gh api repos/kunko-ai-labs/judge-audit/git/ref/tags/v0.3.1 --jq .object.sha` and write `uses: kunko-ai-labs/judge-audit@<that sha>  # v0.3.1`; Dependabot keeps the SHA and the version comment in step. Our own workflows pin every action the same way.
+- **Pin by commit SHA**, not by tag. Tags can move; a SHA cannot. Get the SHA of any release with `gh api repos/kunko-ai-labs/judge-audit/git/ref/tags/v0.3.2 --jq .object.sha` and write `uses: kunko-ai-labs/judge-audit@<that sha>  # v0.3.2`; Dependabot keeps the SHA and the version comment in step. Our own workflows pin every action the same way.
 - **What the Action does:** `pip install` of this repository at that SHA, then runs the CLI on your labels file. The only outbound traffic is `pip` and the judge endpoint you configure through the job's `env`; the Action itself reads no secret and executes nothing from your repository.
 - **Least privilege:** `contents: read` is enough; add `pull-requests: write` only for the PR comment.
 - **Verify what you get:** every release ships Sigstore build provenance (`gh attestation verify` on the artifacts) and the [OpenSSF Scorecard](https://scorecard.dev/viewer/?uri=github.com/kunko-ai-labs/judge-audit) of this repo is public.
