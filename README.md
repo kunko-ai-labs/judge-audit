@@ -13,7 +13,10 @@ Everyone is shipping judgment models — TypeSafe's Jev, LLM-as-judge, guardrail
 | What does it really cost, and how bad is the latency tail? | $ per decision, p50 / p99 | The demo is cheap; the tail is what pages you |
 | Has it drifted since last week? | `judge-audit check` CI gate | Vendors update models without telling you |
 
-![200 emails under attack: the share of decisions each judge lets you automate with zero observed errors](docs/assets/hero-arena.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-arena-dark.png">
+  <img alt="200 emails under attack: the share of decisions each judge lets you automate with zero observed errors" src="docs/assets/hero-arena.png">
+</picture>
 
 ![judge-audit run on a labeled dataset, then the CI gate](docs/demo.gif)
 
@@ -31,7 +34,10 @@ judge-audit check examples/email-routing/labels.jsonl --judge simulated --baseli
 
 Same judge (TypeSafe Jev, via Vercel AI Gateway), three jobs, every raw response committed under [`docs/runs/`](docs/runs/) so anyone can recompute every number (`python scripts/verify_published.py` does, in CI).
 
-![Same judge, three jobs: honest, honest under attack, confidently wrong](docs/assets/hero-arc.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-arc-dark.png">
+  <img alt="Same judge, three jobs: honest, honest under attack, confidently wrong" src="docs/assets/hero-arc.png">
+</picture>
 
 | Audit | n | Accuracy | ECE | What it shows | Report |
 |---|---|---|---|---|---|
@@ -40,7 +46,10 @@ Same judge (TypeSafe Jev, via Vercel AI Gateway), three jobs, every raw response
 | Task router: cheap model vs frontier model, 40 easy / 40 hard / 40 easy + cost-inflation injection | 120 | 66.7 % | 0.318 | With options sent as bare labels the judge **never** chose the strong model: 0/40 on hard tasks at median confidence 0.96. That is exactly the constant-classifier baseline. | [audit-jev-router.md](docs/audit-jev-router.md) |
 | The same 120 rows with a one-line description per option | 120 | 97.5 % | 0.053 | **37/40 hard tasks now go to the strong model**, and the three misses sit at confidence 0.56–0.60 (vs 0.93 when right). Same model, same tasks: the failure was the prompt — and nothing but a calibration audit reveals it. | [audit-jev-router-ablation.md](docs/audit-jev-router-ablation.md) |
 
-![Jev as a task router: bare labels vs described options](docs/assets/hero-router.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-router-dark.png">
+  <img alt="Jev as a task router: bare labels vs described options" src="docs/assets/hero-router.png">
+</picture>
 
 **What we would tell a client.** The email numbers are the vendor's story and they hold up, including under attack. The router numbers are the buyer's story: the first prompt anyone would write routed every hard task to the cheap model at 96 % median confidence, and its 66.7 % accuracy is exactly what a coin glued to "easy" scores; two descriptive sentences took the same judge to 97.5 % with confidence that finally means something. None of that is visible from a benchmark leaderboard; all of it is visible from a calibration audit on your own decisions.
 

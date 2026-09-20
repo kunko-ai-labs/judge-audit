@@ -6,6 +6,7 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- README charts redesigned (`scripts/charts_readme.py`): shared light/dark themes, rounded bars, direct labels, subtitles and footnotes; every chart ships in both themes and the README picks one with `<picture>`. Categorical palette validated for colour-vision deficiency in both themes.
 - README hero chart `docs/assets/hero-arena.png`: zero-error coverage per judge under attack, drawn from the Arena JSON by `scripts/charts_readme.py`; demo gif retaped to show the Arena table.
 - **Judge Arena** (`docs/arena-2026-09.md`, `scripts/arena_report.py`, `scripts/arena_run.sh`): the four published datasets run through several judges with every raw response under `docs/runs/arena/`; per judge: accuracy, ECE, zero-error coverage, confidence when right vs wrong, distinct confidence values, prompt-injection confidence drop, routing behaviour. Regenerated and diffed in CI.
 - **`nli` judge**: local zero-shot NLI encoder (default `MoritzLaurer/deberta-v3-base-zeroshot-v2.0`, MIT) as the small-model baseline — real softmax confidence, cannot follow instructions by construction, no cost. `pip install 'kunko-judge-audit[nli]'`.
