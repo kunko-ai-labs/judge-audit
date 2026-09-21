@@ -9,6 +9,7 @@ docs/arena-2026-09.md and docs/arena-2026-09.json.
 from __future__ import annotations
 
 import json
+import math
 import statistics
 import sys
 from collections import Counter
@@ -72,7 +73,7 @@ def summarize(recs: list[dict], dataset: str) -> dict:
         "mean_conf_correct": round(statistics.mean(right), 3) if right else None,
         "mean_conf_wrong": round(statistics.mean(wrong), 3) if wrong else None,
         "distinct_confidence_values": len(set(round(c, 2) for c in conf)),
-        "cost_usd": round(sum(r["cost_usd"] for r in recs), 4),
+        "cost_usd": round(math.fsum(r["cost_usd"] for r in recs), 4),
         "p50_latency_s": round(statistics.median(r["latency_s"] for r in recs), 3),
     }
     if dataset == "email-adversarial":

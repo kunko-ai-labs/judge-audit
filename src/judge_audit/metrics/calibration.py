@@ -1,6 +1,8 @@
 """Calibration metrics: the honesty math. Stdlib only."""
 from __future__ import annotations
 
+import math
+
 
 def expected_calibration_error(confidences: list[float], correct: list[bool],
                                n_bins: int = 10) -> float:
@@ -17,7 +19,7 @@ def expected_calibration_error(confidences: list[float], correct: list[bool],
         if not b:
             continue
         acc = sum(b) / len(b)
-        avg_conf = sum(cb) / len(cb)
+        avg_conf = math.fsum(cb) / len(cb)  # exact: identical on every Python version
         ece += len(b) / n * abs(acc - avg_conf)
     return ece
 
@@ -36,7 +38,7 @@ def reliability_bins(confidences: list[float], correct: list[bool],
         cs = [confidences[j] for j in idx]
         oks = [correct[j] for j in idx]
         out.append({"bin": f"{lo:.1f}-{hi:.1f}",
-                    "avg_confidence": round(sum(cs) / len(cs), 4),
+                    "avg_confidence": round(math.fsum(cs) / len(cs), 4),
                     "accuracy": round(sum(oks) / len(oks), 4), "n": len(idx)})
     return out
 

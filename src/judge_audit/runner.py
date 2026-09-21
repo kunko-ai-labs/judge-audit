@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import platform
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -105,7 +106,7 @@ def summarize(judge_name: str, records: list[dict], run: dict | None = None) -> 
         reliability=reliability_bins(confidences, correct),
         curve=accuracy_coverage(confidences, correct) if total else [],
         zero_error=zero_error_coverage(confidences, correct),
-        total_cost_usd=sum(r.get("cost_usd", 0.0) for r in records),
+        total_cost_usd=math.fsum(r.get("cost_usd", 0.0) for r in records),
         p50_latency_s=_percentile(latencies, 50),
         p99_latency_s=_percentile(latencies, 99),
         run=run or {},
