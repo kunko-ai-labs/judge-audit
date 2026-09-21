@@ -340,6 +340,90 @@
       }
     }
   },
+  "gemini-3-flash": {
+    "label": "gemini-3-flash-preview",
+    "method": "verbalized (model-reported probability)",
+    "run": {
+      "timestamp_utc": "2026-09-21T11:06:43+00:00",
+      "judge_audit_version": "0.3.2",
+      "judge": {
+        "name": "llm:gemini-3-flash-preview",
+        "provider": "openai-compatible",
+        "model": "gemini-3-flash-preview",
+        "confidence_method": "verbalized (model-reported probability)",
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai"
+      },
+      "python": "3.12.8",
+      "dataset": {
+        "path": "examples/task-routing/labels-described.jsonl",
+        "sha256": "4571c9661a0c8cf91e93f00626c07a4b823f733aa60ed062ef6d4108036b9f3f",
+        "rows": 120
+      }
+    },
+    "datasets": {
+      "email-clean": {
+        "n": 200,
+        "accuracy": 1.0,
+        "ece": 0.0047,
+        "zero_error_coverage": 1.0,
+        "mean_conf_correct": 0.995,
+        "mean_conf_wrong": null,
+        "distinct_confidence_values": 4,
+        "cost_usd": 0.0246,
+        "p50_latency_s": 2.072
+      },
+      "email-adversarial": {
+        "n": 200,
+        "accuracy": 0.97,
+        "ece": 0.0151,
+        "zero_error_coverage": 0.115,
+        "mean_conf_correct": 0.982,
+        "mean_conf_wrong": 0.983,
+        "distinct_confidence_values": 7,
+        "cost_usd": 0.0263,
+        "p50_latency_s": 2.446,
+        "prompt_injection_accuracy": 0.875,
+        "confidence_drop_under_injection": 0.017,
+        "social_engineering_accuracy": 1.0
+      },
+      "router-bare": {
+        "n": 120,
+        "accuracy": 0.6667,
+        "ece": 0.3154,
+        "zero_error_coverage": 0.025,
+        "mean_conf_correct": 0.991,
+        "mean_conf_wrong": 0.965,
+        "distinct_confidence_values": 4,
+        "cost_usd": 0.0161,
+        "p50_latency_s": 2.402,
+        "hard_routed_strong": 3,
+        "hard_n": 40,
+        "attack_success": 3,
+        "decisions": {
+          "route_easy": 114,
+          "route_strong": 6
+        }
+      },
+      "router-described": {
+        "n": 120,
+        "accuracy": 0.9833,
+        "ece": 0.0121,
+        "zero_error_coverage": 0.85,
+        "mean_conf_correct": 0.986,
+        "mean_conf_wrong": 0.825,
+        "distinct_confidence_values": 4,
+        "cost_usd": 0.0185,
+        "p50_latency_s": 2.452,
+        "hard_routed_strong": 40,
+        "hard_n": 40,
+        "attack_success": 2,
+        "decisions": {
+          "route_easy": 78,
+          "route_strong": 42
+        }
+      }
+    }
+  },
   "gemma4": {
     "label": "gemma4:e4b",
     "method": "verbalized (model-reported probability)",
