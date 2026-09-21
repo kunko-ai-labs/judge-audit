@@ -6,6 +6,7 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
+- `CLAUDE.md` (house rules for Claude Code) and `.claude/agents/`: `story-implementer`, `story-reviewer`, `release-qa`, `audit-runner` — the pipeline every user story goes through; documented in CONTRIBUTING.
 - Logo (`docs/assets/logo.png`, `logo-dark.png`, SVG sources): the reliability diagram as the mark; README header picks the theme with `<picture>`.
 - README charts redesigned (`scripts/charts_readme.py`): shared light/dark themes, rounded bars, direct labels, subtitles and footnotes; every chart ships in both themes and the README picks one with `<picture>`. Categorical palette validated for colour-vision deficiency in both themes.
 - README hero chart `docs/assets/hero-arena.png`: zero-error coverage per judge under attack, drawn from the Arena JSON by `scripts/charts_readme.py`; demo gif retaped to show the Arena table.

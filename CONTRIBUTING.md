@@ -34,6 +34,10 @@ Templates under `.github/ISSUE_TEMPLATE/`: 🎯 Epic `[EP-XXX]`, 📖 User Story
 
 Title `type(scope): [ID] Description`. Squash-merged; the title becomes the commit. Before you push: `ruff check src tests scripts examples && pytest -q && python scripts/verify_published.py`.
 
+## Working with Claude Code
+
+`CLAUDE.md` holds the house rules; `.claude/agents/` defines the four agents a story goes through — `story-implementer` (opens the PR), `story-reviewer` (adversarial, read-only), `release-qa` (clean-room install and smoke), `audit-runner` (paid model runs with clean provenance). None of them merges. A story is done when all three verdicts are green and a human has read the PR.
+
 ## Branches
 
 - `main` — releasable at all times; tags `vX.Y.Z`. Protected: linear history, CI required, no force-push.
