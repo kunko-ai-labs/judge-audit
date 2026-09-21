@@ -1,0 +1,708 @@
+{
+  "splits": {
+    "email-clean": {
+      "split": "examples/email-routing/split-heldout.json",
+      "sha256": "05e7630ed5ea29a70a99902db69c0971fb03217309df0463cf2e43a9f01736f7",
+      "seed": 2026,
+      "n_heldout": 100,
+      "n_train": 100
+    },
+    "router-bare": {
+      "split": "examples/task-routing/split-heldout.json",
+      "sha256": "322d113c8c0e67c36362d1d4ff26955c68dd76843158cd8f11462eb8b66ae018",
+      "seed": 2026,
+      "n_heldout": 60,
+      "n_train": 60
+    },
+    "router-described": {
+      "split": "examples/task-routing/split-heldout.json",
+      "sha256": "322d113c8c0e67c36362d1d4ff26955c68dd76843158cd8f11462eb8b66ae018",
+      "seed": 2026,
+      "n_heldout": 60,
+      "n_train": 60
+    }
+  },
+  "judges": {
+    "jev": {
+      "label": "Jev (TypeSafe)",
+      "method": "option probability",
+      "run": {
+        "timestamp_utc": "2026-09-19T08:58:09+00:00",
+        "judge_audit_version": "0.2.0",
+        "judge": {
+          "name": "jev",
+          "model": "typesafe-ai/jev",
+          "backend": "gateway",
+          "bridge": "vercel-ai-sdk/experimental_evaluate",
+          "input_price_per_mtok_usd": 0.042
+        },
+        "python": "3.12.8",
+        "dataset": {
+          "path": "examples/task-routing/labels-described.jsonl",
+          "sha256": "4571c9661a0c8cf91e93f00626c07a4b823f733aa60ed062ef6d4108036b9f3f",
+          "rows": 120
+        }
+      },
+      "datasets": {
+        "email-clean": {
+          "n": 100,
+          "accuracy": 1.0,
+          "accuracy_interval": null,
+          "ece": 0.002,
+          "zero_error_coverage": 1.0,
+          "mean_conf_correct": 0.998,
+          "mean_conf_wrong": null,
+          "no_answer": 0,
+          "cost_usd": 0.0019,
+          "p50_latency_s": 0.868,
+          "scored": "held-out half",
+          "rows_in_checkpoint": 200
+        },
+        "email-adversarial": {
+          "n": 200,
+          "accuracy": 0.955,
+          "accuracy_interval": null,
+          "ece": 0.0389,
+          "zero_error_coverage": 0.73,
+          "mean_conf_correct": 0.933,
+          "mean_conf_wrong": 0.597,
+          "no_answer": 0,
+          "cost_usd": 0.0038,
+          "p50_latency_s": 0.738,
+          "prompt_injection_accuracy": 0.825,
+          "prompt_injection_n": 40,
+          "social_engineering_accuracy": 1.0,
+          "social_engineering_n": 20,
+          "mean_conf_wrong_under_attack": 0.584,
+          "wrong_under_attack_n": 7,
+          "scored": "all rows",
+          "rows_in_checkpoint": 200
+        },
+        "router-bare": {
+          "n": 60,
+          "accuracy": 0.6667,
+          "accuracy_interval": null,
+          "ece": 0.315,
+          "zero_error_coverage": 0.0833,
+          "mean_conf_correct": 0.982,
+          "mean_conf_wrong": 0.93,
+          "no_answer": 0,
+          "cost_usd": 0.001,
+          "p50_latency_s": 0.698,
+          "hard_routed_strong": 0,
+          "hard_n": 20,
+          "attack_success": 0,
+          "attack_n": 20,
+          "scored": "held-out half",
+          "rows_in_checkpoint": 120
+        },
+        "router-described": {
+          "n": 60,
+          "accuracy": 0.9833,
+          "accuracy_interval": null,
+          "ece": 0.0555,
+          "zero_error_coverage": 0.95,
+          "mean_conf_correct": 0.933,
+          "mean_conf_wrong": 0.6,
+          "no_answer": 0,
+          "cost_usd": 0.0011,
+          "p50_latency_s": 0.817,
+          "hard_routed_strong": 19,
+          "hard_n": 20,
+          "attack_success": 0,
+          "attack_n": 20,
+          "scored": "held-out half",
+          "rows_in_checkpoint": 120
+        }
+      }
+    },
+    "claude-sonnet-4.5": {
+      "label": "claude-sonnet-4.5",
+      "method": "verbalized (model-reported probability)",
+      "run": {
+        "timestamp_utc": "2026-09-20T18:53:06+00:00",
+        "judge_audit_version": "0.3.1",
+        "judge": {
+          "name": "llm:claude-sonnet-4.5",
+          "provider": "hosted-api",
+          "model": "claude-sonnet-4.5",
+          "confidence_method": "verbalized (model-reported probability)",
+          "prices_usd_per_mtok": [
+            3.0,
+            15.0
+          ]
+        },
+        "python": "3.12.8",
+        "dataset": {
+          "path": "examples/task-routing/labels-described.jsonl",
+          "sha256": "4571c9661a0c8cf91e93f00626c07a4b823f733aa60ed062ef6d4108036b9f3f",
+          "rows": 120
+        },
+        "reparsed": [
+          {
+            "at": "2026-09-21T14:43:49+00:00",
+            "judge_audit_version": "0.3.2",
+            "judgments_changed": 8
+          }
+        ]
+      },
+      "datasets": {
+        "email-clean": {
+          "n": 100,
+          "accuracy": 1.0,
+          "accuracy_interval": null,
+          "ece": 0.027,
+          "zero_error_coverage": 1.0,
+          "mean_conf_correct": 0.973,
+          "mean_conf_wrong": null,
+          "no_answer": 0,
+          "cost_usd": 0.1908,
+          "p50_latency_s": 2.967,
+          "scored": "held-out half",
+          "rows_in_checkpoint": 200
+        },
+        "email-adversarial": {
+          "n": 200,
+          "accuracy": 0.965,
+          "accuracy_interval": null,
+          "ece": 0.0159,
+          "zero_error_coverage": 0.02,
+          "mean_conf_correct": 0.957,
+          "mean_conf_wrong": 0.877,
+          "no_answer": 0,
+          "cost_usd": 0.4538,
+          "p50_latency_s": 3.48,
+          "prompt_injection_accuracy": 0.875,
+          "prompt_injection_n": 40,
+          "social_engineering_accuracy": 1.0,
+          "social_engineering_n": 20,
+          "mean_conf_wrong_under_attack": 0.86,
+          "wrong_under_attack_n": 5,
+          "scored": "all rows",
+          "rows_in_checkpoint": 200
+        },
+        "router-bare": {
+          "n": 60,
+          "accuracy": 0.6667,
+          "accuracy_interval": null,
+          "ece": 0.2277,
+          "zero_error_coverage": 0.0,
+          "mean_conf_correct": 0.935,
+          "mean_conf_wrong": 0.813,
+          "no_answer": 0,
+          "cost_usd": 0.2499,
+          "p50_latency_s": 5.991,
+          "hard_routed_strong": 2,
+          "hard_n": 20,
+          "attack_success": 2,
+          "attack_n": 20,
+          "scored": "held-out half",
+          "rows_in_checkpoint": 120
+        },
+        "router-described": {
+          "n": 60,
+          "accuracy": 0.9667,
+          "accuracy_interval": null,
+          "ece": 0.0228,
+          "zero_error_coverage": 0.0667,
+          "mean_conf_correct": 0.943,
+          "mean_conf_wrong": 0.975,
+          "no_answer": 0,
+          "cost_usd": 0.1995,
+          "p50_latency_s": 4.562,
+          "hard_routed_strong": 20,
+          "hard_n": 20,
+          "attack_success": 2,
+          "attack_n": 20,
+          "scored": "held-out half",
+          "rows_in_checkpoint": 120
+        }
+      }
+    },
+    "deberta-nli": {
+      "label": "deberta-v3-base-zeroshot-v2.0",
+      "method": "NLI entailment softmax over options",
+      "run": {
+        "timestamp_utc": "2026-09-20T18:53:38+00:00",
+        "judge_audit_version": "0.3.1",
+        "judge": {
+          "name": "nli:deberta-v3-base-zeroshot-v2.0",
+          "provider": "local",
+          "model": "deberta-v3-base-zeroshot-v2.0",
+          "model_id": "MoritzLaurer/deberta-v3-base-zeroshot-v2.0",
+          "confidence_method": "NLI entailment softmax over options",
+          "hypothesis_template": "This text is about {}.",
+          "device": "mps"
+        },
+        "python": "3.12.8",
+        "dataset": {
+          "path": "examples/task-routing/labels-described.jsonl",
+          "sha256": "4571c9661a0c8cf91e93f00626c07a4b823f733aa60ed062ef6d4108036b9f3f",
+          "rows": 120
+        }
+      },
+      "datasets": {
+        "email-clean": {
+          "n": 100,
+          "accuracy": 0.87,
+          "accuracy_interval": null,
+          "ece": 0.1729,
+          "zero_error_coverage": 0.56,
+          "mean_conf_correct": 0.739,
+          "mean_conf_wrong": 0.516,
+          "no_answer": 0,
+          "cost_usd": 0.0,
+          "p50_latency_s": 0.318,
+          "scored": "held-out half",
+          "rows_in_checkpoint": 200
+        },
+        "email-adversarial": {
+          "n": 200,
+          "accuracy": 0.595,
+          "accuracy_interval": null,
+          "ece": 0.1247,
+          "zero_error_coverage": 0.08,
+          "mean_conf_correct": 0.731,
+          "mean_conf_wrong": 0.559,
+          "no_answer": 0,
+          "cost_usd": 0.0,
+          "p50_latency_s": 0.354,
+          "prompt_injection_accuracy": 0.475,
+          "prompt_injection_n": 40,
+          "social_engineering_accuracy": 0.25,
+          "social_engineering_n": 20,
+          "mean_conf_wrong_under_attack": 0.68,
+          "wrong_under_attack_n": 36,
+          "scored": "all rows",
+          "rows_in_checkpoint": 200
+        },
+        "router-bare": {
+          "n": 60,
+          "accuracy": 0.5,
+          "accuracy_interval": null,
+          "ece": 0.4188,
+          "zero_error_coverage": 0.0,
+          "mean_conf_correct": 0.607,
+          "mean_conf_wrong": 0.83,
+          "no_answer": 0,
+          "cost_usd": 0.0,
+          "p50_latency_s": 0.096,
+          "hard_routed_strong": 20,
+          "hard_n": 20,
+          "attack_success": 20,
+          "attack_n": 20,
+          "scored": "held-out half",
+          "rows_in_checkpoint": 120
+        },
+        "router-described": {
+          "n": 60,
+          "accuracy": 0.5,
+          "accuracy_interval": null,
+          "ece": 0.1787,
+          "zero_error_coverage": 0.0,
+          "mean_conf_correct": 0.605,
+          "mean_conf_wrong": 0.673,
+          "no_answer": 0,
+          "cost_usd": 0.0,
+          "p50_latency_s": 0.109,
+          "hard_routed_strong": 20,
+          "hard_n": 20,
+          "attack_success": 19,
+          "attack_n": 20,
+          "scored": "held-out half",
+          "rows_in_checkpoint": 120
+        }
+      }
+    },
+    "deepseek-r1": {
+      "label": "deepseek-r1",
+      "method": "verbalized (model-reported probability)",
+      "run": {
+        "timestamp_utc": "2026-09-21T15:21:30+00:00",
+        "judge_audit_version": "0.3.2",
+        "judge": {
+          "name": "llm:deepseek-r1",
+          "provider": "hosted-api",
+          "model": "deepseek-r1",
+          "confidence_method": "verbalized (model-reported probability)",
+          "prices_usd_per_mtok": [
+            1.35,
+            5.4
+          ],
+          "max_tokens": 4096
+        },
+        "python": "3.12.8",
+        "dataset": {
+          "path": "examples/task-routing/labels-described.jsonl",
+          "sha256": "4571c9661a0c8cf91e93f00626c07a4b823f733aa60ed062ef6d4108036b9f3f",
+          "rows": 120
+        }
+      },
+      "datasets": {
+        "email-clean": {
+          "n": 100,
+          "accuracy": 1.0,
+          "accuracy_interval": null,
+          "ece": 0.0501,
+          "zero_error_coverage": 1.0,
+          "mean_conf_correct": 0.95,
+          "mean_conf_wrong": null,
+          "no_answer": 0,
+          "cost_usd": 0.1935,
+          "p50_latency_s": 3.032,
+          "scored": "held-out half",
+          "rows_in_checkpoint": 200
+        },
+        "email-adversarial": {
+          "n": 200,
+          "accuracy": 0.805,
+          "accuracy_interval": null,
+          "ece": 0.1265,
+          "zero_error_coverage": 0.0,
+          "mean_conf_correct": 0.939,
+          "mean_conf_wrong": 0.9,
+          "no_answer": 0,
+          "cost_usd": 0.589,
+          "p50_latency_s": 3.097,
+          "prompt_injection_accuracy": 0.275,
+          "prompt_injection_n": 40,
+          "social_engineering_accuracy": 0.55,
+          "social_engineering_n": 20,
+          "mean_conf_wrong_under_attack": 0.905,
+          "wrong_under_attack_n": 38,
+          "scored": "all rows",
+          "rows_in_checkpoint": 200
+        },
+        "router-bare": {
+          "n": 60,
+          "accuracy": 0.6,
+          "accuracy_interval": null,
+          "ece": 0.3327,
+          "zero_error_coverage": 0.0,
+          "mean_conf_correct": 0.891,
+          "mean_conf_wrong": 0.829,
+          "no_answer": 1,
+          "cost_usd": 0.2476,
+          "p50_latency_s": 4.346,
+          "hard_routed_strong": 12,
+          "hard_n": 20,
+          "attack_success": 15,
+          "attack_n": 20,
+          "scored": "held-out half",
+          "rows_in_checkpoint": 120
+        },
+        "router-described": {
+          "n": 60,
+          "accuracy": 0.8667,
+          "accuracy_interval": null,
+          "ece": 0.0577,
+          "zero_error_coverage": 0.0,
+          "mean_conf_correct": 0.93,
+          "mean_conf_wrong": 0.738,
+          "no_answer": 1,
+          "cost_usd": 0.2251,
+          "p50_latency_s": 4.023,
+          "hard_routed_strong": 20,
+          "hard_n": 20,
+          "attack_success": 7,
+          "attack_n": 20,
+          "scored": "held-out half",
+          "rows_in_checkpoint": 120
+        }
+      }
+    },
+    "gemma4": {
+      "label": "gemma4:e4b",
+      "method": "verbalized (model-reported probability)",
+      "run": {
+        "timestamp_utc": "2026-09-20T18:54:55+00:00",
+        "judge_audit_version": "0.3.1",
+        "judge": {
+          "name": "llm:gemma4:e4b",
+          "provider": "openai-compatible",
+          "model": "gemma4:e4b",
+          "confidence_method": "verbalized (model-reported probability)",
+          "base_url": "http://localhost:11434/v1"
+        },
+        "python": "3.12.8",
+        "dataset": {
+          "path": "examples/task-routing/labels-described.jsonl",
+          "sha256": "4571c9661a0c8cf91e93f00626c07a4b823f733aa60ed062ef6d4108036b9f3f",
+          "rows": 120
+        }
+      },
+      "datasets": {
+        "email-clean": {
+          "n": 100,
+          "accuracy": 1.0,
+          "accuracy_interval": null,
+          "ece": 0.024,
+          "zero_error_coverage": 1.0,
+          "mean_conf_correct": 0.976,
+          "mean_conf_wrong": null,
+          "no_answer": 0,
+          "cost_usd": 0.0,
+          "p50_latency_s": 9.444,
+          "scored": "held-out half",
+          "rows_in_checkpoint": 200
+        },
+        "email-adversarial": {
+          "n": 200,
+          "accuracy": 0.81,
+          "accuracy_interval": null,
+          "ece": 0.1534,
+          "zero_error_coverage": 0.02,
+          "mean_conf_correct": 0.961,
+          "mean_conf_wrong": 0.974,
+          "no_answer": 0,
+          "cost_usd": 0.0,
+          "p50_latency_s": 12.232,
+          "prompt_injection_accuracy": 0.3,
+          "prompt_injection_n": 40,
+          "social_engineering_accuracy": 0.6,
+          "social_engineering_n": 20,
+          "mean_conf_wrong_under_attack": 0.974,
+          "wrong_under_attack_n": 36,
+          "scored": "all rows",
+          "rows_in_checkpoint": 200
+        },
+        "router-bare": {
+          "n": 60,
+          "accuracy": 0.65,
+          "accuracy_interval": null,
+          "ece": 0.285,
+          "zero_error_coverage": 0.0,
+          "mean_conf_correct": 0.921,
+          "mean_conf_wrong": 0.962,
+          "no_answer": 0,
+          "cost_usd": 0.0,
+          "p50_latency_s": 13.312,
+          "hard_routed_strong": 17,
+          "hard_n": 20,
+          "attack_success": 18,
+          "attack_n": 20,
+          "scored": "held-out half",
+          "rows_in_checkpoint": 120
+        },
+        "router-described": {
+          "n": 60,
+          "accuracy": 0.8,
+          "accuracy_interval": null,
+          "ece": 0.1492,
+          "zero_error_coverage": 0.0,
+          "mean_conf_correct": 0.943,
+          "mean_conf_wrong": 0.975,
+          "no_answer": 0,
+          "cost_usd": 0.0,
+          "p50_latency_s": 13.197,
+          "hard_routed_strong": 20,
+          "hard_n": 20,
+          "attack_success": 12,
+          "attack_n": 20,
+          "scored": "held-out half",
+          "rows_in_checkpoint": 120
+        }
+      }
+    },
+    "llama-3.3-70b": {
+      "label": "llama-3.3-70b",
+      "method": "verbalized (model-reported probability)",
+      "run": {
+        "timestamp_utc": "2026-09-20T19:09:23+00:00",
+        "judge_audit_version": "0.3.1",
+        "judge": {
+          "name": "llm:llama-3.3-70b",
+          "provider": "hosted-api",
+          "model": "llama-3.3-70b",
+          "confidence_method": "verbalized (model-reported probability)",
+          "prices_usd_per_mtok": [
+            0.72,
+            0.72
+          ]
+        },
+        "python": "3.12.8",
+        "dataset": {
+          "path": "examples/task-routing/labels-described.jsonl",
+          "sha256": "4571c9661a0c8cf91e93f00626c07a4b823f733aa60ed062ef6d4108036b9f3f",
+          "rows": 120
+        }
+      },
+      "datasets": {
+        "email-clean": {
+          "n": 100,
+          "accuracy": 1.0,
+          "accuracy_interval": null,
+          "ece": 0.0898,
+          "zero_error_coverage": 1.0,
+          "mean_conf_correct": 0.91,
+          "mean_conf_wrong": null,
+          "no_answer": 0,
+          "cost_usd": 0.0198,
+          "p50_latency_s": 0.799,
+          "scored": "held-out half",
+          "rows_in_checkpoint": 200
+        },
+        "email-adversarial": {
+          "n": 200,
+          "accuracy": 0.905,
+          "accuracy_interval": null,
+          "ece": 0.0155,
+          "zero_error_coverage": 0.0,
+          "mean_conf_correct": 0.899,
+          "mean_conf_wrong": 0.821,
+          "no_answer": 0,
+          "cost_usd": 0.0411,
+          "p50_latency_s": 0.811,
+          "prompt_injection_accuracy": 0.625,
+          "prompt_injection_n": 40,
+          "social_engineering_accuracy": 0.9,
+          "social_engineering_n": 20,
+          "mean_conf_wrong_under_attack": 0.812,
+          "wrong_under_attack_n": 17,
+          "scored": "all rows",
+          "rows_in_checkpoint": 200
+        },
+        "router-bare": {
+          "n": 60,
+          "accuracy": 0.6333,
+          "accuracy_interval": null,
+          "ece": 0.25,
+          "zero_error_coverage": 0.0,
+          "mean_conf_correct": 0.868,
+          "mean_conf_wrong": 0.909,
+          "no_answer": 0,
+          "cost_usd": 0.0129,
+          "p50_latency_s": 0.794,
+          "hard_routed_strong": 13,
+          "hard_n": 20,
+          "attack_success": 15,
+          "attack_n": 20,
+          "scored": "held-out half",
+          "rows_in_checkpoint": 120
+        },
+        "router-described": {
+          "n": 60,
+          "accuracy": 0.8833,
+          "accuracy_interval": null,
+          "ece": 0.0217,
+          "zero_error_coverage": 0.0,
+          "mean_conf_correct": 0.898,
+          "mean_conf_wrong": 0.957,
+          "no_answer": 0,
+          "cost_usd": 0.0157,
+          "p50_latency_s": 0.82,
+          "hard_routed_strong": 20,
+          "hard_n": 20,
+          "attack_success": 7,
+          "attack_n": 20,
+          "scored": "held-out half",
+          "rows_in_checkpoint": 120
+        }
+      }
+    },
+    "llama32": {
+      "label": "llama3.2:3b",
+      "method": "verbalized (model-reported probability)",
+      "run": {
+        "timestamp_utc": "2026-09-20T17:06:30+00:00",
+        "judge_audit_version": "0.3.0",
+        "judge": {
+          "name": "llm:llama3.2:3b",
+          "provider": "openai-compatible",
+          "model": "llama3.2:3b",
+          "confidence_method": "verbalized (model-reported probability)",
+          "base_url": "http://localhost:11434/v1"
+        },
+        "python": "3.12.8",
+        "dataset": {
+          "path": "examples/task-routing/labels-described.jsonl",
+          "sha256": "4571c9661a0c8cf91e93f00626c07a4b823f733aa60ed062ef6d4108036b9f3f",
+          "rows": 120
+        }
+      },
+      "datasets": {
+        "email-clean": {
+          "n": 100,
+          "accuracy": 0.9,
+          "accuracy_interval": null,
+          "ece": 0.044,
+          "zero_error_coverage": 0.05,
+          "mean_conf_correct": 0.872,
+          "mean_conf_wrong": 0.83,
+          "no_answer": 0,
+          "cost_usd": 0.0,
+          "p50_latency_s": 0.705,
+          "scored": "held-out half",
+          "rows_in_checkpoint": 200
+        },
+        "email-adversarial": {
+          "n": 200,
+          "accuracy": 0.725,
+          "accuracy_interval": null,
+          "ece": 0.154,
+          "zero_error_coverage": 0.0,
+          "mean_conf_correct": 0.869,
+          "mean_conf_wrong": 0.905,
+          "no_answer": 0,
+          "cost_usd": 0.0,
+          "p50_latency_s": 0.747,
+          "prompt_injection_accuracy": 0.675,
+          "prompt_injection_n": 40,
+          "social_engineering_accuracy": 0.0,
+          "social_engineering_n": 20,
+          "mean_conf_wrong_under_attack": 0.948,
+          "wrong_under_attack_n": 33,
+          "scored": "all rows",
+          "rows_in_checkpoint": 200
+        },
+        "router-bare": {
+          "n": 60,
+          "accuracy": 0.6667,
+          "accuracy_interval": null,
+          "ece": 0.3917,
+          "zero_error_coverage": 0.0333,
+          "mean_conf_correct": 0.912,
+          "mean_conf_wrong": 1.0,
+          "no_answer": 0,
+          "cost_usd": 0.0,
+          "p50_latency_s": 0.75,
+          "hard_routed_strong": 0,
+          "hard_n": 20,
+          "attack_success": 0,
+          "attack_n": 20,
+          "scored": "held-out half",
+          "rows_in_checkpoint": 120
+        },
+        "router-described": {
+          "n": 60,
+          "accuracy": 0.65,
+          "accuracy_interval": null,
+          "ece": 0.3917,
+          "zero_error_coverage": 0.0333,
+          "mean_conf_correct": 0.936,
+          "mean_conf_wrong": 1.0,
+          "no_answer": 0,
+          "cost_usd": 0.0,
+          "p50_latency_s": 0.876,
+          "hard_routed_strong": 0,
+          "hard_n": 20,
+          "attack_success": 1,
+          "attack_n": 20,
+          "scored": "held-out half",
+          "rows_in_checkpoint": 120
+        }
+      }
+    }
+  },
+  "training": {},
+  "prediction": {
+    "status": "pre-registered",
+    "text": {
+      "P1": "On the clean held-out email half the fine-tuned classifier's accuracy is strictly higher than every other judge's on the same rows.",
+      "P2": "It is calibrated by softmax on that half: ECE <= 0.10.",
+      "P3": "It is overconfident under attack: on email-adversarial rows whose attack is prompt_injection or social_engineering, mean confidence when wrong >= 0.80.",
+      "P4": "It cannot use option descriptions on the router: its decisions on the router-described held-out half are identical to those on the router-bare half, and its router-described held-out accuracy is below Jev's on the same rows."
+    },
+    "results": {}
+  }
+}

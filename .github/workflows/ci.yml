@@ -51,6 +51,10 @@ jobs:
         run: |
           python scripts/arena_report.py
           git diff --exit-code -- docs/arena-2026-09.md docs/arena-2026-09.json
+      - name: Held-out report recomputes from the same checkpoints on the pre-registered split
+        run: |
+          python scripts/heldout_report.py
+          git diff --exit-code -- docs/finetuned-baseline-2026-09.md docs/finetuned-baseline-2026-09.json
       - name: Checkpoint decisions match the current parser (no silent re-parse debt)
         run: python scripts/reparse_checkpoints.py --dry-run | tee /tmp/reparse.txt && grep -q '^0 judgment' /tmp/reparse.txt
 
@@ -67,3 +71,7 @@ jobs:
             (cd examples/$d && python generate.py >/dev/null)
           done
           git diff --exit-code -- examples/
+      - name: Pre-registered held-out split regenerates byte-identical
+        run: |
+          pip install -e .
+          python scripts/split_heldout.py --check
