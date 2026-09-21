@@ -303,7 +303,7 @@ Every 3-judge jury from the frozen panel (jev, claude-sonnet-4.5, deberta-nli, d
 | jev + gemma4 + llama32 | 0.0% / 0.0% | 0 | 0.767 | — / 0.231 | 12 | $0.0020 | 4.90 s |
 | jev + llama-3.3-70b + llama32 | 0.0% / 0.0% | 0 | 0.758 | — / 0.261 | 11 | $0.0278 | 0.75 s |
 
-**Diversity vs accuracy.** On the 40 hard rows, mean phi runs from -0.037 to 0.678 and its Spearman correlation with majority accuracy is -0.31 (40 juries); on all 120 rows, mean phi runs from -0.180 to 0.913 and its Spearman correlation with majority accuracy is -0.32 (56 juries).
+**Diversity vs accuracy.** On the 40 hard rows, mean phi runs from -0.037 to 0.678 and its Spearman correlation with majority accuracy is -0.31 (40 juries, 30 of them with only one defined pair); on all 120 rows, mean phi runs from -0.180 to 0.913 and its Spearman correlation with majority accuracy is -0.32 (56 juries).
 
 ## Task router, described options (n=120)
 

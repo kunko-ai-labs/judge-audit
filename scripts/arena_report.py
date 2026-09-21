@@ -136,6 +136,16 @@ def collect() -> dict:
     return judges
 
 
+def most_correlated_pair(dataset: str) -> dict | None:
+    """The most error-correlated judge pair of a dataset, from the committed consensus JSON
+    (scripts/consensus_report.py); None when that report is not there yet."""
+    path = ROOT / "docs" / "consensus-2026-09.json"
+    if not path.exists():
+        return None
+    ec = json.loads(path.read_text(encoding="utf-8")).get(dataset, {}).get("error_correlation", {})
+    return ec.get("most_correlated")
+
+
 def fmt(x, pct=False):
     if x is None:
         return "—"
@@ -183,10 +193,25 @@ def render(judges: dict) -> str:
                 row += f" {s['hard_routed_strong']} / {s['hard_n']} | {s['attack_success']} / 40 |"
             L.append(row)
         L.append("")
+    # The control's degradation under attack, from this run's own numbers.
+    nli = judges.get("deberta-nli", {}).get("datasets", {})
+    nli_note = ""
+    if "email-clean" in nli and "email-adversarial" in nli:
+        nli_note = (f" — though injected text still degrades it "
+                    f"({fmt(nli['email-clean']['accuracy'], True)} clean → "
+                    f"{fmt(nli['email-adversarial']['accuracy'], True)} under attack, "
+                    f"{fmt(nli['email-adversarial']['prompt_injection_accuracy'], True)} on "
+                    "prompt-injection rows)")
+    pair = most_correlated_pair("router-bare")
+    pair_note = (f" ({pair['pair']}, phi {pair['phi']:.2f} — see "
+                 "[Error correlation](consensus-2026-09.md))" if pair else
+                 " (see [Error correlation](consensus-2026-09.md))")
     L += ["## Why these judges", "",
           "Each row stands for a kind of judge a team could actually deploy, not for a brand. "
-          "The panel is heterogeneous on purpose: a jury of one model family is the documented "
-          "failure mode (see the [consensus audit](consensus-2026-09.md)).", "",
+          "The panel is heterogeneous on purpose: judges that fail on the same rows are the "
+          f"documented failure mode{pair_note}; Shao (2026, "
+          "[arXiv:2609.20543](https://arxiv.org/abs/2609.20543)) and Huang et al. (2026, "
+          "[arXiv:2605.30653](https://arxiv.org/abs/2605.30653)) for the literature.", "",
           "| judge | what it represents |", "|---|---|",
           "| Jev (TypeSafe) | the judgment model under audit — a model built to judge, returning a "
           "probability per option instead of a written number |",
@@ -198,7 +223,7 @@ def render(judges: dict) -> str:
           "| gemma4 (e4b), llama3.2 3B | small local chat models on a laptop — the cost floor "
           "($0) and the floor of what a chat prompt can do |",
           "| DeBERTa-v3 zero-shot NLI | **control**, not a competitor: a ~180M encoder that cannot "
-          "follow instructions (prompt injection cannot reach it by construction), returns a real "
+          f"follow instructions, so an injection cannot hijack it{nli_note}; returns a real "
           "softmax confidence and was never fine-tuned on these tasks — the row that says whether a "
           "task needed a bigger model at all |",
           "| your own fine-tuned classifier | coming in "
@@ -206,12 +231,9 @@ def render(judges: dict) -> str:
           "pre-registered train half, scored on the held-out half next to every judge above |",
           "",
           "Deliberately missing from this round, one reason each:", "",
-          "- **OpenJev** — no hosted endpoint to hand; self-hosting a Jev-compatible server needs a "
-          "GPU box we did not set up in time (the `JEV_ENDPOINT` adapter is ready when one exists).",
-          "- **GPT** — no account with a key for it in this round; the `llm` adapter reaches it "
-          "unchanged once there is one.",
-          "- **Mistral** — budget and time: the round closed before another hosted model was run; "
-          "same adapter, no code change needed.",
+          "- **OpenJev** — needs a Codiv account not yet created.",
+          "- **GPT (OpenAI)** — no API budget allocated this round.",
+          "- **Mistral** — not requested by anyone yet.",
           "",
           "## How to read it", "",
           "- **ECE**: 0 = confidence equals accuracy in every bin. Above ~0.1 the number is decoration.",

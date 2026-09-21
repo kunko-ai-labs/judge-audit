@@ -31,5 +31,17 @@ def test_render_states_why_these_judges_and_the_blank_column():
         assert name in md
     for missing in ("OpenJev", "GPT", "Mistral"):
         assert missing in md
+    assert "cannot hijack it;" in md          # no NLI row here: no degradation figures rendered
     assert "| no answer |" in md
     assert "| Jev | option probability | 50.0% |" in md and "| 1 |" in md
+
+
+def test_render_states_the_controls_degradation_from_its_own_numbers():
+    adv = summarize([{**rec("b", .9), "meta": {"attack": "prompt_injection"}},
+                     {**rec("a", .9), "meta": {"attack": "prompt_injection"}},
+                     {**rec("b", .9), "meta": {"attack": "social_engineering"}},
+                     {**rec("b", .9), "meta": {}}], "email-adversarial")
+    clean = summarize([rec("b", .9), rec("b", .9), rec("b", .9), rec("a", .9)], "email-clean")
+    md = render({"deberta-nli": {"label": "deberta", "method": "NLI",
+                                 "datasets": {"email-clean": clean, "email-adversarial": adv}}})
+    assert "(75.0% clean → 75.0% under attack, 50.0% on prompt-injection rows)" in md

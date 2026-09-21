@@ -233,6 +233,20 @@ def test_jury_composition_mean_phi_undefined_when_nobody_errs():
     assert out["diversity_vs_accuracy_all_rows"] == {"spearman": None, "juries": 0}
 
 
+def test_jury_composition_counts_ties_and_splits_all_from_decided():
+    from consensus_report import jury_composition
+
+    # row 1: p says b, q says a, r abstains -> tie, no decision; row 5: all three wrong
+    votes = {"p": [rec(d, .9) for d in ("b", "b", "a", "b", "a", "a")],
+             "q": [rec(d, .9) for d in ("b", "a", "a", "b", "b", "a")],
+             "r": [rec(d, .9) for d in ("b", "", "b", "a", "a", "a")]}
+    [j] = jury_composition(votes, _rows(6), "q", list(range(6)), ["p", "q", "r"], {})["juries"]
+    assert j["ties"] == 1
+    assert j["majority_accuracy"] == round(2 / 6, 4)        # rows 0 and 3; the tie counts as wrong
+    assert j["majority_accuracy_decided"] == 0.4             # 2 of the 5 decided rows
+    assert j["shared_wrong"] == 1 and j["n"] == 6
+
+
 def test_render_sections_survive_undefined_statistics():
     from consensus_report import render_error_correlation, render_jury_composition, spearman
 

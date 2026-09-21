@@ -432,17 +432,20 @@ def render_jury_composition(comp: dict, n: int) -> list[str]:
                  f"{phi_cell(j['mean_phi_all'], j['pairs_with_phi_all'])} | {j['shared_wrong']} | "
                  f"{money(j['cost_usd'])} | {secs(j['p50_latency_s'])} |")
     parts = []
-    for key, d, label in [("mean_phi", comp["diversity_vs_accuracy"], f"the {n} hard rows"),
-                          ("mean_phi_all", comp["diversity_vs_accuracy_all_rows"],
-                           f"all {n_all} rows")]:
+    for key, k_key, d, label in [
+            ("mean_phi", "pairs_with_phi", comp["diversity_vs_accuracy"], f"the {n} hard rows"),
+            ("mean_phi_all", "pairs_with_phi_all", comp["diversity_vs_accuracy_all_rows"],
+             f"all {n_all} rows")]:
         phis = [j[key] for j in comp["juries"] if j[key] is not None]
+        one_pair = sum(1 for j in comp["juries"] if j[key] is not None and j[k_key] == 1)
+        count = f"{d['juries']} juries" + (f", {one_pair} of them with only one defined pair"
+                                           if one_pair else "")
         if d["spearman"] is None:
-            parts.append(f"on {label}, Spearman is undefined ({d['juries']} juries with a "
-                         "defined mean phi)")
+            parts.append(f"on {label}, Spearman is undefined ({count} with a defined mean phi)")
         else:
             parts.append(f"on {label}, mean phi runs from {num(min(phis))} to {num(max(phis))} "
                          f"and its Spearman correlation with majority accuracy is "
-                         f"{d['spearman']:+.2f} ({d['juries']} juries)")
+                         f"{d['spearman']:+.2f} ({count})")
     text = "; ".join(parts)
     L += ["", "**Diversity vs accuracy.** " + text[0].upper() + text[1:] + "."]
     return L
