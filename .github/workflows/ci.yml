@@ -51,6 +51,11 @@ jobs:
         run: |
           python scripts/arena_report.py
           git diff --exit-code -- docs/arena-2026-09.md docs/arena-2026-09.json
+      - name: Consensus and jury tables recompute from their checkpoints
+        run: |
+          python scripts/consensus_report.py
+          python scripts/jury_report.py
+          git diff --exit-code -- docs/consensus-2026-09.md docs/consensus-2026-09.json docs/jury-consensus.md docs/jury-consensus.json
 
   datasets:
     runs-on: ubuntu-latest
