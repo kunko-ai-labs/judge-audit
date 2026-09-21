@@ -46,7 +46,8 @@ def ece(rows, n_bins=10):
 def load(labels_path, ckpt_path):
     labels = {}
     # The first line may be the dataset header ({"idx": -1, ...}); rows are the rest.
-    parsed = [json.loads(line) for line in open(labels_path) if line.strip()]
+    with open(labels_path, encoding="utf-8") as f:
+        parsed = [json.loads(line) for line in f if line.strip()]
     for i, d in enumerate(d for d in parsed if d.get("idx") != -1):
         labels[i] = {
             "label": d["labels"]["category"],

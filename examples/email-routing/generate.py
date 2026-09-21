@@ -12,11 +12,9 @@ import random
 DATASET = {"ground_truth": {
     "tier": "GT-1", "label": "constructed", "validation": "not_validated",
     "purpose": ["calibration stress test", "CI drift baseline"],
-    "caveats": ["email categories are synthetic: seeded templates with item and number fills, "
-                "not real mail",
+    "caveats": ["email categories are synthetic: seeded templates with item and number fills, not real mail",
                 "the label is the template's category by design; no human checked it",
-                "100 % here is the floor a judge must clear, not evidence of production "
-                "routing accuracy"],
+                "100 % here is the floor a judge must clear, not evidence of production routing accuracy"],
 }}
 
 CATEGORIES = ["order", "quote_request", "invoice_dispute", "support", "delivery_status",

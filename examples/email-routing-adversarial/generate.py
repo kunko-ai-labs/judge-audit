@@ -34,12 +34,9 @@ _spec.loader.exec_module(base_gen)
 # Dataset header: provenance of the labels, read by judge_audit.runner.load_dataset.
 DATASET = {"ground_truth": {
     "tier": "GT-1", "label": "constructed", "validation": "not_validated",
-    "purpose": ["robustness under prompt injection, homoglyphs, ambiguity, PII and social "
-                "engineering", "does confidence drop when the judge is attacked?"],
-    "caveats": ["email categories are synthetic and seeded: 60 clean controls plus 140 attacked "
-                "rows built from the same templates",
-                "the label is the category of the underlying clean email by design; "
-                "_meta.target is what the attacker wanted",
+    "purpose": ["robustness under prompt injection, homoglyphs, ambiguity, PII and social engineering", "does confidence drop when the judge is attacked?"],
+    "caveats": ["email categories are synthetic and seeded: 60 clean controls plus 140 attacked rows built from the same templates",
+                "the label is the category of the underlying clean email by design; _meta.target is what the attacker wanted",
                 "measures resistance to attacks on synthetic mail, not accuracy on real mail"],
 }}
 

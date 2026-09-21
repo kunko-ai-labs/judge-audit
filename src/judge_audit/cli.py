@@ -71,13 +71,14 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> None:
     args = _parser().parse_args(argv)
+    rows, dataset_meta = [], {}
     try:
         rows, dataset_meta = load_dataset(args.labels)
     except (OSError, ValueError) as e:
         _die(f"cannot read {args.labels}: {e}")
     if not rows:
         _die(f"{args.labels} has no rows")
-    tag = ""
+    judge, tag = None, ""
     try:
         judge, tag = _judge(args.judge, rows)
     except (RuntimeError, ValueError) as e:
