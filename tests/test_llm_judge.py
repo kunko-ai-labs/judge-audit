@@ -107,3 +107,36 @@ def test_dropped_connection_is_retried(monkeypatch):
     monkeypatch.setattr(llm_mod.time, "sleep", lambda s: None)
     text, _, _ = LLMJudge()._call("hello")
     assert text == "{}" and calls["n"] == 2
+
+
+def test_timeout_in_json_mode_retries_without_it(monkeypatch):
+    """An endpoint that hangs in JSON mode gets the same prompt again as plain text."""
+    import urllib.request
+
+    from judge_audit.judges import llm as llm_mod
+
+    monkeypatch.setenv("LLM_PROVIDER", "openai-compatible")
+    monkeypatch.setenv("LLM_BASE_URL", "http://unit.test/v1")
+    monkeypatch.setenv("LLM_MODEL", "gpt-5-mini")
+    bodies = []
+
+    class Resp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return json.dumps({"choices": [{"message": {"content": "{}"}}]}).encode()
+
+    def urlopen(req, timeout=0):
+        bodies.append(json.loads(req.data))
+        if len(bodies) == 1:
+            raise TimeoutError("timed out")
+        return Resp()
+
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(llm_mod.time, "sleep", lambda s: None)
+    assert LLMJudge()._call("hello")[0] == "{}"
+    assert "response_format" in bodies[0] and "response_format" not in bodies[1]

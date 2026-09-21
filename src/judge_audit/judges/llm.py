@@ -186,14 +186,19 @@ class LLMJudge(Judge):
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
-        req = urllib.request.Request(f"{self.base_url}/chat/completions",
-                                     data=json.dumps(body).encode(), headers=headers)
         last = ""
         for attempt in range(5):
+            req = urllib.request.Request(f"{self.base_url}/chat/completions",
+                                         data=json.dumps(body).encode(), headers=headers)
             try:
                 with urllib.request.urlopen(req, timeout=120) as r:
                     data = json.load(r)
                 break
+            except TimeoutError as e:
+                # Some endpoints never answer certain prompts in JSON mode (observed with
+                # Gemini). Ask again without it; _extract_json tolerates prose around the JSON.
+                last = f"{type(e).__name__}: {e}"
+                body.pop("response_format", None)
             except urllib.error.HTTPError as e:
                 detail = e.read().decode(errors="replace")[:300]
                 if e.code in TRANSIENT:
@@ -201,8 +206,7 @@ class LLMJudge(Judge):
                     time.sleep(min(2 ** attempt * 5 + random.uniform(0, 3), 120))
                     continue
                 raise RuntimeError(f"{self.base_url} returned {e.code}: {detail}") from e
-            except (urllib.error.URLError, http.client.HTTPException,
-                    ConnectionError, TimeoutError) as e:
+            except (urllib.error.URLError, http.client.HTTPException, ConnectionError) as e:
                 # Dropped or reset connections are as transient as a 503.
                 last = f"{type(e).__name__}: {e}"
                 time.sleep(min(2 ** attempt * 5 + random.uniform(0, 3), 120))

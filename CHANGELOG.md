@@ -13,6 +13,9 @@ All notable changes to this project are documented here. The format follows
 - **`llm` judge**: `custom` provider (`LLM_PROVIDER_MODULE=/path/to/module.py` exposing `call(model, system, user)`) for hosted platforms without an OpenAI-compatible endpoint; `LLM_MODEL_LABEL` sets the name reports show; transient HTTP errors (429/502/503/504/529) are retried with backoff.
 - `.env.example` documenting every credential the adapters read.
 
+### Fixed
+- `llm` judge: an OpenAI-compatible endpoint that times out in JSON mode is asked again without `response_format` (observed with Gemini on one prompt).
+
 ## [0.3.2] — 2026-09-20
 
 ### Fixed
