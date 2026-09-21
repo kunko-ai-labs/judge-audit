@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from arena_report import DATASETS, records  # noqa: E402
-from consensus_report import majority, panel_stats, votes_of  # noqa: E402
+from consensus_report import by_row, majority, panel_stats, votes_of  # noqa: E402
 
 from judge_audit.metrics.calibration import expected_calibration_error  # noqa: E402
 
@@ -48,9 +48,10 @@ def collect() -> dict:
             ck = JURY / ds / f"{slug}.r2.ckpt.jsonl"
             if not ck.exists():
                 continue
-            recs, run = records(str(ROOT / labels), ck, q)
-            if len(recs) < len(rows):
-                print(f"skip {ds}/{slug}: {len(recs)} rows, round 2 not complete", file=sys.stderr)
+            raw, run = records(str(ROOT / labels), ck, q)
+            recs = by_row(raw, len(rows))
+            if recs is None:
+                print(f"skip {ds}/{slug}: {len(raw)} rows, round 2 not complete", file=sys.stderr)
                 continue
             rerun.append(slug)
             r2[slug] = recs
@@ -131,6 +132,7 @@ def render(data: dict) -> str:
                      f"{j['switched']} | {j['switched_to_correct']} / {j['switched_to_wrong']} | "
                      f"{j['switched_toward_panel_majority']} / {j['switched']} |")
         L.append("")
+    L += predictions(data)
     L += ["## How to read it", "",
           "- A jury that deliberates well moves **majority accuracy** up and keeps **conf when wrong** low.",
           "- A jury that merely converges moves **pairwise agreement** and **unanimous** up while accuracy "
@@ -145,6 +147,69 @@ def render(data: dict) -> str:
           "- Judges without a text prompt (zero-shot NLI) keep their round-1 vote in the round-2 panel; "
           "this is stated per dataset above.", ""]
     return "\n".join(L)
+
+
+def _delta(a: float | None, b: float | None, pct_: bool = True) -> str:
+    if a is None or b is None:
+        return "—"
+    return f"{pct(a)} → {pct(b)}" if pct_ else f"{num(a)} → {num(b)}"
+
+
+def predictions(data: dict) -> list[str]:
+    """The four pre-registered predictions (docs/jury-consensus-plan.md), scored from the data."""
+    if not all(data[ds]["rerun"] for ds in ROUND2_DATASETS):
+        return []
+    bare, desc = data["router-bare"], data["router-described"]
+    L = ["## Results vs the pre-registered predictions", "",
+         "Scored mechanically from the tables above; the thresholds are stated with each verdict.", ""]
+    # 1. agreement and unanimity rise on both datasets
+    rows = []
+    ok1 = True
+    for ds, e in (("router-bare", bare), ("router-described", desc)):
+        a, b = e["panel_round1"], e["panel_round2"]
+        up = b["pairwise_agreement"] > a["pairwise_agreement"] and b["unanimous"] >= a["unanimous"]
+        ok1 &= up
+        rows.append(f"{ds}: agreement {_delta(a['pairwise_agreement'], b['pairwise_agreement'])}, "
+                    f"unanimous {a['unanimous']} → {b['unanimous']}")
+    L.append(f"1. **Agreement and unanimity rise on both datasets** — {'held' if ok1 else 'not held'}. "
+             + "; ".join(rows) + ".")
+    # 2. bare: hard majority accuracy does not rise materially (< 10 points); llama32 follows the panel
+    h1, h2 = bare["hard_round1"]["majority_accuracy"], bare["hard_round2"]["majority_accuracy"]
+    small = (h2 - h1) < 0.10
+    j = bare["judges"].get("llama32")
+    follows = bool(j) and j["switched"] > 0 and j["switched_toward_panel_majority"] / j["switched"] >= 0.5
+    verdict = "held" if small and follows else ("partly held" if small or follows else "not held")
+    L.append(f"2. **Bare labels: hard-task majority accuracy does not rise materially (< 10 points) and the "
+             f"3B model follows the panel** — {verdict}. Hard-task majority accuracy {_delta(h1, h2)}; "
+             + (f"llama3.2 switched {j['switched']} votes, {j['switched_toward_panel_majority']} of them "
+                f"onto the panel majority." if j else "llama3.2 did not re-vote."))
+    # 3. described: right judges keep their vote (switches to wrong <= 5 % of votes), majority accuracy rises (>= 0)
+    to_wrong = sum(x["switched_to_wrong"] for x in desc["judges"].values())
+    votes = sum(desc["panel_round1"]["n"] for _ in desc["judges"])
+    keep = to_wrong <= 0.05 * votes
+    m1, m2 = desc["panel_round1"]["majority_accuracy"], desc["panel_round2"]["majority_accuracy"]
+    rises = m2 >= m1
+    verdict = "held" if keep and rises else ("partly held" if keep or rises else "not held")
+    L.append(f"3. **Described options: judges that were right keep their vote (switches to wrong ≤ 5 % of "
+             f"votes) and majority accuracy does not fall** — {verdict}. Switches to wrong: {to_wrong} of "
+             f"{votes} re-votes; majority accuracy {_delta(m1, m2)}.")
+    # 4. chat models' confidence when wrong goes up
+    ups, tot, cells = 0, 0, []
+    for ds, e in (("router-bare", bare), ("router-described", desc)):
+        for slug, x in e["judges"].items():
+            if slug == "jev":
+                continue
+            a, b = x["round1"]["mean_conf_wrong"], x["round2"]["mean_conf_wrong"]
+            if a is None or b is None:
+                continue
+            tot += 1
+            ups += b > a
+            cells.append(f"{slug}/{ds.split('-')[1]} {num(a)}→{num(b)}")
+    verdict = "held" if tot and ups > tot / 2 else "not held"
+    L.append(f"4. **Chat models are more confident when wrong after deliberation** — {verdict} "
+             f"({ups} of {tot} judge×dataset cells went up). " + "; ".join(cells) + ".")
+    L.append("")
+    return L
 
 
 def main() -> None:

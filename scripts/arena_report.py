@@ -58,6 +58,7 @@ def records(labels: str, ckpt: Path, question: str) -> tuple[list[dict], dict]:
         row = rows[rec["idx"]]
         j = next(x for x in rec["judgments"] if x["question"] == question)
         recs.append({
+            "idx": rec["idx"],
             "expected": row["labels"][question], "decision": str(j["decision"]),
             "correct": is_correct(j["decision"], row["labels"][question]),
             "confidence": max(0.0, min(1.0, float(j["confidence"]))),

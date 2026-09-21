@@ -1,0 +1,217 @@
+{
+  "judge": "llm",
+  "n": 120,
+  "accuracy": 0.5667,
+  "ece": 0.3525,
+  "reliability_bins": [
+    {
+      "bin": "0.0-0.1",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.1-0.2",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.2-0.3",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.3-0.4",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.4-0.5",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.5-0.6",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.6-0.7",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.7-0.8",
+      "avg_confidence": 0.7167,
+      "accuracy": 0.6667,
+      "n": 3
+    },
+    {
+      "bin": "0.8-0.9",
+      "avg_confidence": 0.8412,
+      "accuracy": 0.5294,
+      "n": 17
+    },
+    {
+      "bin": "0.9-1.0",
+      "avg_confidence": 0.9385,
+      "accuracy": 0.57,
+      "n": 100
+    }
+  ],
+  "accuracy_coverage": [
+    {
+      "coverage": 0.05,
+      "accuracy": 0.5,
+      "n": 6,
+      "min_confidence": 0.98
+    },
+    {
+      "coverage": 0.1,
+      "accuracy": 0.6667,
+      "n": 12,
+      "min_confidence": 0.98
+    },
+    {
+      "coverage": 0.15,
+      "accuracy": 0.7778,
+      "n": 18,
+      "min_confidence": 0.98
+    },
+    {
+      "coverage": 0.2,
+      "accuracy": 0.7917,
+      "n": 24,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.25,
+      "accuracy": 0.7333,
+      "n": 30,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.3,
+      "accuracy": 0.6944,
+      "n": 36,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.35,
+      "accuracy": 0.6905,
+      "n": 42,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.4,
+      "accuracy": 0.6667,
+      "n": 48,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.45,
+      "accuracy": 0.6852,
+      "n": 54,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.5,
+      "accuracy": 0.6667,
+      "n": 60,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.55,
+      "accuracy": 0.6818,
+      "n": 66,
+      "min_confidence": 0.9
+    },
+    {
+      "coverage": 0.6,
+      "accuracy": 0.6389,
+      "n": 72,
+      "min_confidence": 0.9
+    },
+    {
+      "coverage": 0.65,
+      "accuracy": 0.6026,
+      "n": 78,
+      "min_confidence": 0.9
+    },
+    {
+      "coverage": 0.7,
+      "accuracy": 0.6071,
+      "n": 84,
+      "min_confidence": 0.9
+    },
+    {
+      "coverage": 0.75,
+      "accuracy": 0.5778,
+      "n": 90,
+      "min_confidence": 0.9
+    },
+    {
+      "coverage": 0.8,
+      "accuracy": 0.5729,
+      "n": 96,
+      "min_confidence": 0.9
+    },
+    {
+      "coverage": 0.85,
+      "accuracy": 0.5686,
+      "n": 102,
+      "min_confidence": 0.85
+    },
+    {
+      "coverage": 0.9,
+      "accuracy": 0.5648,
+      "n": 108,
+      "min_confidence": 0.85
+    },
+    {
+      "coverage": 0.95,
+      "accuracy": 0.5702,
+      "n": 114,
+      "min_confidence": 0.85
+    },
+    {
+      "coverage": 1.0,
+      "accuracy": 0.5667,
+      "n": 120,
+      "min_confidence": 0.7
+    }
+  ],
+  "zero_error_coverage": {
+    "coverage": 0.0,
+    "n": 0,
+    "threshold": null
+  },
+  "total_cost_usd": 0.0,
+  "p50_latency_s": 19.53,
+  "p99_latency_s": 38.226,
+  "run": {
+    "judge_audit_version": "0.3.2",
+    "judge": {
+      "name": "llm:gemma4:e4b",
+      "provider": "openai-compatible",
+      "model": "gemma4:e4b",
+      "confidence_method": "verbalized (model-reported probability)",
+      "base_url": "http://localhost:11434/v1"
+    },
+    "python": "3.12.8",
+    "dataset": {
+      "path": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-bare/gemma4.r2.input.jsonl",
+      "sha256": "cbb33e0a8043cc2944b43d9b2be2b2fd99f795435cd37812142c747b6ede1512",
+      "rows": 120
+    },
+    "recomputed_utc": "2026-09-21T09:44:36+00:00",
+    "note": "original run time not recorded in this checkpoint",
+    "checkpoint": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-bare/gemma4.r2.ckpt.jsonl"
+  }
+}

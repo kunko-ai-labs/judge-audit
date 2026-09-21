@@ -37,14 +37,24 @@ def votes_of(dataset: str) -> tuple[dict[str, list[dict]], list[dict]]:
     """{judge slug: per-row records} for every judge with a complete run."""
     labels, q = DATASETS[dataset]
     rows = load_jsonl(str(ROOT / labels))
-    out = {"jev": records(labels, ROOT / JEV[dataset], q)[0]}
+    out = {"jev": by_row(records(labels, ROOT / JEV[dataset], q)[0], len(rows))}
     for d in sorted(p for p in ARENA.iterdir() if p.is_dir()):
         ck = d / f"{dataset}.ckpt.jsonl"
         if ck.exists():
-            recs, _ = records(labels, ck, q)
-            if len(recs) == len(rows):
+            recs = by_row(records(labels, ck, q)[0], len(rows))
+            if recs is not None:
                 out[d.name] = recs
     return out, rows
+
+
+def by_row(recs: list[dict], n_rows: int) -> list[dict] | None:
+    """Records in row order (a resumed driver appends redone rows at the end).
+
+    None when the run is incomplete or has a duplicated row."""
+    seen = {r["idx"]: r for r in recs}
+    if len(seen) != len(recs) or len(seen) != n_rows or set(seen) != set(range(n_rows)):
+        return None
+    return [seen[i] for i in range(n_rows)]
 
 
 def majority(decisions: list[str]) -> tuple[str, float]:

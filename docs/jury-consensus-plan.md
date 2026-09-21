@@ -1,6 +1,6 @@
 # Jury consensus audit — pre-registered plan
 
-**Issue:** [#39](https://github.com/kunko-ai-labs/judge-audit/issues/39) · **Status:** round 1 published, round 2 pre-registered before any call was made (this file's first commit is the freeze).
+**Issue:** [#39](https://github.com/kunko-ai-labs/judge-audit/issues/39) · **Status:** round 1 published; round 2 pre-registered before any call was made (commit 1857282 is the freeze), then run and published in [jury-consensus.md](jury-consensus.md). `gemini-3-flash` completed its Arena run before round 2 and joined both panels, as this plan allowed.
 
 ## 1. Why
 

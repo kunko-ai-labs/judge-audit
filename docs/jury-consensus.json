@@ -1,16 +1,260 @@
 {
   "router-bare": {
-    "rerun": [],
-    "kept_round1": [
+    "rerun": [
       "jev",
       "claude-sonnet-4.5",
-      "deberta-nli",
       "deepseek-r1",
+      "gemini-3-flash",
       "gemma4",
       "llama-3.3-70b",
       "llama32"
     ],
-    "judges": {},
+    "kept_round1": [
+      "deberta-nli"
+    ],
+    "judges": {
+      "jev": {
+        "round1": {
+          "accuracy": 0.6667,
+          "ece": 0.3181,
+          "mean_conf_wrong": 0.926
+        },
+        "round2": {
+          "accuracy": 0.7417,
+          "ece": 0.1811,
+          "mean_conf_wrong": 0.838
+        },
+        "hard_round1": {
+          "accuracy": 0,
+          "ece": 0.9263,
+          "mean_conf_wrong": 0.926
+        },
+        "hard_round2": {
+          "accuracy": 0.225,
+          "ece": 0.5857,
+          "mean_conf_wrong": 0.838
+        },
+        "switched": 9,
+        "switched_to_correct": 9,
+        "switched_to_wrong": 0,
+        "switched_toward_panel_majority": 9,
+        "run": {
+          "name": "jev",
+          "model": "jev-latest",
+          "backend": "typesafe",
+          "bridge": "typesafe-systemone-http",
+          "input_price_per_mtok_usd": 0.042,
+          "endpoint": "https://api.typesafe.ai/v1/systemone"
+        }
+      },
+      "claude-sonnet-4.5": {
+        "round1": {
+          "accuracy": 0.6083,
+          "ece": 0.237,
+          "mean_conf_wrong": 0.726
+        },
+        "round2": {
+          "accuracy": 0.6583,
+          "ece": 0.1903,
+          "mean_conf_wrong": 0.71
+        },
+        "hard_round1": {
+          "accuracy": 0.15,
+          "ece": 0.6583,
+          "mean_conf_wrong": 0.816
+        },
+        "hard_round2": {
+          "accuracy": 0.3,
+          "ece": 0.5085,
+          "mean_conf_wrong": 0.82
+        },
+        "switched": 8,
+        "switched_to_correct": 7,
+        "switched_to_wrong": 1,
+        "switched_toward_panel_majority": 6,
+        "run": {
+          "name": "llm:claude-sonnet-4.5",
+          "provider": "hosted-api",
+          "model": "claude-sonnet-4.5",
+          "confidence_method": "verbalized (model-reported probability)",
+          "prices_usd_per_mtok": [
+            3.0,
+            15.0
+          ]
+        }
+      },
+      "deepseek-r1": {
+        "round1": {
+          "accuracy": 0.4917,
+          "ece": 0.258,
+          "mean_conf_wrong": 0.597
+        },
+        "round2": {
+          "accuracy": 0.5,
+          "ece": 0.3542,
+          "mean_conf_wrong": 0.747
+        },
+        "hard_round1": {
+          "accuracy": 0.45,
+          "ece": 0.2913,
+          "mean_conf_wrong": 0.689
+        },
+        "hard_round2": {
+          "accuracy": 0.2,
+          "ece": 0.7387,
+          "mean_conf_wrong": 0.927
+        },
+        "switched": 32,
+        "switched_to_correct": 11,
+        "switched_to_wrong": 21,
+        "switched_toward_panel_majority": 25,
+        "run": {
+          "name": "llm:deepseek-r1",
+          "provider": "hosted-api",
+          "model": "deepseek-r1",
+          "confidence_method": "verbalized (model-reported probability)",
+          "prices_usd_per_mtok": [
+            1.35,
+            5.4
+          ]
+        }
+      },
+      "gemini-3-flash": {
+        "round1": {
+          "accuracy": 0.6667,
+          "ece": 0.3154,
+          "mean_conf_wrong": 0.965
+        },
+        "round2": {
+          "accuracy": 0.6667,
+          "ece": 0.3029,
+          "mean_conf_wrong": 0.932
+        },
+        "hard_round1": {
+          "accuracy": 0.075,
+          "ece": 0.8862,
+          "mean_conf_wrong": 0.966
+        },
+        "hard_round2": {
+          "accuracy": 0.175,
+          "ece": 0.7737,
+          "mean_conf_wrong": 0.935
+        },
+        "switched": 10,
+        "switched_to_correct": 5,
+        "switched_to_wrong": 5,
+        "switched_toward_panel_majority": 9,
+        "run": {
+          "name": "llm:gemini-3-flash-preview",
+          "provider": "openai-compatible",
+          "model": "gemini-3-flash-preview",
+          "confidence_method": "verbalized (model-reported probability)",
+          "base_url": "https://generativelanguage.googleapis.com/v1beta/openai"
+        }
+      },
+      "gemma4": {
+        "round1": {
+          "accuracy": 0.5917,
+          "ece": 0.3446,
+          "mean_conf_wrong": 0.954
+        },
+        "round2": {
+          "accuracy": 0.5667,
+          "ece": 0.3525,
+          "mean_conf_wrong": 0.909
+        },
+        "hard_round1": {
+          "accuracy": 0.7,
+          "ece": 0.1775,
+          "mean_conf_wrong": 0.858
+        },
+        "hard_round2": {
+          "accuracy": 0.25,
+          "ece": 0.6325,
+          "mean_conf_wrong": 0.893
+        },
+        "switched": 33,
+        "switched_to_correct": 15,
+        "switched_to_wrong": 18,
+        "switched_toward_panel_majority": 32,
+        "run": {
+          "name": "llm:gemma4:e4b",
+          "provider": "openai-compatible",
+          "model": "gemma4:e4b",
+          "confidence_method": "verbalized (model-reported probability)",
+          "base_url": "http://localhost:11434/v1"
+        }
+      },
+      "llama-3.3-70b": {
+        "round1": {
+          "accuracy": 0.65,
+          "ece": 0.2333,
+          "mean_conf_wrong": 0.926
+        },
+        "round2": {
+          "accuracy": 0.55,
+          "ece": 0.398,
+          "mean_conf_wrong": 0.939
+        },
+        "hard_round1": {
+          "accuracy": 0.725,
+          "ece": 0.135,
+          "mean_conf_wrong": 0.8
+        },
+        "hard_round2": {
+          "accuracy": 0.225,
+          "ece": 0.7085,
+          "mean_conf_wrong": 0.943
+        },
+        "switched": 30,
+        "switched_to_correct": 9,
+        "switched_to_wrong": 21,
+        "switched_toward_panel_majority": 30,
+        "run": {
+          "name": "llm:llama-3.3-70b",
+          "provider": "hosted-api",
+          "model": "llama-3.3-70b",
+          "confidence_method": "verbalized (model-reported probability)",
+          "prices_usd_per_mtok": [
+            0.72,
+            0.72
+          ]
+        }
+      },
+      "llama32": {
+        "round1": {
+          "accuracy": 0.6583,
+          "ece": 0.3958,
+          "mean_conf_wrong": 1.0
+        },
+        "round2": {
+          "accuracy": 0.6083,
+          "ece": 0.3462,
+          "mean_conf_wrong": 0.787
+        },
+        "hard_round1": {
+          "accuracy": 0,
+          "ece": 1.0,
+          "mean_conf_wrong": 1.0
+        },
+        "hard_round2": {
+          "accuracy": 0,
+          "ece": 0.8287,
+          "mean_conf_wrong": 0.829
+        },
+        "switched": 8,
+        "switched_to_correct": 1,
+        "switched_to_wrong": 7,
+        "switched_toward_panel_majority": 0,
+        "run": {
+          "name": "llm:llama3.2:3b",
+          "provider": "openai-compatible",
+          "model": "llama3.2:3b",
+          "confidence_method": "verbalized (model-reported probability)",
+          "base_url": "http://localhost:11434/v1"
+        }
+      }
+    },
     "panel_round1": {
       "n": 120,
       "judges": [
@@ -18,23 +262,47 @@
         "claude-sonnet-4.5",
         "deberta-nli",
         "deepseek-r1",
+        "gemini-3-flash",
         "gemma4",
         "llama-3.3-70b",
         "llama32"
       ],
-      "pairwise_agreement": 0.5587,
+      "pairwise_agreement": 0.5824,
       "unanimous": 15,
       "unanimous_wrong": 0,
-      "majority_accuracy": 0.6167,
-      "majority_wrong": 46,
+      "majority_accuracy": 0.65,
+      "majority_wrong": 42,
       "best_single_accuracy": 0.6667,
-      "mean_share_when_right": 0.745,
-      "mean_share_when_wrong": 0.637,
-      "mean_conf_of_wrong_majority": 0.92,
-      "vote_share_ece": 0.1917,
+      "mean_share_when_right": 0.747,
+      "mean_share_when_wrong": 0.652,
+      "mean_conf_of_wrong_majority": 0.917,
+      "vote_share_ece": 0.174,
       "vote_share_zero_error_coverage": 0.125
     },
-    "panel_round2": {},
+    "panel_round2": {
+      "n": 120,
+      "judges": [
+        "jev",
+        "claude-sonnet-4.5",
+        "deberta-nli",
+        "deepseek-r1",
+        "gemini-3-flash",
+        "gemma4",
+        "llama-3.3-70b",
+        "llama32"
+      ],
+      "pairwise_agreement": 0.6741,
+      "unanimous": 12,
+      "unanimous_wrong": 0,
+      "majority_accuracy": 0.6417,
+      "majority_wrong": 43,
+      "best_single_accuracy": 0.7417,
+      "mean_share_when_right": 0.817,
+      "mean_share_when_wrong": 0.788,
+      "mean_conf_of_wrong_majority": 0.897,
+      "vote_share_ece": 0.2062,
+      "vote_share_zero_error_coverage": 0.1167
+    },
     "hard_round1": {
       "n": 40,
       "judges": [
@@ -42,36 +310,304 @@
         "claude-sonnet-4.5",
         "deberta-nli",
         "deepseek-r1",
+        "gemini-3-flash",
         "gemma4",
         "llama-3.3-70b",
         "llama32"
       ],
-      "pairwise_agreement": 0.4738,
+      "pairwise_agreement": 0.5018,
       "unanimous": 0,
       "unanimous_wrong": 0,
-      "majority_accuracy": 0.325,
-      "majority_wrong": 27,
+      "majority_accuracy": 0.15,
+      "majority_wrong": 34,
       "best_single_accuracy": 1,
-      "mean_share_when_right": 0.637,
-      "mean_share_when_wrong": 0.646,
-      "mean_conf_of_wrong_majority": 0.9,
-      "vote_share_ece": 0.3179,
+      "mean_share_when_right": 0.688,
+      "mean_share_when_wrong": 0.651,
+      "mean_conf_of_wrong_majority": 0.914,
+      "vote_share_ece": 0.5062,
       "vote_share_zero_error_coverage": 0.0
     },
-    "hard_round2": {}
+    "hard_round2": {
+      "n": 40,
+      "judges": [
+        "jev",
+        "claude-sonnet-4.5",
+        "deberta-nli",
+        "deepseek-r1",
+        "gemini-3-flash",
+        "gemma4",
+        "llama-3.3-70b",
+        "llama32"
+      ],
+      "pairwise_agreement": 0.7134,
+      "unanimous": 0,
+      "unanimous_wrong": 0,
+      "majority_accuracy": 0.2,
+      "majority_wrong": 32,
+      "best_single_accuracy": 1,
+      "mean_share_when_right": 0.859,
+      "mean_share_when_wrong": 0.844,
+      "mean_conf_of_wrong_majority": 0.887,
+      "vote_share_ece": 0.6469,
+      "vote_share_zero_error_coverage": 0.0
+    }
   },
   "router-described": {
-    "rerun": [],
-    "kept_round1": [
+    "rerun": [
       "jev",
       "claude-sonnet-4.5",
-      "deberta-nli",
       "deepseek-r1",
+      "gemini-3-flash",
       "gemma4",
       "llama-3.3-70b",
       "llama32"
     ],
-    "judges": {},
+    "kept_round1": [
+      "deberta-nli"
+    ],
+    "judges": {
+      "jev": {
+        "round1": {
+          "accuracy": 0.975,
+          "ece": 0.053,
+          "mean_conf_wrong": 0.583
+        },
+        "round2": {
+          "accuracy": 1,
+          "ece": 0.0462,
+          "mean_conf_wrong": null
+        },
+        "hard_round1": {
+          "accuracy": 0.925,
+          "ece": 0.1457,
+          "mean_conf_wrong": 0.583
+        },
+        "hard_round2": {
+          "accuracy": 1,
+          "ece": 0.1308,
+          "mean_conf_wrong": null
+        },
+        "switched": 3,
+        "switched_to_correct": 3,
+        "switched_to_wrong": 0,
+        "switched_toward_panel_majority": 3,
+        "run": {
+          "name": "jev",
+          "model": "jev-latest",
+          "backend": "typesafe",
+          "bridge": "typesafe-systemone-http",
+          "input_price_per_mtok_usd": 0.042,
+          "endpoint": "https://api.typesafe.ai/v1/systemone"
+        }
+      },
+      "claude-sonnet-4.5": {
+        "round1": {
+          "accuracy": 0.8833,
+          "ece": 0.0339,
+          "mean_conf_wrong": 0.421
+        },
+        "round2": {
+          "accuracy": 0.9,
+          "ece": 0.0526,
+          "mean_conf_wrong": 0.379
+        },
+        "hard_round1": {
+          "accuracy": 1,
+          "ece": 0.07,
+          "mean_conf_wrong": null
+        },
+        "hard_round2": {
+          "accuracy": 1,
+          "ece": 0.1015,
+          "mean_conf_wrong": null
+        },
+        "switched": 2,
+        "switched_to_correct": 2,
+        "switched_to_wrong": 0,
+        "switched_toward_panel_majority": 1,
+        "run": {
+          "name": "llm:claude-sonnet-4.5",
+          "provider": "hosted-api",
+          "model": "claude-sonnet-4.5",
+          "confidence_method": "verbalized (model-reported probability)",
+          "prices_usd_per_mtok": [
+            3.0,
+            15.0
+          ]
+        }
+      },
+      "deepseek-r1": {
+        "round1": {
+          "accuracy": 0.7167,
+          "ece": 0.0563,
+          "mean_conf_wrong": 0.31
+        },
+        "round2": {
+          "accuracy": 0.8333,
+          "ece": 0.0112,
+          "mean_conf_wrong": 0.225
+        },
+        "hard_round1": {
+          "accuracy": 0.925,
+          "ece": 0.0988,
+          "mean_conf_wrong": 0.0
+        },
+        "hard_round2": {
+          "accuracy": 0.95,
+          "ece": 0.0633,
+          "mean_conf_wrong": 0.0
+        },
+        "switched": 24,
+        "switched_to_correct": 16,
+        "switched_to_wrong": 8,
+        "switched_toward_panel_majority": 17,
+        "run": {
+          "name": "llm:deepseek-r1",
+          "provider": "hosted-api",
+          "model": "deepseek-r1",
+          "confidence_method": "verbalized (model-reported probability)",
+          "prices_usd_per_mtok": [
+            1.35,
+            5.4
+          ]
+        }
+      },
+      "gemini-3-flash": {
+        "round1": {
+          "accuracy": 0.9833,
+          "ece": 0.0121,
+          "mean_conf_wrong": 0.825
+        },
+        "round2": {
+          "accuracy": 0.9833,
+          "ece": 0.0371,
+          "mean_conf_wrong": 0.85
+        },
+        "hard_round1": {
+          "accuracy": 1,
+          "ece": 0.0312,
+          "mean_conf_wrong": null
+        },
+        "hard_round2": {
+          "accuracy": 1,
+          "ece": 0.0725,
+          "mean_conf_wrong": null
+        },
+        "switched": 2,
+        "switched_to_correct": 1,
+        "switched_to_wrong": 1,
+        "switched_toward_panel_majority": 2,
+        "run": {
+          "name": "llm:gemini-3-flash-preview",
+          "provider": "openai-compatible",
+          "model": "gemini-3-flash-preview",
+          "confidence_method": "verbalized (model-reported probability)",
+          "base_url": "https://generativelanguage.googleapis.com/v1beta/openai"
+        }
+      },
+      "gemma4": {
+        "round1": {
+          "accuracy": 0.775,
+          "ece": 0.18,
+          "mean_conf_wrong": 0.981
+        },
+        "round2": {
+          "accuracy": 0.9,
+          "ece": 0.0539,
+          "mean_conf_wrong": 0.917
+        },
+        "hard_round1": {
+          "accuracy": 1,
+          "ece": 0.05,
+          "mean_conf_wrong": null
+        },
+        "hard_round2": {
+          "accuracy": 1,
+          "ece": 0.0493,
+          "mean_conf_wrong": null
+        },
+        "switched": 21,
+        "switched_to_correct": 18,
+        "switched_to_wrong": 3,
+        "switched_toward_panel_majority": 18,
+        "run": {
+          "name": "llm:gemma4:e4b",
+          "provider": "openai-compatible",
+          "model": "gemma4:e4b",
+          "confidence_method": "verbalized (model-reported probability)",
+          "base_url": "http://localhost:11434/v1"
+        }
+      },
+      "llama-3.3-70b": {
+        "round1": {
+          "accuracy": 0.8667,
+          "ece": 0.0433,
+          "mean_conf_wrong": 0.969
+        },
+        "round2": {
+          "accuracy": 0.9583,
+          "ece": 0.0144,
+          "mean_conf_wrong": 0.89
+        },
+        "hard_round1": {
+          "accuracy": 1,
+          "ece": 0.0925,
+          "mean_conf_wrong": null
+        },
+        "hard_round2": {
+          "accuracy": 1,
+          "ece": 0.0338,
+          "mean_conf_wrong": null
+        },
+        "switched": 15,
+        "switched_to_correct": 13,
+        "switched_to_wrong": 2,
+        "switched_toward_panel_majority": 13,
+        "run": {
+          "name": "llm:llama-3.3-70b",
+          "provider": "hosted-api",
+          "model": "llama-3.3-70b",
+          "confidence_method": "verbalized (model-reported probability)",
+          "prices_usd_per_mtok": [
+            0.72,
+            0.72
+          ]
+        }
+      },
+      "llama32": {
+        "round1": {
+          "accuracy": 0.5917,
+          "ece": 0.4292,
+          "mean_conf_wrong": 1.0
+        },
+        "round2": {
+          "accuracy": 0.8333,
+          "ece": 0.0893,
+          "mean_conf_wrong": 0.79
+        },
+        "hard_round1": {
+          "accuracy": 0,
+          "ece": 1.0,
+          "mean_conf_wrong": 1.0
+        },
+        "hard_round2": {
+          "accuracy": 0.55,
+          "ece": 0.2998,
+          "mean_conf_wrong": 0.783
+        },
+        "switched": 32,
+        "switched_to_correct": 29,
+        "switched_to_wrong": 3,
+        "switched_toward_panel_majority": 29,
+        "run": {
+          "name": "llm:llama3.2:3b",
+          "provider": "openai-compatible",
+          "model": "llama3.2:3b",
+          "confidence_method": "verbalized (model-reported probability)",
+          "base_url": "http://localhost:11434/v1"
+        }
+      }
+    },
     "panel_round1": {
       "n": 120,
       "judges": [
@@ -79,23 +615,47 @@
         "claude-sonnet-4.5",
         "deberta-nli",
         "deepseek-r1",
+        "gemini-3-flash",
         "gemma4",
         "llama-3.3-70b",
         "llama32"
       ],
-      "pairwise_agreement": 0.6321,
+      "pairwise_agreement": 0.6634,
       "unanimous": 14,
       "unanimous_wrong": 0,
-      "majority_accuracy": 0.9333,
-      "majority_wrong": 8,
-      "best_single_accuracy": 0.975,
-      "mean_share_when_right": 0.79,
-      "mean_share_when_wrong": 0.571,
-      "mean_conf_of_wrong_majority": 0.905,
-      "vote_share_ece": 0.1583,
-      "vote_share_zero_error_coverage": 0.6417
+      "majority_accuracy": 0.9583,
+      "majority_wrong": 5,
+      "best_single_accuracy": 0.9833,
+      "mean_share_when_right": 0.805,
+      "mean_share_when_wrong": 0.55,
+      "mean_conf_of_wrong_majority": 0.919,
+      "vote_share_ece": 0.1635,
+      "vote_share_zero_error_coverage": 0.75
     },
-    "panel_round2": {},
+    "panel_round2": {
+      "n": 120,
+      "judges": [
+        "jev",
+        "claude-sonnet-4.5",
+        "deberta-nli",
+        "deepseek-r1",
+        "gemini-3-flash",
+        "gemma4",
+        "llama-3.3-70b",
+        "llama32"
+      ],
+      "pairwise_agreement": 0.7705,
+      "unanimous": 34,
+      "unanimous_wrong": 0,
+      "majority_accuracy": 0.9667,
+      "majority_wrong": 4,
+      "best_single_accuracy": 1,
+      "mean_share_when_right": 0.881,
+      "mean_share_when_wrong": 0.625,
+      "mean_conf_of_wrong_majority": 0.807,
+      "vote_share_ece": 0.0938,
+      "vote_share_zero_error_coverage": 0.875
+    },
     "hard_round1": {
       "n": 40,
       "judges": [
@@ -103,22 +663,46 @@
         "claude-sonnet-4.5",
         "deberta-nli",
         "deepseek-r1",
+        "gemini-3-flash",
         "gemma4",
         "llama-3.3-70b",
         "llama32"
       ],
-      "pairwise_agreement": 0.6821,
+      "pairwise_agreement": 0.7205,
       "unanimous": 0,
       "unanimous_wrong": 0,
       "majority_accuracy": 1,
       "majority_wrong": 0,
       "best_single_accuracy": 1,
-      "mean_share_when_right": 0.836,
+      "mean_share_when_right": 0.856,
       "mean_share_when_wrong": null,
       "mean_conf_of_wrong_majority": null,
-      "vote_share_ece": 0.1643,
+      "vote_share_ece": 0.1437,
       "vote_share_zero_error_coverage": 1.0
     },
-    "hard_round2": {}
+    "hard_round2": {
+      "n": 40,
+      "judges": [
+        "jev",
+        "claude-sonnet-4.5",
+        "deberta-nli",
+        "deepseek-r1",
+        "gemini-3-flash",
+        "gemma4",
+        "llama-3.3-70b",
+        "llama32"
+      ],
+      "pairwise_agreement": 0.875,
+      "unanimous": 20,
+      "unanimous_wrong": 0,
+      "majority_accuracy": 1,
+      "majority_wrong": 0,
+      "best_single_accuracy": 1,
+      "mean_share_when_right": 0.938,
+      "mean_share_when_wrong": null,
+      "mean_conf_of_wrong_majority": null,
+      "vote_share_ece": 0.0625,
+      "vote_share_zero_error_coverage": 1.0
+    }
   }
 }

@@ -58,3 +58,12 @@ def test_deliberation_prompt_hides_names_and_excludes_self(monkeypatch):
     assert out[0]["_meta"]["round"] == 2
     assert sorted(out[0]["_meta"]["panel_seen"]) == ["alpha", "gamma"]
     assert rows[0]["state"] == "task"  # original row untouched
+
+
+def test_by_row_reorders_and_rejects_incomplete_or_duplicated():
+    from consensus_report import by_row
+
+    recs = [{"idx": 2, "decision": "c"}, {"idx": 0, "decision": "a"}, {"idx": 1, "decision": "b"}]
+    assert [r["decision"] for r in by_row(recs, 3)] == ["a", "b", "c"]
+    assert by_row(recs[:2], 3) is None                      # incomplete
+    assert by_row(recs + [{"idx": 1, "decision": "x"}], 3) is None  # duplicated row

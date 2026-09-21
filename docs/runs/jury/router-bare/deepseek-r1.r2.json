@@ -1,0 +1,220 @@
+{
+  "judge": "llm",
+  "n": 120,
+  "accuracy": 0.5,
+  "ece": 0.3542,
+  "reliability_bins": [
+    {
+      "bin": "0.0-0.1",
+      "avg_confidence": 0.0,
+      "accuracy": 0.0,
+      "n": 12
+    },
+    {
+      "bin": "0.1-0.2",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.2-0.3",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.3-0.4",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.4-0.5",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.5-0.6",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.6-0.7",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.7-0.8",
+      "avg_confidence": 0.7357,
+      "accuracy": 0.8571,
+      "n": 7
+    },
+    {
+      "bin": "0.8-0.9",
+      "avg_confidence": 0.85,
+      "accuracy": 0.1667,
+      "n": 6
+    },
+    {
+      "bin": "0.9-1.0",
+      "avg_confidence": 0.9532,
+      "accuracy": 0.5579,
+      "n": 95
+    }
+  ],
+  "accuracy_coverage": [
+    {
+      "coverage": 0.05,
+      "accuracy": 0.5,
+      "n": 6,
+      "min_confidence": 0.99
+    },
+    {
+      "coverage": 0.1,
+      "accuracy": 0.6667,
+      "n": 12,
+      "min_confidence": 0.98
+    },
+    {
+      "coverage": 0.15,
+      "accuracy": 0.7222,
+      "n": 18,
+      "min_confidence": 0.97
+    },
+    {
+      "coverage": 0.2,
+      "accuracy": 0.75,
+      "n": 24,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.25,
+      "accuracy": 0.6667,
+      "n": 30,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.3,
+      "accuracy": 0.6111,
+      "n": 36,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.35,
+      "accuracy": 0.5714,
+      "n": 42,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.4,
+      "accuracy": 0.6042,
+      "n": 48,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.45,
+      "accuracy": 0.5741,
+      "n": 54,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.5,
+      "accuracy": 0.6,
+      "n": 60,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.55,
+      "accuracy": 0.5909,
+      "n": 66,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.6,
+      "accuracy": 0.5972,
+      "n": 72,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.65,
+      "accuracy": 0.5641,
+      "n": 78,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.7,
+      "accuracy": 0.5595,
+      "n": 84,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.75,
+      "accuracy": 0.5778,
+      "n": 90,
+      "min_confidence": 0.9
+    },
+    {
+      "coverage": 0.8,
+      "accuracy": 0.5521,
+      "n": 96,
+      "min_confidence": 0.85
+    },
+    {
+      "coverage": 0.85,
+      "accuracy": 0.5392,
+      "n": 102,
+      "min_confidence": 0.75
+    },
+    {
+      "coverage": 0.9,
+      "accuracy": 0.5556,
+      "n": 108,
+      "min_confidence": 0.7
+    },
+    {
+      "coverage": 0.95,
+      "accuracy": 0.5263,
+      "n": 114,
+      "min_confidence": 0.0
+    },
+    {
+      "coverage": 1.0,
+      "accuracy": 0.5,
+      "n": 120,
+      "min_confidence": 0.0
+    }
+  ],
+  "zero_error_coverage": {
+    "coverage": 0.0,
+    "n": 0,
+    "threshold": null
+  },
+  "total_cost_usd": 0.403923,
+  "p50_latency_s": 3.583,
+  "p99_latency_s": 7.61,
+  "run": {
+    "judge_audit_version": "0.3.2",
+    "judge": {
+      "name": "llm:deepseek-r1",
+      "provider": "hosted-api",
+      "model": "deepseek-r1",
+      "confidence_method": "verbalized (model-reported probability)",
+      "prices_usd_per_mtok": [
+        1.35,
+        5.4
+      ]
+    },
+    "python": "3.12.8",
+    "dataset": {
+      "path": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-bare/deepseek-r1.r2.input.jsonl",
+      "sha256": "3d5d792c3c6f4f3614155e98feb3b58bd8688069eb24f5b36e72bba20743ec09",
+      "rows": 120
+    },
+    "recomputed_utc": "2026-09-21T10:02:38+00:00",
+    "note": "original run time not recorded in this checkpoint",
+    "checkpoint": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-bare/deepseek-r1.r2.ckpt.jsonl"
+  }
+}
