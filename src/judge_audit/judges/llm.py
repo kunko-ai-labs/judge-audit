@@ -48,7 +48,7 @@ def _fetch_json(req: urllib.request.Request, deadline: float) -> dict:
         try:
             with urllib.request.urlopen(req, timeout=deadline) as r:
                 box["data"] = json.load(r)
-        except BaseException as e:  # re-raised in the caller's thread
+        except Exception as e:  # re-raised in the caller's thread
             box["err"] = e
 
     t = threading.Thread(target=go, daemon=True)
