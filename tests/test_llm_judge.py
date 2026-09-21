@@ -27,6 +27,11 @@ def test_render_includes_options_and_descriptions():
     assert "STATE:\nhello" in text and "- spam: unsolicited" in text and "- order" in text
 
 
+def test_extract_json_ignores_trailing_garbage():
+    text = '{"answers": {"route": {"decision": "route_easy", "confidence": 0.8}}}\n0.8}}}\n0.8}}}'
+    assert _extract_json(text)["answers"]["route"]["decision"] == "route_easy"
+
+
 def test_extract_json_tolerates_fences_and_prose():
     assert _extract_json('```json\n{"a": 1}\n```') == {"a": 1}
     assert _extract_json('Sure! {"a": 2} hope this helps') == {"a": 2}

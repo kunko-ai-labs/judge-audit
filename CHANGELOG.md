@@ -15,6 +15,7 @@ All notable changes to this project are documented here. The format follows
 - `.env.example` documenting every credential the adapters read.
 
 ### Fixed
+- `llm` judge: a reply that carries a complete JSON object followed by garbage (Gemini's JSON mode sometimes appends fragments) parses as the object instead of counting as an unparseable, zero-confidence answer.
 - `llm` judge: an OpenAI-compatible endpoint that does not finish in JSON mode within `LLM_TIMEOUT_S` (default 120 s, wall clock — a server trickling keep-alive bytes never trips the socket timeout) is asked again without `response_format` (observed with Gemini on one prompt).
 
 ## [0.3.2] — 2026-09-20

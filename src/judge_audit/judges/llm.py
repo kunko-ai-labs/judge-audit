@@ -104,10 +104,13 @@ def _extract_json(text: str) -> dict:
     try:
         return json.loads(text)
     except json.JSONDecodeError:
-        m = re.search(r"\{.*\}", text, flags=re.S)
-        if not m:
+        # Prose before the object, or garbage after it (Gemini's JSON mode sometimes
+        # appends fragments such as "\n0.8}}}"): take the first complete object.
+        start = text.find("{")
+        if start < 0:
             raise
-        return json.loads(m.group(0))
+        obj, _ = json.JSONDecoder().raw_decode(text[start:])
+        return obj
 
 
 class LLMJudge(Judge):
