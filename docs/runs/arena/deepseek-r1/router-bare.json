@@ -1,0 +1,221 @@
+{
+  "judge": "llm",
+  "n": 120,
+  "accuracy": 0.5583,
+  "ece": 0.3734,
+  "reliability_bins": [
+    {
+      "bin": "0.0-0.1",
+      "avg_confidence": 0.0,
+      "accuracy": 0.0,
+      "n": 1
+    },
+    {
+      "bin": "0.1-0.2",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.2-0.3",
+      "avg_confidence": 0.2,
+      "accuracy": 0.0,
+      "n": 1
+    },
+    {
+      "bin": "0.3-0.4",
+      "avg_confidence": 0.3,
+      "accuracy": 0.0,
+      "n": 1
+    },
+    {
+      "bin": "0.4-0.5",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.5-0.6",
+      "avg_confidence": 0.5,
+      "accuracy": 0.0,
+      "n": 1
+    },
+    {
+      "bin": "0.6-0.7",
+      "avg_confidence": 0.6,
+      "accuracy": 1.0,
+      "n": 2
+    },
+    {
+      "bin": "0.7-0.8",
+      "avg_confidence": 0.7,
+      "accuracy": 0.8462,
+      "n": 13
+    },
+    {
+      "bin": "0.8-0.9",
+      "avg_confidence": 0.82,
+      "accuracy": 0.7,
+      "n": 10
+    },
+    {
+      "bin": "0.9-1.0",
+      "avg_confidence": 0.9551,
+      "accuracy": 0.5165,
+      "n": 91
+    }
+  ],
+  "accuracy_coverage": [
+    {
+      "coverage": 0.05,
+      "accuracy": 0.0,
+      "n": 6,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.1,
+      "accuracy": 0.0,
+      "n": 12,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.15,
+      "accuracy": 0.0,
+      "n": 18,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.2,
+      "accuracy": 0.25,
+      "n": 24,
+      "min_confidence": 0.99
+    },
+    {
+      "coverage": 0.25,
+      "accuracy": 0.3333,
+      "n": 30,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.3,
+      "accuracy": 0.3611,
+      "n": 36,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.35,
+      "accuracy": 0.4286,
+      "n": 42,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.4,
+      "accuracy": 0.4792,
+      "n": 48,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.45,
+      "accuracy": 0.4815,
+      "n": 54,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.5,
+      "accuracy": 0.5167,
+      "n": 60,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.55,
+      "accuracy": 0.5303,
+      "n": 66,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.6,
+      "accuracy": 0.5417,
+      "n": 72,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.65,
+      "accuracy": 0.5513,
+      "n": 78,
+      "min_confidence": 0.9
+    },
+    {
+      "coverage": 0.7,
+      "accuracy": 0.5476,
+      "n": 84,
+      "min_confidence": 0.9
+    },
+    {
+      "coverage": 0.75,
+      "accuracy": 0.5111,
+      "n": 90,
+      "min_confidence": 0.9
+    },
+    {
+      "coverage": 0.8,
+      "accuracy": 0.5312,
+      "n": 96,
+      "min_confidence": 0.8
+    },
+    {
+      "coverage": 0.85,
+      "accuracy": 0.5392,
+      "n": 102,
+      "min_confidence": 0.7
+    },
+    {
+      "coverage": 0.9,
+      "accuracy": 0.5648,
+      "n": 108,
+      "min_confidence": 0.7
+    },
+    {
+      "coverage": 0.95,
+      "accuracy": 0.5702,
+      "n": 114,
+      "min_confidence": 0.7
+    },
+    {
+      "coverage": 1.0,
+      "accuracy": 0.5583,
+      "n": 120,
+      "min_confidence": 0.0
+    }
+  ],
+  "zero_error_coverage": {
+    "coverage": 0.0,
+    "n": 0,
+    "threshold": null
+  },
+  "total_cost_usd": 0.437856,
+  "p50_latency_s": 4.249,
+  "p99_latency_s": 21.268,
+  "run": {
+    "judge_audit_version": "0.3.2",
+    "judge": {
+      "name": "llm:deepseek-r1",
+      "provider": "hosted-api",
+      "model": "deepseek-r1",
+      "confidence_method": "verbalized (model-reported probability)",
+      "prices_usd_per_mtok": [
+        1.35,
+        5.4
+      ],
+      "max_tokens": 4096
+    },
+    "python": "3.12.8",
+    "dataset": {
+      "path": "examples/task-routing/labels.jsonl",
+      "sha256": "27250d78eda62c5e5ad07906abd3c7fdeaecb1131a7d13e12146bed30f55ec8d",
+      "rows": 120
+    },
+    "recomputed_utc": "2026-09-21T15:10:27+00:00",
+    "note": "original run time not recorded in this checkpoint",
+    "checkpoint": "docs/runs/arena/deepseek-r1/router-bare.ckpt.jsonl"
+  }
+}
