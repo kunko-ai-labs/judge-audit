@@ -51,6 +51,8 @@ jobs:
         run: |
           python scripts/arena_report.py
           git diff --exit-code -- docs/arena-2026-09.md docs/arena-2026-09.json
+      - name: Checkpoint decisions match the current parser (no silent re-parse debt)
+        run: python scripts/reparse_checkpoints.py --dry-run | tee /tmp/reparse.txt && grep -q '^0 judgment' /tmp/reparse.txt
 
   datasets:
     runs-on: ubuntu-latest
