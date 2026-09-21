@@ -66,6 +66,14 @@ JUDGE_INFO: dict[str, dict[str, object]] = {
         "env": ["extra [nli] (transformers + torch)",
                 "NLI_MODEL, NLI_HYPOTHESIS, NLI_DEVICE (optional)"],
     },
+    "finetuned": {
+        "description": "A sequence classifier fine-tuned on your own labels "
+                       "(scripts/train_classifier.py). Confidence is the softmax probability "
+                       "of the chosen option; reads only the state text, never instructions "
+                       "or option descriptions.",
+        "env": ["extra [nli] (transformers + torch)", "FINETUNED_MODEL_DIR (required)",
+                "FINETUNED_DEVICE, FINETUNED_MAX_LEN (optional)"],
+    },
     "simulated": {
         "description": "Seeded simulator to see the pipeline without a key. Not a real "
                        "vendor audit; every result is tagged SIMULATED.",

@@ -1,13 +1,14 @@
 # Judges: what plugs in and how
 
-judge-audit audits anything that maps `(state, questions) -> (decision, confidence)`. Four adapters ship; writing a fifth is ~30 lines.
+judge-audit audits anything that maps `(state, questions) -> (decision, confidence)`. Five adapters ship; writing a sixth is ~30 lines.
 
 | `--judge` | What it audits | Confidence comes from | Needs |
 |---|---|---|---|
 | `jev` | TypeSafe Jev, a purpose-built judgment model | the per-option probability the model returns | `AI_GATEWAY_API_KEY` + Node (gateway) **or** `JEV_BACKEND=typesafe` + `TYPESAFE_API_KEY` |
 | `jev` + `JEV_ENDPOINT` | any Jev-compatible server: [OpenJev](https://github.com/ekzhang/openjev-sglang), other open re-implementations of the `/v1/systemone` API | same — the server's probability distribution | `JEV_BACKEND=typesafe JEV_ENDPOINT=http://host/v1/systemone` (key optional) |
 | `llm` | a chat model with a "classify and say how sure you are" prompt — what most production judges actually are | **verbalized**: the model writes a number | Anthropic: `pip install 'judge-audit[anthropic]'` + `ANTHROPIC_API_KEY` · OpenAI-compatible (OpenAI, Ollama, vLLM, LM Studio): `LLM_PROVIDER=openai-compatible LLM_BASE_URL=… LLM_MODEL=…` |
-| `nli` | a small zero-shot encoder (DeBERTa-class cross-encoder) — the classic "small model" baseline; cannot follow instructions by design | **NLI entailment softmax** over the options: a real probability, computed locally | `pip install 'kunko-judge-audit[nli]'`; optional `NLI_MODEL`, `NLI_HYPOTHESIS`, `NLI_DEVICE` |
+| `nli` | a small zero-shot encoder (DeBERTa-class cross-encoder) — the **control** row: small, instruction-immune, real softmax confidence; not a competitor | **NLI entailment softmax** over the options: a real probability, computed locally | `pip install 'kunko-judge-audit[nli]'`; optional `NLI_MODEL`, `NLI_HYPOTHESIS`, `NLI_DEVICE` |
+| `finetuned` | **your own classifier**: a DeBERTa-class encoder fine-tuned on your labelled rows (`scripts/train_classifier.py`) — the "isn't a judgment model just a classifier?" row | **softmax probability of the chosen option** from the classification head; reads only the state text | `pip install 'kunko-judge-audit[nli]'` + `FINETUNED_MODEL_DIR`; optional `FINETUNED_DEVICE`, `FINETUNED_MAX_LEN` |
 | `simulated` | nothing real — a seeded simulator to see the pipeline | drawn from a distribution | nothing; output is stamped SIMULATED |
 
 ## Same dataset, several judges = the Arena
@@ -32,9 +33,28 @@ LLM_PROVIDER=openai-compatible LLM_BASE_URL=http://localhost:11434/v1 LLM_MODEL=
 
 Compare `ece`, `zero_error_coverage` and the prompt-injection confidence drop across the JSON files. The Judge Arena (roadmap v0.5) is this table, published and continuously updated.
 
-## Why an NLI baseline
+## Why an NLI control
 
-`nli` is a ~180M-parameter encoder that scores each option as a hypothesis against the state and returns the softmax over options. It cannot follow instructions, so prompt injection cannot reach it by construction; its probabilities are real, not written; it runs on a laptop for free. It also cannot reason and reads a short context. That is the point: it is the baseline any judgment model or LLM judge has to beat, and the row that tells you whether a task needed a bigger model at all. Option descriptions, when present, are used as the hypotheses — the same lever the router ablation tests.
+`nli` is a ~180M-parameter encoder that scores each option as a hypothesis against the state and returns the softmax over options. It cannot follow instructions, so prompt injection cannot reach it by construction; its probabilities are real, not written; it runs on a laptop for free. It also cannot reason and reads a short context. It is a **control**, not a competitor: the row that shows what "small, instruction-immune, real softmax" looks like before any training, so the fine-tuned row and the LLM rows can be read against it. Option descriptions, when present, are used as the hypotheses — the same lever the router ablation tests.
+
+## The fine-tuned classifier: your own classifier as a row
+
+`finetuned` answers the CTO's question — "isn't Jev just a classifier? I could fine-tune one on my labels" — with numbers instead of opinions. `scripts/train_classifier.py --dataset email-routing` fine-tunes `microsoft/deberta-v3-base` as a sequence classifier on the **train half** of a pre-registered split (`examples/<dataset>/split-heldout.json`, seed 2026, label-stratified, committed before any training run) and writes the model under `~/.cache/judge-audit/finetuned/<dataset>/` (never committed) plus `docs/runs/finetuned/<dataset>.train.json` (hyper-parameters, seed, per-epoch loss, wall time, backbone and revision, sha256 of the train rows, hardware — committed). The judge then runs like any other:
+
+```bash
+FINETUNED_MODEL_DIR=~/.cache/judge-audit/finetuned/email-routing \
+  judge-audit run examples/email-routing/labels.jsonl --judge finetuned --json ft.json
+```
+
+What it is, by construction — and what every report using it says next to the numbers:
+
+- **Confidence is the softmax probability of the chosen option** from the classification head, over the labels it was trained on. Options are mapped by label id (`config.json` → `id2label`); an option the model never saw is ignored and listed in `raw.ignored_options`; a question with no trained option is an error, never a guess.
+- **It cannot follow instructions.** The only input is the state text; the question, its instructions and the option descriptions never reach the model. Prompt injection cannot *instruct* it, but text that resembles another category can still mislead it — and the softmax does not know it is under attack.
+- **It cannot use option descriptions.** On the task router the bare and described files share texts, so one model serves both and must score identically; the gap to a judge that reads the descriptions is what the descriptions are worth.
+- **It only knows its training distribution.** Its held-out numbers (docs/finetuned-baseline-2026-09.md) come from unseen *rows* of the *same seeded generator* — the best case for a classifier — and say nothing about drift, new categories or real inboxes.
+- `describe()` records the backbone and revision, the training-set digest, the split file, the seed and the sha256 of `config.json`, so a run is attributable to one trained artefact.
+
+Evaluate it only on rows it did not train on: `scripts/audit_resumable.py … --rows examples/<dataset>/split-heldout.json:heldout` judges the held-out indices alone and records the split and its sha256 in the checkpoint header.
 
 ## Why two kinds of confidence
 
