@@ -110,3 +110,140 @@ def test_check_detects_a_stale_input(monkeypatch, tmp_path):
     assert jury_deliberate.check() == 0
     inp.write_text("{}\n", encoding="utf-8")
     assert jury_deliberate.check() == 1
+# ----------------------------------------------------------------- error correlation (#45)
+def _rows(n, expected="b"):
+    return [{"labels": {"q": expected}} for _ in range(n)]
+
+
+def test_pairwise_error_stats_hand_computed():
+    from consensus_report import pairwise_error_stats
+
+    # x: right right wrong wrong right blank  /  y: right wrong wrong right right right
+    votes = {"x": [rec("b", .9), rec("b", .9), rec("a", .8), rec("a", .7), rec("b", .6),
+                   rec("", 0)],
+             "y": [rec("b", .6), rec("a", .5), rec("a", .9), rec("b", .6), rec("b", .6),
+                   rec("b", .6)]}
+    [s] = pairwise_error_stats(votes, _rows(6), "q")
+    assert (s["a"], s["b"], s["n"]) == ("x", "y", 5)      # row 5: x abstained, excluded
+    assert s["agreement"] == 0.6                           # rows 0, 2, 4 agree
+    assert s["errors_a"] == 2 and s["errors_b"] == 2 and s["shared_wrong"] == 1  # row 2
+    assert s["joint_error"] == 0.2
+    assert s["p_a_wrong_given_b_wrong"] == 0.5 and s["p_b_wrong_given_a_wrong"] == 0.5
+    assert s["error_jaccard"] == round(1 / 3, 4)
+    # 2x2 error table: both wrong 1, only x 1, only y 1, both right 2
+    # phi = (1*2 - 1*1) / sqrt(2 * 3 * 2 * 3) = 1/6
+    assert s["phi"] == round(1 / 6, 4)
+
+
+def test_pairwise_error_stats_degenerate_cases():
+    from consensus_report import pairwise_error_stats
+
+    x = [rec("b", .9), rec("a", .9), rec("b", .9)]      # one error (row 1)
+    z = [rec("b", .9), rec("b", .9), rec("b", .9)]      # no errors
+    # a judge with no errors: conditional on its errors and phi are undefined
+    [s] = pairwise_error_stats({"x": x, "z": z}, _rows(3), "q")
+    assert s["phi"] is None and s["p_a_wrong_given_b_wrong"] is None
+    assert s["p_b_wrong_given_a_wrong"] == 0.0 and s["error_jaccard"] == 0.0
+    assert s["joint_error"] == 0.0 and s["agreement"] == round(2 / 3, 4)
+    # both judges flawless: no error set to compare
+    [s] = pairwise_error_stats({"z": z, "w": list(z)}, _rows(3), "q")
+    assert s["error_jaccard"] is None and s["phi"] is None and s["agreement"] == 1.0
+    # identical judges with errors: perfect correlation
+    [s] = pairwise_error_stats({"x": x, "x2": list(x)}, _rows(3), "q")
+    assert s["phi"] == 1.0 and s["error_jaccard"] == 1.0 and s["agreement"] == 1.0
+    assert s["p_a_wrong_given_b_wrong"] == 1.0 and s["p_b_wrong_given_a_wrong"] == 1.0
+    # opposite judges: one wrong exactly where the other is right
+    y = [rec("a", .9), rec("b", .9), rec("a", .9)]
+    [s] = pairwise_error_stats({"x": x, "y": y}, _rows(3), "q")
+    assert s["phi"] == -1.0 and s["error_jaccard"] == 0.0 and s["shared_wrong"] == 0
+    # nothing to compare: every row has an abstention on one side, or n = 1
+    [s] = pairwise_error_stats({"x": [rec("", 0), rec("b", .9)],
+                                "y": [rec("b", .9), rec("", 0)]}, _rows(2), "q")
+    assert s["n"] == 0 and s["phi"] is None and s["agreement"] is None
+    [s] = pairwise_error_stats({"x": x[:1], "y": y[:1]}, _rows(1), "q")
+    assert s["n"] == 1 and s["phi"] is None and s["agreement"] == 0.0
+    # subset selection and pair count
+    out = pairwise_error_stats({"x": x, "y": y, "z": z}, _rows(3), "q", [1])
+    assert len(out) == 3 and all(s["n"] == 1 for s in out)
+    assert pairwise_error_stats({"x": x}, _rows(3), "q") == []
+
+
+def test_spearman_hand_computed():
+    from consensus_report import spearman
+
+    assert spearman([1, 2, 3], [3, 2, 1]) == -1.0
+    assert spearman([1, 2, 3], [10, 20, 30]) == 1.0
+    # tied x ranks (1.5, 1.5, 3) vs (1, 2, 3): r = 1.5 / sqrt(1.5 * 2)
+    assert spearman([1, 1, 2], [1, 2, 3]) == round(1.5 / (1.5 * 2) ** 0.5, 4)
+    assert spearman([1, 1, 1], [1, 2, 3]) is None        # no variance
+    assert spearman([1, 2], [2, 1]) is None               # fewer than three points
+
+
+def test_jury_composition_on_a_four_judge_panel():
+    from consensus_report import jury_composition
+
+    from judge_audit.metrics.calibration import expected_calibration_error
+
+    votes = {"p": [rec("b", .9), rec("b", .9), rec("b", .9), rec("a", .9)],
+             "q": [rec("b", .9), rec("b", .9), rec("a", .9), rec("a", .9)],
+             "r": [rec("b", .9), rec("a", .9), rec("a", .9), rec("b", .9)],
+             "s": [rec("a", .9), rec("b", .9), rec("b", .9), rec("a", .9)]}
+    costs = {j: {"cost_usd": c, "p50_latency_s": t}
+             for j, c, t in [("p", .1, 1.0), ("q", .2, 2.0), ("r", .3, 3.0), ("s", 0.0, 6.0)]}
+    out = jury_composition(votes, _rows(4), "q", [0, 1, 2, 3], ["p", "q", "r", "s"], costs)
+    assert out["panel"] == ["p", "q", "r", "s"] and len(out["juries"]) == 4
+    # sorted by majority accuracy, then decided accuracy, then name
+    assert [j["jury"] for j in out["juries"]] == ["p + q + s", "p + r + s", "p + q + r",
+                                                  "q + r + s"]
+    assert [j["majority_accuracy"] for j in out["juries"]] == [0.75, 0.75, 0.5, 0.5]
+    pqs = out["juries"][0]
+    assert pqs["ties"] == 0 and pqs["majority_accuracy_decided"] == 0.75
+    assert pqs["shared_wrong"] == 1                    # row 3: all three say a
+    # errors p={3} q={2,3} s={0,3}: phi(p,q) = phi(p,s) = 2/sqrt(12), phi(q,s) = 0
+    assert pqs["mean_phi"] == round((2 * 2 / 12 ** 0.5) / 3, 4)
+    assert pqs["vote_share_ece"] == round(expected_calibration_error(
+        [2 / 3, 1.0, 2 / 3, 1.0], [True, True, True, False]), 4)
+    assert pqs["cost_usd"] == 0.3 and pqs["p50_latency_s"] == 3.0
+    assert out["juries"][2]["jury"] == "p + q + r" and out["juries"][2]["shared_wrong"] == 0
+    assert pqs["pairs_with_phi"] == 3 and pqs["mean_phi_all"] == pqs["mean_phi"]  # same rows
+    # diversity vs accuracy is the Spearman correlation over juries with a defined mean phi
+    d = out["diversity_vs_accuracy"]
+    assert d["juries"] == 4 and d["spearman"] is not None
+    assert out["diversity_vs_accuracy_all_rows"] == d
+    # scored on rows 0-2 only: p has no error there, so only the q-s pair has a phi
+    # (q wrong on 2, s wrong on 0: n11=0 n10=1 n01=1 n00=1 -> -1/2); all-rows phi unchanged
+    out = jury_composition(votes, _rows(4), "q", [0, 1, 2], ["p", "q", "r", "s"], costs)
+    pqs = next(j for j in out["juries"] if j["jury"] == "p + q + s")
+    assert pqs["majority_accuracy"] == 1.0 and pqs["n"] == 3 and pqs["n_all"] == 4
+    assert (pqs["mean_phi"], pqs["pairs_with_phi"]) == (-0.5, 1)
+    assert (pqs["mean_phi_all"], pqs["pairs_with_phi_all"]) == (round((4 / 12 ** 0.5) / 3, 4), 3)
+    # a judge missing from the cost table renders no cost, not a wrong one
+    out = jury_composition(votes, _rows(4), "q", [0, 1, 2, 3], ["p", "q", "r"], {"p": costs["p"]})
+    assert len(out["juries"]) == 1 and out["juries"][0]["cost_usd"] is None
+    assert out["juries"][0]["p50_latency_s"] is None
+
+
+def test_jury_composition_mean_phi_undefined_when_nobody_errs():
+    from consensus_report import jury_composition
+
+    votes = {j: [rec("b", .9), rec("b", .9)] for j in "pqr"}
+    out = jury_composition(votes, _rows(2), "q", [0, 1], ["p", "q", "r"], {})
+    assert out["juries"][0]["mean_phi"] is None and out["juries"][0]["majority_accuracy"] == 1.0
+    assert out["diversity_vs_accuracy"] == {"spearman": None, "juries": 0}
+    assert out["diversity_vs_accuracy_all_rows"] == {"spearman": None, "juries": 0}
+
+
+def test_render_sections_survive_undefined_statistics():
+    from consensus_report import render_error_correlation, render_jury_composition, spearman
+
+    votes = {j: [rec("b", .9), rec("b", .9)] for j in "pqr"}
+    from consensus_report import error_correlation, jury_composition
+
+    ec = render_error_correlation(error_correlation(votes, _rows(2), "q"))
+    assert any("undefined for every pair" in line for line in ec)
+    comp = render_jury_composition(jury_composition(votes, _rows(2), "q", [0, 1], list("pqr"), {}),
+                                   2)
+    assert any("Spearman is undefined" in line for line in comp)
+    text = "\n".join(comp)
+    assert "| p + q + r | 100.0% / 100.0% | 0 |" in text and "| — / — |" in text
+    assert spearman([], []) is None

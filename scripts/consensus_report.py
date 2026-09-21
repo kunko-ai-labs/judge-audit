@@ -12,6 +12,7 @@ by scripts/jury_report.py.
 from __future__ import annotations
 
 import json
+import math
 import statistics
 import sys
 from collections import Counter
@@ -31,6 +32,24 @@ from judge_audit.metrics.calibration import (  # noqa: E402
 from judge_audit.runner import is_correct, load_jsonl  # noqa: E402
 
 JURY_SIZE = 3
+PANEL = ROOT / "docs" / "runs" / "jury" / "panel.json"        # frozen panel, judge order
+ARENA_JSON = ROOT / "docs" / "arena-2026-09.json"             # cost and latency per judge
+
+
+def frozen_panel(votes: dict[str, list[dict]]) -> list[str]:
+    """Judges of the frozen panel (docs/runs/jury/panel.json) that have a complete run,
+    in the panel's order; every judge with a run when no panel file exists."""
+    if PANEL.exists():
+        return [j for j in json.loads(PANEL.read_text(encoding="utf-8"))["panel"] if j in votes]
+    return list(votes)
+
+
+def arena_costs(dataset: str) -> dict[str, dict]:
+    """{judge slug: Arena summary of this dataset} — cost_usd and p50_latency_s per judge."""
+    if not ARENA_JSON.exists():
+        return {}
+    arena = json.loads(ARENA_JSON.read_text(encoding="utf-8"))
+    return {slug: j["datasets"][dataset] for slug, j in arena.items() if dataset in j["datasets"]}
 
 
 def votes_of(dataset: str) -> tuple[dict[str, list[dict]], list[dict]]:
@@ -131,6 +150,150 @@ def panel_stats(votes: dict[str, list[dict]], rows: list[dict], question: str,
     }
 
 
+def _ratio(num: float, den: float, digits: int = 4) -> float | None:
+    return round(num / den, digits) if den else None
+
+
+def pairwise_error_stats(votes: dict[str, list[dict]], rows: list[dict], question: str,
+                         idxs: list[int] | None = None) -> list[dict]:
+    """Are two judges' errors independent evidence or one blind spot voting twice?
+
+    For every judge pair, over the rows where both answered (a blank is an abstention and
+    the row is excluded — n is stated per pair): agreement, joint error rate,
+    P(A wrong | B wrong), P(B wrong | A wrong), Jaccard of the two error sets and the phi
+    coefficient between the two error indicators. Phi is None when a judge has no error
+    (or no correct answer) on the compared rows; the conditionals are None when the
+    conditioning judge has no error; Jaccard is None when neither judge erred."""
+    idxs = list(range(len(rows))) if idxs is None else idxs
+    out = []
+    for a, b in combinations(votes, 2):
+        both = [i for i in idxs
+                if votes[a][i]["decision"].strip() and votes[b][i]["decision"].strip()]
+        n = len(both)
+        wrong_a = {i for i in both if not votes[a][i]["correct"]}
+        wrong_b = {i for i in both if not votes[b][i]["correct"]}
+        n11 = len(wrong_a & wrong_b)                   # both wrong
+        n10, n01 = len(wrong_a) - n11, len(wrong_b) - n11
+        n00 = n - n11 - n10 - n01                      # both right
+        den = math.sqrt(len(wrong_a) * (n - len(wrong_a)) * len(wrong_b) * (n - len(wrong_b)))
+        out.append({
+            "a": a, "b": b, "n": n,
+            "agreement": _ratio(sum(votes[a][i]["decision"].strip() == votes[b][i]["decision"].strip()
+                                    for i in both), n),
+            "errors_a": len(wrong_a), "errors_b": len(wrong_b), "shared_wrong": n11,
+            "joint_error": _ratio(n11, n),
+            "p_a_wrong_given_b_wrong": _ratio(n11, len(wrong_b)),
+            "p_b_wrong_given_a_wrong": _ratio(n11, len(wrong_a)),
+            "error_jaccard": _ratio(n11, len(wrong_a | wrong_b)),
+            "phi": round((n11 * n00 - n10 * n01) / den, 4) if den else None,
+        })
+    return out
+
+
+def error_correlation(votes: dict[str, list[dict]], rows: list[dict], question: str,
+                      idxs: list[int] | None = None) -> dict:
+    """Pairwise error statistics plus the most and least correlated pairs (by phi)."""
+    pairs = pairwise_error_stats(votes, rows, question, idxs)
+    idxs = list(range(len(rows))) if idxs is None else idxs
+    defined = [p for p in pairs if p["phi"] is not None]
+
+    def pick(p: dict) -> dict:
+        return {"pair": f"{p['a']} + {p['b']}", "phi": p["phi"], "shared_wrong": p["shared_wrong"],
+                "n": p["n"]}
+
+    return {
+        "n_rows": len(idxs), "judges": list(votes),
+        "errors": {j: sum(1 for i in idxs if votes[j][i]["decision"].strip()
+                          and not votes[j][i]["correct"]) for j in votes},
+        "pairs": pairs, "pairs_with_phi": len(defined),
+        "most_correlated": pick(max(defined, key=lambda p: p["phi"])) if defined else None,
+        "least_correlated": pick(min(defined, key=lambda p: p["phi"])) if defined else None,
+    }
+
+
+def spearman(xs: list[float], ys: list[float]) -> float | None:
+    """Spearman rank correlation (average ranks on ties); None below three points or
+    when either side has no variance."""
+    if len(xs) < 3:
+        return None
+
+    def ranks(vs: list[float]) -> list[float]:
+        order = sorted(range(len(vs)), key=lambda i: vs[i])
+        r = [0.0] * len(vs)
+        i = 0
+        while i < len(order):
+            j = i
+            while j + 1 < len(order) and vs[order[j + 1]] == vs[order[i]]:
+                j += 1
+            for k in range(i, j + 1):
+                r[order[k]] = (i + j) / 2 + 1
+            i = j + 1
+        return r
+
+    rx, ry = ranks(xs), ranks(ys)
+    mx, my = statistics.mean(rx), statistics.mean(ry)
+    cov = sum((a - mx) * (b - my) for a, b in zip(rx, ry, strict=True))
+    var = math.sqrt(sum((a - mx) ** 2 for a in rx) * sum((b - my) ** 2 for b in ry))
+    return round(cov / var, 4) if var else None
+
+
+def jury_composition(votes: dict[str, list[dict]], rows: list[dict], question: str,
+                     idxs: list[int], panel: list[str], costs: dict[str, dict]) -> dict:
+    """Every 3-judge jury from the frozen panel, one row each: majority accuracy (a tie is
+    no decision), decided-rows accuracy, ties, vote-share ECE, mean pairwise error phi,
+    shared-wrong cases (all three answered and all three wrong), cost and p50 latency
+    (sum / mean of the members' Arena figures). Sorted by majority accuracy; no composite.
+
+    Mean phi averages the pairs whose phi is defined (`pairs_with_phi` says how many); it is
+    given on the scored rows (`mean_phi`) and on every row of the dataset (`mean_phi_all`),
+    because a judge wrong on all — or none — of the scored rows has no phi there.
+    `diversity_vs_accuracy` is the Spearman correlation between each mean phi and majority
+    accuracy over the juries where it is defined — a number, not a verdict."""
+    all_idxs = list(range(len(rows)))
+
+    def mean_phi(sub: dict[str, list[dict]], on: list[int]) -> tuple[float | None, int]:
+        phis = [p["phi"] for p in pairwise_error_stats(sub, rows, question, on)
+                if p["phi"] is not None]
+        return (round(statistics.mean(phis), 4) if phis else None), len(phis)
+
+    juries = []
+    for jury in combinations([j for j in panel if j in votes], JURY_SIZE):
+        sub = {j: votes[j] for j in jury}
+        s = panel_stats(sub, rows, question, idxs)
+        phi, k = mean_phi(sub, idxs)
+        phi_all, k_all = mean_phi(sub, all_idxs)
+        members = [costs.get(j) for j in jury]
+        juries.append({
+            "jury": " + ".join(jury), "members": list(jury), "n": len(idxs),
+            "majority_accuracy": s["majority_accuracy"],
+            "majority_accuracy_decided": s["majority_accuracy_decided"],
+            "ties": s["ties"], "vote_share_ece": s["vote_share_ece"],
+            "mean_phi": phi, "pairs_with_phi": k,
+            "mean_phi_all": phi_all, "pairs_with_phi_all": k_all, "n_all": len(all_idxs),
+            "shared_wrong": sum(1 for i in idxs
+                                if all(votes[j][i]["decision"].strip() and not votes[j][i]["correct"]
+                                       for j in jury)),
+            "cost_usd": (round(math.fsum(m["cost_usd"] for m in members), 4)
+                         if all(members) else None),
+            "p50_latency_s": (round(statistics.mean(m["p50_latency_s"] for m in members), 3)
+                              if all(members) else None),
+        })
+    juries.sort(key=lambda j: (-j["majority_accuracy"], -(j["majority_accuracy_decided"] or 0),
+                               j["jury"]))
+
+    def diversity(key: str) -> dict:
+        with_phi = [j for j in juries if j[key] is not None]
+        return {"spearman": spearman([j[key] for j in with_phi],
+                                     [j["majority_accuracy"] for j in with_phi]),
+                "juries": len(with_phi)}
+
+    return {
+        "panel": [j for j in panel if j in votes], "size": JURY_SIZE, "juries": juries,
+        "diversity_vs_accuracy": diversity("mean_phi"),
+        "diversity_vs_accuracy_all_rows": diversity("mean_phi_all"),
+    }
+
+
 def jury_sensitivity(votes: dict[str, list[dict]], rows: list[dict], question: str,
                      idxs: list[int]) -> dict:
     """Every 3-judge jury: how much the headline moves with the jury you pick."""
@@ -172,6 +335,9 @@ def collect() -> dict:
             entry["subsets"][name] = panel_stats(votes, rows, q, idxs)
             if ds.startswith("router") and name == "hard":
                 entry["subsets"][name]["jury_sensitivity"] = jury_sensitivity(votes, rows, q, idxs)
+                entry["subsets"][name]["jury_composition"] = jury_composition(
+                    votes, rows, q, idxs, frozen_panel(votes), arena_costs(ds))
+        entry["error_correlation"] = error_correlation(votes, rows, q)
         # Per-judge declared confidence vs the panel's vote share, same yardstick.
         entry["declared_confidence"] = {
             j: {"ece": round(expected_calibration_error(
@@ -190,6 +356,96 @@ def pct(x):
 
 def num(x):
     return "—" if x is None else f"{x:.3f}"
+
+
+def money(x):
+    return "—" if x is None else f"${x:.4f}"
+
+
+def secs(x):
+    return "—" if x is None else f"{x:.2f} s"
+
+
+def render_error_correlation(ec: dict) -> list[str]:
+    """Phi matrix (upper triangle) with each judge's error count, the full pair table
+    folded away, and one reading line."""
+    judges = ec["judges"]
+    phi = {(p["a"], p["b"]): p for p in ec["pairs"]}
+    L = [f"### Error correlation (n={ec['n_rows']})", "",
+         "Phi between the two judges' error indicators, over the rows where both answered. "
+         "\"—\": undefined because one judge has no error on those rows. `errors` is the judge's "
+         "own count; the full pair table (agreement, joint error, conditional error rates, "
+         "error-set Jaccard, n) is folded below.", "",
+         "| judge (errors) | " + " | ".join(judges) + " |", "|---|" + "---|" * len(judges)]
+    for a in judges:
+        cells = []
+        for b in judges:
+            p = phi.get((a, b))
+            cells.append(num(p["phi"]) if p else "")
+        L.append(f"| {a} ({ec['errors'][a]}) | " + " | ".join(cells) + " |")
+    L += ["", "<details><summary>Every pair</summary>", "",
+          "| A | B | n | agreement | joint error | P(A wrong \\| B wrong) | P(B wrong \\| A wrong) | "
+          "error-set Jaccard | phi |", "|---|---|---|---|---|---|---|---|---|"]
+    for p in ec["pairs"]:
+        L.append(f"| {p['a']} | {p['b']} | {p['n']} | {pct(p['agreement'])} | {pct(p['joint_error'])} | "
+                 f"{pct(p['p_a_wrong_given_b_wrong'])} | {pct(p['p_b_wrong_given_a_wrong'])} | "
+                 f"{num(p['error_jaccard'])} | {num(p['phi'])} |")
+    L += ["", "</details>", ""]
+    hi, lo = ec["most_correlated"], ec["least_correlated"]
+    if hi is None:
+        L.append("**Reading.** Phi is undefined for every pair: no two judges both err on this dataset.")
+    elif ec["pairs_with_phi"] == 1:
+        L.append(f"**Reading.** Only one pair has a defined phi: {hi['pair']} at {num(hi['phi'])} "
+                 f"({hi['shared_wrong']} shared wrong cases of {hi['n']}).")
+    else:
+        L.append(f"**Reading.** Of {ec['pairs_with_phi']} pairs with a defined phi, the most correlated "
+                 f"errors are {hi['pair']} (phi {num(hi['phi'])}, {hi['shared_wrong']} shared wrong "
+                 f"cases of {hi['n']}) and the least correlated are {lo['pair']} (phi {num(lo['phi'])}, "
+                 f"{lo['shared_wrong']} shared wrong cases of {lo['n']}).")
+    return L
+
+
+def render_jury_composition(comp: dict, n: int) -> list[str]:
+    """One row per 3-judge jury of the frozen panel on the hard tasks, sorted by majority
+    accuracy; every column stays separate."""
+    n_all = comp["juries"][0]["n_all"] if comp["juries"] else 0
+    pairs = comp["size"] * (comp["size"] - 1) // 2
+
+    def phi_cell(value, k) -> str:
+        return num(value) + (f" ({k}/{pairs})" if value is not None and k < pairs else "")
+
+    L = ["", f"### Jury composition — hard tasks (n={n})", "",
+         f"Every {comp['size']}-judge jury from the frozen panel ({', '.join(comp['panel'])}; "
+         f"`docs/runs/jury/panel.json`), {len(comp['juries'])} juries. Mean pairwise error phi is "
+         f"given on the {n} hard rows and on all {n_all} rows of the dataset — a judge wrong on "
+         "every hard row (or on none) has no phi there; \"(k/3)\" says how many of the three pairs "
+         f"had one. Cost is the sum of the members' cost on the {n_all} rows; p50 latency the mean "
+         "of the members' medians (`docs/arena-2026-09.json`). Sorted by majority accuracy; no "
+         "composite score.", "",
+         "| jury | majority accuracy (all / decided) | ties | vote-share ECE | "
+         f"mean pairwise error phi (hard / all {n_all}) | shared wrong | cost / {n_all} rows | "
+         "p50 latency |", "|---|---|---|---|---|---|---|---|"]
+    for j in comp["juries"]:
+        L.append(f"| {j['jury']} | {pct(j['majority_accuracy'])} / "
+                 f"{pct(j['majority_accuracy_decided'])} | {j['ties']} | {num(j['vote_share_ece'])} | "
+                 f"{phi_cell(j['mean_phi'], j['pairs_with_phi'])} / "
+                 f"{phi_cell(j['mean_phi_all'], j['pairs_with_phi_all'])} | {j['shared_wrong']} | "
+                 f"{money(j['cost_usd'])} | {secs(j['p50_latency_s'])} |")
+    parts = []
+    for key, d, label in [("mean_phi", comp["diversity_vs_accuracy"], f"the {n} hard rows"),
+                          ("mean_phi_all", comp["diversity_vs_accuracy_all_rows"],
+                           f"all {n_all} rows")]:
+        phis = [j[key] for j in comp["juries"] if j[key] is not None]
+        if d["spearman"] is None:
+            parts.append(f"on {label}, Spearman is undefined ({d['juries']} juries with a "
+                         "defined mean phi)")
+        else:
+            parts.append(f"on {label}, mean phi runs from {num(min(phis))} to {num(max(phis))} "
+                         f"and its Spearman correlation with majority accuracy is "
+                         f"{d['spearman']:+.2f} ({d['juries']} juries)")
+    text = "; ".join(parts)
+    L += ["", "**Diversity vs accuracy.** " + text[0].upper() + text[1:] + "."]
+    return L
 
 
 def render(data: dict) -> str:
@@ -215,8 +471,8 @@ def render(data: dict) -> str:
         e = data[ds]
         p = e["panel"]
         L += [f"## {title}", "",
-              f"Panel: {len(p['judges'])} judges ({', '.join(p['judges'])}). Majority vote, ties to the "
-              f"alphabetically first option.", "",
+              f"Panel: {len(p['judges'])} judges ({', '.join(p['judges'])}). Majority vote among "
+              f"those who answered; a tie is no decision.", "",
               "| subset | n | pairwise agreement | unanimous (wrong) | ties | abstentions | "
               "majority accuracy (all / decided) | best single judge | vote share right / wrong | "
               "conf of the wrong majority |",
@@ -247,6 +503,10 @@ def render(data: dict) -> str:
                   f"{pct(hard['majority_accuracy_min']['value'])} ({hard['majority_accuracy_min']['jury']}) to "
                   f"{pct(hard['majority_accuracy_max']['value'])} ({hard['majority_accuracy_max']['jury']}); "
                   + tail]
+        L += [""] + render_error_correlation(e["error_correlation"])
+        comp = e["subsets"].get("hard", {}).get("jury_composition")
+        if comp:
+            L += render_jury_composition(comp, e["subsets"]["hard"]["n"])
         L.append("")
     L += ["## How to read it", "",
           "- **pairwise agreement**: mean over judge pairs of the share of cases where both chose the same option.",
@@ -261,6 +521,20 @@ def render(data: dict) -> str:
           "- **conf of the wrong majority**: mean declared confidence of the judges who voted with a wrong majority.",
           "- **vote share as confidence**: ECE and zero-error coverage computed with the share as the confidence "
           "of the majority decision — the number an agent jury would act on.",
+          "- **error correlation** (per judge pair, over the rows where both answered; n stated per "
+          "pair): *joint error* is the share of rows where both were wrong; *P(A wrong | B wrong)* is "
+          "the joint errors over B's errors; *error-set Jaccard* is shared errors over the union of the "
+          "two error sets; *phi* is the correlation between the two 0/1 error indicators (+1: identical "
+          "errors, 0: independent, −1: never wrong together). Phi is undefined when a judge has no "
+          "error (or no correct answer) on the compared rows, the conditional when the conditioning "
+          "judge has none, Jaccard when neither erred. Three judges with phi near 1 are one opinion "
+          "voting three times.",
+          "- **jury composition**: *mean pairwise error phi* averages the three pairs' phi (pairs with "
+          "an undefined phi are left out and the count is shown; \"—\" when all three are), on the "
+          "hard rows and on every row of the dataset; *shared wrong* counts the hard rows where all "
+          "three answered and all three were wrong; *diversity vs accuracy* is the Spearman rank "
+          "correlation between mean phi and majority accuracy across the juries — reported as "
+          "computed, on 40 scored rows.",
           "", "## Caveats", "",
           "- Synthetic, seeded datasets; ground truth for routing is by construction. n is small; "
           "subset rows are indicative.",

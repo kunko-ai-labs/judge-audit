@@ -80,6 +80,9 @@ def summarize(recs: list[dict], dataset: str) -> dict:
         "mean_conf_correct": round(statistics.mean(right), 3) if right else None,
         "mean_conf_wrong": round(statistics.mean(wrong), 3) if wrong else None,
         "distinct_confidence_values": len(set(round(c, 2) for c in conf)),
+        # A blank decision is a reply the adapter could not parse (format failure, truncated
+        # reasoning budget); it counts as wrong above, and is counted here on its own.
+        "no_answer": sum(1 for r in recs if not r["decision"].strip()),
         "cost_usd": round(math.fsum(r["cost_usd"] for r in recs), 4),
         "p50_latency_s": round(statistics.median(r["latency_s"] for r in recs), 3),
     }
@@ -158,10 +161,11 @@ def render(judges: dict) -> str:
     for ds, title in names.items():
         gt = ground_truth_tier(DATASETS[ds][0])
         L += [f"## {title} — {gt.tier} {gt.label}", "",
-              "| judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | distinct conf values |"
+              "| judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | "
+              "distinct conf values | no answer |"
               + (" prompt-injection acc | conf drop under injection | social-eng acc |" if ds == "email-adversarial" else "")
               + (" hard → strong | attack success |" if ds.startswith("router") else ""),
-              "|---|---|---|---|---|---|---|" + ("---|---|---|" if ds == "email-adversarial" else "")
+              "|---|---|---|---|---|---|---|---|" + ("---|---|---|" if ds == "email-adversarial" else "")
               + ("---|---|" if ds.startswith("router") else "")]
         for j in judges.values():
             s = j["datasets"].get(ds)
@@ -169,7 +173,8 @@ def render(judges: dict) -> str:
                 continue
             row = (f"| {j['label']} | {j['method']} | {fmt(s['accuracy'], True)} | {fmt(s['ece'])} | "
                    f"{fmt(s['zero_error_coverage'], True)} | {fmt(s['mean_conf_correct'])} / "
-                   f"{fmt(s['mean_conf_wrong'])} | {s['distinct_confidence_values']} |")
+                   f"{fmt(s['mean_conf_wrong'])} | {s['distinct_confidence_values']} | "
+                   f"{s['no_answer']} |")
             if ds == "email-adversarial":
                 row += (f" {fmt(s['prompt_injection_accuracy'], True)} | "
                         f"{s['confidence_drop_under_injection']:+.3f} | "
@@ -178,12 +183,45 @@ def render(judges: dict) -> str:
                 row += f" {s['hard_routed_strong']} / {s['hard_n']} | {s['attack_success']} / 40 |"
             L.append(row)
         L.append("")
-    L += ["## How to read it", "",
+    L += ["## Why these judges", "",
+          "Each row stands for a kind of judge a team could actually deploy, not for a brand. "
+          "The panel is heterogeneous on purpose: a jury of one model family is the documented "
+          "failure mode (see the [consensus audit](consensus-2026-09.md)).", "",
+          "| judge | what it represents |", "|---|---|",
+          "| Jev (TypeSafe) | the judgment model under audit — a model built to judge, returning a "
+          "probability per option instead of a written number |",
+          "| Claude Sonnet 4.5, Gemini 3 Flash | what teams deploy today as LLM-as-judge: frontier chat "
+          "models with a verbalized confidence |",
+          "| Llama 3.3 70B | an open, hosted, mid-size chat model — the self-hostable alternative |",
+          "| DeepSeek R1 | a reasoning model; its reasoning channel spends the output budget before "
+          "the answer, so the token budget decides how many replies are blank (see `no answer`) |",
+          "| gemma4 (e4b), llama3.2 3B | small local chat models on a laptop — the cost floor "
+          "($0) and the floor of what a chat prompt can do |",
+          "| DeBERTa-v3 zero-shot NLI | **control**, not a competitor: a ~180M encoder that cannot "
+          "follow instructions (prompt injection cannot reach it by construction), returns a real "
+          "softmax confidence and was never fine-tuned on these tasks — the row that says whether a "
+          "task needed a bigger model at all |",
+          "| your own fine-tuned classifier | coming in "
+          "[#51](https://github.com/kunko-ai-labs/judge-audit/issues/51): a DeBERTa fine-tuned on a "
+          "pre-registered train half, scored on the held-out half next to every judge above |",
+          "",
+          "Deliberately missing from this round, one reason each:", "",
+          "- **OpenJev** — no hosted endpoint to hand; self-hosting a Jev-compatible server needs a "
+          "GPU box we did not set up in time (the `JEV_ENDPOINT` adapter is ready when one exists).",
+          "- **GPT** — no account with a key for it in this round; the `llm` adapter reaches it "
+          "unchanged once there is one.",
+          "- **Mistral** — budget and time: the round closed before another hosted model was run; "
+          "same adapter, no code change needed.",
+          "",
+          "## How to read it", "",
           "- **ECE**: 0 = confidence equals accuracy in every bin. Above ~0.1 the number is decoration.",
           "- **conf right / wrong**: an honest judge has a visible gap. A gap of zero or negative means "
           "confidence carries no information about correctness.",
           "- **distinct confidence values**: a chat model that only ever says 0.8 or 0.9 is not "
           "estimating anything; it is filling a field.",
+          "- **no answer**: replies the adapter could not parse (format failure, exhausted reasoning "
+          "budget). They count as wrong at confidence 0 in every other column; this one keeps "
+          "format failures visible apart from judgment quality.",
           "- **zero-error coverage**: the most-confident share of decisions with no observed error — "
           "the automation budget. Retrospective on this dataset.",
           "- Costs are as reported by each adapter (vendor list price for Jev; $0 for local models; "
