@@ -12,7 +12,7 @@ Procedure (in the worktree you were given, PR branch checked out):
 2. Static: `ruff check src tests scripts examples`.
 3. Tests: `pytest -q` (count, failures verbatim if any, ≤ 20 lines).
 4. Evidence: `python scripts/verify_published.py`; `python scripts/arena_report.py`; `python scripts/consensus_report.py`; `python scripts/jury_report.py`; then `git status --short -- docs` must be empty. Any diff = FAIL (published numbers no longer match their checkpoints).
-5. CLI contract: `judge-audit --version`; `judge-audit run examples/email-routing/labels.jsonl --judge simulated --out /tmp/qa.md --json /tmp/qa.json` exits 0 and the summary line carries the SIMULATED tag; `judge-audit check /tmp/qa.json --baseline examples/email-routing/baseline-simulated.json` exits 0; a baseline that must fail exits 1; a missing file exits 2.
+5. CLI contract: `judge-audit --version`; `judge-audit run examples/email-routing/labels.jsonl --judge simulated --out /tmp/qa.md --json /tmp/qa.json` exits 0 and the summary line carries the SIMULATED tag; `judge-audit check examples/email-routing/labels.jsonl --judge simulated --baseline examples/email-routing/baseline-simulated.json` exits 0; `--baseline examples/email-routing/baseline-strict.json` exits 1 (drift); a missing labels file exits 2.
 6. MCP: `judge-audit-mcp --help` exits 0; if `mcp` is installed, start the server on stdio and call `list_judges` (a 10-line Python client is fine).
 7. Action: `python -c "import yaml,sys; yaml.safe_load(open('action.yml'))"`; description ≤ 125 chars; `scripts/pr_comment.py` renders a comment from /tmp/qa.json.
 8. Datasets: regenerate `examples/*/generate.py` outputs into a temp dir and diff against the committed files (must be byte-identical).
