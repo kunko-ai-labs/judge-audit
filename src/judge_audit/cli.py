@@ -10,12 +10,13 @@ import sys
 from typing import NoReturn
 
 from . import __version__
+from .ground_truth import ground_truth_of
 from .judges.jev import JevJudge
 from .judges.llm import LLMJudge
 from .judges.nli import NLIJudge
 from .judges.simulated import SIMULATED_TAG, SimulatedJudge
 from .report import check_drift, render_html, render_markdown
-from .runner import load_jsonl, run_audit, write_judgments
+from .runner import load_dataset, run_audit, write_judgments
 
 JUDGES = ("jev", "llm", "nli", "simulated")
 
@@ -71,7 +72,7 @@ def _parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> None:
     args = _parser().parse_args(argv)
     try:
-        rows = load_jsonl(args.labels)
+        rows, dataset_meta = load_dataset(args.labels)
     except (OSError, ValueError) as e:
         _die(f"cannot read {args.labels}: {e}")
     if not rows:
@@ -82,7 +83,7 @@ def main(argv: list[str] | None = None) -> None:
     except (RuntimeError, ValueError) as e:
         _die(f"judge '{args.judge}' is not configured: {e}")
 
-    result = run_audit(judge, rows, labels_path=args.labels)
+    result = run_audit(judge, rows, labels_path=args.labels, dataset_meta=dataset_meta)
 
     if args.cmd == "run":
         fmt = args.format
@@ -103,7 +104,8 @@ def main(argv: list[str] | None = None) -> None:
         if args.judgments:
             write_judgments(result, args.judgments)
         print(f"judge={result.judge} n={result.n} accuracy={result.accuracy:.1%} "
-              f"ece={result.ece:.4f} cost=${result.total_cost_usd:.4f} -> {out}")
+              f"ece={result.ece:.4f} gt={ground_truth_of(result.run).tier} "
+              f"cost=${result.total_cost_usd:.4f} -> {out}")
     else:
         failures: list[str] = []
         try:
@@ -132,7 +134,8 @@ def main(argv: list[str] | None = None) -> None:
             for fl in failures:
                 print(f"  - {fl}", file=sys.stderr)
             sys.exit(1)
-        print(f"OK: no drift (ece={result.ece:.4f}, accuracy={result.accuracy:.1%})")
+        print(f"OK: no drift (ece={result.ece:.4f}, accuracy={result.accuracy:.1%}, "
+              f"gt={ground_truth_of(result.run).tier})")
 
 
 if __name__ == "__main__":

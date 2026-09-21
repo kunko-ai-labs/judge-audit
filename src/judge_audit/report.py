@@ -1,8 +1,10 @@
 """Markdown audit report + CI drift gate."""
 from __future__ import annotations
 
+import html
 import json
 
+from .ground_truth import ground_truth_of
 from .runner import AuditResult
 
 
@@ -26,10 +28,18 @@ def provenance_lines(run: dict) -> list[str]:
     if run.get("judge_audit_version"):
         parts.append(f"judge-audit {run['judge_audit_version']}")
     lines = ["_" + " · ".join(parts) + "_"]
-    if ds:
+    if ds.get("path"):
         lines.append(f"_dataset `{ds.get('path')}` · {ds.get('rows')} rows · "
                      f"sha256 `{str(ds.get('sha256', ''))[:12]}…`_")
     return lines
+
+
+def ground_truth_line(run: dict) -> str:
+    """`Ground truth: GT-1 constructed — …` from `run.dataset.ground_truth`; GT-0 when absent.
+
+    Never silent: a report without a declared tier says so and how to declare one.
+    """
+    return ground_truth_of(run).report_line()
 
 
 def render_markdown(result: AuditResult) -> str:
@@ -41,6 +51,8 @@ def render_markdown(result: AuditResult) -> str:
         f"· cost **${d['total_cost_usd']:.4f}** · p50 **{d['p50_latency_s']}s** · p99 **{d['p99_latency_s']}s**",
         "",
         *provenance_lines(d.get("run", {})),
+        "",
+        f"**{ground_truth_line(d.get('run', {}))}**",
         "",
         "## Can I automate this?",
         "",
@@ -76,6 +88,7 @@ def render_html(result: AuditResult, tag: str = "") -> str:
     acc = png_to_data_uri(accuracy_coverage_png(result))
     banner = f'<div class="banner">⚠️ {tag}</div>' if tag else ""
     prov = "<br>".join(line.strip("_") for line in provenance_lines(d.get("run", {})))
+    gt = html.escape(ground_truth_line(d.get("run", {})))
     curve_rows = "".join(
         f"<tr><td>{r['coverage']:.0%}</td><td>{r['accuracy']:.1%}</td>"
         f"<td>{r['min_confidence']:.2f}</td><td>{r['n']}</td></tr>"
@@ -97,6 +110,7 @@ h2{{margin-top:2.5rem}}.prov{{color:#666;font-size:.9rem}}</style></head><body>
 <p class="metric"><b>{d['n']}</b> decisions · accuracy <b>{d['accuracy']:.1%}</b> · ECE <b>{d['ece']:.4f}</b><br>
 cost <b>${d['total_cost_usd']:.4f}</b> · p50 <b>{d['p50_latency_s']}s</b> · p99 <b>{d['p99_latency_s']}s</b></p>
 <p class="prov">{prov}</p>
+<p class="gt"><b>{gt}</b></p>
 <h2>Can I automate this?</h2>
 <p>Zero observed errors through the most confident <b>{d['zero_error_coverage']['coverage']:.1%}</b>
 ({d['zero_error_coverage']['n']} decisions, confidence ≥ {d['zero_error_coverage']['threshold']}).<br>

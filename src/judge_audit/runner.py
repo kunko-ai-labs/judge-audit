@@ -8,6 +8,7 @@ import platform
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
+from .ground_truth import parse_ground_truth
 from .judges.base import Judge, Question, QuestionType
 from .metrics.calibration import (
     accuracy_coverage,
@@ -66,8 +67,13 @@ def is_correct(decision: str, expected: str) -> bool:
 
 
 def run_metadata(judge: Judge, labels_path: str | None = None,
-                 n_rows: int | None = None) -> dict:
-    """Everything an outsider needs to know how these numbers were produced."""
+                 n_rows: int | None = None, dataset_meta: dict | None = None) -> dict:
+    """Everything an outsider needs to know how these numbers were produced.
+
+    `dataset_meta` is the header object `load_dataset` returns; when it is not
+    given the header is read from `labels_path`, so the ground-truth tier is
+    never silently GT-0 for a file that declares one.
+    """
     from . import __version__
     meta = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -76,20 +82,37 @@ def run_metadata(judge: Judge, labels_path: str | None = None,
         "python": platform.python_version(),
     }
     if labels_path:
+        if dataset_meta is None:
+            dataset_meta = read_dataset_header(labels_path)
         meta["dataset"] = {
             "path": labels_path,
             "sha256": sha256_of(labels_path),
+            "sha256_rows": sha256_rows_of(labels_path),
             "rows": n_rows,
+            "ground_truth": parse_ground_truth(dataset_meta.get("ground_truth")).to_dict(),
         }
     return meta
 
 
 def sha256_of(path: str) -> str:
+    """Digest of the whole file, header line included."""
     h = hashlib.sha256()
     with open(path, "rb") as f:
         for chunk in iter(lambda: f.read(1 << 16), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def sha256_rows_of(path: str) -> str:
+    """Digest of the rows only: the file minus its dataset header line.
+
+    Equals `sha256_of` for a file without a header, and equals the whole-file
+    digest recorded by runs made before the header existed.
+    """
+    with open(path, "rb") as f:
+        data = f.read()
+    _, rows = _split_header(data)
+    return hashlib.sha256(rows).hexdigest()
 
 
 def summarize(judge_name: str, records: list[dict], run: dict | None = None) -> AuditResult:
@@ -129,9 +152,10 @@ def record_of(idx: int, row: dict, judgment, expected: str) -> dict:
     }
 
 
-def run_audit(judge: Judge, rows: list[dict], labels_path: str | None = None) -> AuditResult:
+def run_audit(judge: Judge, rows: list[dict], labels_path: str | None = None,
+              dataset_meta: dict | None = None) -> AuditResult:
     """rows: [{state, questions: [{name, type, instructions, options?, descriptions?}],
-              labels: {name: expected}}]"""
+              labels: {name: expected}}]; dataset_meta: the header from `load_dataset`."""
     records: list[dict] = []
     for idx, row in enumerate(rows):
         labels: dict = row.get("labels", {})
@@ -140,7 +164,8 @@ def run_audit(judge: Judge, rows: list[dict], labels_path: str | None = None) ->
             if expected is None:
                 continue
             records.append(record_of(idx, row, judgment, expected))
-    return summarize(judge.name, records, run_metadata(judge, labels_path, len(rows)))
+    return summarize(judge.name, records,
+                     run_metadata(judge, labels_path, len(rows), dataset_meta))
 
 
 def write_judgments(result: AuditResult, path: str) -> None:
@@ -150,6 +175,65 @@ def write_judgments(result: AuditResult, path: str) -> None:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
 
 
-def load_jsonl(path: str) -> list[dict]:
+def _is_header(obj) -> bool:
+    return isinstance(obj, dict) and obj.get("idx") == -1
+
+
+def _split_header(data: bytes) -> tuple[bytes | None, bytes]:
+    """(header line, everything after it) — header None when the first line is a row."""
+    nl = data.find(b"\n")
+    first = data if nl < 0 else data[:nl + 1]
+    try:
+        obj = json.loads(first)
+    except ValueError:
+        return None, data
+    if not _is_header(obj):
+        return None, data
+    return first, data[len(first):]
+
+
+def _validate_header(obj: dict, path: str) -> dict:
+    ds = obj.get("dataset")
+    if not isinstance(ds, dict):
+        raise ValueError(f"{path}: dataset header line must carry a 'dataset' object")
+    parse_ground_truth(ds.get("ground_truth"))  # unknown tier / shape fails here, loudly
+    return ds
+
+
+def read_dataset_header(path: str) -> dict:
+    """The header's `dataset` object ({} when the file has none), validated."""
+    with open(path, "rb") as f:
+        first = f.readline()
+    try:
+        obj = json.loads(first) if first.strip() else None
+    except ValueError:
+        return {}
+    return _validate_header(obj, path) if _is_header(obj) else {}
+
+
+def load_dataset(path: str) -> tuple[list[dict], dict]:
+    """Rows and the dataset header ({} when absent).
+
+    The header is an optional first line `{"idx": -1, "dataset": {...}}`; its
+    `ground_truth` object is validated (docs/ground-truth.md). Rows are every
+    other non-empty line, in order.
+    """
+    rows: list[dict] = []
+    dataset: dict = {}
     with open(path, encoding="utf-8") as f:
-        return [json.loads(line) for line in f if line.strip()]
+        for lineno, line in enumerate(f, 1):
+            if not line.strip():
+                continue
+            obj = json.loads(line)
+            if _is_header(obj):
+                if rows or dataset:
+                    raise ValueError(f"{path}:{lineno}: dataset header must be the first line")
+                dataset = _validate_header(obj, path)
+                continue
+            rows.append(obj)
+    return rows, dataset
+
+
+def load_jsonl(path: str) -> list[dict]:
+    """Rows only; the dataset header line, if any, is validated and dropped."""
+    return load_dataset(path)[0]

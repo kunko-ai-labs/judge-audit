@@ -33,9 +33,28 @@ def test_simulated_banner_and_marker_present_once():
 
 def test_numbers_are_formatted_for_humans():
     md = pr_comment.build(RESULT)
-    row = "| 200 | 85.5% | 0.0359 | 19.0% (n=38, conf ≥ 0.9594) | $0.0160 | 0.407 s | 0.556 s |"
+    row = ("| 200 | 85.5% | GT-0 unknown | 0.0359 | 19.0% (n=38, conf ≥ 0.9594) | $0.0160 | "
+           "0.407 s | 0.556 s |")
     assert row in md
     assert "`examples/email-routing/labels.jsonl` (200 rows, sha256 `c5b4c111290a…`)" in md
+
+
+def test_ground_truth_tier_sits_next_to_accuracy_and_is_never_silent():
+    # No tier recorded: GT-0 plus the hint on how to declare one.
+    md = pr_comment.build(RESULT)
+    assert "| n | accuracy | ground truth | ECE |" in md
+    assert ("_Ground truth: GT-0 unknown — declare it with a dataset header line "
+            "(see docs/ground-truth.md)_") in md
+    # A declared tier: label in the table cell, meaning and caveats in the line below.
+    tiered = json.loads(json.dumps(RESULT))
+    tiered["run"]["dataset"]["ground_truth"] = {
+        "tier": "GT-1", "label": "constructed", "meaning": "true by construction",
+        "validation": "not_validated", "purpose": ["stress test"],
+        "caveats": ["synthetic mail", "no human checked it"]}
+    md = pr_comment.build(tiered)
+    assert "| 200 | 85.5% | GT-1 constructed | 0.0359 |" in md
+    assert ("_Ground truth: GT-1 constructed — true by construction; synthetic mail; "
+            "no human checked it_") in md
 
 
 def test_drift_failure_is_rendered_with_its_reasons():

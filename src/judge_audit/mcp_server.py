@@ -19,9 +19,10 @@ import argparse
 import os
 
 from .cli import JUDGES, _judge
+from .ground_truth import ground_truth_of
 from .judges.simulated import SIMULATED_TAG
 from .report import check_drift as _check_drift
-from .runner import load_jsonl, write_judgments
+from .runner import load_dataset, write_judgments
 from .runner import run_audit as _run_audit
 
 try:
@@ -79,17 +80,18 @@ def _resolve(path: str) -> str | None:
     return full if os.path.isfile(full) else None
 
 
-def _load(labels_path: str) -> tuple[list[dict] | None, dict | None]:
+def _load(labels_path: str) -> tuple[list[dict] | None, dict, dict | None]:
+    """(rows, dataset header, error) — rows is None when error is set."""
     full = _resolve(labels_path)
     if full is None:
-        return None, {"error": f"labels file not found: {labels_path} (cwd {os.getcwd()})"}
+        return None, {}, {"error": f"labels file not found: {labels_path} (cwd {os.getcwd()})"}
     try:
-        rows = load_jsonl(full)
+        rows, dataset_meta = load_dataset(full)
     except (OSError, ValueError) as exc:
-        return None, {"error": f"cannot read {labels_path}: {exc}"}
+        return None, {}, {"error": f"cannot read {labels_path}: {exc}"}
     if not rows:
-        return None, {"error": f"{labels_path} has no rows"}
-    return rows, None
+        return None, {}, {"error": f"{labels_path} has no rows"}
+    return rows, dataset_meta, None
 
 
 def _make_judge(name: str, rows: list[dict]) -> tuple[object | None, str, dict | None]:
@@ -105,23 +107,28 @@ def _make_judge(name: str, rows: list[dict]) -> tuple[object | None, str, dict |
 @server.tool(description=(
     "Audit a judge in shadow mode against a labeled JSONL file "
     "({state, questions, labels} per line). Returns n, accuracy, ECE, reliability bins, "
-    "accuracy-coverage curve, zero-error coverage, total cost, p50/p99 latency and the run "
-    "provenance (judge, model, backend, dataset sha256). judge: jev | llm | simulated "
+    "accuracy-coverage curve, zero-error coverage, total cost, p50/p99 latency, the run "
+    "provenance (judge, model, backend, dataset sha256) and ground_truth: the dataset's "
+    "provenance tier (GT-0 unknown … GT-6 production outcome; docs/ground-truth.md) that says "
+    "what the accuracy is evidence of. judge: jev | llm | simulated "
     "(default; no key, tagged SIMULATED). judgments_path: optional JSONL to write "
     "per-decision evidence."))
 def run_audit(labels_path: str, judge: str = "simulated",
               judgments_path: str | None = None) -> dict:
-    rows, err = _load(labels_path)
+    rows, dataset_meta, err = _load(labels_path)
     if err:
         return err
     j, tag, err = _make_judge(judge, rows)
     if err:
         return err
     try:
-        result = _run_audit(j, rows, labels_path=os.path.abspath(labels_path))
+        result = _run_audit(j, rows, labels_path=os.path.abspath(labels_path),
+                            dataset_meta=dataset_meta)
     except Exception as exc:  # judge/network failure: report, do not crash the server
         return {"error": f"audit failed: {type(exc).__name__}: {exc}"}
     out = result.to_dict()
+    gt = ground_truth_of(result.run)
+    out["ground_truth"] = {"tier": gt.tier, "label": gt.label, "line": gt.report_line()}
     if tag:
         out["tag"] = tag
     if judgments_path:
@@ -140,7 +147,7 @@ def run_audit(labels_path: str, judge: str = "simulated",
     "an error."))
 def check_drift(labels_path: str, baseline_path: str, judge: str = "simulated",
                 max_ece_drift: float = 0.02, max_acc_drop: float = 0.01) -> dict:
-    rows, err = _load(labels_path)
+    rows, dataset_meta, err = _load(labels_path)
     if err:
         return err
     baseline = _resolve(baseline_path)
@@ -150,7 +157,8 @@ def check_drift(labels_path: str, baseline_path: str, judge: str = "simulated",
     if err:
         return err
     try:
-        result = _run_audit(j, rows, labels_path=os.path.abspath(labels_path))
+        result = _run_audit(j, rows, labels_path=os.path.abspath(labels_path),
+                            dataset_meta=dataset_meta)
         failures = _check_drift(result, baseline, max_ece_drift, max_acc_drop)
     except (OSError, ValueError, KeyError) as exc:
         return {"error": f"cannot use baseline {baseline_path}: {exc}"}
@@ -158,6 +166,7 @@ def check_drift(labels_path: str, baseline_path: str, judge: str = "simulated",
         return {"error": f"audit failed: {type(exc).__name__}: {exc}"}
     out = {"ok": not failures, "failures": failures,
            "ece": result.ece, "accuracy": result.accuracy, "n": result.n,
+           "ground_truth": ground_truth_of(result.run).tier,
            "baseline": baseline}
     if tag:
         out["tag"] = tag

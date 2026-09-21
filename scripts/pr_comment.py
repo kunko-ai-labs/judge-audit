@@ -32,6 +32,23 @@ def _judge_line(run: dict) -> str:
     return " · ".join(parts)
 
 
+def _ground_truth(run: dict) -> tuple[str, str]:
+    """(cell next to accuracy, full line) from run.dataset.ground_truth; GT-0 when absent.
+
+    Mirrors GroundTruth.report_line() in src/judge_audit/ground_truth.py without
+    importing it: this script runs with the stdlib only.
+    """
+    ds = run.get("dataset", {}) if isinstance(run, dict) else {}
+    gt = ds.get("ground_truth") or {}
+    tier, label = gt.get("tier", "GT-0"), gt.get("label", "unknown")
+    cell = f"{tier} {label}"
+    if tier == "GT-0":
+        tail = "declare it with a dataset header line (see docs/ground-truth.md)"
+    else:
+        tail = "; ".join([gt.get("meaning", ""), *gt.get("caveats", [])])
+    return cell, f"Ground truth: {cell} — {tail}"
+
+
 def build(result: dict, drift: dict | None = None, artifact_url: str = "",
           marker: str = MARKER) -> str:
     run = result.get("run", {}) or {}
@@ -40,14 +57,16 @@ def build(result: dict, drift: dict | None = None, artifact_url: str = "",
     lines = [marker, "## judge-audit", ""]
     if tag:
         lines += [f"> ⚠️ **{tag}**", ""]
+    gt_cell, gt_line = _ground_truth(run)
     lines += [f"Judge {_judge_line(run)}", "",
-              "| n | accuracy | ECE | zero-error coverage | cost | p50 | p99 |",
-              "|---|---|---|---|---|---|---|",
-              f"| {result.get('n', 0)} | {result.get('accuracy', 0):.1%} | "
+              "| n | accuracy | ground truth | ECE | zero-error coverage | cost | p50 | p99 |",
+              "|---|---|---|---|---|---|---|---|",
+              f"| {result.get('n', 0)} | {result.get('accuracy', 0):.1%} | {gt_cell} | "
               f"{result.get('ece', 0):.4f} | {zec.get('coverage', 0):.1%} "
               f"(n={zec.get('n', 0)}, conf ≥ {zec.get('threshold')}) | "
               f"${result.get('total_cost_usd', 0):.4f} | {result.get('p50_latency_s', 0)} s | "
-              f"{result.get('p99_latency_s', 0)} s |", ""]
+              f"{result.get('p99_latency_s', 0)} s |", "",
+              f"_{gt_line}_", ""]
     if drift is not None:
         base = drift.get("baseline", "baseline")
         if drift.get("ok"):
