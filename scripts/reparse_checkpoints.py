@@ -30,7 +30,7 @@ from judge_audit.runner import load_jsonl, questions_of  # noqa: E402
 def reparse(ckpt: Path, rows: list[dict], dry_run: bool) -> int:
     lines = ckpt.read_text(encoding="utf-8").splitlines()
     out, changed, header_at = [], 0, None
-    for k, line in enumerate(lines):
+    for line in lines:
         if not line.strip():
             continue
         rec = json.loads(line)

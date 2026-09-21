@@ -223,8 +223,8 @@ class LLMJudge(Judge):
             kwargs["output_config"] = {"effort": self.effort}
         try:
             resp = self._client.messages.create(
-                model=self.model, max_tokens=int(os.environ.get("LLM_MAX_TOKENS", "1024")), system=SYSTEM,
-                messages=[{"role": "user", "content": user}], **kwargs)
+                model=self.model, max_tokens=int(os.environ.get("LLM_MAX_TOKENS", "1024")),
+                system=SYSTEM, messages=[{"role": "user", "content": user}], **kwargs)
         except self._anthropic.RateLimitError as e:
             raise RuntimeError(f"rate-limited by Anthropic: {e.message}") from e
         except self._anthropic.APIStatusError as e:
