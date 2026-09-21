@@ -1,0 +1,635 @@
+{
+  "email-clean": {
+    "panel": {
+      "n": 200,
+      "judges": [
+        "jev",
+        "claude-sonnet-4.5",
+        "deberta-nli",
+        "deepseek-r1",
+        "gemma4",
+        "llama-3.3-70b",
+        "llama32"
+      ],
+      "pairwise_agreement": 0.9329,
+      "unanimous": 153,
+      "unanimous_wrong": 0,
+      "majority_accuracy": 1,
+      "majority_wrong": 0,
+      "best_single_accuracy": 1,
+      "mean_share_when_right": 0.966,
+      "mean_share_when_wrong": null,
+      "mean_conf_of_wrong_majority": null,
+      "vote_share_ece": 0.0336,
+      "vote_share_zero_error_coverage": 1.0
+    },
+    "subsets": {
+      "clean": {
+        "n": 200,
+        "judges": [
+          "jev",
+          "claude-sonnet-4.5",
+          "deberta-nli",
+          "deepseek-r1",
+          "gemma4",
+          "llama-3.3-70b",
+          "llama32"
+        ],
+        "pairwise_agreement": 0.9329,
+        "unanimous": 153,
+        "unanimous_wrong": 0,
+        "majority_accuracy": 1,
+        "majority_wrong": 0,
+        "best_single_accuracy": 1,
+        "mean_share_when_right": 0.966,
+        "mean_share_when_wrong": null,
+        "mean_conf_of_wrong_majority": null,
+        "vote_share_ece": 0.0336,
+        "vote_share_zero_error_coverage": 1.0
+      }
+    },
+    "declared_confidence": {
+      "jev": {
+        "ece": 0.0036,
+        "zero_error_coverage": 1.0,
+        "accuracy": 1
+      },
+      "claude-sonnet-4.5": {
+        "ece": 0.029,
+        "zero_error_coverage": 1.0,
+        "accuracy": 1
+      },
+      "deberta-nli": {
+        "ece": 0.1765,
+        "zero_error_coverage": 0.515,
+        "accuracy": 0.865
+      },
+      "deepseek-r1": {
+        "ece": 0.0486,
+        "zero_error_coverage": 1.0,
+        "accuracy": 1
+      },
+      "gemma4": {
+        "ece": 0.0258,
+        "zero_error_coverage": 1.0,
+        "accuracy": 1
+      },
+      "llama-3.3-70b": {
+        "ece": 0.0909,
+        "zero_error_coverage": 1.0,
+        "accuracy": 1
+      },
+      "llama32": {
+        "ece": 0.034,
+        "zero_error_coverage": 0.055,
+        "accuracy": 0.9
+      }
+    }
+  },
+  "email-adversarial": {
+    "panel": {
+      "n": 200,
+      "judges": [
+        "jev",
+        "claude-sonnet-4.5",
+        "deberta-nli",
+        "deepseek-r1",
+        "gemma4",
+        "llama-3.3-70b",
+        "llama32"
+      ],
+      "pairwise_agreement": 0.7405,
+      "unanimous": 84,
+      "unanimous_wrong": 0,
+      "majority_accuracy": 0.89,
+      "majority_wrong": 22,
+      "best_single_accuracy": 0.965,
+      "mean_share_when_right": 0.873,
+      "mean_share_when_wrong": 0.584,
+      "mean_conf_of_wrong_majority": 0.848,
+      "vote_share_ece": 0.0571,
+      "vote_share_zero_error_coverage": 0.585
+    },
+    "subsets": {
+      "homoglyph_zerowidth": {
+        "n": 10,
+        "judges": [
+          "jev",
+          "claude-sonnet-4.5",
+          "deberta-nli",
+          "deepseek-r1",
+          "gemma4",
+          "llama-3.3-70b",
+          "llama32"
+        ],
+        "pairwise_agreement": 0.8048,
+        "unanimous": 4,
+        "unanimous_wrong": 0,
+        "majority_accuracy": 1,
+        "majority_wrong": 0,
+        "best_single_accuracy": 1,
+        "mean_share_when_right": 0.9,
+        "mean_share_when_wrong": null,
+        "mean_conf_of_wrong_majority": null,
+        "vote_share_ece": 0.1,
+        "vote_share_zero_error_coverage": 1.0
+      },
+      "ambiguous": {
+        "n": 30,
+        "judges": [
+          "jev",
+          "claude-sonnet-4.5",
+          "deberta-nli",
+          "deepseek-r1",
+          "gemma4",
+          "llama-3.3-70b",
+          "llama32"
+        ],
+        "pairwise_agreement": 0.7492,
+        "unanimous": 10,
+        "unanimous_wrong": 0,
+        "majority_accuracy": 0.9333,
+        "majority_wrong": 2,
+        "best_single_accuracy": 0.9333,
+        "mean_share_when_right": 0.878,
+        "mean_share_when_wrong": 0.714,
+        "mean_conf_of_wrong_majority": 0.847,
+        "vote_share_ece": 0.0667,
+        "vote_share_zero_error_coverage": 0.9333
+      },
+      "homoglyph_cyrillic": {
+        "n": 14,
+        "judges": [
+          "jev",
+          "claude-sonnet-4.5",
+          "deberta-nli",
+          "deepseek-r1",
+          "gemma4",
+          "llama-3.3-70b",
+          "llama32"
+        ],
+        "pairwise_agreement": 0.8435,
+        "unanimous": 8,
+        "unanimous_wrong": 0,
+        "majority_accuracy": 1,
+        "majority_wrong": 0,
+        "best_single_accuracy": 1,
+        "mean_share_when_right": 0.918,
+        "mean_share_when_wrong": null,
+        "mean_conf_of_wrong_majority": null,
+        "vote_share_ece": 0.0816,
+        "vote_share_zero_error_coverage": 1.0
+      },
+      "pii": {
+        "n": 20,
+        "judges": [
+          "jev",
+          "claude-sonnet-4.5",
+          "deberta-nli",
+          "deepseek-r1",
+          "gemma4",
+          "llama-3.3-70b",
+          "llama32"
+        ],
+        "pairwise_agreement": 0.9143,
+        "unanimous": 14,
+        "unanimous_wrong": 0,
+        "majority_accuracy": 1,
+        "majority_wrong": 0,
+        "best_single_accuracy": 1,
+        "mean_share_when_right": 0.957,
+        "mean_share_when_wrong": null,
+        "mean_conf_of_wrong_majority": null,
+        "vote_share_ece": 0.0429,
+        "vote_share_zero_error_coverage": 1.0
+      },
+      "clean": {
+        "n": 60,
+        "judges": [
+          "jev",
+          "claude-sonnet-4.5",
+          "deberta-nli",
+          "deepseek-r1",
+          "gemma4",
+          "llama-3.3-70b",
+          "llama32"
+        ],
+        "pairwise_agreement": 0.9048,
+        "unanimous": 40,
+        "unanimous_wrong": 0,
+        "majority_accuracy": 1,
+        "majority_wrong": 0,
+        "best_single_accuracy": 1,
+        "mean_share_when_right": 0.952,
+        "mean_share_when_wrong": null,
+        "mean_conf_of_wrong_majority": null,
+        "vote_share_ece": 0.0476,
+        "vote_share_zero_error_coverage": 1.0
+      },
+      "prompt_injection": {
+        "n": 40,
+        "judges": [
+          "jev",
+          "claude-sonnet-4.5",
+          "deberta-nli",
+          "deepseek-r1",
+          "gemma4",
+          "llama-3.3-70b",
+          "llama32"
+        ],
+        "pairwise_agreement": 0.4881,
+        "unanimous": 3,
+        "unanimous_wrong": 0,
+        "majority_accuracy": 0.625,
+        "majority_wrong": 15,
+        "best_single_accuracy": 0.875,
+        "mean_share_when_right": 0.686,
+        "mean_share_when_wrong": 0.61,
+        "mean_conf_of_wrong_majority": 0.834,
+        "vote_share_ece": 0.0464,
+        "vote_share_zero_error_coverage": 0.125
+      },
+      "social_engineering": {
+        "n": 20,
+        "judges": [
+          "jev",
+          "claude-sonnet-4.5",
+          "deberta-nli",
+          "deepseek-r1",
+          "gemma4",
+          "llama-3.3-70b",
+          "llama32"
+        ],
+        "pairwise_agreement": 0.4095,
+        "unanimous": 0,
+        "unanimous_wrong": 0,
+        "majority_accuracy": 0.75,
+        "majority_wrong": 5,
+        "best_single_accuracy": 1,
+        "mean_share_when_right": 0.657,
+        "mean_share_when_wrong": 0.457,
+        "mean_conf_of_wrong_majority": 0.905,
+        "vote_share_ece": 0.2571,
+        "vote_share_zero_error_coverage": 0.6
+      },
+      "homoglyph_fullwidth": {
+        "n": 6,
+        "judges": [
+          "jev",
+          "claude-sonnet-4.5",
+          "deberta-nli",
+          "deepseek-r1",
+          "gemma4",
+          "llama-3.3-70b",
+          "llama32"
+        ],
+        "pairwise_agreement": 0.9127,
+        "unanimous": 5,
+        "unanimous_wrong": 0,
+        "majority_accuracy": 1,
+        "majority_wrong": 0,
+        "best_single_accuracy": 1,
+        "mean_share_when_right": 0.952,
+        "mean_share_when_wrong": null,
+        "mean_conf_of_wrong_majority": null,
+        "vote_share_ece": 0.0476,
+        "vote_share_zero_error_coverage": 1.0
+      }
+    },
+    "declared_confidence": {
+      "jev": {
+        "ece": 0.0389,
+        "zero_error_coverage": 0.73,
+        "accuracy": 0.955
+      },
+      "claude-sonnet-4.5": {
+        "ece": 0.0159,
+        "zero_error_coverage": 0.02,
+        "accuracy": 0.965
+      },
+      "deberta-nli": {
+        "ece": 0.1247,
+        "zero_error_coverage": 0.08,
+        "accuracy": 0.595
+      },
+      "deepseek-r1": {
+        "ece": 0.074,
+        "zero_error_coverage": 0.005,
+        "accuracy": 0.765
+      },
+      "gemma4": {
+        "ece": 0.1534,
+        "zero_error_coverage": 0.02,
+        "accuracy": 0.81
+      },
+      "llama-3.3-70b": {
+        "ece": 0.0155,
+        "zero_error_coverage": 0.0,
+        "accuracy": 0.905
+      },
+      "llama32": {
+        "ece": 0.154,
+        "zero_error_coverage": 0.0,
+        "accuracy": 0.725
+      }
+    }
+  },
+  "router-bare": {
+    "panel": {
+      "n": 120,
+      "judges": [
+        "jev",
+        "claude-sonnet-4.5",
+        "deberta-nli",
+        "deepseek-r1",
+        "gemma4",
+        "llama-3.3-70b",
+        "llama32"
+      ],
+      "pairwise_agreement": 0.5587,
+      "unanimous": 15,
+      "unanimous_wrong": 0,
+      "majority_accuracy": 0.6167,
+      "majority_wrong": 46,
+      "best_single_accuracy": 0.6667,
+      "mean_share_when_right": 0.745,
+      "mean_share_when_wrong": 0.637,
+      "mean_conf_of_wrong_majority": 0.92,
+      "vote_share_ece": 0.1917,
+      "vote_share_zero_error_coverage": 0.125
+    },
+    "subsets": {
+      "easy": {
+        "n": 40,
+        "judges": [
+          "jev",
+          "claude-sonnet-4.5",
+          "deberta-nli",
+          "deepseek-r1",
+          "gemma4",
+          "llama-3.3-70b",
+          "llama32"
+        ],
+        "pairwise_agreement": 0.8036,
+        "unanimous": 15,
+        "unanimous_wrong": 0,
+        "majority_accuracy": 1,
+        "majority_wrong": 0,
+        "best_single_accuracy": 1,
+        "mean_share_when_right": 0.9,
+        "mean_share_when_wrong": null,
+        "mean_conf_of_wrong_majority": null,
+        "vote_share_ece": 0.1,
+        "vote_share_zero_error_coverage": 1.0
+      },
+      "hard": {
+        "n": 40,
+        "judges": [
+          "jev",
+          "claude-sonnet-4.5",
+          "deberta-nli",
+          "deepseek-r1",
+          "gemma4",
+          "llama-3.3-70b",
+          "llama32"
+        ],
+        "pairwise_agreement": 0.4738,
+        "unanimous": 0,
+        "unanimous_wrong": 0,
+        "majority_accuracy": 0.325,
+        "majority_wrong": 27,
+        "best_single_accuracy": 1,
+        "mean_share_when_right": 0.637,
+        "mean_share_when_wrong": 0.646,
+        "mean_conf_of_wrong_majority": 0.9,
+        "vote_share_ece": 0.3179,
+        "vote_share_zero_error_coverage": 0.0,
+        "jury_sensitivity": {
+          "juries": 35,
+          "majority_accuracy_min": {
+            "jury": "jev + claude-sonnet-4.5 + llama32",
+            "value": 0
+          },
+          "majority_accuracy_max": {
+            "jury": "deberta-nli + gemma4 + llama-3.3-70b",
+            "value": 0.925
+          },
+          "unanimous_wrong_max": {
+            "jury": "jev + claude-sonnet-4.5 + llama32",
+            "value": 34,
+            "of": 40
+          }
+        }
+      },
+      "adversarial": {
+        "n": 40,
+        "judges": [
+          "jev",
+          "claude-sonnet-4.5",
+          "deberta-nli",
+          "deepseek-r1",
+          "gemma4",
+          "llama-3.3-70b",
+          "llama32"
+        ],
+        "pairwise_agreement": 0.3988,
+        "unanimous": 0,
+        "unanimous_wrong": 0,
+        "majority_accuracy": 0.525,
+        "majority_wrong": 19,
+        "best_single_accuracy": 1,
+        "mean_share_when_right": 0.517,
+        "mean_share_when_wrong": 0.624,
+        "mean_conf_of_wrong_majority": 0.949,
+        "vote_share_ece": 0.3286,
+        "vote_share_zero_error_coverage": 0.0
+      }
+    },
+    "declared_confidence": {
+      "jev": {
+        "ece": 0.3181,
+        "zero_error_coverage": 0.025,
+        "accuracy": 0.6667
+      },
+      "claude-sonnet-4.5": {
+        "ece": 0.237,
+        "zero_error_coverage": 0.0,
+        "accuracy": 0.6083
+      },
+      "deberta-nli": {
+        "ece": 0.4027,
+        "zero_error_coverage": 0.0,
+        "accuracy": 0.475
+      },
+      "deepseek-r1": {
+        "ece": 0.258,
+        "zero_error_coverage": 0.0,
+        "accuracy": 0.4917
+      },
+      "gemma4": {
+        "ece": 0.3446,
+        "zero_error_coverage": 0.0,
+        "accuracy": 0.5917
+      },
+      "llama-3.3-70b": {
+        "ece": 0.2333,
+        "zero_error_coverage": 0.0,
+        "accuracy": 0.65
+      },
+      "llama32": {
+        "ece": 0.3958,
+        "zero_error_coverage": 0.025,
+        "accuracy": 0.6583
+      }
+    }
+  },
+  "router-described": {
+    "panel": {
+      "n": 120,
+      "judges": [
+        "jev",
+        "claude-sonnet-4.5",
+        "deberta-nli",
+        "deepseek-r1",
+        "gemma4",
+        "llama-3.3-70b",
+        "llama32"
+      ],
+      "pairwise_agreement": 0.6321,
+      "unanimous": 14,
+      "unanimous_wrong": 0,
+      "majority_accuracy": 0.9333,
+      "majority_wrong": 8,
+      "best_single_accuracy": 0.975,
+      "mean_share_when_right": 0.79,
+      "mean_share_when_wrong": 0.571,
+      "mean_conf_of_wrong_majority": 0.905,
+      "vote_share_ece": 0.1583,
+      "vote_share_zero_error_coverage": 0.6417
+    },
+    "subsets": {
+      "easy": {
+        "n": 40,
+        "judges": [
+          "jev",
+          "claude-sonnet-4.5",
+          "deberta-nli",
+          "deepseek-r1",
+          "gemma4",
+          "llama-3.3-70b",
+          "llama32"
+        ],
+        "pairwise_agreement": 0.8143,
+        "unanimous": 14,
+        "unanimous_wrong": 0,
+        "majority_accuracy": 1,
+        "majority_wrong": 0,
+        "best_single_accuracy": 1,
+        "mean_share_when_right": 0.907,
+        "mean_share_when_wrong": null,
+        "mean_conf_of_wrong_majority": null,
+        "vote_share_ece": 0.0929,
+        "vote_share_zero_error_coverage": 1.0
+      },
+      "hard": {
+        "n": 40,
+        "judges": [
+          "jev",
+          "claude-sonnet-4.5",
+          "deberta-nli",
+          "deepseek-r1",
+          "gemma4",
+          "llama-3.3-70b",
+          "llama32"
+        ],
+        "pairwise_agreement": 0.6821,
+        "unanimous": 0,
+        "unanimous_wrong": 0,
+        "majority_accuracy": 1,
+        "majority_wrong": 0,
+        "best_single_accuracy": 1,
+        "mean_share_when_right": 0.836,
+        "mean_share_when_wrong": null,
+        "mean_conf_of_wrong_majority": null,
+        "vote_share_ece": 0.1643,
+        "vote_share_zero_error_coverage": 1.0,
+        "jury_sensitivity": {
+          "juries": 35,
+          "majority_accuracy_min": {
+            "jury": "jev + deepseek-r1 + llama32",
+            "value": 0.85
+          },
+          "majority_accuracy_max": {
+            "jury": "jev + claude-sonnet-4.5 + deberta-nli",
+            "value": 1
+          },
+          "unanimous_wrong_max": {
+            "jury": "jev + claude-sonnet-4.5 + deberta-nli",
+            "value": 0,
+            "of": 40
+          }
+        }
+      },
+      "adversarial": {
+        "n": 40,
+        "judges": [
+          "jev",
+          "claude-sonnet-4.5",
+          "deberta-nli",
+          "deepseek-r1",
+          "gemma4",
+          "llama-3.3-70b",
+          "llama32"
+        ],
+        "pairwise_agreement": 0.4,
+        "unanimous": 0,
+        "unanimous_wrong": 0,
+        "majority_accuracy": 0.8,
+        "majority_wrong": 8,
+        "best_single_accuracy": 1,
+        "mean_share_when_right": 0.585,
+        "mean_share_when_wrong": 0.571,
+        "mean_conf_of_wrong_majority": 0.905,
+        "vote_share_ece": 0.2179,
+        "vote_share_zero_error_coverage": 0.075
+      }
+    },
+    "declared_confidence": {
+      "jev": {
+        "ece": 0.053,
+        "zero_error_coverage": 0.9417,
+        "accuracy": 0.975
+      },
+      "claude-sonnet-4.5": {
+        "ece": 0.0339,
+        "zero_error_coverage": 0.0333,
+        "accuracy": 0.8833
+      },
+      "deberta-nli": {
+        "ece": 0.1952,
+        "zero_error_coverage": 0.0,
+        "accuracy": 0.4917
+      },
+      "deepseek-r1": {
+        "ece": 0.0563,
+        "zero_error_coverage": 0.0,
+        "accuracy": 0.7167
+      },
+      "gemma4": {
+        "ece": 0.18,
+        "zero_error_coverage": 0.0,
+        "accuracy": 0.775
+      },
+      "llama-3.3-70b": {
+        "ece": 0.0433,
+        "zero_error_coverage": 0.0083,
+        "accuracy": 0.8667
+      },
+      "llama32": {
+        "ece": 0.4292,
+        "zero_error_coverage": 0.025,
+        "accuracy": 0.5917
+      }
+    }
+  }
+}

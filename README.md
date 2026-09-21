@@ -73,6 +73,18 @@ Every judge below ran the same four datasets through the same harness; raw respo
 
 **Read the zero-error coverage column.** Claude Sonnet 4.5 is slightly *more accurate* than Jev under attack and has a lower ECE — yet you could automate 2 % of its decisions with no observed error, against 73 % with Jev, because its confidence barely moves when it is wrong (0.88). A judge that says 0.60 when it is guessing is worth more than one that says 0.88. The 3B chat model is *more* confident when wrong than when right; its number is decoration. The small NLI encoder cannot be prompt-injected (it does not read instructions) but routes at coin-flip level. Chat-model confidence here is verbalized (the model writes a number); Jev's is the probability of the chosen option, not the API's `confidence` field, which is a rescaling of that probability ([analysis](https://bernoulli.app/articles/is-jev-confident)) and calibrates worse on our data (ECE 0.13 vs 0.05 on the router).
 
+### Consensus is not calibration
+
+Most agent juries use *agreement* as confidence: seven judges, majority wins, vote share is the score. Reading the Arena checkpoints side by side ([docs/consensus-2026-09.md](docs/consensus-2026-09.md), no new API call) says what that score is worth:
+
+| dataset | 7-judge majority accuracy | best single judge | vote share when right / wrong | vote share as confidence: ECE | best declared confidence: ECE |
+|---|---|---|---|---|---|
+| Emails under attack | 89.0% | 96.5% | 0.87 / 0.58 | 0.057 | 0.015 (Llama 70B) |
+| Router, bare labels | 61.7% | 66.7% | 0.75 / 0.64 | 0.192 | 0.233 (Llama 70B) |
+| Router, described options | 93.3% | 97.5% | 0.79 / 0.57 | 0.158 | 0.034 (Sonnet) |
+
+On the 40 hard routing tasks (bare labels) the majority is right 32.5 % of the time and the panel agrees exactly as much when it is wrong as when it is right (vote share 0.65 vs 0.64); the judges who voted with a wrong majority declared 0.90 confidence on average. And the headline depends on who sits on the jury: across the 35 possible three-judge juries, hard-task accuracy runs from **0 %** (Jev + Sonnet + llama3.2) to **92.5 %** (DeBERTa + gemma4 + Llama 70B). This is the assumption Shao (2026, [arXiv:2609.20543](https://arxiv.org/abs/2609.20543)) and Huang et al. (2026, [arXiv:2605.30653](https://arxiv.org/abs/2605.30653)) attack — LLM groups that overstate consensus by 34–44 points and converge, unanimously, on wrong answers — measured on a heterogeneous jury with the same yardstick as a single calibrated judge. Round 2 (each judge re-votes after seeing the panel) is pre-registered in [docs/jury-consensus-plan.md](docs/jury-consensus-plan.md) and reported in [docs/jury-consensus.md](docs/jury-consensus.md).
+
 ## How it works
 
 1. **Labeled dataset** — JSONL rows `{state, questions, labels}`. Your humans already decided; the judge must reproduce them. An optional first line declares where the labels come from — their [ground-truth tier](docs/ground-truth.md), from `GT-1 constructed` to `GT-6 production outcome`.
