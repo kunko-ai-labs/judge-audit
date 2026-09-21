@@ -24,7 +24,7 @@ Implement `Judge.decide(state, questions) -> [Judgment]` in `src/judge_audit/jud
 
 ## Adding a dataset
 
-A seeded `generate.py` that writes `labels.jsonl`. Rows are `{state, questions, labels, _meta}`; `_meta` carries whatever the analysis needs (attack type, difficulty, target). State in the docstring how ground truth was obtained and what the dataset cannot show. CI regenerates every dataset and fails if the committed file differs.
+A seeded `generate.py` that writes `labels.jsonl`. Rows are `{state, questions, labels, _meta}`; `_meta` carries whatever the analysis needs (attack type, difficulty, target). State in the docstring how ground truth was obtained and what the dataset cannot show, and declare it machine-readably: the first line of the file is a dataset header with the [ground-truth tier](docs/ground-truth.md) and its caveats, which every report prints next to the accuracy. CI regenerates every dataset and fails if the committed file differs.
 
 ## Issues
 

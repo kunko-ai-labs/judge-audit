@@ -34,7 +34,7 @@ Cursor (`.cursor/mcp.json`) or any stdio MCP client:
 }
 ```
 
-Tools: `run_audit`, `check_drift`, `list_judges`. The agent can ask *"audit `examples/email-routing/labels.jsonl` with the simulated judge and tell me the zero-error coverage"* and gets back the same numbers the CLI writes — n, accuracy, ECE, reliability bins, accuracy-coverage curve, zero-error coverage, cost, p50/p99 — plus the run provenance (judge, model, backend, dataset sha256). Or *"has our judge drifted since `baseline.json`?"* → `check_drift` returns `ok`, the failures, and the new ECE/accuracy.
+Tools: `run_audit`, `check_drift`, `list_judges`. The agent can ask *"audit `examples/email-routing/labels.jsonl` with the simulated judge and tell me the zero-error coverage"* and gets back the same numbers the CLI writes — n, accuracy, ECE, reliability bins, accuracy-coverage curve, zero-error coverage, cost, p50/p99 — plus the run provenance (judge, model, backend, dataset sha256) and `ground_truth`: the dataset's [provenance tier](ground-truth.md) next to the accuracy (`GT-1 constructed`, or `GT-0 unknown` with a hint when the file declares none). Or *"has our judge drifted since `baseline.json`?"* → `check_drift` returns `ok`, the failures, the new ECE/accuracy and the tier.
 
 Paths resolve from the directory the server was started in. Results from the simulated judge always carry the `SIMULATED` tag; a judge that is not configured (no API key) comes back as a structured `error`, never as a crashed server. The server makes no network calls of its own — only the ones the judge you chose makes.
 
