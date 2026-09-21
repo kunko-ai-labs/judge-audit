@@ -27,6 +27,7 @@ import json
 import os
 import random
 import re
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -35,6 +36,29 @@ from .base import Judge, Judgment, Question, QuestionType
 
 # HTTP statuses worth waiting out: rate limit, overloaded, unavailable, gateway timeout.
 TRANSIENT = {429, 503, 529, 502, 504}
+# Wall-clock limit per request. A socket timeout alone is not enough: a server that
+# trickles keep-alive bytes never trips it.
+TIMEOUT_S = float(os.environ.get("LLM_TIMEOUT_S", "120"))
+
+
+def _fetch_json(req: urllib.request.Request, deadline: float) -> dict:
+    box: dict = {}
+
+    def go():
+        try:
+            with urllib.request.urlopen(req, timeout=deadline) as r:
+                box["data"] = json.load(r)
+        except BaseException as e:  # re-raised in the caller's thread
+            box["err"] = e
+
+    t = threading.Thread(target=go, daemon=True)
+    t.start()
+    t.join(deadline)
+    if t.is_alive():
+        raise TimeoutError(f"no complete response after {deadline:.0f}s")
+    if "err" in box:
+        raise box["err"]
+    return box["data"]
 
 # USD per million tokens (input, output). Unknown models report cost 0 and say so.
 PRICES: dict[str, tuple[float, float]] = {
@@ -191,12 +215,12 @@ class LLMJudge(Judge):
             req = urllib.request.Request(f"{self.base_url}/chat/completions",
                                          data=json.dumps(body).encode(), headers=headers)
             try:
-                with urllib.request.urlopen(req, timeout=120) as r:
-                    data = json.load(r)
+                data = _fetch_json(req, TIMEOUT_S)
                 break
             except TimeoutError as e:
-                # Some endpoints never answer certain prompts in JSON mode (observed with
-                # Gemini). Ask again without it; _extract_json tolerates prose around the JSON.
+                # Some endpoints never finish certain prompts in JSON mode (observed with
+                # Gemini, which keeps the socket alive without answering). Ask again
+                # without it; _extract_json tolerates prose around the JSON.
                 last = f"{type(e).__name__}: {e}"
                 body.pop("response_format", None)
             except urllib.error.HTTPError as e:

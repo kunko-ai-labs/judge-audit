@@ -14,7 +14,7 @@ All notable changes to this project are documented here. The format follows
 - `.env.example` documenting every credential the adapters read.
 
 ### Fixed
-- `llm` judge: an OpenAI-compatible endpoint that times out in JSON mode is asked again without `response_format` (observed with Gemini on one prompt).
+- `llm` judge: an OpenAI-compatible endpoint that does not finish in JSON mode within `LLM_TIMEOUT_S` (default 120 s, wall clock — a server trickling keep-alive bytes never trips the socket timeout) is asked again without `response_format` (observed with Gemini on one prompt).
 
 ## [0.3.2] — 2026-09-20
 

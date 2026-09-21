@@ -140,3 +140,18 @@ def test_timeout_in_json_mode_retries_without_it(monkeypatch):
     monkeypatch.setattr(llm_mod.time, "sleep", lambda s: None)
     assert LLMJudge()._call("hello")[0] == "{}"
     assert "response_format" in bodies[0] and "response_format" not in bodies[1]
+
+
+def test_wall_clock_deadline_trips_when_the_socket_never_times_out(monkeypatch):
+    """A server that trickles keep-alive bytes never trips the socket timeout."""
+    import threading
+    import urllib.request
+
+    from judge_audit.judges import llm as llm_mod
+
+    def urlopen(req, timeout=0):
+        threading.Event().wait(5)  # hangs longer than the deadline
+
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+    with pytest.raises(TimeoutError):
+        llm_mod._fetch_json(urllib.request.Request("http://unit.test/v1"), 0.2)
