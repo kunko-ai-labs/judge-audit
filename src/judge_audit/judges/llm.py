@@ -21,6 +21,7 @@ LLM_BASE_URL, LLM_API_KEY, LLM_EFFORT (anthropic only), LLM_PROVIDER_MODULE (cus
 """
 from __future__ import annotations
 
+import http.client
 import importlib.util
 import json
 import os
@@ -200,6 +201,11 @@ class LLMJudge(Judge):
                     time.sleep(min(2 ** attempt * 5 + random.uniform(0, 3), 120))
                     continue
                 raise RuntimeError(f"{self.base_url} returned {e.code}: {detail}") from e
+            except (urllib.error.URLError, http.client.HTTPException,
+                    ConnectionError, TimeoutError) as e:
+                # Dropped or reset connections are as transient as a 503.
+                last = f"{type(e).__name__}: {e}"
+                time.sleep(min(2 ** attempt * 5 + random.uniform(0, 3), 120))
         else:
             # "rate-limited" is what scripts/audit_resumable.py looks for before sleeping.
             raise RuntimeError(f"rate-limited by {self.base_url} after retries ({last})")

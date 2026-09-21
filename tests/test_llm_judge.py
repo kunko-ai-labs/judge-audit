@@ -74,3 +74,36 @@ def test_missing_config_is_a_runtime_error(monkeypatch):
     monkeypatch.delenv("LLM_BASE_URL", raising=False)
     with pytest.raises(RuntimeError, match="LLM_BASE_URL"):
         LLMJudge()
+
+
+def test_dropped_connection_is_retried(monkeypatch):
+    """A server that closes the socket mid-request is as transient as a 503."""
+    import http.client
+    import io
+    import urllib.request
+
+    from judge_audit.judges import llm as llm_mod
+
+    monkeypatch.setenv("LLM_PROVIDER", "openai-compatible")
+    monkeypatch.setenv("LLM_BASE_URL", "http://unit.test/v1")
+    monkeypatch.setenv("LLM_MODEL", "gpt-5-mini")
+    calls = {"n": 0}
+
+    class Resp(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    def urlopen(req, timeout=0):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise http.client.RemoteDisconnected("Remote end closed connection")
+        return Resp(json.dumps({"choices": [{"message": {"content": "{}"}}],
+                                "usage": {"prompt_tokens": 1, "completion_tokens": 1}}).encode())
+
+    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(llm_mod.time, "sleep", lambda s: None)
+    text, _, _ = LLMJudge()._call("hello")
+    assert text == "{}" and calls["n"] == 2
