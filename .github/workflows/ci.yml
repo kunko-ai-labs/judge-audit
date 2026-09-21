@@ -57,6 +57,7 @@ jobs:
         run: |
           python scripts/consensus_report.py
           python scripts/jury_report.py
+          python scripts/jury_deliberate.py --check
           git diff --exit-code -- docs/consensus-2026-09.md docs/consensus-2026-09.json docs/jury-consensus.md docs/jury-consensus.json
 
   datasets:

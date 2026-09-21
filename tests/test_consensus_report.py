@@ -22,9 +22,22 @@ VOTES = {
 }
 
 
-def test_majority_breaks_ties_alphabetically():
-    assert majority(["b", "b", "a"]) == ("b", 2 / 3)
-    assert majority(["a", "b"]) == ("a", 0.5)
+def test_majority_treats_ties_and_blanks_as_no_vote():
+    assert majority(["b", "b", "a"]) == ("b", 2 / 3, False)
+    assert majority(["a", "b"]) == (None, 0.5, True)           # tie: no decision
+    assert majority(["b", "", " "]) == ("b", 1.0, False)        # blanks abstain
+    assert majority(["", ""]) == (None, 0.0, False)
+
+
+def test_panel_stats_ties_and_abstentions():
+    votes = {"x": [rec("b", 0.9), rec("", 0.0)], "y": [rec("a", 0.6), rec("b", 0.7)]}
+    rows = [{"labels": {"q": "b"}}, {"labels": {"q": "b"}}]
+    s = panel_stats(votes, rows, "q")
+    assert s["ties"] == 1 and s["abstentions"] == 1
+    assert s["majority_accuracy"] == 0.5   # row 0 tie = not correct; row 1 decided by y alone
+    assert s["unanimous"] == 0                      # one voter is not unanimity
+    assert s["mean_share_when_right"] == 1.0 and s["mean_share_when_wrong"] is None
+    assert s["pairwise_agreement"] == 0.0           # only row 0 has both votes, and they differ
 
 
 def test_panel_stats_counts_agreement_and_wrong_majorities():
@@ -50,13 +63,23 @@ def test_deliberation_prompt_hides_names_and_excludes_self(monkeypatch):
              "_meta": {"difficulty": "hard"}}]
     votes = {"alpha": VOTES["x"][:1], "beta": VOTES["y"][:1], "gamma": VOTES["z"][:1]}
     monkeypatch.setattr(jury_deliberate, "votes_of", lambda ds: (votes, rows))
-    out, panel = jury_deliberate.deliberation_rows("router-bare", "beta")
+    trio = ["alpha", "beta", "gamma"]
+    out, panel = jury_deliberate.deliberation_rows("router-bare", "beta", panel=trio)
     assert panel == ["alpha", "gamma"]
     state = out[0]["state"]
     assert "2 other judges" in state and "Judge A: b" in state and "Judge B: b" in state
     assert "alpha" not in state and "gamma" not in state  # anonymised
-    assert out[0]["_meta"]["round"] == 2
     assert sorted(out[0]["_meta"]["panel_seen"]) == ["alpha", "gamma"]
+    # a blank round-1 answer is not shown and not listed
+    votes["gamma"] = [rec("", 0.0)]
+    out, _ = jury_deliberate.deliberation_rows("router-bare", "beta", panel=trio)
+    assert "1 other judge assessed" in out[0]["state"]
+    assert out[0]["_meta"]["panel_seen"] == ["alpha"]
+    votes["alpha"] = [rec("", 0.0)]
+    out, _ = jury_deliberate.deliberation_rows("router-bare", "beta", panel=trio)
+    assert "none of them gave an answer" in out[0]["state"]
+    assert out[0]["_meta"]["panel_seen"] == []
+    assert out[0]["_meta"]["round"] == 2
     assert rows[0]["state"] == "task"  # original row untouched
 
 

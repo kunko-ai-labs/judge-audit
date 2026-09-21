@@ -1,0 +1,6 @@
+{
+  "panel": ["jev", "claude-sonnet-4.5", "deberta-nli", "deepseek-r1", "gemini-3-flash", "gemma4", "llama-3.3-70b", "llama32"],
+  "revote": ["jev", "claude-sonnet-4.5", "deepseek-r1", "gemini-3-flash", "gemma4", "llama-3.3-70b", "llama32"],
+  "frozen_at": "2026-09-21",
+  "note": "Round-2 panel, frozen before the rerun (jury-consensus-plan.md, Amendments). deberta-nli cannot read a deliberation prompt and keeps its round-1 vote."
+}

@@ -1,6 +1,6 @@
 # Jury consensus audit — pre-registered plan
 
-**Issue:** [#39](https://github.com/kunko-ai-labs/judge-audit/issues/39) · **Status:** round 1 published; round 2 pre-registered before any call was made (commit 1857282 is the freeze), then run and published in [jury-consensus.md](jury-consensus.md). `gemini-3-flash` completed its Arena run before round 2 and joined both panels, as this plan allowed.
+**Issue:** [#39](https://github.com/kunko-ai-labs/judge-audit/issues/39) · **Status:** round 1 published; round 2 pre-registered before any call was made (tag `jury-consensus-freeze`), amended after an independent review (§6, tag `jury-consensus-freeze-2`), rerun, and published in [jury-consensus.md](jury-consensus.md).
 
 ## 1. Why
 
@@ -32,7 +32,7 @@ Panel at freeze: `jev`, `claude-sonnet-4.5`, `deberta-nli`, `deepseek-r1`, `gemm
 - panel: pairwise agreement, unanimous (and unanimous-wrong), majority accuracy, vote share when right vs wrong, vote-share ECE and zero-error coverage — all rows and the 40 hard rows;
 - per judge: accuracy, hard-task accuracy, ECE, mean confidence when wrong, number of switched votes, switches to correct vs to wrong, switches that landed on the other judges' round-1 majority (conformity).
 
-**Predictions, written before the runs** (to be confirmed or refuted; we publish either way):
+**Predictions, written before the runs** (to be confirmed or refuted; we publish either way; scoring thresholds in §6):
 
 1. Pairwise agreement and unanimity rise in round 2 on both datasets.
 2. On `router-bare`, majority accuracy on the hard tasks does not rise materially (the prompt has no information to converge on); the 3B model follows the panel.
@@ -55,3 +55,15 @@ Panel at freeze: `jev`, `claude-sonnet-4.5`, `deberta-nli`, `deepseek-r1`, `gemm
 | `scripts/consensus_report.py` → `docs/consensus-2026-09.{md,json}` | round 1, recomputed and diffed in CI |
 | `scripts/jury_deliberate.py` → `docs/runs/jury/<dataset>/<slug>.r2.{input.jsonl,ckpt.jsonl,md,json}` | round 2 inputs and raw answers |
 | `scripts/jury_report.py` → `docs/jury-consensus.{md,json}` | round 1 vs round 2, recomputed and diffed in CI |
+
+## 6. Amendments (2026-09-21, after review, before the rerun)
+
+The first round-2 run was reviewed by an independent agent before publication and discarded. What changed, and why — all fixed **before** the rerun, so the rerun is pre-registered under these rules:
+
+1. **Blank answers are abstentions.** Two chat models returned unparseable answers on 6–23 router rows in round 1 (recorded as wrong, confidence 0, per the single-judge house rule). The first run showed them to other judges as `Judge C:  (confidence 0.00)`. Now a blank answer is not a vote: it is not shown in the deliberation prompt, it is not counted in agreement, unanimity or majority, and a switch is only counted between two non-blank answers. Reports show *no answer* per judge and round.
+2. **Ties are no decision.** With an even panel the original rule (alphabetically first option) always favoured `route_easy`, the wrong answer on every hard task, and it alone moved hard-task majority accuracy between 15 % and 32.5 %. A tie now counts as not correct in majority accuracy, is reported as a tie, and is excluded from share statistics and vote-share ECE.
+3. **The panel is frozen** in `docs/runs/jury/panel.json` (8 judges: the 7 at the original freeze plus `gemini-3-flash`, whose Arena run completed before the rerun). Every re-voting judge sees the same panel; in the first run six judges had re-voted before Gemini existed and saw six votes while Gemini saw seven. `scripts/jury_deliberate.py --check` regenerates every committed input from the frozen panel and CI diffs it.
+4. **"Followed the panel majority"** is scored against the votes each judge actually saw (`_meta.panel_seen` in its committed input), not against the whole panel.
+5. **Scoring thresholds for the predictions**, fixed here: (1) agreement rises *and* unanimity does not fall on both datasets; (2) hard-task majority accuracy rises by fewer than 10 points *and* the 3B model's switches land on the majority it saw at least half the time; (3) switches to a wrong answer ≤ 5 % of re-votes *and* majority accuracy does not fall; (4) mean confidence when wrong rises in more than half of the chat-model × dataset cells.
+
+Nothing else changed: same datasets, same prompt wording, same seed, same adapters, same metrics.

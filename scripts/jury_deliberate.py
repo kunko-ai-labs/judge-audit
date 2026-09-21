@@ -8,9 +8,13 @@ docs/jury-consensus-plan.md; reported by scripts/jury_report.py.
 
   scripts/arena_run.sh-style env for the judge, then:
   python scripts/jury_deliberate.py router-bare claude-sonnet-4.5 --judge llm
+  python scripts/jury_deliberate.py --check      # committed inputs regenerate byte-identical (CI)
 
-Writes docs/runs/jury/<dataset>/<slug>.r2.input.jsonl (what the judge saw)
-and docs/runs/jury/<dataset>/<slug>.r2.ckpt.jsonl (what it answered).
+The panel is frozen in docs/runs/jury/panel.json so a judge joining the
+Arena later cannot change what round-2 judges saw. A blank (unparseable)
+round-1 answer is an abstention and is not shown. Writes
+docs/runs/jury/<dataset>/<slug>.r2.input.jsonl (what the judge saw) and
+docs/runs/jury/<dataset>/<slug>.r2.ckpt.jsonl (what it answered).
 """
 from __future__ import annotations
 
@@ -28,36 +32,70 @@ from arena_report import DATASETS  # noqa: E402
 from consensus_report import votes_of  # noqa: E402
 
 JURY = ROOT / "docs" / "runs" / "jury"
+PANEL_FILE = JURY / "panel.json"
 SEED = 2026
 PREAMBLE = ("\n\n--- Deliberation round ---\n"
-            "{k} other judges assessed this same task independently. Their votes:\n{votes}\n"
+            "{k} other judge{s} assessed this same task independently. Their votes:\n{votes}\n"
             "You may keep or revise your answer. Give your own decision and confidence.")
+PREAMBLE_NONE = ("\n\n--- Deliberation round ---\n"
+                 "Other judges assessed this same task independently; none of them gave an answer.\n"
+                 "You may keep or revise your answer. Give your own decision and confidence.")
 
 
-def deliberation_rows(dataset: str, slug: str) -> tuple[list[dict], list[str]]:
-    """Original rows + the panel's round-1 votes (minus this judge) in `state`."""
+def frozen_panel() -> list[str]:
+    return json.loads(PANEL_FILE.read_text(encoding="utf-8"))["panel"]
+
+
+def deliberation_rows(dataset: str, slug: str, panel: list[str] | None = None) -> tuple[list[dict], list[str]]:
+    """Original rows + the frozen panel's round-1 votes (minus this judge) in `state`.
+
+    Blank round-1 answers are abstentions: not shown, not listed in panel_seen."""
     votes, rows = votes_of(dataset)
-    panel = [j for j in votes if j != slug]
+    panel = [j for j in (panel or frozen_panel()) if j != slug]
+    missing = [j for j in panel if j not in votes]
+    if missing:
+        raise SystemExit(f"{dataset}: no complete round-1 run for {missing}")
     out = []
     for idx, row in enumerate(rows):
-        order = list(panel)
+        order = [j for j in panel if votes[j][idx]["decision"].strip()]
         random.Random(f"{SEED}:{idx}").shuffle(order)
         lines = [f"- Judge {chr(65 + k)}: {votes[j][idx]['decision']} "
                  f"(confidence {votes[j][idx]['confidence']:.2f})" for k, j in enumerate(order)]
+        text = (PREAMBLE.format(k=len(order), s="" if len(order) == 1 else "s", votes="\n".join(lines))
+                if order else PREAMBLE_NONE)
         new = dict(row)
-        new["state"] = row["state"] + PREAMBLE.format(k=len(order), votes="\n".join(lines))
+        new["state"] = row["state"] + text
         new["_meta"] = dict(row.get("_meta", {}), round=2, panel_seen=order)
         out.append(new)
     return out, panel
 
 
+def check() -> int:
+    """Every committed round-2 input regenerates byte-identical from the frozen panel."""
+    bad = 0
+    for inp in sorted(JURY.glob("*/*.r2.input.jsonl")):
+        dataset, slug = inp.parent.name, inp.name[: -len(".r2.input.jsonl")]
+        rows, _ = deliberation_rows(dataset, slug)
+        want = "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows)
+        if inp.read_text(encoding="utf-8") != want:
+            print(f"STALE {inp.relative_to(ROOT)}")
+            bad += 1
+    print(f"{bad} stale round-2 input(s)")
+    return 1 if bad else 0
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("dataset", choices=sorted(DATASETS))
-    ap.add_argument("slug", help="arena slug of the judge being re-run (docs/runs/arena/<slug>)")
+    ap.add_argument("dataset", nargs="?", choices=sorted(DATASETS))
+    ap.add_argument("slug", nargs="?", help="arena slug of the judge being re-run (docs/runs/arena/<slug>)")
     ap.add_argument("--judge", default="llm", help="adapter name for the CLI (jev, llm, ...)")
     ap.add_argument("--dry-run", action="store_true", help="write the input file only")
+    ap.add_argument("--check", action="store_true", help="verify committed inputs regenerate identically")
     a = ap.parse_args()
+    if a.check:
+        sys.exit(check())
+    if not (a.dataset and a.slug):
+        ap.error("dataset and slug are required unless --check")
     out = JURY / a.dataset
     out.mkdir(parents=True, exist_ok=True)
     rows, panel = deliberation_rows(a.dataset, a.slug)

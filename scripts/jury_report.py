@@ -22,17 +22,52 @@ from arena_report import DATASETS, records  # noqa: E402
 from consensus_report import by_row, majority, panel_stats, votes_of  # noqa: E402
 
 from judge_audit.metrics.calibration import expected_calibration_error  # noqa: E402
+from judge_audit.runner import load_jsonl  # noqa: E402
 
 JURY = ROOT / "docs" / "runs" / "jury"
 ROUND2_DATASETS = ("router-bare", "router-described")
 
 
 def judge_stats(recs: list[dict]) -> dict:
+    if not recs:
+        return {"accuracy": None, "ece": None, "mean_conf_wrong": None}
     wrong = [r["confidence"] for r in recs if not r["correct"]]
     return {"accuracy": round(statistics.mean(r["correct"] for r in recs), 4),
             "ece": round(expected_calibration_error([r["confidence"] for r in recs],
                                                     [r["correct"] for r in recs]), 4),
             "mean_conf_wrong": round(statistics.mean(wrong), 3) if wrong else None}
+
+
+def switch_stats(a: list[dict], b: list[dict], seen: list[list[str]],
+                 r1: dict[str, list[dict]]) -> dict:
+    """Round-1 → round-2 vote changes of one judge.
+
+    A blank answer in either round is 'no answer', not a switch. 'toward panel
+    majority' scores against the majority of the votes this judge actually saw
+    (from the committed input file), abstentions excluded."""
+    n = len(a)
+    blank1 = [i for i in range(n) if not a[i]["decision"].strip()]
+    blank2 = [i for i in range(n) if not b[i]["decision"].strip()]
+    answered = [i for i in range(n) if i not in set(blank1) and i not in set(blank2)]
+    switched = [i for i in answered if a[i]["decision"] != b[i]["decision"]]
+    toward = 0
+    for i in switched:
+        win, _, _ = majority([r1[j][i]["decision"] for j in seen[i]])
+        toward += win is not None and b[i]["decision"] == win
+    return {"no_answer_round1": len(blank1), "no_answer_round2": len(blank2),
+            "switched": len(switched),
+            "switched_to_correct": sum(b[i]["correct"] for i in switched),
+            "switched_to_wrong": sum(not b[i]["correct"] for i in switched),
+            "switched_toward_panel_majority": toward}
+
+
+def panel_seen(ds: str, slug: str, n: int) -> list[list[str]]:
+    """Who each row's deliberation prompt listed, from the committed input file."""
+    inp = JURY / ds / f"{slug}.r2.input.jsonl"
+    rows = load_jsonl(str(inp))
+    if len(rows) != n:
+        raise SystemExit(f"{inp}: {len(rows)} rows, expected {n}")
+    return [r["_meta"]["panel_seen"] for r in rows]
 
 
 def collect() -> dict:
@@ -56,19 +91,11 @@ def collect() -> dict:
             rerun.append(slug)
             r2[slug] = recs
             a, b = r1[slug], recs
-            switched = [i for i in range(len(rows)) if a[i]["decision"] != b[i]["decision"]]
-            others = [j for j in r1 if j != slug]
-            toward_majority = sum(
-                b[i]["decision"] == majority([r1[j][i]["decision"] for j in others])[0]
-                for i in switched)
             judges[slug] = {
                 "round1": judge_stats(a), "round2": judge_stats(b),
                 "hard_round1": judge_stats([a[i] for i in hard]),
                 "hard_round2": judge_stats([b[i] for i in hard]),
-                "switched": len(switched),
-                "switched_to_correct": sum(b[i]["correct"] for i in switched),
-                "switched_to_wrong": sum(not b[i]["correct"] for i in switched),
-                "switched_toward_panel_majority": toward_majority,
+                **switch_stats(a, b, panel_seen(ds, slug, len(rows)), r1),
                 "run": run.get("judge", {}),
             }
         out[ds] = {
@@ -111,24 +138,27 @@ def render(data: dict) -> str:
             continue
         L += [f"Re-voted after seeing the panel: {', '.join(e['rerun'])}. Kept their round-1 vote "
               f"(cannot read a deliberation prompt): {', '.join(e['kept_round1']) or 'none'}.", "",
-              "| panel | pairwise agreement | unanimous (wrong) | majority accuracy | "
+              "| panel | pairwise agreement | unanimous (wrong) | ties | abstentions | majority accuracy | "
               "vote share right / wrong | vote-share ECE | zero-error coverage |",
-              "|---|---|---|---|---|---|---|"]
+              "|---|---|---|---|---|---|---|---|---|"]
         for label, key in [("all, round 1", "panel_round1"), ("all, round 2", "panel_round2"),
                            ("hard, round 1", "hard_round1"), ("hard, round 2", "hard_round2")]:
             s = e[key]
             L.append(f"| {label} | {pct(s['pairwise_agreement'])} | {s['unanimous']} ({s['unanimous_wrong']}) | "
+                     f"{s['ties']} | {s['abstentions']} | "
                      f"{pct(s['majority_accuracy'])} | {num(s['mean_share_when_right'])} / "
                      f"{num(s['mean_share_when_wrong'])} | {num(s['vote_share_ece'])} | "
                      f"{pct(s['vote_share_zero_error_coverage'])} |")
         L += ["", "| judge | accuracy r1 → r2 | hard accuracy r1 → r2 | ECE r1 → r2 | "
-              "conf when wrong r1 → r2 | switched | → correct / → wrong | followed the panel majority |",
-              "|---|---|---|---|---|---|---|---|"]
+              "conf when wrong r1 → r2 | no answer r1 / r2 | switched | → correct / → wrong | "
+              "followed the panel majority |",
+              "|---|---|---|---|---|---|---|---|---|"]
         for slug, j in e["judges"].items():
             L.append(f"| {slug} | {pct(j['round1']['accuracy'])} → {pct(j['round2']['accuracy'])} | "
                      f"{pct(j['hard_round1']['accuracy'])} → {pct(j['hard_round2']['accuracy'])} | "
                      f"{num(j['round1']['ece'])} → {num(j['round2']['ece'])} | "
                      f"{num(j['round1']['mean_conf_wrong'])} → {num(j['round2']['mean_conf_wrong'])} | "
+                     f"{j['no_answer_round1']} / {j['no_answer_round2']} | "
                      f"{j['switched']} | {j['switched_to_correct']} / {j['switched_to_wrong']} | "
                      f"{j['switched_toward_panel_majority']} / {j['switched']} |")
         L.append("")
@@ -137,8 +167,12 @@ def render(data: dict) -> str:
           "- A jury that deliberates well moves **majority accuracy** up and keeps **conf when wrong** low.",
           "- A jury that merely converges moves **pairwise agreement** and **unanimous** up while accuracy "
           "stays put — Shao's \"nearly unanimous, mostly incorrect\" in miniature.",
-          "- **followed the panel majority** counts switches that landed on the other judges' round-1 "
-          "majority: conformity, whether or not it was right.",
+          "- **followed the panel majority** counts switches that landed on the majority of the votes the "
+          "judge actually saw (committed in its `.r2.input.jsonl`): conformity, whether or not it was right.",
+          "- **no answer**: blank (unparseable) answers per round. They are abstentions — not votes, not "
+          "switches — and were not shown to other judges.",
+          "- **ties**: an even split among those who answered is no decision; counted as not correct in "
+          "majority accuracy, excluded from share statistics.",
           "", "## Caveats", "",
           "- Illustration, not replication: no human groups, a routing task instead of Wason, n=120 "
           "(40 hard). Ground truth for routing is by construction.",
@@ -161,7 +195,8 @@ def predictions(data: dict) -> list[str]:
         return []
     bare, desc = data["router-bare"], data["router-described"]
     L = ["## Results vs the pre-registered predictions", "",
-         "Scored mechanically from the tables above; the thresholds are stated with each verdict.", ""]
+         "Scored mechanically from the tables above with the thresholds fixed in the plan's Amendments "
+         "before the rerun.", ""]
     # 1. agreement and unanimity rise on both datasets
     rows = []
     ok1 = True

@@ -57,43 +57,66 @@ def by_row(recs: list[dict], n_rows: int) -> list[dict] | None:
     return [seen[i] for i in range(n_rows)]
 
 
-def majority(decisions: list[str]) -> tuple[str, float]:
-    """(winning option, vote share). Ties go to the alphabetically first option."""
-    c = Counter(decisions)
-    top = sorted(c.items(), key=lambda kv: (-kv[1], kv[0]))[0]
-    return top[0], top[1] / len(decisions)
+def majority(decisions: list[str]) -> tuple[str | None, float, bool]:
+    """(winning option, vote share among those who voted, tie?).
+
+    A blank decision (unparseable answer) is an abstention, not a vote.
+    A tie is no decision: option None, share 0.5, tie True. No votes: (None, 0.0, False)."""
+    voted = [d for d in decisions if d.strip()]
+    if not voted:
+        return None, 0.0, False
+    c = Counter(voted)
+    ranked = sorted(c.items(), key=lambda kv: (-kv[1], kv[0]))
+    if len(ranked) > 1 and ranked[0][1] == ranked[1][1]:
+        return None, ranked[0][1] / len(voted), True
+    return ranked[0][0], ranked[0][1] / len(voted), False
 
 
 def panel_stats(votes: dict[str, list[dict]], rows: list[dict], question: str,
                 idxs: list[int] | None = None) -> dict:
+    """Majority-vote statistics of a panel on the given rows.
+
+    Abstentions (blank answers) are not votes; a tie is no decision and counts as
+    not correct in majority accuracy; share statistics, vote-share ECE and
+    zero-error coverage are computed over decided rows only."""
     judges = list(votes)
     idxs = list(range(len(rows))) if idxs is None else idxs
     if not idxs:
         return {}
+
+    def vote(j: str, i: int) -> str:
+        return votes[j][i]["decision"].strip()
+
     pair_agree = []
     for a, b in combinations(judges, 2):
-        pair_agree.append(statistics.mean(
-            votes[a][i]["decision"] == votes[b][i]["decision"] for i in idxs))
-    maj_ok, shares, unanimous, unanimous_wrong = [], [], 0, 0
-    share_right, share_wrong, conf_wrong = [], [], []
+        both = [i for i in idxs if vote(a, i) and vote(b, i)]
+        if both:
+            pair_agree.append(statistics.mean(vote(a, i) == vote(b, i) for i in both))
+    maj_ok, ties, abstentions, unanimous, unanimous_wrong = [], 0, 0, 0, 0
+    shares, decided_ok, share_right, share_wrong, conf_wrong = [], [], [], [], []
     for i in idxs:
-        decisions = [votes[j][i]["decision"] for j in judges]
-        win, share = majority(decisions)
-        ok = is_correct(win, rows[i]["labels"][question])
+        decisions = [vote(j, i) for j in judges]
+        abstentions += sum(1 for d in decisions if not d)
+        win, share, tie = majority(decisions)
+        ok = win is not None and is_correct(win, rows[i]["labels"][question])
         maj_ok.append(ok)
+        if tie:
+            ties += 1
+        if win is None:
+            continue
         shares.append(share)
+        decided_ok.append(ok)
         (share_right if ok else share_wrong).append(share)
-        if share == 1.0:
+        if share == 1.0 and sum(1 for d in decisions if d) >= 2:
             unanimous += 1
             unanimous_wrong += not ok
         if not ok:
-            conf_wrong += [votes[j][i]["confidence"] for j in judges
-                           if votes[j][i]["decision"] == win]
-    zec = zero_error_coverage(shares, maj_ok)["coverage"]
+            conf_wrong += [votes[j][i]["confidence"] for j in judges if vote(j, i) == win]
     return {
         "n": len(idxs), "judges": judges,
-        "pairwise_agreement": round(statistics.mean(pair_agree), 4),
+        "pairwise_agreement": round(statistics.mean(pair_agree), 4) if pair_agree else None,
         "unanimous": unanimous, "unanimous_wrong": unanimous_wrong,
+        "ties": ties, "abstentions": abstentions,
         "majority_accuracy": round(statistics.mean(maj_ok), 4),
         "majority_wrong": sum(not ok for ok in maj_ok),
         "best_single_accuracy": round(max(
@@ -101,8 +124,9 @@ def panel_stats(votes: dict[str, list[dict]], rows: list[dict], question: str,
         "mean_share_when_right": round(statistics.mean(share_right), 3) if share_right else None,
         "mean_share_when_wrong": round(statistics.mean(share_wrong), 3) if share_wrong else None,
         "mean_conf_of_wrong_majority": round(statistics.mean(conf_wrong), 3) if conf_wrong else None,
-        "vote_share_ece": round(expected_calibration_error(shares, maj_ok), 4),
-        "vote_share_zero_error_coverage": zec,
+        "vote_share_ece": round(expected_calibration_error(shares, decided_ok), 4) if shares else None,
+        "vote_share_zero_error_coverage": (zero_error_coverage(shares, decided_ok)["coverage"]
+                                          if shares else None),
     }
 
 
@@ -163,6 +187,10 @@ def pct(x):
     return "—" if x is None else f"{x:.1%}"
 
 
+def num(x):
+    return "—" if x is None else f"{x:.3f}"
+
+
 def render(data: dict) -> str:
     names = {"email-clean": "Business emails, clean (n=200)",
              "email-adversarial": "Emails under attack (n=200)",
@@ -188,12 +216,13 @@ def render(data: dict) -> str:
         L += [f"## {title}", "",
               f"Panel: {len(p['judges'])} judges ({', '.join(p['judges'])}). Majority vote, ties to the "
               f"alphabetically first option.", "",
-              "| subset | n | pairwise agreement | unanimous (wrong) | majority accuracy | "
+              "| subset | n | pairwise agreement | unanimous (wrong) | ties | abstentions | majority accuracy | "
               "best single judge | vote share right / wrong | conf of the wrong majority |",
-              "|---|---|---|---|---|---|---|---|"]
+              "|---|---|---|---|---|---|---|---|---|---|"]
         for name, s in [("all", p)] + list(e["subsets"].items()):
             L.append(f"| {name} | {s['n']} | {pct(s['pairwise_agreement'])} | "
-                     f"{s['unanimous']} ({s['unanimous_wrong']}) | {pct(s['majority_accuracy'])} | "
+                     f"{s['unanimous']} ({s['unanimous_wrong']}) | {s['ties']} | {s['abstentions']} | "
+                     f"{pct(s['majority_accuracy'])} | "
                      f"{pct(s['best_single_accuracy'])} | "
                      f"{s['mean_share_when_right'] if s['mean_share_when_right'] is not None else '—'} / "
                      f"{s['mean_share_when_wrong'] if s['mean_share_when_wrong'] is not None else '—'} | "
@@ -201,7 +230,7 @@ def render(data: dict) -> str:
         L += ["", "**Vote share as a confidence score** (the way most agent juries use it) against each "
               "judge's own declared confidence, same ECE and zero-error coverage:", "",
               "| confidence source | accuracy | ECE | zero-error coverage |", "|---|---|---|---|",
-              f"| panel vote share (majority) | {pct(p['majority_accuracy'])} | {p['vote_share_ece']:.3f} | "
+              f"| panel vote share (majority) | {pct(p['majority_accuracy'])} | {num(p['vote_share_ece'])} | "
               f"{pct(p['vote_share_zero_error_coverage'])} |"]
         for j, d in e["declared_confidence"].items():
             L.append(f"| {j} (declared) | {pct(d['accuracy'])} | {d['ece']:.3f} | {pct(d['zero_error_coverage'])} |")
@@ -219,7 +248,11 @@ def render(data: dict) -> str:
         L.append("")
     L += ["## How to read it", "",
           "- **pairwise agreement**: mean over judge pairs of the share of cases where both chose the same option.",
-          "- **unanimous (wrong)**: cases where every judge chose the same option, and how many of those were wrong.",
+          "- **unanimous (wrong)**: cases where every judge who answered chose the same option (at least two "
+          "answered), and how many of those were wrong.",
+          "- **ties**: an even split among those who answered — no decision; counted as not correct in "
+          "majority accuracy and excluded from the share statistics.",
+          "- **abstentions**: blank (unparseable) answers across the panel; an abstention is not a vote.",
           "- **vote share right / wrong**: mean share of the winning option when the majority was right vs. wrong. "
           "If the two numbers are close, agreement carries no information about correctness.",
           "- **conf of the wrong majority**: mean declared confidence of the judges who voted with a wrong majority.",
@@ -228,7 +261,8 @@ def render(data: dict) -> str:
           "", "## Caveats", "",
           "- Synthetic, seeded datasets; ground truth for routing is by construction. n is small; "
           "subset rows are indicative.",
-          "- Ties in a panel with an even number of judges go to the alphabetically first option.",
+          "- Ties are no decision (see above). An earlier version broke ties alphabetically, which on the "
+          "router always favoured `route_easy`; changed and disclosed in `jury-consensus-plan.md`.",
           "- Judges differ in cost, size and confidence method; the panel is heterogeneous on purpose "
           "(same-model juries are the documented failure mode — Smit et al., ICML 2024).",
           "- Round 1 only: nobody saw anybody else's vote. Round 2 (deliberation) is pre-registered in "
