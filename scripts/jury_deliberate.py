@@ -26,10 +26,13 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from arena_report import DATASETS  # noqa: E402
 from consensus_report import votes_of  # noqa: E402
+
+from judge_audit.runner import read_dataset_header  # noqa: E402
 
 JURY = ROOT / "docs" / "runs" / "jury"
 PANEL_FILE = JURY / "panel.json"
@@ -70,13 +73,21 @@ def deliberation_rows(dataset: str, slug: str, panel: list[str] | None = None) -
     return out, panel
 
 
+def input_text(dataset: str, rows: list[dict]) -> str:
+    """The round-2 labels file: the source dataset's header (ground-truth tier), then the rows."""
+    header = read_dataset_header(str(ROOT / DATASETS[dataset][0]))
+    lines = [json.dumps({"idx": -1, "dataset": header}, ensure_ascii=False)] if header else []
+    lines += [json.dumps(r, ensure_ascii=False) for r in rows]
+    return "".join(line + "\n" for line in lines)
+
+
 def check() -> int:
     """Every committed round-2 input regenerates byte-identical from the frozen panel."""
     bad = 0
     for inp in sorted(JURY.glob("*/*.r2.input.jsonl")):
         dataset, slug = inp.parent.name, inp.name[: -len(".r2.input.jsonl")]
         rows, _ = deliberation_rows(dataset, slug)
-        want = "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows)
+        want = input_text(dataset, rows)
         if inp.read_text(encoding="utf-8") != want:
             print(f"STALE {inp.relative_to(ROOT)}")
             bad += 1
@@ -100,7 +111,7 @@ def main() -> None:
     out.mkdir(parents=True, exist_ok=True)
     rows, panel = deliberation_rows(a.dataset, a.slug)
     inp = out / f"{a.slug}.r2.input.jsonl"
-    inp.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows), encoding="utf-8")
+    inp.write_text(input_text(a.dataset, rows), encoding="utf-8")
     print(f"{a.dataset}/{a.slug}: panel shown = {panel}; input -> {inp.relative_to(ROOT)}")
     if a.dry_run:
         return

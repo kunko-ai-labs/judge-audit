@@ -8,10 +8,10 @@ Does agreement between AI judges tell you anything about whether they are right?
 
 Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flash, gemma4, llama-3.3-70b, llama32). Majority vote, ties to the alphabetically first option.
 
-| subset | n | pairwise agreement | unanimous (wrong) | ties | abstentions | majority accuracy | best single judge | vote share right / wrong | conf of the wrong majority |
+| subset | n | pairwise agreement | unanimous (wrong) | ties | abstentions | majority accuracy (all / decided) | best single judge | vote share right / wrong | conf of the wrong majority |
 |---|---|---|---|---|---|---|---|---|---|
-| all | 200 | 94.1% | 153 (0) | 0 | 0 | 100.0% | 100.0% | 0.971 / — | — |
-| clean | 200 | 94.1% | 153 (0) | 0 | 0 | 100.0% | 100.0% | 0.971 / — | — |
+| all | 200 | 94.1% | 153 (0) | 0 | 0 | 100.0% / 100.0% | 100.0% | 0.971 / — | — |
+| clean | 200 | 94.1% | 153 (0) | 0 | 0 | 100.0% / 100.0% | 100.0% | 0.971 / — | — |
 
 **Vote share as a confidence score** (the way most agent juries use it) against each judge's own declared confidence, same ECE and zero-error coverage:
 
@@ -21,7 +21,7 @@ Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flas
 | jev (declared) | 100.0% | 0.004 | 100.0% |
 | claude-sonnet-4.5 (declared) | 100.0% | 0.029 | 100.0% |
 | deberta-nli (declared) | 86.5% | 0.176 | 51.5% |
-| deepseek-r1 (declared) | 100.0% | 0.049 | 100.0% |
+| deepseek-r1 (declared) | 100.0% | 0.052 | 100.0% |
 | gemini-3-flash (declared) | 100.0% | 0.005 | 100.0% |
 | gemma4 (declared) | 100.0% | 0.026 | 100.0% |
 | llama-3.3-70b (declared) | 100.0% | 0.091 | 100.0% |
@@ -31,27 +31,27 @@ Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flas
 
 Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flash, gemma4, llama-3.3-70b, llama32). Majority vote, ties to the alphabetically first option.
 
-| subset | n | pairwise agreement | unanimous (wrong) | ties | abstentions | majority accuracy | best single judge | vote share right / wrong | conf of the wrong majority |
+| subset | n | pairwise agreement | unanimous (wrong) | ties | abstentions | majority accuracy (all / decided) | best single judge | vote share right / wrong | conf of the wrong majority |
 |---|---|---|---|---|---|---|---|---|---|
-| all | 200 | 78.2% | 84 (0) | 7 | 19 | 91.5% | 97.0% | 0.887 / 0.67 | 0.894 |
-| homoglyph_zerowidth | 10 | 82.9% | 4 (0) | 0 | 0 | 100.0% | 100.0% | 0.912 / — | — |
-| ambiguous | 30 | 77.5% | 10 (0) | 0 | 0 | 93.3% | 96.7% | 0.893 / 0.688 | 0.852 |
-| homoglyph_cyrillic | 14 | 86.2% | 8 (0) | 0 | 0 | 100.0% | 100.0% | 0.929 / — | — |
-| pii | 20 | 92.5% | 14 (0) | 0 | 0 | 100.0% | 100.0% | 0.963 / — | — |
-| clean | 60 | 91.7% | 40 (0) | 0 | 0 | 100.0% | 100.0% | 0.958 / — | — |
-| prompt_injection | 40 | 54.4% | 3 (0) | 6 | 10 | 65.0% | 87.5% | 0.747 / 0.665 | 0.905 |
-| social_engineering | 20 | 52.7% | 0 (0) | 1 | 9 | 95.0% | 100.0% | 0.697 / — | — |
-| homoglyph_fullwidth | 6 | 92.3% | 5 (0) | 0 | 0 | 100.0% | 100.0% | 0.958 / — | — |
+| all | 200 | 77.2% | 83 (0) | 11 | 0 | 90.0% / 95.2% | 97.0% | 0.89 / 0.681 | 0.899 |
+| homoglyph_zerowidth | 10 | 82.9% | 4 (0) | 0 | 0 | 100.0% / 100.0% | 100.0% | 0.912 / — | — |
+| ambiguous | 30 | 77.4% | 10 (0) | 1 | 0 | 93.3% / 96.5% | 96.7% | 0.893 / 0.75 | 0.832 |
+| homoglyph_cyrillic | 14 | 86.2% | 8 (0) | 0 | 0 | 100.0% / 100.0% | 100.0% | 0.929 / — | — |
+| pii | 20 | 92.5% | 14 (0) | 0 | 0 | 100.0% / 100.0% | 100.0% | 0.963 / — | — |
+| clean | 60 | 91.7% | 40 (0) | 0 | 0 | 100.0% / 100.0% | 100.0% | 0.958 / — | — |
+| prompt_injection | 40 | 54.3% | 2 (0) | 6 | 0 | 65.0% / 76.5% | 87.5% | 0.74 / 0.672 | 0.908 |
+| social_engineering | 20 | 50.0% | 0 (0) | 4 | 0 | 80.0% / 100.0% | 100.0% | 0.703 / — | — |
+| homoglyph_fullwidth | 6 | 92.3% | 5 (0) | 0 | 0 | 100.0% / 100.0% | 100.0% | 0.958 / — | — |
 
 **Vote share as a confidence score** (the way most agent juries use it) against each judge's own declared confidence, same ECE and zero-error coverage:
 
 | confidence source | accuracy | ECE | zero-error coverage |
 |---|---|---|---|
-| panel vote share (majority) | 91.5% | 0.072 | 60.6% |
+| panel vote share (majority) | 90.0% | 0.073 | 62.4% |
 | jev (declared) | 95.5% | 0.039 | 73.0% |
 | claude-sonnet-4.5 (declared) | 96.5% | 0.016 | 2.0% |
 | deberta-nli (declared) | 59.5% | 0.125 | 8.0% |
-| deepseek-r1 (declared) | 76.5% | 0.074 | 0.5% |
+| deepseek-r1 (declared) | 80.5% | 0.127 | 0.0% |
 | gemini-3-flash (declared) | 97.0% | 0.015 | 11.5% |
 | gemma4 (declared) | 81.0% | 0.153 | 2.0% |
 | llama-3.3-70b (declared) | 90.5% | 0.015 | 0.0% |
@@ -61,22 +61,22 @@ Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flas
 
 Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flash, gemma4, llama-3.3-70b, llama32). Majority vote, ties to the alphabetically first option.
 
-| subset | n | pairwise agreement | unanimous (wrong) | ties | abstentions | majority accuracy | best single judge | vote share right / wrong | conf of the wrong majority |
+| subset | n | pairwise agreement | unanimous (wrong) | ties | abstentions | majority accuracy (all / decided) | best single judge | vote share right / wrong | conf of the wrong majority |
 |---|---|---|---|---|---|---|---|---|---|
-| all | 120 | 62.0% | 17 (0) | 18 | 26 | 55.8% | 66.7% | 0.813 / 0.697 | 0.919 |
-| easy | 40 | 85.6% | 17 (0) | 0 | 5 | 100.0% | 100.0% | 0.927 / — | — |
-| hard | 40 | 51.6% | 0 (0) | 7 | 4 | 15.0% | 100.0% | 0.688 / 0.703 | 0.915 |
-| adversarial | 40 | 47.1% | 0 (0) | 11 | 17 | 52.5% | 100.0% | 0.633 / 0.676 | 0.929 |
+| all | 120 | 61.1% | 17 (0) | 28 | 1 | 48.3% / 63.0% | 66.7% | 0.85 / 0.688 | 0.927 |
+| easy | 40 | 85.6% | 17 (0) | 0 | 0 | 100.0% / 100.0% | 100.0% | 0.928 / — | — |
+| hard | 40 | 50.9% | 0 (0) | 7 | 0 | 15.0% / 18.2% | 100.0% | 0.688 / 0.69 | 0.922 |
+| adversarial | 40 | 46.6% | 0 (0) | 21 | 1 | 30.0% / 63.2% | 100.0% | 0.673 / 0.679 | 0.944 |
 
 **Vote share as a confidence score** (the way most agent juries use it) against each judge's own declared confidence, same ECE and zero-error coverage:
 
 | confidence source | accuracy | ECE | zero-error coverage |
 |---|---|---|---|
-| panel vote share (majority) | 55.8% | 0.195 | 16.7% |
+| panel vote share (majority) | 48.3% | 0.174 | 18.5% |
 | jev (declared) | 66.7% | 0.318 | 2.5% |
-| claude-sonnet-4.5 (declared) | 60.8% | 0.237 | 0.0% |
+| claude-sonnet-4.5 (declared) | 65.8% | 0.235 | 0.0% |
 | deberta-nli (declared) | 47.5% | 0.403 | 0.0% |
-| deepseek-r1 (declared) | 49.2% | 0.258 | 0.0% |
+| deepseek-r1 (declared) | 55.8% | 0.373 | 0.0% |
 | gemini-3-flash (declared) | 66.7% | 0.315 | 2.5% |
 | gemma4 (declared) | 59.2% | 0.345 | 0.0% |
 | llama-3.3-70b (declared) | 65.0% | 0.233 | 0.0% |
@@ -88,34 +88,34 @@ Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flas
 
 Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flash, gemma4, llama-3.3-70b, llama32). Majority vote, ties to the alphabetically first option.
 
-| subset | n | pairwise agreement | unanimous (wrong) | ties | abstentions | majority accuracy | best single judge | vote share right / wrong | conf of the wrong majority |
+| subset | n | pairwise agreement | unanimous (wrong) | ties | abstentions | majority accuracy (all / decided) | best single judge | vote share right / wrong | conf of the wrong majority |
 |---|---|---|---|---|---|---|---|---|---|
-| all | 120 | 71.5% | 18 (0) | 3 | 31 | 93.3% | 98.3% | 0.834 / 0.629 | 0.919 |
-| easy | 40 | 86.0% | 18 (0) | 0 | 4 | 100.0% | 100.0% | 0.931 / — | — |
-| hard | 40 | 73.6% | 0 (0) | 0 | 3 | 100.0% | 100.0% | 0.864 / — | — |
-| adversarial | 40 | 51.0% | 0 (0) | 3 | 24 | 80.0% | 100.0% | 0.676 / 0.629 | 0.919 |
+| all | 120 | 70.4% | 18 (0) | 13 | 1 | 85.8% / 96.3% | 98.3% | 0.86 / 0.656 | 0.923 |
+| easy | 40 | 86.2% | 18 (0) | 0 | 0 | 100.0% / 100.0% | 100.0% | 0.931 / — | — |
+| hard | 40 | 73.7% | 0 (0) | 0 | 0 | 100.0% / 100.0% | 100.0% | 0.866 / — | — |
+| adversarial | 40 | 51.2% | 0 (0) | 13 | 1 | 57.5% / 85.2% | 100.0% | 0.727 / 0.656 | 0.923 |
 
 **Vote share as a confidence score** (the way most agent juries use it) against each judge's own declared confidence, same ECE and zero-error coverage:
 
 | confidence source | accuracy | ECE | zero-error coverage |
 |---|---|---|---|
-| panel vote share (majority) | 93.3% | 0.132 | 76.1% |
+| panel vote share (majority) | 85.8% | 0.110 | 83.2% |
 | jev (declared) | 97.5% | 0.053 | 94.2% |
-| claude-sonnet-4.5 (declared) | 88.3% | 0.034 | 3.3% |
+| claude-sonnet-4.5 (declared) | 95.0% | 0.032 | 3.3% |
 | deberta-nli (declared) | 49.2% | 0.195 | 0.0% |
-| deepseek-r1 (declared) | 71.7% | 0.056 | 0.0% |
+| deepseek-r1 (declared) | 79.2% | 0.148 | 0.0% |
 | gemini-3-flash (declared) | 98.3% | 0.012 | 85.0% |
 | gemma4 (declared) | 77.5% | 0.180 | 0.0% |
 | llama-3.3-70b (declared) | 86.7% | 0.043 | 0.8% |
 | llama32 (declared) | 59.2% | 0.429 | 2.5% |
 
-**Pick the jury, pick the headline.** Over all 56 three-judge juries drawn from this panel, majority accuracy on the 40 hard tasks runs from 85.0% (jev + deepseek-r1 + llama32) to 100.0% (jev + claude-sonnet-4.5 + deberta-nli); no three-judge jury is unanimous and wrong on any hard task.
+**Pick the jury, pick the headline.** Over all 56 three-judge juries drawn from this panel, majority accuracy on the 40 hard tasks runs from 92.5% (jev + claude-sonnet-4.5 + llama32) to 100.0% (jev + claude-sonnet-4.5 + deberta-nli); no three-judge jury is unanimous and wrong on any hard task.
 
 ## How to read it
 
 - **pairwise agreement**: mean over judge pairs of the share of cases where both chose the same option.
 - **unanimous (wrong)**: cases where every judge who answered chose the same option (at least two answered), and how many of those were wrong.
-- **ties**: an even split among those who answered — no decision; counted as not correct in majority accuracy and excluded from the share statistics.
+- **ties**: an even split among those who answered — no decision. *majority accuracy (all)* counts a tie as not correct (the jury could not act); *(decided)* is accuracy over the rows with a majority. Ties are excluded from the share statistics.
 - **abstentions**: blank (unparseable) answers across the panel; an abstention is not a vote.
 - **vote share right / wrong**: mean share of the winning option when the majority was right vs. wrong. If the two numbers are close, agreement carries no information about correctness.
 - **conf of the wrong majority**: mean declared confidence of the judges who voted with a wrong majority.

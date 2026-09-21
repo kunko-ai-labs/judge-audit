@@ -138,15 +138,17 @@ def render(data: dict) -> str:
             continue
         L += [f"Re-voted after seeing the panel: {', '.join(e['rerun'])}. Kept their round-1 vote "
               f"(cannot read a deliberation prompt): {', '.join(e['kept_round1']) or 'none'}.", "",
-              "| panel | pairwise agreement | unanimous (wrong) | ties | abstentions | majority accuracy | "
-              "vote share right / wrong | vote-share ECE | zero-error coverage |",
+              "| panel | pairwise agreement | unanimous (wrong) | ties | abstentions | "
+              "majority accuracy (all / decided) | vote share right / wrong | vote-share ECE | "
+              "zero-error coverage |",
               "|---|---|---|---|---|---|---|---|---|"]
         for label, key in [("all, round 1", "panel_round1"), ("all, round 2", "panel_round2"),
                            ("hard, round 1", "hard_round1"), ("hard, round 2", "hard_round2")]:
             s = e[key]
             L.append(f"| {label} | {pct(s['pairwise_agreement'])} | {s['unanimous']} ({s['unanimous_wrong']}) | "
                      f"{s['ties']} | {s['abstentions']} | "
-                     f"{pct(s['majority_accuracy'])} | {num(s['mean_share_when_right'])} / "
+                     f"{pct(s['majority_accuracy'])} / {pct(s['majority_accuracy_decided'])} | "
+                     f"{num(s['mean_share_when_right'])} / "
                      f"{num(s['mean_share_when_wrong'])} | {num(s['vote_share_ece'])} | "
                      f"{pct(s['vote_share_zero_error_coverage'])} |")
         L += ["", "| judge | accuracy r1 → r2 | hard accuracy r1 → r2 | ECE r1 → r2 | "

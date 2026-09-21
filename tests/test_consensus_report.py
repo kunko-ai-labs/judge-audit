@@ -35,6 +35,7 @@ def test_panel_stats_ties_and_abstentions():
     s = panel_stats(votes, rows, "q")
     assert s["ties"] == 1 and s["abstentions"] == 1
     assert s["majority_accuracy"] == 0.5   # row 0 tie = not correct; row 1 decided by y alone
+    assert s["majority_accuracy_decided"] == 1.0
     assert s["unanimous"] == 0                      # one voter is not unanimity
     assert s["mean_share_when_right"] == 1.0 and s["mean_share_when_wrong"] is None
     assert s["pairwise_agreement"] == 0.0           # only row 0 has both votes, and they differ

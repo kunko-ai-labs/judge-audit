@@ -118,6 +118,7 @@ def panel_stats(votes: dict[str, list[dict]], rows: list[dict], question: str,
         "unanimous": unanimous, "unanimous_wrong": unanimous_wrong,
         "ties": ties, "abstentions": abstentions,
         "majority_accuracy": round(statistics.mean(maj_ok), 4),
+        "majority_accuracy_decided": round(statistics.mean(decided_ok), 4) if decided_ok else None,
         "majority_wrong": sum(not ok for ok in maj_ok),
         "best_single_accuracy": round(max(
             statistics.mean(votes[j][i]["correct"] for i in idxs) for j in judges), 4),
@@ -216,13 +217,14 @@ def render(data: dict) -> str:
         L += [f"## {title}", "",
               f"Panel: {len(p['judges'])} judges ({', '.join(p['judges'])}). Majority vote, ties to the "
               f"alphabetically first option.", "",
-              "| subset | n | pairwise agreement | unanimous (wrong) | ties | abstentions | majority accuracy | "
-              "best single judge | vote share right / wrong | conf of the wrong majority |",
+              "| subset | n | pairwise agreement | unanimous (wrong) | ties | abstentions | "
+              "majority accuracy (all / decided) | best single judge | vote share right / wrong | "
+              "conf of the wrong majority |",
               "|---|---|---|---|---|---|---|---|---|---|"]
         for name, s in [("all", p)] + list(e["subsets"].items()):
             L.append(f"| {name} | {s['n']} | {pct(s['pairwise_agreement'])} | "
                      f"{s['unanimous']} ({s['unanimous_wrong']}) | {s['ties']} | {s['abstentions']} | "
-                     f"{pct(s['majority_accuracy'])} | "
+                     f"{pct(s['majority_accuracy'])} / {pct(s['majority_accuracy_decided'])} | "
                      f"{pct(s['best_single_accuracy'])} | "
                      f"{s['mean_share_when_right'] if s['mean_share_when_right'] is not None else '—'} / "
                      f"{s['mean_share_when_wrong'] if s['mean_share_when_wrong'] is not None else '—'} | "
@@ -250,8 +252,9 @@ def render(data: dict) -> str:
           "- **pairwise agreement**: mean over judge pairs of the share of cases where both chose the same option.",
           "- **unanimous (wrong)**: cases where every judge who answered chose the same option (at least two "
           "answered), and how many of those were wrong.",
-          "- **ties**: an even split among those who answered — no decision; counted as not correct in "
-          "majority accuracy and excluded from the share statistics.",
+          "- **ties**: an even split among those who answered — no decision. *majority accuracy (all)* counts "
+          "a tie as not correct (the jury could not act); *(decided)* is accuracy over the rows with a "
+          "majority. Ties are excluded from the share statistics.",
           "- **abstentions**: blank (unparseable) answers across the panel; an abstention is not a vote.",
           "- **vote share right / wrong**: mean share of the winning option when the majority was right vs. wrong. "
           "If the two numbers are close, agreement carries no information about correctness.",
