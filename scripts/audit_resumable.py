@@ -23,11 +23,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from judge_audit import __version__  # noqa: E402
 from judge_audit.cli import _judge  # noqa: E402
+from judge_audit.ground_truth import parse_ground_truth  # noqa: E402
 from judge_audit.judges.simulated import SIMULATED_TAG  # noqa: E402
 from judge_audit.report import render_html, render_markdown  # noqa: E402
 from judge_audit.runner import (  # noqa: E402
     is_correct,
-    load_jsonl,
+    load_dataset,
     questions_of,
     run_metadata,
     summarize,
@@ -57,7 +58,7 @@ def main() -> None:
     ap.add_argument("--html", default=None)
     args = ap.parse_args()
 
-    rows = load_jsonl(args.labels)
+    rows, dataset_meta = load_dataset(args.labels)
     ckpt = Path(args.checkpoint)
     ckpt.parent.mkdir(parents=True, exist_ok=True)
     done = load_checkpoint(ckpt)
@@ -73,7 +74,7 @@ def main() -> None:
                    "timestamp_utc": datetime.now(timezone.utc).isoformat(timespec="seconds")}
     else:
         judge, tag = _judge(args.judge, rows)
-        started = run_metadata(judge, args.labels, len(rows))
+        started = run_metadata(judge, args.labels, len(rows), dataset_meta)
 
     with open(ckpt, "a", encoding="utf-8") as f:
         if not done:
@@ -120,6 +121,10 @@ def main() -> None:
         run["recomputed_utc"] = started["timestamp_utc"]
         run["note"] = "original run time not recorded in this checkpoint"
     run["checkpoint"] = str(ckpt)
+    # The tier is a property of the dataset, not of the run: read it from the labels
+    # file so a checkpoint that predates ground-truth headers still reports it.
+    run.setdefault("dataset", {})["ground_truth"] = parse_ground_truth(
+        dataset_meta.get("ground_truth")).to_dict()
     records = []
     for idx, row in enumerate(rows):
         labels = row.get("labels", {})
@@ -147,7 +152,8 @@ def main() -> None:
     if args.html:
         Path(args.html).write_text(render_html(result, tag=tag), encoding="utf-8")
     print(f"judge={result.judge} n={result.n} accuracy={result.accuracy:.1%} "
-          f"ece={result.ece:.4f} cost=${result.total_cost_usd:.4f} -> {args.out}")
+          f"ece={result.ece:.4f} gt={run['dataset']['ground_truth']['tier']} "
+          f"cost=${result.total_cost_usd:.4f} -> {args.out}")
 
 
 if __name__ == "__main__":

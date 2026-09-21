@@ -1,9 +1,23 @@
 """Seeded synthetic email-routing dataset generator (DE/EN, 10 categories).
 
-Every row is synthetic. Regenerate with: python generate.py
+Every row is synthetic. Ground truth is GT-1 (constructed): the category is
+the template that produced the row; nobody checked it and it cannot show
+real-world routing accuracy. The first line of labels.jsonl declares this
+(docs/ground-truth.md). Regenerate with: python generate.py
 """
 import json
 import random
+
+# Dataset header: provenance of the labels, read by judge_audit.runner.load_dataset.
+DATASET = {"ground_truth": {
+    "tier": "GT-1", "label": "constructed", "validation": "not_validated",
+    "purpose": ["calibration stress test", "CI drift baseline"],
+    "caveats": ["email categories are synthetic: seeded templates with item and number fills, "
+                "not real mail",
+                "the label is the template's category by design; no human checked it",
+                "100 % here is the floor a judge must clear, not evidence of production "
+                "routing accuracy"],
+}}
 
 CATEGORIES = ["order", "quote_request", "invoice_dispute", "support", "delivery_status",
               "contract", "payment_reminder", "return_request", "partnership", "spam"]
@@ -79,6 +93,7 @@ def main(n=200, seed=42):
     rng = random.Random(seed)
     rows = [make_row(rng, i) for i in range(n)]
     with open("labels.jsonl", "w", encoding="utf-8") as f:
+        f.write(json.dumps({"idx": -1, "dataset": DATASET}, ensure_ascii=False) + "\n")
         for r in rows:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
     print(f"wrote {n} synthetic rows (seed={seed})")

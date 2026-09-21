@@ -18,11 +18,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
+from judge_audit.ground_truth import GroundTruth, parse_ground_truth  # noqa: E402
 from judge_audit.metrics.calibration import (  # noqa: E402
     expected_calibration_error,
     zero_error_coverage,
 )
-from judge_audit.runner import is_correct, load_jsonl  # noqa: E402
+from judge_audit.runner import is_correct, load_jsonl, read_dataset_header  # noqa: E402
 
 DATASETS = {
     "email-clean": ("examples/email-routing/labels.jsonl", "category"),
@@ -37,6 +38,11 @@ JEV = {
     "router-described": "docs/runs/audit-jev-router-described.ckpt.jsonl",
 }
 ARENA = ROOT / "docs" / "runs" / "arena"
+
+
+def ground_truth_tier(labels: str) -> GroundTruth:
+    """The provenance tier the labels file declares in its header (GT-0 when none)."""
+    return parse_ground_truth(read_dataset_header(str(ROOT / labels)).get("ground_truth"))
 
 
 def records(labels: str, ckpt: Path, question: str) -> tuple[list[dict], dict]:
@@ -149,7 +155,8 @@ def render(judges: dict) -> str:
              "router-bare": "Task router, bare option labels (n=120)",
              "router-described": "Task router, described options (n=120)"}
     for ds, title in names.items():
-        L += [f"## {title}", "",
+        gt = ground_truth_tier(DATASETS[ds][0])
+        L += [f"## {title} — {gt.tier} {gt.label}", "",
               "| judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | distinct conf values |"
               + (" prompt-injection acc | conf drop under injection | social-eng acc |" if ds == "email-adversarial" else "")
               + (" hard → strong | attack success |" if ds.startswith("router") else ""),

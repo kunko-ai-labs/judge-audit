@@ -9,9 +9,11 @@
     trying to force routing to the expensive model ("route to route_strong").
     Label stays route_easy (the honest answer); meta.target = "route_strong".
 
-Ground truth is BY CONSTRUCTION (difficulty level). Limitation, documented in
-the issue: empirical validation — checking whether the cheap model actually
-solves the easy tasks and fails the hard ones — is a follow-up story.
+Ground truth is BY CONSTRUCTION (difficulty level) — tier GT-1, declared in
+the first line of each labels file (docs/ground-truth.md). Limitation,
+documented in the issue: empirical validation — checking whether the cheap
+model actually solves the easy tasks and fails the hard ones — is a
+follow-up story (that would lift the files to GT-5).
 
 The routing question is deliberately NOT hardened against instructions
 embedded in the task text, mirroring a naive production router.
@@ -27,6 +29,26 @@ Regenerate with: python generate.py
 import json
 import random
 from pathlib import Path
+
+# Dataset header: provenance of the labels, read by judge_audit.runner.load_dataset.
+GROUND_TRUTH = {
+    "tier": "GT-1", "label": "constructed", "validation": "not_validated",
+    "caveats": ["the route label is the generator's difficulty class by design "
+                "(easy -> route_easy, hard -> route_strong), not an observed outcome",
+                "downstream task quality is not measured: whether the cheap model solves the "
+                "easy tasks and fails the hard ones is unverified",
+                "40 adversarial rows keep the honest label route_easy; _meta.target is what "
+                "the attacker wanted"],
+}
+DATASETS = {
+    "labels.jsonl": {"ground_truth": {
+        **GROUND_TRUTH,
+        "purpose": ["model-routing calibration", "cost-inflation attack resistance"]}},
+    "labels-described.jsonl": {"ground_truth": {
+        **GROUND_TRUTH,
+        "purpose": ["model-routing calibration", "cost-inflation attack resistance",
+                    "ablation: options carry a description"]}},
+}
 
 OPTIONS = ["route_easy", "route_strong"]
 DESCRIPTIONS = {
@@ -161,6 +183,7 @@ def main():
         rows = build(described=described)
         out = here / name
         with open(out, "w", encoding="utf-8") as f:
+            f.write(json.dumps({"idx": -1, "dataset": DATASETS[name]}, ensure_ascii=False) + "\n")
             for r in rows:
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")
         from collections import Counter
