@@ -35,7 +35,7 @@ def test_extract_json_ignores_trailing_garbage():
 def test_extract_json_tolerates_fences_and_prose():
     assert _extract_json('```json\n{"a": 1}\n```') == {"a": 1}
     assert _extract_json('Sure! {"a": 2} hope this helps') == {"a": 2}
-    with pytest.raises(json.JSONDecodeError):
+    with pytest.raises(ValueError):
         _extract_json("no json here")
 
 
@@ -160,3 +160,15 @@ def test_wall_clock_deadline_trips_when_the_socket_never_times_out(monkeypatch):
     monkeypatch.setattr(urllib.request, "urlopen", urlopen)
     with pytest.raises(TimeoutError):
         llm_mod._fetch_json(urllib.request.Request("http://unit.test/v1"), 0.2)
+
+
+def test_extract_json_scans_past_prose_braces_and_fenced_then_prose():
+    prose = ("Looking at this task: merge `{'a': 1}` with `{'b': 2}`.\n\n"
+             '{"answers": {"route": {"decision": "route_easy", "confidence": 0.9}}}'
+             "\n\n**Reasoning:** short.")
+    assert _extract_json(prose)["answers"]["route"]["decision"] == "route_easy"
+    fenced = ('```json\n{"answers": {"route": {"decision": "route_strong", "confidence": 0.7}}}'
+              "\n```\n\n**Reasoning:** the task hides edge cases.")
+    assert _extract_json(fenced)["answers"]["route"]["confidence"] == 0.7
+    with pytest.raises(ValueError):
+        _extract_json("No JSON here, only `{'python': 'dict'}` syntax.")

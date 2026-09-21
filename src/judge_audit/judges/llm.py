@@ -98,19 +98,48 @@ def _render(state: str, questions: list[Question]) -> str:
 
 
 def _extract_json(text: str) -> dict:
+    """The first JSON object in a reply — bare, fenced, wrapped in prose, or followed by
+    garbage. Prefers an object with an "answers" key. Raises ValueError when none parses."""
     text = text.strip()
     if text.startswith("```"):
         text = re.sub(r"^```(?:json)?\s*|\s*```$", "", text, flags=re.S)
     try:
-        return json.loads(text)
+        obj = json.loads(text)
+        if isinstance(obj, dict):
+            return obj
     except json.JSONDecodeError:
-        # Prose before the object, or garbage after it (Gemini's JSON mode sometimes
-        # appends fragments such as "\n0.8}}}"): take the first complete object.
-        start = text.find("{")
-        if start < 0:
-            raise
-        obj, _ = json.JSONDecoder().raw_decode(text[start:])
-        return obj
+        pass
+    decoder = json.JSONDecoder()
+    first: dict | None = None
+    for m in re.finditer(r"\{", text):
+        try:
+            obj, _ = decoder.raw_decode(text[m.start():])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(obj, dict):
+            if "answers" in obj:
+                return obj
+            first = first or obj
+    if first is not None:
+        return first
+    raise ValueError("no JSON object in the reply")
+
+
+def parse_reply(text: str, questions: list[Question]) -> dict[str, tuple[str, float, dict | None]]:
+    """{question name: (decision, confidence, the answer object as parsed)} for one reply.
+
+    Pure: the same text always yields the same decisions, so a checkpoint's raw
+    replies can be re-parsed offline when the parser improves (scripts/reparse_checkpoints.py)."""
+    try:
+        answers = _extract_json(text).get("answers", {})
+    except (ValueError, AttributeError):
+        answers = {}
+    out = {}
+    for q in questions:
+        ans = answers.get(q.name) if isinstance(answers, dict) else None
+        decision, confidence = LLMJudge._normalize(q, ans)
+        out[q.name] = (decision, confidence, ans if isinstance(ans, dict) else None)
+    return out
 
 
 class LLMJudge(Judge):
@@ -194,7 +223,7 @@ class LLMJudge(Judge):
             kwargs["output_config"] = {"effort": self.effort}
         try:
             resp = self._client.messages.create(
-                model=self.model, max_tokens=1024, system=SYSTEM,
+                model=self.model, max_tokens=int(os.environ.get("LLM_MAX_TOKENS", "1024")), system=SYSTEM,
                 messages=[{"role": "user", "content": user}], **kwargs)
         except self._anthropic.RateLimitError as e:
             raise RuntimeError(f"rate-limited by Anthropic: {e.message}") from e
@@ -251,14 +280,10 @@ class LLMJudge(Judge):
         latency = time.monotonic() - t0
         price = self._price()
         cost = (in_tok * price[0] + out_tok * price[1]) / 1e6 if price else 0.0
-        try:
-            answers = _extract_json(text).get("answers", {})
-        except (json.JSONDecodeError, AttributeError):
-            answers = {}
+        parsed = parse_reply(text, questions)
         out: list[Judgment] = []
         for q in questions:
-            ans = answers.get(q.name) if isinstance(answers, dict) else None
-            decision, confidence = self._normalize(q, ans)
+            decision, confidence, ans = parsed[q.name]
             out.append(Judgment(
                 question=q.name, decision=decision, confidence=confidence,
                 latency_s=latency / max(len(questions), 1),

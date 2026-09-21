@@ -5,6 +5,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- `llm` judge: the reply parser scans every candidate JSON object (prose containing `{`, fenced JSON followed by a reasoning paragraph) and prefers one with an `answers` key; `parse_reply()` is pure so `scripts/reparse_checkpoints.py` recomputes decisions offline from the raw text kept in checkpoints. Re-parsed 14 Claude Sonnet 4.5 router replies the old parser had counted as blank (router, described options: 88.3 % → 95.0 %); the reparse is recorded in the checkpoint headers. `LLM_MAX_TOKENS` for the Anthropic path; `docs/judges.md` documents token budgets for reasoning models.
+
 ### Added
 - `CLAUDE.md` (house rules for Claude Code) and `.claude/agents/`: `story-implementer`, `story-reviewer`, `release-qa`, `audit-runner` — the pipeline every user story goes through; documented in CONTRIBUTING.
 - Logo (`docs/assets/logo.png`, `logo-dark.png`, SVG sources): the reliability diagram as the mark; README header picks the theme with `<picture>`.
