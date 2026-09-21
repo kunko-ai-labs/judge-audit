@@ -16,7 +16,7 @@ Procedure (in the worktree you were given, PR branch checked out):
 6. MCP: `judge-audit-mcp --help` exits 0; if `mcp` is installed, start the server on stdio and call `list_judges` (a 10-line Python client is fine).
 7. Action: `python -c "import yaml,sys; yaml.safe_load(open('action.yml'))"`; description ≤ 125 chars; `scripts/pr_comment.py` renders a comment from /tmp/qa.json.
 8. Datasets: regenerate `examples/*/generate.py` outputs into a temp dir and diff against the committed files (must be byte-identical).
-9. Hygiene: `git grep -n -i -E 'bedrock|vertex ai|azure openai|sk-ant-|vck_|AKIA' -- . ':!CLAUDE.md' ':!.claude'` must return nothing; no `.env` or `.DS_Store` tracked.
+9. Hygiene: `git grep -n -i -E '<the cloud AI platform names you know, pipe-separated>|sk-ant-|vck_|AKIA'` must return nothing (build the pattern yourself; do not commit it); no `.env` or `.DS_Store` tracked.
 10. Clean up `.qa`.
 
 Report (≤ 30 lines): a table step · result · evidence (the exact command and its decisive output line), then `QA: PASS` or `QA: FAIL — <first blocking step>`. Never summarise a failure away; paste its decisive lines.
