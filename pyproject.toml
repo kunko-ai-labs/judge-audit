@@ -1,6 +1,6 @@
 [project]
 name = "kunko-judge-audit"
-version = "0.3.2"
+version = "0.4.0"
 description = "Independent calibration audits for AI judges: is the confidence honest, what can you automate, what does it cost."
 readme = "README.md"
 requires-python = ">=3.10"
