@@ -81,7 +81,8 @@ def test_summary_carries_bootstrap_intervals_around_the_point_estimates(labels_p
     d = res.to_dict()
     assert d["accuracy_ci"] == list(clopper_pearson(res.n, res.n))
     assert d["accuracy_ci_method"] == "clopper-pearson"
-    assert d["ece_ci_method"] == "bootstrap" and d["bootstrap"]["n_boot"] == 2000
+    assert d["ece_ci"] is None and d["ece_ci_method"] == "degenerate-bootstrap"
+    assert d["bootstrap"]["n_boot"] == 2000
     assert d["bootstrap"]["seed"] == 0 and d["bootstrap"]["level"] == 0.95
 
 

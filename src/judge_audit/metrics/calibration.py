@@ -287,6 +287,10 @@ def ci_fields(name: str, ci: Interval | None) -> dict:
     """
     if ci is None:
         return {f"{name}_ci": None, f"{name}_ci_method": None}
+    if ci[0] == ci[1]:
+        # A zero-width 95 % interval is not a narrow interval, it is no interval:
+        # every resample returned the same value. Say that instead of publishing [x, x].
+        return {f"{name}_ci": None, f"{name}_ci_method": "degenerate-" + ci.method}
     return {f"{name}_ci": [ci[0], ci[1]], f"{name}_ci_method": ci.method}
 
 

@@ -4719,11 +4719,8 @@
             1.0
           ],
           "accuracy_ci_method": "clopper-pearson",
-          "ece_ci": [
-            0.0,
-            0.0
-          ],
-          "ece_ci_method": "bootstrap",
+          "ece_ci": null,
+          "ece_ci_method": "degenerate-bootstrap",
           "zero_error_coverage_ci": [
             0.9638,
             1.0
@@ -5099,11 +5096,8 @@
             1.0
           ],
           "accuracy_ci_method": "clopper-pearson",
-          "ece_ci": [
-            0.0,
-            0.0
-          ],
-          "ece_ci_method": "bootstrap",
+          "ece_ci": null,
+          "ece_ci_method": "degenerate-bootstrap",
           "zero_error_coverage_ci": [
             0.9404,
             1.0
@@ -5198,11 +5192,8 @@
             1.0
           ],
           "accuracy_ci_method": "clopper-pearson",
-          "ece_ci": [
-            0.0,
-            0.0
-          ],
-          "ece_ci_method": "bootstrap",
+          "ece_ci": null,
+          "ece_ci_method": "degenerate-bootstrap",
           "zero_error_coverage_ci": [
             0.9404,
             1.0

@@ -7,7 +7,6 @@ import math
 import warnings
 
 from .ground_truth import ground_truth_of
-from .metrics.calibration import BOOTSTRAP as BOOTSTRAP_METHOD
 from .metrics.calibration import EXACT as EXACT_METHOD
 from .runner import AuditResult
 
@@ -29,11 +28,12 @@ def interval(ci, pct: bool = False, digits: int = 4, method: str | None = None) 
     interval is marked `†`, and a bootstrap that came back with zero width is marked `‡`
     instead of printing `[x, x]`. `interval_notes` turns the marks into a legend.
     """
-    if ci is None:
-        return ""
-    lo, hi = ci
     method = method or getattr(ci, "method", None)
-    if method == BOOTSTRAP_METHOD and lo == hi:
+    if ci is None:
+        # A degenerate interval is published as no interval plus its method.
+        return f" {DEGENERATE_MARK}" if (method or "").startswith("degenerate-") else ""
+    lo, hi = ci
+    if lo == hi:
         return f" {DEGENERATE_MARK}"
     mark = EXACT_MARK if method == EXACT_METHOD else ""
     if pct:
