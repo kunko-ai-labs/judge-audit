@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from arena_report import DATASETS, records  # noqa: E402
-from consensus_report import by_row, majority, panel_stats, votes_of  # noqa: E402
+from consensus_report import by_row, majority, panel_stats, state_groups, votes_of  # noqa: E402
 
 from judge_audit.metrics.calibration import (  # noqa: E402
     N_BOOT,
@@ -33,12 +33,17 @@ JURY = ROOT / "docs" / "runs" / "jury"
 ROUND2_DATASETS = ("router-bare", "router-described")
 
 
-def judge_stats(recs: list[dict]) -> dict:
+def judge_stats(recs: list[dict], groups: list[str] | None = None) -> dict:
+    """One judge's accuracy, ECE and confidence when wrong on the given records.
+
+    `groups` are the cluster keys of the accuracy interval (the rows' state texts); a
+    round-2 record is indexed against the same source dataset, so both rounds cluster
+    on the original state, never on the deliberation prompt built around it."""
     if not recs:
         return {"accuracy": None, "accuracy_ci": None, "ece": None, "mean_conf_wrong": None}
     wrong = [r["confidence"] for r in recs if not r["correct"]]
     return {"accuracy": round(statistics.mean(r["correct"] for r in recs), 4),
-            "accuracy_ci": list(accuracy_ci([r["correct"] for r in recs])),
+            "accuracy_ci": list(accuracy_ci([r["correct"] for r in recs], groups=groups)),
             "ece": round(expected_calibration_error([r["confidence"] for r in recs],
                                                     [r["correct"] for r in recs]), 4),
             "mean_conf_wrong": round(statistics.mean(wrong), 3) if wrong else None}
@@ -98,10 +103,12 @@ def collect() -> dict:
             rerun.append(slug)
             r2[slug] = recs
             a, b = r1[slug], recs
+            all_groups = state_groups(rows, list(range(len(rows))))
+            hard_groups = state_groups(rows, hard)
             judges[slug] = {
-                "round1": judge_stats(a), "round2": judge_stats(b),
-                "hard_round1": judge_stats([a[i] for i in hard]),
-                "hard_round2": judge_stats([b[i] for i in hard]),
+                "round1": judge_stats(a, all_groups), "round2": judge_stats(b, all_groups),
+                "hard_round1": judge_stats([a[i] for i in hard], hard_groups),
+                "hard_round2": judge_stats([b[i] for i in hard], hard_groups),
                 **switch_stats(a, b, panel_seen(ds, slug, len(rows)), r1),
                 "run": run.get("judge", {}),
             }
@@ -179,9 +186,12 @@ def render(data: dict) -> str:
         L.append("")
     L += predictions(data)
     L += ["## How to read it", "",
-          f"- **[a, b]** after an accuracy: 95 % percentile-bootstrap interval over rows ({N_BOOT:,} " +
-          "resamples, seed 0). On 40 hard rows it is about ±15 points wide: a round-1 → round-2 move " +
-          "inside it is not evidence of a change.",
+          f"- **[a, b]** after an accuracy: 95 % percentile-bootstrap interval ({N_BOOT:,} resamples, " +
+          "seed 0) over the dataset's distinct texts — the 40 hard rows carry 14 of them, which is why " +
+          "these intervals are wide (`docs/judges.md` § Confidence intervals). Each interval is that " +
+          "round's own sampling noise; the two rounds are the same judges on the same rows, so what " +
+          "shows whether deliberation changed anything is the paired evidence in this table — the " +
+          "switch counts, where they landed, and how many followed the panel.",
           "- A jury that deliberates well moves **majority accuracy** up and keeps **conf when wrong** low.",
           "- A jury that merely converges moves **pairwise agreement** and **unanimous** up while accuracy " +
           "stays put — Shao's \"nearly unanimous, mostly incorrect\" in miniature.",

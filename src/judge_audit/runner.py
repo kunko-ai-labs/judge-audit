@@ -23,10 +23,11 @@ from .metrics.calibration import (
     zero_error_coverage_ci,
 )
 
-# Percentile bootstrap over rows (docs/judges.md § Confidence intervals); the seed is
-# fixed so a published interval recomputes to the digit from its checkpoint.
-BOOTSTRAP = {"method": "percentile bootstrap over rows", "level": CI_LEVEL,
-             "n_boot": N_BOOT, "seed": 0}
+# Percentile bootstrap over distinct texts (docs/judges.md § Confidence intervals): the
+# datasets repeat states, and two rows with the same text are not two independent
+# observations. The seed is fixed so a published interval recomputes to the digit.
+BOOTSTRAP = {"method": "percentile bootstrap over distinct dataset texts (cluster)",
+             "level": CI_LEVEL, "n_boot": N_BOOT, "seed": 0}
 
 
 @dataclass
@@ -135,6 +136,16 @@ def sha256_rows_of(path: str) -> str:
     return hashlib.sha256(rows).hexdigest()
 
 
+def groups_of(records: list[dict], rows: list[dict]) -> list[str]:
+    """One cluster key per record: the text of the row it judged.
+
+    The datasets repeat states (the router has 61 distinct texts in 120 rows), so the
+    published interval resamples distinct texts, not rows. A record whose row is not in
+    `rows` falls back to its own index — it is then its own cluster."""
+    return [str(rows[r["idx"]]["state"]) if 0 <= r.get("idx", -1) < len(rows)
+            else f"#{i}" for i, r in enumerate(records)]
+
+
 def bootstrap_enabled() -> bool:
     """`JUDGE_AUDIT_BOOTSTRAP=0` (or `false`, `no`, `off`) skips the intervals."""
     return os.environ.get("JUDGE_AUDIT_BOOTSTRAP", "1").strip().lower() not in (
@@ -142,10 +153,12 @@ def bootstrap_enabled() -> bool:
 
 
 def summarize(judge_name: str, records: list[dict], run: dict | None = None,
-              ci: bool | None = None) -> AuditResult:
+              ci: bool | None = None, groups: list[str] | None = None) -> AuditResult:
     """Metrics from per-question records ({confidence, correct, latency_s, cost_usd, ...}).
 
-    `ci` adds the bootstrap intervals; None defers to `JUDGE_AUDIT_BOOTSTRAP`."""
+    `ci` adds the bootstrap intervals; None defers to `JUDGE_AUDIT_BOOTSTRAP`.
+    `groups` is one cluster key per record (`groups_of`); without it every row is its own
+    cluster, which overstates precision on a dataset with repeated texts."""
     confidences = [r["confidence"] for r in records]
     correct = [bool(r["correct"]) for r in records]
     latencies = [r.get("latency_s", 0.0) for r in records]
@@ -164,9 +177,9 @@ def summarize(judge_name: str, records: list[dict], run: dict | None = None,
         p50_latency_s=_percentile(latencies, 50),
         p99_latency_s=_percentile(latencies, 99),
         run=run or {},
-        accuracy_ci=accuracy_ci(correct) if ci and total else None,
-        ece_ci=ece_ci(confidences, correct) if ci and total else None,
-        zero_error_coverage_ci=(zero_error_coverage_ci(confidences, correct)
+        accuracy_ci=accuracy_ci(correct, groups=groups) if ci and total else None,
+        ece_ci=ece_ci(confidences, correct, groups=groups) if ci and total else None,
+        zero_error_coverage_ci=(zero_error_coverage_ci(confidences, correct, groups=groups)
                                 if ci and total else None),
         records=records,
     )
@@ -201,7 +214,8 @@ def run_audit(judge: Judge, rows: list[dict], labels_path: str | None = None,
                 continue
             records.append(record_of(idx, row, judgment, expected))
     return summarize(judge.name, records,
-                     run_metadata(judge, labels_path, len(rows), dataset_meta), ci=ci)
+                     run_metadata(judge, labels_path, len(rows), dataset_meta), ci=ci,
+                     groups=groups_of(records, rows))
 
 
 def write_judgments(result: AuditResult, path: str) -> None:

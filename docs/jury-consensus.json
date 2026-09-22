@@ -17,8 +17,8 @@
         "round1": {
           "accuracy": 0.6667,
           "accuracy_ci": [
-            0.575,
-            0.75
+            0.5246,
+            0.8032
           ],
           "ece": 0.3181,
           "mean_conf_wrong": 0.926
@@ -26,8 +26,8 @@
         "round2": {
           "accuracy": 0.725,
           "accuracy_ci": [
-            0.6417,
-            0.8
+            0.5878,
+            0.8455
           ],
           "ece": 0.2083,
           "mean_conf_wrong": 0.86
@@ -44,8 +44,8 @@
         "hard_round2": {
           "accuracy": 0.175,
           "accuracy_ci": [
-            0.075,
-            0.3
+            0.0,
+            0.375
           ],
           "ece": 0.6605,
           "mean_conf_wrong": 0.86
@@ -69,8 +69,8 @@
         "round1": {
           "accuracy": 0.6583,
           "accuracy_ci": [
-            0.575,
-            0.7417
+            0.5191,
+            0.7869
           ],
           "ece": 0.2353,
           "mean_conf_wrong": 0.832
@@ -78,8 +78,8 @@
         "round2": {
           "accuracy": 0.7,
           "accuracy_ci": [
-            0.6167,
-            0.7833
+            0.5641,
+            0.8208
           ],
           "ece": 0.2311,
           "mean_conf_wrong": 0.877
@@ -87,8 +87,8 @@
         "hard_round1": {
           "accuracy": 0.15,
           "accuracy_ci": [
-            0.05,
-            0.275
+            0.0,
+            0.3415
           ],
           "ece": 0.6583,
           "mean_conf_wrong": 0.816
@@ -96,8 +96,8 @@
         "hard_round2": {
           "accuracy": 0.25,
           "accuracy_ci": [
-            0.125,
-            0.375
+            0.05,
+            0.475
           ],
           "ece": 0.6433,
           "mean_conf_wrong": 0.874
@@ -124,8 +124,8 @@
         "round1": {
           "accuracy": 0.5583,
           "accuracy_ci": [
-            0.4667,
-            0.65
+            0.4248,
+            0.6818
           ],
           "ece": 0.3734,
           "mean_conf_wrong": 0.888
@@ -133,8 +133,8 @@
         "round2": {
           "accuracy": 0.55,
           "accuracy_ci": [
-            0.4583,
-            0.6333
+            0.4173,
+            0.6818
           ],
           "ece": 0.3787,
           "mean_conf_wrong": 0.916
@@ -142,8 +142,8 @@
         "hard_round1": {
           "accuracy": 0.55,
           "accuracy_ci": [
-            0.4,
-            0.7
+            0.325,
+            0.775
           ],
           "ece": 0.3925,
           "mean_conf_wrong": 0.881
@@ -151,8 +151,8 @@
         "hard_round2": {
           "accuracy": 0.125,
           "accuracy_ci": [
-            0.025,
-            0.225
+            0.0,
+            0.2974
           ],
           "ece": 0.794,
           "mean_conf_wrong": 0.932
@@ -179,8 +179,8 @@
         "round1": {
           "accuracy": 0.6667,
           "accuracy_ci": [
-            0.575,
-            0.75
+            0.5289,
+            0.8
           ],
           "ece": 0.3154,
           "mean_conf_wrong": 0.965
@@ -188,8 +188,8 @@
         "round2": {
           "accuracy": 0.6667,
           "accuracy_ci": [
-            0.5833,
-            0.7419
+            0.5217,
+            0.7965
           ],
           "ece": 0.3047,
           "mean_conf_wrong": 0.93
@@ -198,7 +198,7 @@
           "accuracy": 0.075,
           "accuracy_ci": [
             0.0,
-            0.15
+            0.225
           ],
           "ece": 0.8862,
           "mean_conf_wrong": 0.966
@@ -206,8 +206,8 @@
         "hard_round2": {
           "accuracy": 0.2,
           "accuracy_ci": [
-            0.075,
-            0.325
+            0.0,
+            0.425
           ],
           "ece": 0.7562,
           "mean_conf_wrong": 0.933
@@ -230,8 +230,8 @@
         "round1": {
           "accuracy": 0.5917,
           "accuracy_ci": [
-            0.5,
-            0.675
+            0.4615,
+            0.712
           ],
           "ece": 0.3446,
           "mean_conf_wrong": 0.954
@@ -239,8 +239,8 @@
         "round2": {
           "accuracy": 0.6167,
           "accuracy_ci": [
-            0.525,
-            0.7
+            0.4836,
+            0.7426
           ],
           "ece": 0.3098,
           "mean_conf_wrong": 0.92
@@ -248,8 +248,8 @@
         "hard_round1": {
           "accuracy": 0.7,
           "accuracy_ci": [
-            0.55,
-            0.825
+            0.4615,
+            0.9025
           ],
           "ece": 0.1775,
           "mean_conf_wrong": 0.858
@@ -257,8 +257,8 @@
         "hard_round2": {
           "accuracy": 0.175,
           "accuracy_ci": [
-            0.075,
-            0.3
+            0.0,
+            0.3902
           ],
           "ece": 0.7283,
           "mean_conf_wrong": 0.91
@@ -281,8 +281,8 @@
         "round1": {
           "accuracy": 0.65,
           "accuracy_ci": [
-            0.5667,
-            0.7333
+            0.5167,
+            0.7669
           ],
           "ece": 0.2333,
           "mean_conf_wrong": 0.926
@@ -290,8 +290,8 @@
         "round2": {
           "accuracy": 0.55,
           "accuracy_ci": [
-            0.4583,
-            0.6333
+            0.4107,
+            0.6905
           ],
           "ece": 0.3903,
           "mean_conf_wrong": 0.936
@@ -299,8 +299,8 @@
         "hard_round1": {
           "accuracy": 0.725,
           "accuracy_ci": [
-            0.6,
-            0.85
+            0.4862,
+            0.9286
           ],
           "ece": 0.135,
           "mean_conf_wrong": 0.8
@@ -309,7 +309,7 @@
           "accuracy": 0.075,
           "accuracy_ci": [
             0.0,
-            0.15
+            0.225
           ],
           "ece": 0.857,
           "mean_conf_wrong": 0.938
@@ -336,8 +336,8 @@
         "round1": {
           "accuracy": 0.6583,
           "accuracy_ci": [
-            0.5667,
-            0.7417
+            0.5159,
+            0.7925
           ],
           "ece": 0.3958,
           "mean_conf_wrong": 1.0
@@ -345,8 +345,8 @@
         "round2": {
           "accuracy": 0.6667,
           "accuracy_ci": [
-            0.575,
-            0.75
+            0.5246,
+            0.8032
           ],
           "ece": 0.2816,
           "mean_conf_wrong": 0.829
@@ -403,8 +403,8 @@
       "abstentions": 1,
       "majority_accuracy": 0.4833,
       "majority_accuracy_ci": [
-        0.3917,
-        0.575
+        0.3442,
+        0.616
       ],
       "majority_accuracy_decided": 0.6304,
       "majority_wrong": 62,
@@ -434,8 +434,8 @@
       "abstentions": 1,
       "majority_accuracy": 0.6333,
       "majority_accuracy_ci": [
-        0.55,
-        0.7167
+        0.4927,
+        0.7607
       ],
       "majority_accuracy_decided": 0.6552,
       "majority_wrong": 44,
@@ -465,8 +465,8 @@
       "abstentions": 0,
       "majority_accuracy": 0.15,
       "majority_accuracy_ci": [
-        0.05,
-        0.275
+        0.0,
+        0.3415
       ],
       "majority_accuracy_decided": 0.1818,
       "majority_wrong": 34,
@@ -496,8 +496,8 @@
       "abstentions": 0,
       "majority_accuracy": 0.175,
       "majority_accuracy_ci": [
-        0.075,
-        0.3
+        0.0,
+        0.375
       ],
       "majority_accuracy_decided": 0.1795,
       "majority_wrong": 33,
@@ -527,7 +527,7 @@
         "round1": {
           "accuracy": 0.975,
           "accuracy_ci": [
-            0.9417,
+            0.9189,
             1.0
           ],
           "ece": 0.053,
@@ -545,7 +545,7 @@
         "hard_round1": {
           "accuracy": 0.925,
           "accuracy_ci": [
-            0.85,
+            0.7692,
             1.0
           ],
           "ece": 0.1457,
@@ -579,8 +579,8 @@
         "round1": {
           "accuracy": 0.95,
           "accuracy_ci": [
-            0.9083,
-            0.9833
+            0.9035,
+            0.9849
           ],
           "ece": 0.0322,
           "mean_conf_wrong": 0.983
@@ -588,8 +588,8 @@
         "round2": {
           "accuracy": 0.95,
           "accuracy_ci": [
-            0.9083,
-            0.9833
+            0.9035,
+            0.9849
           ],
           "ece": 0.0484,
           "mean_conf_wrong": 0.8
@@ -634,8 +634,8 @@
         "round1": {
           "accuracy": 0.7917,
           "accuracy_ci": [
-            0.7167,
-            0.8667
+            0.6992,
+            0.8692
           ],
           "ece": 0.1478,
           "mean_conf_wrong": 0.894
@@ -643,8 +643,8 @@
         "round2": {
           "accuracy": 0.8917,
           "accuracy_ci": [
-            0.8333,
-            0.9417
+            0.823,
+            0.9457
           ],
           "ece": 0.0507,
           "mean_conf_wrong": 0.846
@@ -689,7 +689,7 @@
         "round1": {
           "accuracy": 0.9833,
           "accuracy_ci": [
-            0.9583,
+            0.9554,
             1.0
           ],
           "ece": 0.0121,
@@ -698,7 +698,7 @@
         "round2": {
           "accuracy": 0.9917,
           "accuracy_ci": [
-            0.975,
+            0.9717,
             1.0
           ],
           "ece": 0.0236,
@@ -740,8 +740,8 @@
         "round1": {
           "accuracy": 0.775,
           "accuracy_ci": [
-            0.7,
-            0.85
+            0.6721,
+            0.8705
           ],
           "ece": 0.18,
           "mean_conf_wrong": 0.981
@@ -749,8 +749,8 @@
         "round2": {
           "accuracy": 0.9333,
           "accuracy_ci": [
-            0.8833,
-            0.975
+            0.8738,
+            0.976
           ],
           "ece": 0.0266,
           "mean_conf_wrong": 0.912
@@ -791,8 +791,8 @@
         "round1": {
           "accuracy": 0.8667,
           "accuracy_ci": [
-            0.8,
-            0.925
+            0.7845,
+            0.9339
           ],
           "ece": 0.0433,
           "mean_conf_wrong": 0.969
@@ -800,8 +800,8 @@
         "round2": {
           "accuracy": 0.9667,
           "accuracy_ci": [
-            0.9333,
-            0.9917
+            0.9298,
+            0.9922
           ],
           "ece": 0.0133,
           "mean_conf_wrong": 0.925
@@ -846,8 +846,8 @@
         "round1": {
           "accuracy": 0.5917,
           "accuracy_ci": [
-            0.5,
-            0.675
+            0.4553,
+            0.7302
           ],
           "ece": 0.4292,
           "mean_conf_wrong": 1.0
@@ -855,8 +855,8 @@
         "round2": {
           "accuracy": 0.9417,
           "accuracy_ci": [
-            0.9,
-            0.9833
+            0.864,
+            1.0
           ],
           "ece": 0.1349,
           "mean_conf_wrong": 0.6
@@ -873,8 +873,8 @@
         "hard_round2": {
           "accuracy": 0.825,
           "accuracy_ci": [
-            0.7,
-            0.925
+            0.6098,
+            1.0
           ],
           "ece": 0.1405,
           "mean_conf_wrong": 0.6
@@ -913,8 +913,8 @@
       "abstentions": 1,
       "majority_accuracy": 0.8583,
       "majority_accuracy_ci": [
-        0.7917,
-        0.9167
+        0.7768,
+        0.9217
       ],
       "majority_accuracy_decided": 0.9626,
       "majority_wrong": 17,
@@ -944,8 +944,8 @@
       "abstentions": 1,
       "majority_accuracy": 0.95,
       "majority_accuracy_ci": [
-        0.9083,
-        0.9833
+        0.9047,
+        0.9843
       ],
       "majority_accuracy_decided": 0.9913,
       "majority_wrong": 6,

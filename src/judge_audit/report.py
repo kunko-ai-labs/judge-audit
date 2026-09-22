@@ -9,7 +9,7 @@ from .runner import AuditResult
 
 
 def interval(ci, pct: bool = False, digits: int = 4) -> str:
-    """` [55.8, 75.0]` for a (lo, hi) pair — the compact form every report uses next to
+    """` [52.5, 80.3]` for a (lo, hi) pair — the compact form every report uses next to
     its point estimate; '' when the interval was not computed."""
     if ci is None:
         return ""
@@ -101,9 +101,9 @@ def ci_lines(d: dict) -> list[str]:
     b = d.get("bootstrap")
     if not b:
         return []
-    return ["", f"_Brackets are {b['level']:.0%} percentile-bootstrap intervals over rows "
-                f"({b['n_boot']:,} resamples, seed {b['seed']}): how far the number would move "
-                f"on another sample of n={d['n']}._"]
+    return ["", f"_Brackets are {b['level']:.0%} percentile-bootstrap intervals over the dataset's "
+                f"distinct texts ({b['n_boot']:,} resamples, seed {b['seed']}): how far the number "
+                f"would move on another sample of n={d['n']} drawn the same way._"]
 
 
 def render_html(result: AuditResult, tag: str = "") -> str:

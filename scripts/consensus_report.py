@@ -94,13 +94,21 @@ def majority(decisions: list[str]) -> tuple[str | None, float, bool]:
     return ranked[0][0], ranked[0][1] / len(voted), False
 
 
+def state_groups(rows: list[dict], idxs: list[int]) -> list[str]:
+    """Cluster key per scored row: its state text. The router repeats each of its 61
+    texts about twice (14 distinct texts carry the 40 hard rows), so a bootstrap that
+    resampled rows would treat one text judged twice as two independent observations."""
+    return [str(rows[i].get("state", i)) for i in idxs]
+
+
 def panel_stats(votes: dict[str, list[dict]], rows: list[dict], question: str,
                 idxs: list[int] | None = None) -> dict:
     """Majority-vote statistics of a panel on the given rows.
 
     Abstentions (blank answers) are not votes; a tie is no decision and counts as
     not correct in majority accuracy; share statistics, vote-share ECE and
-    zero-error coverage are computed over decided rows only."""
+    zero-error coverage are computed over decided rows only. The interval on majority
+    accuracy resamples the dataset's distinct texts, not its rows (`state_groups`)."""
     judges = list(votes)
     idxs = list(range(len(rows))) if idxs is None else idxs
     if not idxs:
@@ -142,7 +150,7 @@ def panel_stats(votes: dict[str, list[dict]], rows: list[dict], question: str,
         "majority_accuracy": round(statistics.mean(maj_ok), 4),
         # Bootstrap over rows: the majority is decided per row, so resampling rows and
         # recomputing it equals resampling the per-row majority outcomes.
-        "majority_accuracy_ci": list(accuracy_ci(maj_ok)),
+        "majority_accuracy_ci": list(accuracy_ci(maj_ok, groups=state_groups(rows, idxs))),
         "majority_accuracy_decided": round(statistics.mean(decided_ok), 4) if decided_ok else None,
         "majority_wrong": sum(not ok for ok in maj_ok),
         "best_single_accuracy": round(max(
@@ -526,9 +534,12 @@ def render(data: dict) -> str:
             L += render_jury_composition(comp, e["subsets"]["hard"]["n"])
         L.append("")
     L += ["## How to read it", "",
-          f"- **[a, b]** after majority accuracy: 95 % percentile-bootstrap interval over rows ({N_BOOT:,} " +
-          "resamples, seed 0; the majority is recomputed per resampled row). On 40 hard rows it is " +
-          "about ±15 points wide — juries whose intervals overlap are not separated by this data.",
+          f"- **[a, b]** after majority accuracy: 95 % percentile-bootstrap interval ({N_BOOT:,} " +
+          "resamples, seed 0) over the dataset's **distinct texts**, not its rows — the majority is " +
+          "recomputed on each resampled text, and two rows with the same state are not two " +
+          "independent observations (`docs/judges.md` § Confidence intervals). The 40 hard rows carry " +
+          "only 14 distinct texts, so that interval is wide (±15 to 20 points): juries whose intervals " +
+          "overlap are not separated by this data.",
           "- **pairwise agreement**: mean over judge pairs of the share of cases where both chose the same option.",
           "- **unanimous (wrong)**: cases where every judge who answered chose the same option (at least two " +
           "answered), and how many of those were wrong.",

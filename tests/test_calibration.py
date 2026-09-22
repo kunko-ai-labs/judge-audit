@@ -4,6 +4,7 @@ from __future__ import annotations
 import pytest
 
 from judge_audit.metrics.calibration import (
+    _percentile,
     accuracy_ci,
     accuracy_coverage,
     bootstrap_ci,
@@ -135,3 +136,33 @@ def test_zero_error_coverage_ci_brackets_the_point_estimate():
     lo, hi = zero_error_coverage_ci(conf, ok)
     assert lo <= point <= hi
     assert zero_error_coverage_ci([0.9, 0.8], [True, True]) == (1.0, 1.0)
+
+
+def test_percentile_matches_statistics_quantiles_inclusive():
+    import random
+    import statistics
+
+    assert _percentile([1, 2, 3, 4], 0.025) == pytest.approx(1.075)
+    assert _percentile([1, 2, 3, 4], 0.975) == pytest.approx(3.925)
+    xs = sorted(random.Random(3).random() for _ in range(2000))
+    cuts = statistics.quantiles(xs, n=40, method="inclusive")   # 2.5 %, 5 %, …, 97.5 %
+    assert _percentile(xs, 0.025) == pytest.approx(cuts[0])
+    assert _percentile(xs, 0.975) == pytest.approx(cuts[-1])
+
+
+def test_cluster_bootstrap_resamples_groups_not_rows():
+    # Four texts, each judged three times with the same outcome: the row-i.i.d. interval
+    # treats them as twelve observations, the cluster interval as four.
+    ok = [True, True, True, True, True, True, False, False, False, True, True, True]
+    groups = ["a"] * 3 + ["b"] * 3 + ["c"] * 3 + ["d"] * 3
+    rows = bootstrap_ci(ok, _mean)
+    cluster = bootstrap_ci(ok, _mean, groups=groups)
+    assert rows[0] <= 0.75 <= rows[1] and cluster[0] <= 0.75 <= cluster[1]
+    assert cluster[1] - cluster[0] > rows[1] - rows[0]
+    # Every resample is a mix of whole groups, so the statistic is a multiple of 1/4.
+    assert cluster == (0.25, 1.0)
+    # One row per group is the ordinary bootstrap.
+    assert bootstrap_ci(ok, _mean, groups=list(range(12))) == rows
+    assert accuracy_ci(ok, groups=groups) == cluster
+    with pytest.raises(ValueError):
+        bootstrap_ci(ok, _mean, groups=groups[:-1])

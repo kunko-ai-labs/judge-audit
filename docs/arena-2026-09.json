@@ -18,7 +18,7 @@
           1.0
         ],
         "ece_ci": [
-          0.0015,
+          0.0014,
           0.006
         ],
         "zero_error_coverage_ci": [
@@ -39,15 +39,15 @@
         "zero_error_coverage": 0.73,
         "accuracy_ci": [
           0.925,
-          0.98
+          0.9802
         ],
         "ece_ci": [
-          0.0274,
-          0.0664
+          0.0278,
+          0.0659
         ],
         "zero_error_coverage_ci": [
           0.675,
-          0.935
+          0.94
         ],
         "mean_conf_correct": 0.933,
         "mean_conf_wrong": 0.597,
@@ -65,16 +65,16 @@
         "ece": 0.3181,
         "zero_error_coverage": 0.025,
         "accuracy_ci": [
-          0.575,
-          0.75
+          0.5246,
+          0.8032
         ],
         "ece_ci": [
-          0.2398,
-          0.4014
+          0.1924,
+          0.4485
         ],
         "zero_error_coverage_ci": [
           0.0,
-          0.2083
+          0.5081
         ],
         "mean_conf_correct": 0.976,
         "mean_conf_wrong": 0.926,
@@ -95,15 +95,15 @@
         "ece": 0.053,
         "zero_error_coverage": 0.9417,
         "accuracy_ci": [
-          0.9417,
+          0.9189,
           1.0
         ],
         "ece_ci": [
-          0.0396,
-          0.0828
+          0.0341,
+          0.0999
         ],
         "zero_error_coverage_ci": [
-          0.9,
+          0.8621,
           1.0
         ],
         "mean_conf_correct": 0.931,
@@ -163,8 +163,8 @@
           1.0
         ],
         "ece_ci": [
-          0.0254,
-          0.0326
+          0.0243,
+          0.0333
         ],
         "zero_error_coverage_ci": [
           1.0,
@@ -183,16 +183,16 @@
         "ece": 0.0159,
         "zero_error_coverage": 0.02,
         "accuracy_ci": [
-          0.94,
-          0.99
+          0.9391,
+          0.9898
         ],
         "ece_ci": [
-          0.0043,
-          0.0383
+          0.0049,
+          0.0397
         ],
         "zero_error_coverage_ci": [
           0.0,
-          0.915
+          0.9175
         ],
         "mean_conf_correct": 0.957,
         "mean_conf_wrong": 0.877,
@@ -210,16 +210,16 @@
         "ece": 0.2353,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
-          0.575,
-          0.7417
+          0.5191,
+          0.7869
         ],
         "ece_ci": [
-          0.1599,
-          0.3175
+          0.1216,
+          0.3629
         ],
         "zero_error_coverage_ci": [
           0.0,
-          0.1667
+          0.2624
         ],
         "mean_conf_correct": 0.926,
         "mean_conf_wrong": 0.832,
@@ -241,16 +241,16 @@
         "ece": 0.0322,
         "zero_error_coverage": 0.0333,
         "accuracy_ci": [
-          0.9083,
-          0.9833
+          0.9035,
+          0.9849
         ],
         "ece_ci": [
-          0.0167,
-          0.0743
+          0.0127,
+          0.0821
         ],
         "zero_error_coverage_ci": [
           0.0,
-          0.1
+          0.1193
         ],
         "mean_conf_correct": 0.943,
         "mean_conf_wrong": 0.983,
@@ -297,16 +297,16 @@
         "ece": 0.1765,
         "zero_error_coverage": 0.515,
         "accuracy_ci": [
-          0.815,
-          0.91
+          0.8083,
+          0.9159
         ],
         "ece_ci": [
-          0.1388,
-          0.2216
+          0.1244,
+          0.2416
         ],
         "zero_error_coverage_ci": [
-          0.45,
-          0.62
+          0.4145,
+          0.641
         ],
         "mean_conf_correct": 0.74,
         "mean_conf_wrong": 0.504,
@@ -321,16 +321,16 @@
         "ece": 0.1247,
         "zero_error_coverage": 0.08,
         "accuracy_ci": [
-          0.525,
-          0.665
+          0.517,
+          0.6667
         ],
         "ece_ci": [
-          0.0873,
-          0.1946
+          0.0876,
+          0.2007
         ],
         "zero_error_coverage_ci": [
-          0.045,
-          0.14
+          0.0391,
+          0.16
         ],
         "mean_conf_correct": 0.731,
         "mean_conf_wrong": 0.559,
@@ -348,12 +348,12 @@
         "ece": 0.4027,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
-          0.3917,
-          0.5667
+          0.3364,
+          0.6116
         ],
         "ece_ci": [
-          0.3183,
-          0.5003
+          0.2999,
+          0.5539
         ],
         "zero_error_coverage_ci": [
           0.0,
@@ -379,12 +379,12 @@
         "ece": 0.1952,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
-          0.4,
-          0.5833
+          0.3492,
+          0.6279
         ],
         "ece_ci": [
-          0.1443,
-          0.3062
+          0.1376,
+          0.3548
         ],
         "zero_error_coverage_ci": [
           0.0,
@@ -441,7 +441,7 @@
           1.0
         ],
         "ece_ci": [
-          0.0493,
+          0.0488,
           0.0548
         ],
         "zero_error_coverage_ci": [
@@ -461,12 +461,12 @@
         "ece": 0.1265,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
-          0.7499,
-          0.86
+          0.7476,
+          0.8564
         ],
         "ece_ci": [
-          0.0729,
-          0.1832
+          0.0764,
+          0.1839
         ],
         "zero_error_coverage_ci": [
           0.0,
@@ -488,12 +488,12 @@
         "ece": 0.3734,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
-          0.4667,
-          0.65
+          0.4248,
+          0.6818
         ],
         "ece_ci": [
-          0.2904,
-          0.4642
+          0.2622,
+          0.4956
         ],
         "zero_error_coverage_ci": [
           0.0,
@@ -520,12 +520,12 @@
         "ece": 0.1478,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
-          0.7167,
-          0.8667
+          0.6992,
+          0.8692
         ],
         "ece_ci": [
-          0.0791,
-          0.2263
+          0.0744,
+          0.2369
         ],
         "zero_error_coverage_ci": [
           0.0,
@@ -579,8 +579,8 @@
           1.0
         ],
         "ece_ci": [
-          0.003,
-          0.0067
+          0.0025,
+          0.0075
         ],
         "zero_error_coverage_ci": [
           1.0,
@@ -599,16 +599,16 @@
         "ece": 0.0151,
         "zero_error_coverage": 0.115,
         "accuracy_ci": [
-          0.945,
-          0.99
+          0.9447,
+          0.9902
         ],
         "ece_ci": [
-          0.0021,
-          0.0414
+          0.002,
+          0.04
         ],
         "zero_error_coverage_ci": [
           0.0,
-          0.435
+          0.4545
         ],
         "mean_conf_correct": 0.982,
         "mean_conf_wrong": 0.983,
@@ -626,16 +626,16 @@
         "ece": 0.3154,
         "zero_error_coverage": 0.025,
         "accuracy_ci": [
-          0.5833,
-          0.75
+          0.5351,
+          0.7949
         ],
         "ece_ci": [
-          0.2396,
-          0.4
+          0.1892,
+          0.4413
         ],
         "zero_error_coverage_ci": [
           0.0,
-          0.1
+          0.2344
         ],
         "mean_conf_correct": 0.991,
         "mean_conf_wrong": 0.965,
@@ -657,15 +657,15 @@
         "ece": 0.0121,
         "zero_error_coverage": 0.85,
         "accuracy_ci": [
-          0.9583,
+          0.9554,
           1.0
         ],
         "ece_ci": [
-          0.0017,
-          0.0308
+          0.0013,
+          0.0335
         ],
         "zero_error_coverage_ci": [
-          0.6998,
+          0.6609,
           1.0
         ],
         "mean_conf_correct": 0.986,
@@ -715,8 +715,8 @@
           1.0
         ],
         "ece_ci": [
-          0.0223,
-          0.0292
+          0.0204,
+          0.0307
         ],
         "zero_error_coverage_ci": [
           1.0,
@@ -736,15 +736,15 @@
         "zero_error_coverage": 0.02,
         "accuracy_ci": [
           0.755,
-          0.865
+          0.8641
         ],
         "ece_ci": [
-          0.0972,
-          0.2088
+          0.0997,
+          0.2111
         ],
         "zero_error_coverage_ci": [
           0.0,
-          0.04
+          0.0402
         ],
         "mean_conf_correct": 0.961,
         "mean_conf_wrong": 0.974,
@@ -762,12 +762,12 @@
         "ece": 0.3446,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
-          0.5,
-          0.675
+          0.4615,
+          0.712
         ],
         "ece_ci": [
-          0.2542,
-          0.4346
+          0.2223,
+          0.4761
         ],
         "zero_error_coverage_ci": [
           0.0,
@@ -793,16 +793,16 @@
         "ece": 0.18,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
-          0.7,
-          0.85
+          0.6721,
+          0.8705
         ],
         "ece_ci": [
-          0.1021,
-          0.2579
+          0.0816,
+          0.289
         ],
         "zero_error_coverage_ci": [
           0.0,
-          0.0167
+          0.0263
         ],
         "mean_conf_correct": 0.947,
         "mean_conf_wrong": 0.981,
@@ -854,8 +854,8 @@
           1.0
         ],
         "ece_ci": [
-          0.0861,
-          0.0956
+          0.0858,
+          0.096
         ],
         "zero_error_coverage_ci": [
           1.0,
@@ -874,12 +874,12 @@
         "ece": 0.0155,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
-          0.86,
+          0.8614,
           0.945
         ],
         "ece_ci": [
-          0.0058,
-          0.0566
+          0.0052,
+          0.0598
         ],
         "zero_error_coverage_ci": [
           0.0,
@@ -901,12 +901,12 @@
         "ece": 0.2333,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
-          0.5667,
-          0.7333
+          0.5167,
+          0.7669
         ],
         "ece_ci": [
-          0.1508,
-          0.3267
+          0.1331,
+          0.3741
         ],
         "zero_error_coverage_ci": [
           0.0,
@@ -932,16 +932,16 @@
         "ece": 0.0433,
         "zero_error_coverage": 0.0083,
         "accuracy_ci": [
-          0.8,
-          0.925
+          0.7845,
+          0.9339
         ],
         "ece_ci": [
-          0.0083,
-          0.1125
+          0.0073,
+          0.1308
         ],
         "zero_error_coverage_ci": [
           0.0,
-          0.0167
+          0.018
         ],
         "mean_conf_correct": 0.901,
         "mean_conf_wrong": 0.969,
@@ -986,16 +986,16 @@
         "ece": 0.034,
         "zero_error_coverage": 0.055,
         "accuracy_ci": [
-          0.8599,
-          0.94
+          0.7783,
+          1.0
         ],
         "ece_ci": [
-          0.0085,
-          0.0755
+          0.0245,
+          0.1431
         ],
         "zero_error_coverage_ci": [
-          0.0,
-          0.26
+          0.0136,
+          1.0
         ],
         "mean_conf_correct": 0.868,
         "mean_conf_wrong": 0.845,
@@ -1010,12 +1010,12 @@
         "ece": 0.154,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
-          0.665,
-          0.785
+          0.6517,
+          0.7969
         ],
         "ece_ci": [
-          0.0985,
-          0.2175
+          0.085,
+          0.2307
         ],
         "zero_error_coverage_ci": [
           0.0,
@@ -1037,16 +1037,16 @@
         "ece": 0.3958,
         "zero_error_coverage": 0.025,
         "accuracy_ci": [
-          0.5667,
-          0.7417
+          0.5159,
+          0.7925
         ],
         "ece_ci": [
-          0.3167,
-          0.4833
+          0.2614,
+          0.5287
         ],
         "zero_error_coverage_ci": [
           0.0,
-          0.0583
+          0.1525
         ],
         "mean_conf_correct": 0.918,
         "mean_conf_wrong": 1.0,
@@ -1068,16 +1068,16 @@
         "ece": 0.4292,
         "zero_error_coverage": 0.025,
         "accuracy_ci": [
-          0.5,
-          0.675
+          0.4553,
+          0.7302
         ],
         "ece_ci": [
-          0.3458,
-          0.5167
+          0.2939,
+          0.5691
         ],
         "zero_error_coverage_ci": [
           0.0,
-          0.05
+          0.121
         ],
         "mean_conf_correct": 0.965,
         "mean_conf_wrong": 1.0,

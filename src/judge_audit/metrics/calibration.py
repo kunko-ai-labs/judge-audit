@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import math
 import random
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Hashable, Sequence
 from typing import TypeVar
 
 T = TypeVar("T")
@@ -78,20 +78,27 @@ def zero_error_coverage(confidences: list[float], correct: list[bool]) -> dict:
             "threshold": round(confidences[order[k - 1]], 4) if k else None}
 
 
-# --- uncertainty: percentile bootstrap over rows ----------------------------------------
+# --- uncertainty: percentile bootstrap over rows or over groups of rows ----------------
 #
 # Every headline number is a statistic of n rows; the interval says how much it would
-# move on another sample of the same size. Rows are resampled with replacement and the
-# statistic recomputed on each resample; the 2.5th and 97.5th percentiles of those
-# values are the 95 % interval. Pure Python, seeded, identical on every Python version:
-# `random.Random(seed).choices` and linear interpolation between order statistics.
+# move on another sample of the same size. Rows (or whole groups of rows) are resampled
+# with replacement and the statistic recomputed on each resample; the 2.5th and 97.5th
+# percentiles of those values are the 95 % interval. Pure Python, seeded, identical on
+# every Python version: `random.Random(seed).choices` and linear interpolation between
+# order statistics.
+#
+# Groups exist because the datasets repeat texts: the router has 61 distinct states in
+# 120 rows (14 in the 40 hard rows), the adversarial emails 189 in 200. Two rows with the
+# same text are not two independent observations of the judge, so the published interval
+# resamples distinct texts (a cluster bootstrap); `groups=None` is the row-i.i.d. version.
 
 N_BOOT = 2000
 CI_LEVEL = 0.95
 
 
 def _percentile(sorted_values: list[float], q: float) -> float:
-    """q-th quantile (0..1) by linear interpolation between order statistics."""
+    """q-th quantile (0..1) by linear interpolation between order statistics — the
+    same cut as `statistics.quantiles(method="inclusive")`."""
     pos = q * (len(sorted_values) - 1)
     i = int(pos)
     if i + 1 >= len(sorted_values):
@@ -101,42 +108,56 @@ def _percentile(sorted_values: list[float], q: float) -> float:
 
 
 def bootstrap_ci(values: Sequence[T], statistic: Callable[[list[T]], float],
-                 n_boot: int = N_BOOT, seed: int = 0,
-                 level: float = CI_LEVEL) -> tuple[float, float] | None:
-    """Percentile bootstrap interval of `statistic(values)` over resampled rows.
+                 n_boot: int = N_BOOT, seed: int = 0, level: float = CI_LEVEL,
+                 groups: Sequence[Hashable] | None = None) -> tuple[float, float] | None:
+    """Percentile bootstrap interval of `statistic(values)`.
 
     `values` is one entry per row (a bool, a (confidence, correct) pair, …) and
-    `statistic` maps a list of them to a number. Returns (lo, hi) rounded to 4
-    decimals, deterministic for a seed; None when there are no rows. Rows are the
-    unit of resampling — never bins — so any statistic of rows can be bootstrapped."""
+    `statistic` maps a list of them to a number. With `groups` (one key per row, e.g.
+    the row's text) whole groups are resampled with replacement and their rows
+    concatenated — the unit of independence is the group; without it every row is its
+    own group. Returns (lo, hi) rounded to 4 decimals, deterministic for a seed; None
+    when there are no rows."""
     n = len(values)
     if n == 0:
         return None
+    if groups is None:
+        units: list[list[T]] = [[v] for v in values]
+    else:
+        if len(groups) != n:
+            raise ValueError(f"{len(groups)} group keys for {n} rows")
+        by_key: dict[Hashable, list[T]] = {}
+        for key, v in zip(groups, values, strict=True):
+            by_key.setdefault(key, []).append(v)          # first-appearance order
+        units = list(by_key.values())
     rng = random.Random(seed)
-    idx = range(n)
-    stats = sorted(statistic([values[i] for i in rng.choices(idx, k=n)])
+    idx = range(len(units))
+    stats = sorted(statistic([v for i in rng.choices(idx, k=len(units)) for v in units[i]])
                    for _ in range(n_boot))
     tail = (1 - level) / 2
     return round(_percentile(stats, tail), 4), round(_percentile(stats, 1 - tail), 4)
 
 
-def accuracy_ci(correct: Sequence[bool], n_boot: int = N_BOOT,
-                seed: int = 0) -> tuple[float, float] | None:
+def accuracy_ci(correct: Sequence[bool], n_boot: int = N_BOOT, seed: int = 0,
+                groups: Sequence[Hashable] | None = None) -> tuple[float, float] | None:
     """95 % interval of the share of correct rows."""
-    return bootstrap_ci(list(correct), lambda ok: sum(ok) / len(ok), n_boot, seed)
+    return bootstrap_ci(list(correct), lambda ok: sum(ok) / len(ok), n_boot, seed,
+                        groups=groups)
 
 
 def ece_ci(confidences: Sequence[float], correct: Sequence[bool], n_bins: int = 10,
-           n_boot: int = N_BOOT, seed: int = 0) -> tuple[float, float] | None:
+           n_boot: int = N_BOOT, seed: int = 0,
+           groups: Sequence[Hashable] | None = None) -> tuple[float, float] | None:
     """95 % interval of `expected_calibration_error`, bins recomputed on every resample."""
     rows = list(zip(confidences, correct, strict=True))
     return bootstrap_ci(rows, lambda rs: expected_calibration_error(
-        [c for c, _ in rs], [ok for _, ok in rs], n_bins), n_boot, seed)
+        [c for c, _ in rs], [ok for _, ok in rs], n_bins), n_boot, seed, groups=groups)
 
 
 def zero_error_coverage_ci(confidences: Sequence[float], correct: Sequence[bool],
-                           n_boot: int = N_BOOT, seed: int = 0) -> tuple[float, float] | None:
+                           n_boot: int = N_BOOT, seed: int = 0,
+                           groups: Sequence[Hashable] | None = None) -> tuple[float, float] | None:
     """95 % interval of `zero_error_coverage(...)["coverage"]`."""
     rows = list(zip(confidences, correct, strict=True))
     return bootstrap_ci(rows, lambda rs: zero_error_coverage(
-        [c for c, _ in rs], [ok for _, ok in rs])["coverage"], n_boot, seed)
+        [c for c, _ in rs], [ok for _, ok in rs])["coverage"], n_boot, seed, groups=groups)

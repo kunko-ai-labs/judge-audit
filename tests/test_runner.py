@@ -6,7 +6,8 @@ import pytest
 
 from judge_audit.judges.base import Judge, Judgment, Question
 from judge_audit.judges.simulated import SimulatedJudge
-from judge_audit.runner import load_jsonl, run_audit, summarize, write_judgments
+from judge_audit.metrics.calibration import accuracy_ci
+from judge_audit.runner import groups_of, load_jsonl, run_audit, summarize, write_judgments
 
 
 class ConstantJudge(Judge):
@@ -93,3 +94,26 @@ def test_intervals_bracket_a_mixed_result_and_can_be_skipped(labels_path, monkey
     assert run_audit(judge, rows).accuracy_ci is None
     monkeypatch.setenv("JUDGE_AUDIT_BOOTSTRAP", "1")
     assert run_audit(judge, rows).accuracy_ci == res.accuracy_ci
+
+
+def test_groups_of_falls_back_to_one_cluster_per_record():
+    rows = [{"state": "a"}, {"state": "b"}]
+    assert groups_of([{"idx": 0}, {"idx": 1}, {"idx": 0}], rows) == ["a", "b", "a"]
+    assert groups_of([{"idx": 7}, {}], rows) == ["#0", "#1"]
+
+
+def test_intervals_resample_distinct_texts_not_rows():
+    # Four distinct states, each judged twice: eight rows, four independent texts.
+    rows = []
+    for i in range(4):
+        rows += [{"state": f"state {i}",
+                  "questions": [{"name": "category", "type": "choice",
+                                 "options": ["quote_request", "spam"]}],
+                  "labels": {"category": "quote_request" if i else "spam"}}] * 2
+    res = run_audit(ConstantJudge("quote_request", 0.9), rows, ci=True)
+    assert res.accuracy == 0.75
+    correct = [r["correct"] for r in res.records]
+    assert res.accuracy_ci == accuracy_ci(correct, groups=[r["state"] for r in rows])
+    # Treating the eight rows as independent would claim a narrower interval.
+    naive = accuracy_ci(correct)
+    assert res.accuracy_ci[1] - res.accuracy_ci[0] > naive[1] - naive[0]
