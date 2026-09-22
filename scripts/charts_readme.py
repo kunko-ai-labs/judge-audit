@@ -40,9 +40,9 @@ DPI = 160
 ARENA_LABELS = {"jev": "Jev", "claude-sonnet-4.5": "Claude Sonnet 4.5", "llama-3.3-70b": "Llama 3.3 70B",
                 "deepseek-r1": "DeepSeek R1", "gemma4": "gemma4 (local)", "llama32": "llama3.2 3B (local)",
                 "deberta-nli": "DeBERTa NLI (local)",
-                "finetuned-deberta": "DeBERTa fine-tuned, run 1 (local)",
-                "finetuned-deberta-run2": "DeBERTa fine-tuned, run 2 (local)",
-                "finetuned-deberta-run2-ts": "DeBERTa fine-tuned, run 2 + temp. scaling (local)"}
+                "finetuned-deberta": "DeBERTa fine-tuned r1 (local)",
+                "finetuned-deberta-run2": "DeBERTa fine-tuned r2 (local)",
+                "finetuned-deberta-run2-ts": "DeBERTa fine-tuned r2+TS (local)"}
 SEG_LABELS = {"clean_easy": "easy tasks\n(label: cheap)", "clean_hard": "hard tasks\n(label: strong)",
               "adversarial": "easy + injection\n(label: cheap)"}
 
@@ -134,7 +134,7 @@ def hero_arena(theme: str) -> Path | None:
     rows.sort(key=lambda r: r[1], reverse=True)
 
     fig = plt.figure(figsize=(10.4, 5.6))
-    ax = fig.add_axes((0.20, 0.13, 0.50, 0.62))
+    ax = fig.add_axes((0.25, 0.13, 0.46, 0.62))
     _axes(ax, t, grid="x")
     ax.spines["bottom"].set_visible(False)
     n = len(rows)
@@ -148,14 +148,14 @@ def hero_arena(theme: str) -> Path | None:
             _hairline(ax, 0, 0.004, y, y, color)
         ax.text(cov + 0.012, y, f"{cov:.0%}", va="center", ha="left", fontsize=11,
                 fontweight="bold", color=t["ink"])
-        ax.text(1.09, y, f"{acc:.0%}", va="center", ha="right", fontsize=10, color=t["ink"],
+        ax.text(1.17, y, f"{acc:.0%}", va="center", ha="right", fontsize=10, color=t["ink"],
                 transform=ax.get_yaxis_transform(), clip_on=False)
-        ax.text(1.36, y, f"{cw:.2f}", va="center", ha="right", fontsize=10,
+        ax.text(1.44, y, f"{cw:.2f}", va="center", ha="right", fontsize=10,
                 color=t["wrong"] if cw >= 0.8 else t["ink"],
                 transform=ax.get_yaxis_transform(), clip_on=False)
-    ax.text(1.09, n - 0.3, "accuracy", va="bottom", ha="right", fontsize=8.5, color=t["muted"],
+    ax.text(1.17, n - 0.3, "accuracy", va="bottom", ha="right", fontsize=8.5, color=t["muted"],
             transform=ax.get_yaxis_transform(), clip_on=False)
-    ax.text(1.36, n - 0.3, "conf. when wrong", va="bottom", ha="right", fontsize=8.5,
+    ax.text(1.44, n - 0.3, "conf. when wrong", va="bottom", ha="right", fontsize=8.5,
             color=t["muted"], transform=ax.get_yaxis_transform(), clip_on=False)
     ax.set_yticks(ys)
     ax.set_yticklabels([r[0] for r in rows], fontsize=10.5)
