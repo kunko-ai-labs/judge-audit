@@ -89,3 +89,15 @@ def test_extras_reaches_pip_as_a_quoted_variable(steps):
     install = next(s for s in steps if "Install" in s.get("name", ""))
     assert "EXTRAS" in install.get("env", {})
     assert "${{" not in install["run"], "the install step interpolates an expression"
+
+
+def test_the_run_step_survives_a_drift_verdict(action):
+    """The runner's shell adds -e; a drift verdict is exit 1, not a crash.
+
+    Without `|| code=$?` the step aborts before recording JA_DRIFT, and
+    `fail-on-drift: false` fails the job anyway (caught in CI 2026-09-22).
+    """
+    steps = action["runs"]["steps"]
+    body = next(s["run"] for s in steps if "${cmd[@]}" in s.get("run", ""))
+    assert '"${cmd[@]}" || code=$?' in body
+    assert "JA_DRIFT=1" in body

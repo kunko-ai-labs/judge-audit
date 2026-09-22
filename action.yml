@@ -141,8 +141,10 @@ runs:
             exit 2 ;;
         esac
 
-        "${cmd[@]}"
-        code=$?
+        # The runner's shell adds -e, and a drift verdict is exit 1, not a crash:
+        # take the code without aborting the step.
+        code=0
+        "${cmd[@]}" || code=$?
 
         if [ -f judge-audit-report.md ]; then
           cat judge-audit-report.md >> "$GITHUB_STEP_SUMMARY"
