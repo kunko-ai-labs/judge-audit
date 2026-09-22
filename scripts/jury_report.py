@@ -122,14 +122,14 @@ def render(data: dict) -> str:
     names = {"router-bare": "Task router, bare option labels (n=120)",
              "router-described": "Task router, described options (n=120)"}
     L = ["# Jury consensus audit — deliberation (round 2)", "",
-         "Round 1 (independent votes, every judge, no new API call) is in "
-         "[consensus-2026-09.md](consensus-2026-09.md). Here each judge votes again after "
-         "seeing the other judges' round-1 decisions and confidences, anonymised and shuffled "
-         "(protocol pre-registered in [jury-consensus-plan.md](jury-consensus-plan.md); inputs and "
+         "Round 1 (independent votes, every judge, no new API call) is in " +
+         "[consensus-2026-09.md](consensus-2026-09.md). Here each judge votes again after " +
+         "seeing the other judges' round-1 decisions and confidences, anonymised and shuffled " +
+         "(protocol pre-registered in [jury-consensus-plan.md](jury-consensus-plan.md); inputs and " +
          "raw answers under `docs/runs/jury/`). Recompute: `python scripts/jury_report.py`.", "",
-         "The question is the one Shao (2026, [arXiv:2609.20543](https://arxiv.org/abs/2609.20543)) "
-         "and Huang et al. (2026, [arXiv:2605.30653](https://arxiv.org/abs/2605.30653)) raise: "
-         "after communication, does agreement go up because the panel got closer to the truth, "
+         "The question is the one Shao (2026, [arXiv:2609.20543](https://arxiv.org/abs/2609.20543)) " +
+         "and Huang et al. (2026, [arXiv:2605.30653](https://arxiv.org/abs/2605.30653)) raise: " +
+         "after communication, does agreement go up because the panel got closer to the truth, " +
          "or just closer to each other?", ""]
     for ds, title in names.items():
         e = data[ds]
@@ -137,51 +137,51 @@ def render(data: dict) -> str:
         if not e["rerun"]:
             L += ["_Round 2 not run yet._", ""]
             continue
-        L += [f"Re-voted after seeing the panel: {', '.join(e['rerun'])}. Kept their round-1 vote "
+        L += [f"Re-voted after seeing the panel: {', '.join(e['rerun'])}. Kept their round-1 vote " +
               f"(cannot read a deliberation prompt): {', '.join(e['kept_round1']) or 'none'}.", "",
-              "| panel | pairwise agreement | unanimous (wrong) | ties | abstentions | "
-              "majority accuracy (all / decided) | vote share right / wrong | vote-share ECE | "
+              "| panel | pairwise agreement | unanimous (wrong) | ties | abstentions | " +
+              "majority accuracy (all / decided) | vote share right / wrong | vote-share ECE | " +
               "zero-error coverage |",
               "|---|---|---|---|---|---|---|---|---|"]
         for label, key in [("all, round 1", "panel_round1"), ("all, round 2", "panel_round2"),
                            ("hard, round 1", "hard_round1"), ("hard, round 2", "hard_round2")]:
             s = e[key]
-            L.append(f"| {label} | {pct(s['pairwise_agreement'])} | {s['unanimous']} ({s['unanimous_wrong']}) | "
-                     f"{s['ties']} | {s['abstentions']} | "
-                     f"{pct(s['majority_accuracy'])} / {pct(s['majority_accuracy_decided'])} | "
-                     f"{num(s['mean_share_when_right'])} / "
-                     f"{num(s['mean_share_when_wrong'])} | {num(s['vote_share_ece'])} | "
+            L.append(f"| {label} | {pct(s['pairwise_agreement'])} | {s['unanimous']} ({s['unanimous_wrong']}) | " +
+                     f"{s['ties']} | {s['abstentions']} | " +
+                     f"{pct(s['majority_accuracy'])} / {pct(s['majority_accuracy_decided'])} | " +
+                     f"{num(s['mean_share_when_right'])} / " +
+                     f"{num(s['mean_share_when_wrong'])} | {num(s['vote_share_ece'])} | " +
                      f"{pct(s['vote_share_zero_error_coverage'])} |")
-        L += ["", "| judge | accuracy r1 → r2 | hard accuracy r1 → r2 | ECE r1 → r2 | "
-              "conf when wrong r1 → r2 | no answer r1 / r2 | switched | → correct / → wrong | "
+        L += ["", "| judge | accuracy r1 → r2 | hard accuracy r1 → r2 | ECE r1 → r2 | " +
+              "conf when wrong r1 → r2 | no answer r1 / r2 | switched | → correct / → wrong | " +
               "followed the panel majority |",
               "|---|---|---|---|---|---|---|---|---|"]
         for slug, j in e["judges"].items():
-            L.append(f"| {slug} | {pct(j['round1']['accuracy'])} → {pct(j['round2']['accuracy'])} | "
-                     f"{pct(j['hard_round1']['accuracy'])} → {pct(j['hard_round2']['accuracy'])} | "
-                     f"{num(j['round1']['ece'])} → {num(j['round2']['ece'])} | "
-                     f"{num(j['round1']['mean_conf_wrong'])} → {num(j['round2']['mean_conf_wrong'])} | "
-                     f"{j['no_answer_round1']} / {j['no_answer_round2']} | "
-                     f"{j['switched']} | {j['switched_to_correct']} / {j['switched_to_wrong']} | "
+            L.append(f"| {slug} | {pct(j['round1']['accuracy'])} → {pct(j['round2']['accuracy'])} | " +
+                     f"{pct(j['hard_round1']['accuracy'])} → {pct(j['hard_round2']['accuracy'])} | " +
+                     f"{num(j['round1']['ece'])} → {num(j['round2']['ece'])} | " +
+                     f"{num(j['round1']['mean_conf_wrong'])} → {num(j['round2']['mean_conf_wrong'])} | " +
+                     f"{j['no_answer_round1']} / {j['no_answer_round2']} | " +
+                     f"{j['switched']} | {j['switched_to_correct']} / {j['switched_to_wrong']} | " +
                      f"{j['switched_toward_panel_majority']} / {j['switched']} |")
         L.append("")
     L += predictions(data)
     L += ["## How to read it", "",
           "- A jury that deliberates well moves **majority accuracy** up and keeps **conf when wrong** low.",
-          "- A jury that merely converges moves **pairwise agreement** and **unanimous** up while accuracy "
+          "- A jury that merely converges moves **pairwise agreement** and **unanimous** up while accuracy " +
           "stays put — Shao's \"nearly unanimous, mostly incorrect\" in miniature.",
-          "- **followed the panel majority** counts switches that landed on the majority of the votes the "
+          "- **followed the panel majority** counts switches that landed on the majority of the votes the " +
           "judge actually saw (committed in its `.r2.input.jsonl`): conformity, whether or not it was right.",
-          "- **no answer**: blank (unparseable) answers per round. They are abstentions — not votes, not "
+          "- **no answer**: blank (unparseable) answers per round. They are abstentions — not votes, not " +
           "switches — and were not shown to other judges.",
-          "- **ties**: an even split among those who answered is no decision; counted as not correct in "
+          "- **ties**: an even split among those who answered is no decision; counted as not correct in " +
           "majority accuracy, excluded from share statistics.",
           "", "## Caveats", "",
-          "- Illustration, not replication: no human groups, a routing task instead of Wason, n=120 "
+          "- Illustration, not replication: no human groups, a routing task instead of Wason, n=120 " +
           "(40 hard). Ground truth for routing is by construction.",
-          "- One deliberation prompt, one round; the panel seen is round-1 votes, so judges do not see "
+          "- One deliberation prompt, one round; the panel seen is round-1 votes, so judges do not see " +
           "each other's revisions.",
-          "- Judges without a text prompt (zero-shot NLI) keep their round-1 vote in the round-2 panel; "
+          "- Judges without a text prompt (zero-shot NLI) keep their round-1 vote in the round-2 panel; " +
           "this is stated per dataset above.", ""]
     return "\n".join(L)
 
@@ -198,7 +198,7 @@ def predictions(data: dict) -> list[str]:
         return []
     bare, desc = data["router-bare"], data["router-described"]
     L = ["## Results vs the pre-registered predictions", "",
-         "Scored mechanically from the tables above with the thresholds fixed in the plan's Amendments "
+         "Scored mechanically from the tables above with the thresholds fixed in the plan's Amendments " +
          "before the rerun.", ""]
     # 1. agreement and unanimity rise on both datasets
     rows = []
@@ -207,7 +207,7 @@ def predictions(data: dict) -> list[str]:
         a, b = e["panel_round1"], e["panel_round2"]
         up = b["pairwise_agreement"] > a["pairwise_agreement"] and b["unanimous"] >= a["unanimous"]
         ok1 &= up
-        rows.append(f"{ds}: agreement {_delta(a['pairwise_agreement'], b['pairwise_agreement'])}, "
+        rows.append(f"{ds}: agreement {_delta(a['pairwise_agreement'], b['pairwise_agreement'])}, " +
                     f"unanimous {a['unanimous']} → {b['unanimous']}")
     L.append(f"1. **Agreement and unanimity rise on both datasets** — {'held' if ok1 else 'not held'}. "
              + "; ".join(rows) + ".")
@@ -217,12 +217,12 @@ def predictions(data: dict) -> list[str]:
     j = bare["judges"].get("llama32")
     follows = bool(j) and j["switched"] > 0 and j["switched_toward_panel_majority"] / j["switched"] >= 0.5
     verdict = "held" if small and follows else ("partly held" if small or follows else "not held")
-    L.append(f"2. **Bare labels: hard-task majority accuracy does not rise materially (< 10 points) and the "
+    L.append("2. **Bare labels: hard-task majority accuracy does not rise materially (< 10 points) and the " +
              f"3B model follows the panel** — {verdict}. Hard-task majority accuracy {_delta(h1, h2)}; "
-             + (f"llama3.2 switched {j['switched']} vote{'s' if j['switched'] != 1 else ''}"
-                f"{' (too few to tell either way)' if j['switched'] < 5 else ''}, "
-                f"{j['switched_toward_panel_majority']} of them "
-                f"onto the panel majority." if j else "llama3.2 did not re-vote."))
+             + (f"llama3.2 switched {j['switched']} vote{'s' if j['switched'] != 1 else ''}" +
+                f"{' (too few to tell either way)' if j['switched'] < 5 else ''}, " +
+                f"{j['switched_toward_panel_majority']} of them " +
+                "onto the panel majority." if j else "llama3.2 did not re-vote."))
     # 3. described: right judges keep their vote (switches to wrong <= 5 % of votes), majority accuracy rises (>= 0)
     to_wrong = sum(x["switched_to_wrong"] for x in desc["judges"].values())
     votes = sum(desc["panel_round1"]["n"] for _ in desc["judges"])
@@ -230,8 +230,8 @@ def predictions(data: dict) -> list[str]:
     m1, m2 = desc["panel_round1"]["majority_accuracy"], desc["panel_round2"]["majority_accuracy"]
     rises = m2 >= m1
     verdict = "held" if keep and rises else ("partly held" if keep or rises else "not held")
-    L.append(f"3. **Described options: judges that were right keep their vote (switches to wrong ≤ 5 % of "
-             f"votes) and majority accuracy does not fall** — {verdict}. Switches to wrong: {to_wrong} of "
+    L.append("3. **Described options: judges that were right keep their vote (switches to wrong ≤ 5 % of " +
+             f"votes) and majority accuracy does not fall** — {verdict}. Switches to wrong: {to_wrong} of " +
              f"{votes} re-votes; majority accuracy {_delta(m1, m2)}.")
     # 4. chat models' confidence when wrong goes up
     ups, tot, cells = 0, 0, []
@@ -246,7 +246,7 @@ def predictions(data: dict) -> list[str]:
             ups += b > a
             cells.append(f"{slug}/{ds.split('-')[1]} {num(a)}→{num(b)}")
     verdict = "held" if tot and ups > tot / 2 else "not held"
-    L.append(f"4. **Chat models are more confident when wrong after deliberation** — {verdict} "
+    L.append(f"4. **Chat models are more confident when wrong after deliberation** — {verdict} " +
              f"({ups} of {tot} judge×dataset cells went up). " + "; ".join(cells) + ".")
     L.append("")
     return L
