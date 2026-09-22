@@ -69,6 +69,7 @@ def records(labels: str, ckpt: Path, question: str) -> tuple[list[dict], dict]:
         row = rows[rec["idx"]]
         j = next(x for x in rec["judgments"] if x["question"] == question)
         recs.append({
+            "idx": rec["idx"],
             "expected": row["labels"][question], "decision": str(j["decision"]),
             "correct": is_correct(j["decision"], row["labels"][question]),
             "confidence": max(0.0, min(1.0, float(j["confidence"]))),
@@ -90,6 +91,9 @@ def summarize(recs: list[dict], dataset: str) -> dict:
         "mean_conf_correct": round(statistics.mean(right), 3) if right else None,
         "mean_conf_wrong": round(statistics.mean(wrong), 3) if wrong else None,
         "distinct_confidence_values": len(set(round(c, 2) for c in conf)),
+        # A blank decision is a reply the adapter could not parse (format failure, truncated
+        # reasoning budget); it counts as wrong above, and is counted here on its own.
+        "no_answer": sum(1 for r in recs if not r["decision"].strip()),
         "cost_usd": round(math.fsum(r["cost_usd"] for r in recs), 4),
         "p50_latency_s": round(statistics.median(r["latency_s"] for r in recs), 3),
     }
@@ -150,6 +154,16 @@ def collect() -> dict:
     return judges
 
 
+def most_correlated_pair(dataset: str) -> dict | None:
+    """The most error-correlated judge pair of a dataset, from the committed consensus JSON
+    (scripts/consensus_report.py); None when that report is not there yet."""
+    path = ROOT / "docs" / "consensus-2026-09.json"
+    if not path.exists():
+        return None
+    ec = json.loads(path.read_text(encoding="utf-8")).get(dataset, {}).get("error_correlation", {})
+    return ec.get("most_correlated")
+
+
 def fmt(x, pct=False):
     if x is None:
         return "—"
@@ -161,13 +175,13 @@ def render(judges: dict) -> str:
     judges = {k: v for k, v in judges.items() if not k.startswith("_")}
     L = ["# Judge Arena — September 2026",
          "",
-         "Same four datasets, every judge, every raw response committed under `docs/runs/`. "
-         "Recompute: `python scripts/arena_report.py`. Jev's rows are the published audits; "
+         "Same four datasets, every judge, every raw response committed under `docs/runs/`. " +
+         "Recompute: `python scripts/arena_report.py`. Jev's rows are the published audits; " +
          "the others were run with `scripts/arena_run.sh`.",
          "",
-         "**Read the confidence column first.** A judgment model returns a probability per option; "
-         "a chat model *writes* a number (\"verbalized\"). ECE says whether either means anything. "
-         "`conf right / wrong` is the shortest honesty test: a judge whose confidence is not lower "
+         "**Read the confidence column first.** A judgment model returns a probability per option; " +
+         "a chat model *writes* a number (\"verbalized\"). ECE says whether either means anything. " +
+         "`conf right / wrong` is the shortest honesty test: a judge whose confidence is not lower " +
          "when it is wrong cannot be used to decide what to automate.",
          ""]
     names = {"email-clean": "Business emails, clean (n=200)",
@@ -177,53 +191,91 @@ def render(judges: dict) -> str:
     for ds, title in names.items():
         gt = ground_truth_tier(DATASETS[ds][0])
         L += [f"## {title} — {gt.tier} {gt.label}", "",
-              "| judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | distinct conf values |"
+              "| judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | " +
+              "distinct conf values | no answer |"
               + (" prompt-injection acc | conf drop under injection | social-eng acc |" if ds == "email-adversarial" else "")
               + (" hard → strong | attack success |" if ds.startswith("router") else ""),
-              "|---|---|---|---|---|---|---|" + ("---|---|---|" if ds == "email-adversarial" else "")
+              "|---|---|---|---|---|---|---|---|" + ("---|---|---|" if ds == "email-adversarial" else "")
               + ("---|---|" if ds.startswith("router") else "")]
         for j in judges.values():
             s = j["datasets"].get(ds)
             if not s:
                 continue
-            row = (f"| {j['label']} | {j['method']} | {fmt(s['accuracy'], True)} | {fmt(s['ece'])} | "
-                   f"{fmt(s['zero_error_coverage'], True)} | {fmt(s['mean_conf_correct'])} / "
-                   f"{fmt(s['mean_conf_wrong'])} | {s['distinct_confidence_values']} |")
+            row = (f"| {j['label']} | {j['method']} | {fmt(s['accuracy'], True)} | {fmt(s['ece'])} | " +
+                   f"{fmt(s['zero_error_coverage'], True)} | {fmt(s['mean_conf_correct'])} / " +
+                   f"{fmt(s['mean_conf_wrong'])} | {s['distinct_confidence_values']} | " +
+                   f"{s['no_answer']} |")
             if ds == "email-adversarial":
-                row += (f" {fmt(s['prompt_injection_accuracy'], True)} | "
-                        f"{s['confidence_drop_under_injection']:+.3f} | "
+                row += (f" {fmt(s['prompt_injection_accuracy'], True)} | " +
+                        f"{s['confidence_drop_under_injection']:+.3f} | " +
                         f"{fmt(s['social_engineering_accuracy'], True)} |")
             if ds.startswith("router"):
                 row += f" {s['hard_routed_strong']} / {s['hard_n']} | {s['attack_success']} / 40 |"
             L.append(row)
         L.append("")
+    # The control's degradation under attack, from this run's own numbers.
+    nli = judges.get("deberta-nli", {}).get("datasets", {})
+    nli_note = ""
+    if "email-clean" in nli and "email-adversarial" in nli:
+        nli_note = (" — though injected text still degrades it " +
+                    f"({fmt(nli['email-clean']['accuracy'], True)} clean → " +
+                    f"{fmt(nli['email-adversarial']['accuracy'], True)} under attack, " +
+                    f"{fmt(nli['email-adversarial']['prompt_injection_accuracy'], True)} on " +
+                    "prompt-injection rows)")
+    pair = most_correlated_pair("router-bare")
+    pair_note = (f" ({pair['pair']}, phi {pair['phi']:.2f} — see " +
+                 "[Error correlation](consensus-2026-09.md))" if pair else
+                 " (see [Error correlation](consensus-2026-09.md))")
     L += ["## Why these judges", "",
-          "- **Jev**: a purpose-built judgment model; confidence is the probability of the chosen option.",
-          "- **Chat models** (hosted and local): what most production judges actually are; confidence "
-          "is verbalized.",
-          "- **DeBERTa-v3 NLI zero-shot**: the *control* — small, instruction-immune, real softmax "
-          "confidence, no training. Not a competitor; the row the others are read against.",
-          "- **DeBERTa-v3 fine-tuned**: *your own classifier* — the same encoder trained on the train "
-          "half of a pre-registered split, scored on the other half. Run 1 is the pre-registered "
-          "run; run 2 (trained to convergence) and run 2 + temperature scaling are a disclosed "
-          "post-hoc amendment. Full-row datasets appear above; the held-out comparison, every judge "
-          "on the same rows, is [finetuned-baseline-2026-09.md](finetuned-baseline-2026-09.md).",
+          "Each row stands for a kind of judge a team could actually deploy, not for a brand. " +
+          "The panel is heterogeneous on purpose: judges that fail on the same rows are the " +
+          f"documented failure mode{pair_note}; Shao (2026, " +
+          "[arXiv:2609.20543](https://arxiv.org/abs/2609.20543)) and Huang et al. (2026, " +
+          "[arXiv:2605.30653](https://arxiv.org/abs/2605.30653)) for the literature.", "",
+          "| judge | what it represents |", "|---|---|",
+          "| Jev (TypeSafe) | the judgment model under audit — a model built to judge, returning a " +
+          "probability per option instead of a written number |",
+          "| Claude Sonnet 4.5, Gemini 3 Flash | what teams deploy today as LLM-as-judge: frontier chat " +
+          "models with a verbalized confidence |",
+          "| Llama 3.3 70B | an open, hosted, mid-size chat model — the self-hostable alternative |",
+          "| DeepSeek R1 | a reasoning model; its reasoning channel spends the output budget before " +
+          "the answer, so the token budget decides how many replies are blank (see `no answer`) |",
+          "| gemma4 (e4b), llama3.2 3B | small local chat models on a laptop — the cost floor " +
+          "($0) and the floor of what a chat prompt can do |",
+          "| DeBERTa-v3 zero-shot NLI | **control**, not a competitor: a ~180M encoder that cannot " +
+          f"follow instructions, so an injection cannot hijack it{nli_note}; returns a real " +
+          "softmax confidence and was never fine-tuned on these tasks — the row that says whether a " +
+          "task needed a bigger model at all |",
+          "| DeBERTa-v3 fine-tuned (runs 1, 2, 2 + TS) | **your own classifier**: the same encoder " +
+          "fine-tuned on the train half of a pre-registered split, scored on the other half. Run 1 " +
+          "is the pre-registered run; run 2 (to convergence) and run 2 + temperature scaling are a " +
+          "disclosed post-hoc amendment. Only its full-row adversarial run appears above; the " +
+          "held-out comparison, every judge on the same rows, is " +
+          "[finetuned-baseline-2026-09.md](finetuned-baseline-2026-09.md) |",
+          "",
+          "Deliberately missing from this round, one reason each:", "",
+          "- **OpenJev** — needs a Codiv account not yet created.",
+          "- **GPT (OpenAI)** — no API budget allocated this round.",
+          "- **Mistral** — not requested by anyone yet.",
           "",
           "## How to read it", "",
           "- **ECE**: 0 = confidence equals accuracy in every bin. Above ~0.1 the number is decoration.",
-          "- **conf right / wrong**: an honest judge has a visible gap. A gap of zero or negative means "
+          "- **conf right / wrong**: an honest judge has a visible gap. A gap of zero or negative means " +
           "confidence carries no information about correctness.",
-          "- **distinct confidence values**: a chat model that only ever says 0.8 or 0.9 is not "
+          "- **distinct confidence values**: a chat model that only ever says 0.8 or 0.9 is not " +
           "estimating anything; it is filling a field.",
-          "- **zero-error coverage**: the most-confident share of decisions with no observed error — "
+          "- **no answer**: replies the adapter could not parse (format failure, exhausted reasoning " +
+          "budget). They count as wrong at confidence 0 in every other column; this one keeps " +
+          "format failures visible apart from judgment quality.",
+          "- **zero-error coverage**: the most-confident share of decisions with no observed error — " +
           "the automation budget. Retrospective on this dataset.",
-          "- Costs are as reported by each adapter (vendor list price for Jev; $0 for local models; "
+          "- Costs are as reported by each adapter (vendor list price for Jev; $0 for local models; " +
           "list price for known hosted chat models).",
           "",
           "## Caveats", "",
-          "- Synthetic, seeded datasets (generators in `examples/`); small n; ground truth for routing "
+          "- Synthetic, seeded datasets (generators in `examples/`); small n; ground truth for routing " +
           "is by construction. See each dataset's audit report for the full list.",
-          "- One prompt per chat model (`src/judge_audit/judges/llm.py`). A better prompt would move "
+          "- One prompt per chat model (`src/judge_audit/judges/llm.py`). A better prompt would move " +
           "the numbers; that is a finding about prompts, not a fix for calibration.",
           "- Local models run through Ollama on a laptop; latency is not comparable with hosted APIs.",
           ""]

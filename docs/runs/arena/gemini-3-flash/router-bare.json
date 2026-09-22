@@ -1,0 +1,216 @@
+{
+  "judge": "llm",
+  "n": 120,
+  "accuracy": 0.6667,
+  "ece": 0.3154,
+  "reliability_bins": [
+    {
+      "bin": "0.0-0.1",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.1-0.2",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.2-0.3",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.3-0.4",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.4-0.5",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.5-0.6",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.6-0.7",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.7-0.8",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.8-0.9",
+      "avg_confidence": 0.8,
+      "accuracy": 0.0,
+      "n": 1
+    },
+    {
+      "bin": "0.9-1.0",
+      "avg_confidence": 0.9836,
+      "accuracy": 0.6723,
+      "n": 119
+    }
+  ],
+  "accuracy_coverage": [
+    {
+      "coverage": 0.05,
+      "accuracy": 0.6667,
+      "n": 6,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.1,
+      "accuracy": 0.5833,
+      "n": 12,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.15,
+      "accuracy": 0.5,
+      "n": 18,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.2,
+      "accuracy": 0.5417,
+      "n": 24,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.25,
+      "accuracy": 0.6333,
+      "n": 30,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.3,
+      "accuracy": 0.6667,
+      "n": 36,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.35,
+      "accuracy": 0.6905,
+      "n": 42,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.4,
+      "accuracy": 0.7292,
+      "n": 48,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.45,
+      "accuracy": 0.7407,
+      "n": 54,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.5,
+      "accuracy": 0.7333,
+      "n": 60,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.55,
+      "accuracy": 0.7576,
+      "n": 66,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.6,
+      "accuracy": 0.7361,
+      "n": 72,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.65,
+      "accuracy": 0.7308,
+      "n": 78,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.7,
+      "accuracy": 0.7381,
+      "n": 84,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.75,
+      "accuracy": 0.7556,
+      "n": 90,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.8,
+      "accuracy": 0.7292,
+      "n": 96,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.85,
+      "accuracy": 0.7157,
+      "n": 102,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.9,
+      "accuracy": 0.7037,
+      "n": 108,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.95,
+      "accuracy": 0.693,
+      "n": 114,
+      "min_confidence": 0.9
+    },
+    {
+      "coverage": 1.0,
+      "accuracy": 0.6667,
+      "n": 120,
+      "min_confidence": 0.8
+    }
+  ],
+  "zero_error_coverage": {
+    "coverage": 0.025,
+    "n": 3,
+    "threshold": 1.0
+  },
+  "total_cost_usd": 0.016126,
+  "p50_latency_s": 2.423,
+  "p99_latency_s": 62.701,
+  "run": {
+    "timestamp_utc": "2026-09-21T10:36:15+00:00",
+    "judge_audit_version": "0.3.2",
+    "judge": {
+      "name": "llm:gemini-3-flash-preview",
+      "provider": "openai-compatible",
+      "model": "gemini-3-flash-preview",
+      "confidence_method": "verbalized (model-reported probability)",
+      "base_url": "https://generativelanguage.googleapis.com/v1beta/openai"
+    },
+    "python": "3.12.8",
+    "dataset": {
+      "path": "examples/task-routing/labels.jsonl",
+      "sha256": "27250d78eda62c5e5ad07906abd3c7fdeaecb1131a7d13e12146bed30f55ec8d",
+      "rows": 120
+    },
+    "checkpoint": "docs/runs/arena/gemini-3-flash/router-bare.ckpt.jsonl"
+  }
+}

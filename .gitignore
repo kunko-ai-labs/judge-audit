@@ -9,3 +9,4 @@ node_modules/
 docs/.frames/
 .DS_Store
 .env
+.claude/worktrees/

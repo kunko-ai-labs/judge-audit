@@ -1,0 +1,237 @@
+{
+  "judge": "llm",
+  "n": 120,
+  "accuracy": 0.7,
+  "ece": 0.2311,
+  "reliability_bins": [
+    {
+      "bin": "0.0-0.1",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.1-0.2",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.2-0.3",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.3-0.4",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.4-0.5",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.5-0.6",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.6-0.7",
+      "avg_confidence": 0.65,
+      "accuracy": 0.8333,
+      "n": 6
+    },
+    {
+      "bin": "0.7-0.8",
+      "avg_confidence": 0.7433,
+      "accuracy": 0.3333,
+      "n": 9
+    },
+    {
+      "bin": "0.8-0.9",
+      "avg_confidence": 0.855,
+      "accuracy": 0.5556,
+      "n": 18
+    },
+    {
+      "bin": "0.9-1.0",
+      "avg_confidence": 0.9603,
+      "accuracy": 0.7586,
+      "n": 87
+    }
+  ],
+  "accuracy_coverage": [
+    {
+      "coverage": 0.05,
+      "accuracy": 1.0,
+      "n": 6,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.1,
+      "accuracy": 1.0,
+      "n": 12,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.15,
+      "accuracy": 1.0,
+      "n": 18,
+      "min_confidence": 0.98
+    },
+    {
+      "coverage": 0.2,
+      "accuracy": 1.0,
+      "n": 24,
+      "min_confidence": 0.98
+    },
+    {
+      "coverage": 0.25,
+      "accuracy": 1.0,
+      "n": 30,
+      "min_confidence": 0.98
+    },
+    {
+      "coverage": 0.3,
+      "accuracy": 1.0,
+      "n": 36,
+      "min_confidence": 0.98
+    },
+    {
+      "coverage": 0.35,
+      "accuracy": 0.9762,
+      "n": 42,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.4,
+      "accuracy": 0.9167,
+      "n": 48,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.45,
+      "accuracy": 0.9259,
+      "n": 54,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.5,
+      "accuracy": 0.9,
+      "n": 60,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.55,
+      "accuracy": 0.8636,
+      "n": 66,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.6,
+      "accuracy": 0.8472,
+      "n": 72,
+      "min_confidence": 0.92
+    },
+    {
+      "coverage": 0.65,
+      "accuracy": 0.7949,
+      "n": 78,
+      "min_confidence": 0.92
+    },
+    {
+      "coverage": 0.7,
+      "accuracy": 0.7619,
+      "n": 84,
+      "min_confidence": 0.92
+    },
+    {
+      "coverage": 0.75,
+      "accuracy": 0.7444,
+      "n": 90,
+      "min_confidence": 0.88
+    },
+    {
+      "coverage": 0.8,
+      "accuracy": 0.75,
+      "n": 96,
+      "min_confidence": 0.85
+    },
+    {
+      "coverage": 0.85,
+      "accuracy": 0.7255,
+      "n": 102,
+      "min_confidence": 0.85
+    },
+    {
+      "coverage": 0.9,
+      "accuracy": 0.7037,
+      "n": 108,
+      "min_confidence": 0.75
+    },
+    {
+      "coverage": 0.95,
+      "accuracy": 0.693,
+      "n": 114,
+      "min_confidence": 0.72
+    },
+    {
+      "coverage": 1.0,
+      "accuracy": 0.7,
+      "n": 120,
+      "min_confidence": 0.65
+    }
+  ],
+  "zero_error_coverage": {
+    "coverage": 0.3333,
+    "n": 40,
+    "threshold": 0.95
+  },
+  "total_cost_usd": 0.715095,
+  "p50_latency_s": 7.851,
+  "p99_latency_s": 11.985,
+  "run": {
+    "judge_audit_version": "0.3.2",
+    "judge": {
+      "name": "llm:claude-sonnet-4.5",
+      "provider": "hosted-api",
+      "model": "claude-sonnet-4.5",
+      "confidence_method": "verbalized (model-reported probability)",
+      "prices_usd_per_mtok": [
+        3.0,
+        15.0
+      ],
+      "max_tokens": 4096
+    },
+    "python": "3.12.8",
+    "dataset": {
+      "path": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-bare/claude-sonnet-4.5.r2.input.jsonl",
+      "sha256": "3b895b46200d771b4154364beb731d760a99cfcf59127e6264a46daa60f6402b",
+      "sha256_rows": "d3c4aa7cf5c6a1029916020f71b497d2a1a5b028428d49c71b6232de4b97cf3b",
+      "rows": 120,
+      "ground_truth": {
+        "tier": "GT-1",
+        "label": "constructed",
+        "meaning": "labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy",
+        "validation": "not_validated",
+        "purpose": [
+          "model-routing calibration",
+          "cost-inflation attack resistance"
+        ],
+        "caveats": [
+          "the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome",
+          "downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified",
+          "40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted"
+        ]
+      }
+    },
+    "recomputed_utc": "2026-09-21T18:52:47+00:00",
+    "note": "original run time not recorded in this checkpoint",
+    "checkpoint": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-bare/claude-sonnet-4.5.r2.ckpt.jsonl"
+  }
+}

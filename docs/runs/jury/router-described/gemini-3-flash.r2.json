@@ -1,0 +1,234 @@
+{
+  "judge": "llm",
+  "n": 120,
+  "accuracy": 0.9917,
+  "ece": 0.0236,
+  "reliability_bins": [
+    {
+      "bin": "0.0-0.1",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.1-0.2",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.2-0.3",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.3-0.4",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.4-0.5",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.5-0.6",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.6-0.7",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.7-0.8",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.8-0.9",
+      "avg_confidence": 0.85,
+      "accuracy": 1.0,
+      "n": 2
+    },
+    {
+      "bin": "0.9-1.0",
+      "avg_confidence": 0.9701,
+      "accuracy": 0.9915,
+      "n": 118
+    }
+  ],
+  "accuracy_coverage": [
+    {
+      "coverage": 0.05,
+      "accuracy": 1.0,
+      "n": 6,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.1,
+      "accuracy": 1.0,
+      "n": 12,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.15,
+      "accuracy": 1.0,
+      "n": 18,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.2,
+      "accuracy": 1.0,
+      "n": 24,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.25,
+      "accuracy": 1.0,
+      "n": 30,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.3,
+      "accuracy": 1.0,
+      "n": 36,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.35,
+      "accuracy": 1.0,
+      "n": 42,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.4,
+      "accuracy": 1.0,
+      "n": 48,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.45,
+      "accuracy": 1.0,
+      "n": 54,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.5,
+      "accuracy": 1.0,
+      "n": 60,
+      "min_confidence": 0.98
+    },
+    {
+      "coverage": 0.55,
+      "accuracy": 1.0,
+      "n": 66,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.6,
+      "accuracy": 1.0,
+      "n": 72,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.65,
+      "accuracy": 1.0,
+      "n": 78,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.7,
+      "accuracy": 1.0,
+      "n": 84,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.75,
+      "accuracy": 1.0,
+      "n": 90,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.8,
+      "accuracy": 1.0,
+      "n": 96,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.85,
+      "accuracy": 1.0,
+      "n": 102,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.9,
+      "accuracy": 1.0,
+      "n": 108,
+      "min_confidence": 0.9
+    },
+    {
+      "coverage": 0.95,
+      "accuracy": 0.9912,
+      "n": 114,
+      "min_confidence": 0.9
+    },
+    {
+      "coverage": 1.0,
+      "accuracy": 0.9917,
+      "n": 120,
+      "min_confidence": 0.85
+    }
+  ],
+  "zero_error_coverage": {
+    "coverage": 0.9333,
+    "n": 112,
+    "threshold": 0.9
+  },
+  "total_cost_usd": 0.025351,
+  "p50_latency_s": 3.139,
+  "p99_latency_s": 27.575,
+  "run": {
+    "judge_audit_version": "0.3.2",
+    "judge": {
+      "name": "llm:gemini-3-flash-preview",
+      "provider": "openai-compatible",
+      "model": "gemini-3-flash-preview",
+      "confidence_method": "verbalized (model-reported probability)",
+      "base_url": "https://generativelanguage.googleapis.com/v1beta/openai"
+    },
+    "python": "3.12.8",
+    "dataset": {
+      "path": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-described/gemini-3-flash.r2.input.jsonl",
+      "sha256": "59fd7ce735e5b6d71950b1e7497102a34cfaa95356485b2b3cde8d711a287480",
+      "sha256_rows": "6f65974f58906d15aad59366ec6b27bb7f72e8a2a8b181d50fa5480cd1866a4a",
+      "rows": 120,
+      "ground_truth": {
+        "tier": "GT-1",
+        "label": "constructed",
+        "meaning": "labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy",
+        "validation": "not_validated",
+        "purpose": [
+          "model-routing calibration",
+          "cost-inflation attack resistance",
+          "ablation: options carry a description"
+        ],
+        "caveats": [
+          "the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome",
+          "downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified",
+          "40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted"
+        ]
+      }
+    },
+    "recomputed_utc": "2026-09-21T19:07:14+00:00",
+    "note": "original run time not recorded in this checkpoint",
+    "checkpoint": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-described/gemini-3-flash.r2.ckpt.jsonl"
+  }
+}

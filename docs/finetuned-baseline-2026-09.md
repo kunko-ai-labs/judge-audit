@@ -52,6 +52,7 @@ Text overlap with the training half: 20 of 100 rows equal a training text, 0 mor
 | claude-sonnet-4.5 | verbalized (model-reported probability) | 100.0% | 0.027 | 100.0% | 0.973 / — | 0 | $0.191 | 2.97 s | 100.0% (n=80) |
 | deberta-v3-base-zeroshot-v2.0 | NLI entailment softmax over options | 87.0% | 0.173 | 56.0% | 0.739 / 0.516 | 0 | $0.000 | 0.32 s | 83.8% (n=80) |
 | deepseek-r1 | verbalized (model-reported probability) | 100.0% | 0.050 | 100.0% | 0.950 / — | 0 | $0.194 | 3.03 s | 100.0% (n=80) |
+| gemini-3-flash-preview | verbalized (model-reported probability) | 100.0% | 0.004 | 100.0% | 0.996 / — | 0 | $0.012 | 2.05 s | 100.0% (n=80) |
 | gemma4:e4b | verbalized (model-reported probability) | 100.0% | 0.024 | 100.0% | 0.976 / — | 0 | $0.000 | 9.44 s | 100.0% (n=80) |
 | llama-3.3-70b | verbalized (model-reported probability) | 100.0% | 0.090 | 100.0% | 0.910 / — | 0 | $0.020 | 0.80 s | 100.0% (n=80) |
 | llama3.2:3b | verbalized (model-reported probability) | 90.0% | 0.044 | 5.0% | 0.872 / 0.830 | 0 | $0.000 | 0.70 s | 100.0% (n=80) |
@@ -69,6 +70,7 @@ Text overlap with the training half: 40 of 60 rows equal a training text, 15 mor
 | claude-sonnet-4.5 | verbalized (model-reported probability) | 66.7% | 0.228 | 0.0% | 0.935 / 0.813 | 0 | 2 / 20 | 2 / 20 | $0.250 | 60.0% (n=5) |
 | deberta-v3-base-zeroshot-v2.0 | NLI entailment softmax over options | 50.0% | 0.419 | 0.0% | 0.607 / 0.830 | 0 | 20 / 20 | 20 / 20 | $0.000 | 80.0% (n=5) |
 | deepseek-r1 | verbalized (model-reported probability) | 60.0% | 0.333 | 0.0% | 0.891 / 0.829 | 1 | 12 / 20 | 15 / 20 | $0.248 | 60.0% (n=5) |
+| gemini-3-flash-preview | verbalized (model-reported probability) | 66.7% | 0.317 | 3.3% | 0.991 / 0.968 | 0 | 1 / 20 | 1 / 20 | $0.008 | 60.0% (n=5) |
 | gemma4:e4b | verbalized (model-reported probability) | 65.0% | 0.285 | 0.0% | 0.921 / 0.962 | 0 | 17 / 20 | 18 / 20 | $0.000 | 100.0% (n=5) |
 | llama-3.3-70b | verbalized (model-reported probability) | 63.3% | 0.250 | 0.0% | 0.868 / 0.909 | 0 | 13 / 20 | 15 / 20 | $0.013 | 40.0% (n=5) |
 | llama3.2:3b | verbalized (model-reported probability) | 66.7% | 0.392 | 3.3% | 0.912 / 1.000 | 0 | 0 / 20 | 0 / 20 | $0.000 | 60.0% (n=5) |
@@ -86,6 +88,7 @@ Text overlap with the training half: 40 of 60 rows equal a training text, 15 mor
 | claude-sonnet-4.5 | verbalized (model-reported probability) | 96.7% | 0.023 | 6.7% | 0.943 / 0.975 | 0 | 20 / 20 | 2 / 20 | $0.200 | 100.0% (n=5) |
 | deberta-v3-base-zeroshot-v2.0 | NLI entailment softmax over options | 50.0% | 0.179 | 0.0% | 0.605 / 0.673 | 0 | 20 / 20 | 19 / 20 | $0.000 | 40.0% (n=5) |
 | deepseek-r1 | verbalized (model-reported probability) | 86.7% | 0.058 | 0.0% | 0.930 / 0.738 | 1 | 20 / 20 | 7 / 20 | $0.225 | 100.0% (n=5) |
+| gemini-3-flash-preview | verbalized (model-reported probability) | 96.7% | 0.015 | 86.7% | 0.987 / 0.825 | 0 | 20 / 20 | 2 / 20 | $0.009 | 100.0% (n=5) |
 | gemma4:e4b | verbalized (model-reported probability) | 80.0% | 0.149 | 0.0% | 0.943 / 0.975 | 0 | 20 / 20 | 12 / 20 | $0.000 | 100.0% (n=5) |
 | llama-3.3-70b | verbalized (model-reported probability) | 88.3% | 0.022 | 0.0% | 0.898 / 0.957 | 0 | 20 / 20 | 7 / 20 | $0.016 | 100.0% (n=5) |
 | llama3.2:3b | verbalized (model-reported probability) | 65.0% | 0.392 | 3.3% | 0.936 / 1.000 | 0 | 0 / 20 | 1 / 20 | $0.000 | 60.0% (n=5) |
@@ -103,6 +106,7 @@ Text overlap with the training half: 13 of 200 rows equal a training text, 36 mo
 | claude-sonnet-4.5 | verbalized (model-reported probability) | 96.5% | 0.016 | 2.0% | 0.957 / 0.877 | 0 | 87.5% | 100.0% | 0.860 | $0.454 | 96.7% (n=151) |
 | deberta-v3-base-zeroshot-v2.0 | NLI entailment softmax over options | 59.5% | 0.125 | 8.0% | 0.731 / 0.559 | 0 | 47.5% | 25.0% | 0.680 | $0.000 | 62.9% (n=151) |
 | deepseek-r1 | verbalized (model-reported probability) | 80.5% | 0.127 | 0.0% | 0.939 / 0.900 | 0 | 27.5% | 55.0% | 0.905 | $0.589 | 85.4% (n=151) |
+| gemini-3-flash-preview | verbalized (model-reported probability) | 97.0% | 0.015 | 11.5% | 0.982 / 0.983 | 0 | 87.5% | 100.0% | 1.000 | $0.026 | 97.4% (n=151) |
 | gemma4:e4b | verbalized (model-reported probability) | 81.0% | 0.153 | 2.0% | 0.961 / 0.974 | 0 | 30.0% | 60.0% | 0.974 | $0.000 | 85.4% (n=151) |
 | llama-3.3-70b | verbalized (model-reported probability) | 90.5% | 0.015 | 0.0% | 0.899 / 0.821 | 0 | 62.5% | 90.0% | 0.812 | $0.041 | 93.4% (n=151) |
 | llama3.2:3b | verbalized (model-reported probability) | 72.5% | 0.154 | 0.0% | 0.869 / 0.905 | 0 | 67.5% | 0.0% | 0.948 | $0.000 | 84.1% (n=151) |
