@@ -14,17 +14,20 @@
         "ece": 0.0036,
         "zero_error_coverage": 1.0,
         "accuracy_ci": [
-          1.0,
+          0.9817,
           1.0
         ],
+        "accuracy_ci_method": "clopper-pearson",
         "ece_ci": [
           0.0014,
           0.006
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
-          1.0,
+          0.9817,
           1.0
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.996,
         "mean_conf_wrong": null,
         "distinct_confidence_values": 10,
@@ -41,14 +44,17 @@
           0.925,
           0.9802
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.0278,
           0.0659
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.6701,
           0.94
         ],
+        "zero_error_coverage_ci_method": "bootstrap",
         "mean_conf_correct": 0.933,
         "mean_conf_wrong": 0.597,
         "distinct_confidence_values": 40,
@@ -56,8 +62,18 @@
         "cost_usd": 0.0038,
         "p50_latency_s": 0.738,
         "prompt_injection_accuracy": 0.825,
+        "prompt_injection_accuracy_ci": [
+          0.7,
+          0.925
+        ],
+        "prompt_injection_accuracy_ci_method": "bootstrap",
         "confidence_drop_under_injection": 0.285,
-        "social_engineering_accuracy": 1.0
+        "social_engineering_accuracy": 1.0,
+        "social_engineering_accuracy_ci": [
+          0.8316,
+          1.0
+        ],
+        "social_engineering_accuracy_ci_method": "clopper-pearson"
       },
       "router-bare": {
         "n": 120,
@@ -68,14 +84,17 @@
           0.5246,
           0.8032
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.1924,
           0.4485
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.448
+          0.0303
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.976,
         "mean_conf_wrong": 0.926,
         "distinct_confidence_values": 25,
@@ -98,14 +117,17 @@
           0.9189,
           1.0
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.0341,
           0.0999
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.8594,
           1.0
         ],
+        "zero_error_coverage_ci_method": "bootstrap",
         "mean_conf_correct": 0.931,
         "mean_conf_wrong": 0.583,
         "distinct_confidence_values": 31,
@@ -159,17 +181,20 @@
         "ece": 0.029,
         "zero_error_coverage": 1.0,
         "accuracy_ci": [
-          1.0,
+          0.9817,
           1.0
         ],
+        "accuracy_ci_method": "clopper-pearson",
         "ece_ci": [
           0.0243,
           0.0333
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
-          1.0,
+          0.9817,
           1.0
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.971,
         "mean_conf_wrong": null,
         "distinct_confidence_values": 4,
@@ -186,14 +211,17 @@
           0.9391,
           0.9898
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.0049,
           0.0397
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.9086
+          0.0183
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.957,
         "mean_conf_wrong": 0.877,
         "distinct_confidence_values": 7,
@@ -201,8 +229,18 @@
         "cost_usd": 0.4538,
         "p50_latency_s": 3.48,
         "prompt_injection_accuracy": 0.875,
+        "prompt_injection_accuracy_ci": [
+          0.775,
+          0.975
+        ],
+        "prompt_injection_accuracy_ci_method": "bootstrap",
         "confidence_drop_under_injection": 0.027,
-        "social_engineering_accuracy": 1.0
+        "social_engineering_accuracy": 1.0,
+        "social_engineering_accuracy_ci": [
+          0.8316,
+          1.0
+        ],
+        "social_engineering_accuracy_ci_method": "clopper-pearson"
       },
       "router-bare": {
         "n": 120,
@@ -213,14 +251,17 @@
           0.5191,
           0.7869
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.1216,
           0.3629
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.1032
+          0.0303
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.926,
         "mean_conf_wrong": 0.832,
         "distinct_confidence_values": 10,
@@ -244,14 +285,17 @@
           0.9035,
           0.9849
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.0127,
           0.0821
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.0
+          0.0303
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.943,
         "mean_conf_wrong": 0.983,
         "distinct_confidence_values": 4,
@@ -300,14 +344,17 @@
           0.8083,
           0.9159
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.1244,
           0.2416
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.4145,
           0.641
         ],
+        "zero_error_coverage_ci_method": "bootstrap",
         "mean_conf_correct": 0.74,
         "mean_conf_wrong": 0.504,
         "distinct_confidence_values": 59,
@@ -324,14 +371,17 @@
           0.517,
           0.6667
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.0876,
           0.2007
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0391,
           0.16
         ],
+        "zero_error_coverage_ci_method": "bootstrap",
         "mean_conf_correct": 0.731,
         "mean_conf_wrong": 0.559,
         "distinct_confidence_values": 66,
@@ -339,8 +389,18 @@
         "cost_usd": 0.0,
         "p50_latency_s": 0.354,
         "prompt_injection_accuracy": 0.475,
+        "prompt_injection_accuracy_ci": [
+          0.325,
+          0.625
+        ],
+        "prompt_injection_accuracy_ci_method": "bootstrap",
         "confidence_drop_under_injection": 0.093,
-        "social_engineering_accuracy": 0.25
+        "social_engineering_accuracy": 0.25,
+        "social_engineering_accuracy_ci": [
+          0.0869,
+          0.4737
+        ],
+        "social_engineering_accuracy_ci_method": "bootstrap"
       },
       "router-bare": {
         "n": 120,
@@ -351,14 +411,17 @@
           0.3364,
           0.6116
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.2999,
           0.5539
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.0
+          0.0303
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.596,
         "mean_conf_wrong": 0.812,
         "distinct_confidence_values": 31,
@@ -382,14 +445,17 @@
           0.3492,
           0.6279
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.1376,
           0.3548
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.0
+          0.0303
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.595,
         "mean_conf_wrong": 0.677,
         "distinct_confidence_values": 31,
@@ -437,17 +503,20 @@
         "ece": 0.0519,
         "zero_error_coverage": 1.0,
         "accuracy_ci": [
-          1.0,
+          0.9817,
           1.0
         ],
+        "accuracy_ci_method": "clopper-pearson",
         "ece_ci": [
           0.0488,
           0.0548
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
-          1.0,
+          0.9817,
           1.0
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.948,
         "mean_conf_wrong": null,
         "distinct_confidence_values": 4,
@@ -464,14 +533,17 @@
           0.7476,
           0.8564
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.0764,
           0.1839
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.0
+          0.0183
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.939,
         "mean_conf_wrong": 0.9,
         "distinct_confidence_values": 9,
@@ -479,8 +551,18 @@
         "cost_usd": 0.589,
         "p50_latency_s": 3.097,
         "prompt_injection_accuracy": 0.275,
+        "prompt_injection_accuracy_ci": [
+          0.15,
+          0.425
+        ],
+        "prompt_injection_accuracy_ci_method": "bootstrap",
         "confidence_drop_under_injection": 0.051,
-        "social_engineering_accuracy": 0.55
+        "social_engineering_accuracy": 0.55,
+        "social_engineering_accuracy_ci": [
+          0.3125,
+          0.7619
+        ],
+        "social_engineering_accuracy_ci_method": "bootstrap"
       },
       "router-bare": {
         "n": 120,
@@ -491,14 +573,17 @@
           0.4248,
           0.6818
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.2622,
           0.4956
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.0
+          0.0303
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.886,
         "mean_conf_wrong": 0.888,
         "distinct_confidence_values": 12,
@@ -523,14 +608,17 @@
           0.6992,
           0.8692
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.0744,
           0.2369
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.0
+          0.0303
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.933,
         "mean_conf_wrong": 0.894,
         "distinct_confidence_values": 9,
@@ -621,14 +709,17 @@
           0.9444,
           0.9902
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.4702,
           0.522
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.9444,
           0.9902
         ],
+        "zero_error_coverage_ci_method": "bootstrap",
         "mean_conf_correct": 0.484,
         "mean_conf_wrong": 0.15,
         "distinct_confidence_values": 55,
@@ -636,8 +727,18 @@
         "cost_usd": 0.0,
         "p50_latency_s": 0.017,
         "prompt_injection_accuracy": 1.0,
+        "prompt_injection_accuracy_ci": [
+          0.9119,
+          1.0
+        ],
+        "prompt_injection_accuracy_ci_method": "clopper-pearson",
         "confidence_drop_under_injection": 0.089,
-        "social_engineering_accuracy": 1.0
+        "social_engineering_accuracy": 1.0,
+        "social_engineering_accuracy_ci": [
+          0.8316,
+          1.0
+        ],
+        "social_engineering_accuracy_ci_method": "clopper-pearson"
       }
     }
   },
@@ -727,14 +828,17 @@
           0.9746,
           1.0
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.036,
           0.0659
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.931,
           1.0
         ],
+        "zero_error_coverage_ci_method": "bootstrap",
         "mean_conf_correct": 0.953,
         "mean_conf_wrong": 0.614,
         "distinct_confidence_values": 21,
@@ -742,8 +846,18 @@
         "cost_usd": 0.0,
         "p50_latency_s": 0.018,
         "prompt_injection_accuracy": 1.0,
+        "prompt_injection_accuracy_ci": [
+          0.9119,
+          1.0
+        ],
+        "prompt_injection_accuracy_ci_method": "clopper-pearson",
         "confidence_drop_under_injection": 0.009,
-        "social_engineering_accuracy": 1.0
+        "social_engineering_accuracy": 1.0,
+        "social_engineering_accuracy_ci": [
+          0.8316,
+          1.0
+        ],
+        "social_engineering_accuracy_ci_method": "clopper-pearson"
       }
     }
   },
@@ -833,14 +947,17 @@
           0.9746,
           1.0
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.005,
           0.0331
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.932,
           1.0
         ],
+        "zero_error_coverage_ci_method": "bootstrap",
         "mean_conf_correct": 0.991,
         "mean_conf_wrong": 0.918,
         "distinct_confidence_values": 9,
@@ -848,8 +965,18 @@
         "cost_usd": 0.0,
         "p50_latency_s": 0.019,
         "prompt_injection_accuracy": 1.0,
+        "prompt_injection_accuracy_ci": [
+          0.9119,
+          1.0
+        ],
+        "prompt_injection_accuracy_ci_method": "clopper-pearson",
         "confidence_drop_under_injection": 0.0,
-        "social_engineering_accuracy": 1.0
+        "social_engineering_accuracy": 1.0,
+        "social_engineering_accuracy_ci": [
+          0.8316,
+          1.0
+        ],
+        "social_engineering_accuracy_ci_method": "clopper-pearson"
       }
     }
   },
@@ -880,17 +1007,20 @@
         "ece": 0.0047,
         "zero_error_coverage": 1.0,
         "accuracy_ci": [
-          1.0,
+          0.9817,
           1.0
         ],
+        "accuracy_ci_method": "clopper-pearson",
         "ece_ci": [
           0.0025,
           0.0075
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
-          1.0,
+          0.9817,
           1.0
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.995,
         "mean_conf_wrong": null,
         "distinct_confidence_values": 4,
@@ -907,14 +1037,17 @@
           0.9447,
           0.9902
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.002,
           0.04
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.0
+          0.0183
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.982,
         "mean_conf_wrong": 0.983,
         "distinct_confidence_values": 7,
@@ -922,8 +1055,18 @@
         "cost_usd": 0.0263,
         "p50_latency_s": 2.446,
         "prompt_injection_accuracy": 0.875,
+        "prompt_injection_accuracy_ci": [
+          0.775,
+          0.975
+        ],
+        "prompt_injection_accuracy_ci_method": "bootstrap",
         "confidence_drop_under_injection": 0.017,
-        "social_engineering_accuracy": 1.0
+        "social_engineering_accuracy": 1.0,
+        "social_engineering_accuracy_ci": [
+          0.8316,
+          1.0
+        ],
+        "social_engineering_accuracy_ci_method": "clopper-pearson"
       },
       "router-bare": {
         "n": 120,
@@ -934,14 +1077,17 @@
           0.5351,
           0.7949
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.1892,
           0.4413
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.0
+          0.0303
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.991,
         "mean_conf_wrong": 0.965,
         "distinct_confidence_values": 4,
@@ -965,14 +1111,17 @@
           0.9554,
           1.0
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.0013,
           0.0335
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.6063,
           1.0
         ],
+        "zero_error_coverage_ci_method": "bootstrap",
         "mean_conf_correct": 0.986,
         "mean_conf_wrong": 0.825,
         "distinct_confidence_values": 4,
@@ -1016,17 +1165,20 @@
         "ece": 0.0258,
         "zero_error_coverage": 1.0,
         "accuracy_ci": [
-          1.0,
+          0.9817,
           1.0
         ],
+        "accuracy_ci_method": "clopper-pearson",
         "ece_ci": [
           0.0204,
           0.0307
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
-          1.0,
+          0.9817,
           1.0
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.974,
         "mean_conf_wrong": null,
         "distinct_confidence_values": 3,
@@ -1043,14 +1195,17 @@
           0.755,
           0.8641
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.0997,
           0.2111
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.0
+          0.0183
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.961,
         "mean_conf_wrong": 0.974,
         "distinct_confidence_values": 5,
@@ -1058,8 +1213,18 @@
         "cost_usd": 0.0,
         "p50_latency_s": 12.232,
         "prompt_injection_accuracy": 0.3,
+        "prompt_injection_accuracy_ci": [
+          0.175,
+          0.45
+        ],
+        "prompt_injection_accuracy_ci_method": "bootstrap",
         "confidence_drop_under_injection": 0.007,
-        "social_engineering_accuracy": 0.6
+        "social_engineering_accuracy": 0.6,
+        "social_engineering_accuracy_ci": [
+          0.312,
+          0.8261
+        ],
+        "social_engineering_accuracy_ci_method": "bootstrap"
       },
       "router-bare": {
         "n": 120,
@@ -1070,14 +1235,17 @@
           0.4615,
           0.712
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.2223,
           0.4761
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.0
+          0.0303
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.924,
         "mean_conf_wrong": 0.954,
         "distinct_confidence_values": 4,
@@ -1101,14 +1269,17 @@
           0.6721,
           0.8705
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.0816,
           0.289
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.0
+          0.0303
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.947,
         "mean_conf_wrong": 0.981,
         "distinct_confidence_values": 3,
@@ -1155,17 +1326,20 @@
         "ece": 0.0909,
         "zero_error_coverage": 1.0,
         "accuracy_ci": [
-          1.0,
+          0.9817,
           1.0
         ],
+        "accuracy_ci_method": "clopper-pearson",
         "ece_ci": [
           0.0858,
           0.096
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
-          1.0,
+          0.9817,
           1.0
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.909,
         "mean_conf_wrong": null,
         "distinct_confidence_values": 4,
@@ -1182,14 +1356,17 @@
           0.8614,
           0.945
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.0052,
           0.0598
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.0
+          0.0183
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.899,
         "mean_conf_wrong": 0.821,
         "distinct_confidence_values": 6,
@@ -1197,8 +1374,18 @@
         "cost_usd": 0.0411,
         "p50_latency_s": 0.811,
         "prompt_injection_accuracy": 0.625,
+        "prompt_injection_accuracy_ci": [
+          0.45,
+          0.775
+        ],
+        "prompt_injection_accuracy_ci_method": "bootstrap",
         "confidence_drop_under_injection": 0.058,
-        "social_engineering_accuracy": 0.9
+        "social_engineering_accuracy": 0.9,
+        "social_engineering_accuracy_ci": [
+          0.7,
+          1.0
+        ],
+        "social_engineering_accuracy_ci_method": "bootstrap"
       },
       "router-bare": {
         "n": 120,
@@ -1209,14 +1396,17 @@
           0.5167,
           0.7669
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.1331,
           0.3741
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.0
+          0.0303
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.86,
         "mean_conf_wrong": 0.926,
         "distinct_confidence_values": 3,
@@ -1240,14 +1430,17 @@
           0.7845,
           0.9339
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.0073,
           0.1308
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.0
+          0.0303
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.901,
         "mean_conf_wrong": 0.969,
         "distinct_confidence_values": 3,
@@ -1294,14 +1487,17 @@
           0.7783,
           1.0
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.0245,
           0.1431
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          1.0
+          0.0183
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.868,
         "mean_conf_wrong": 0.845,
         "distinct_confidence_values": 2,
@@ -1318,14 +1514,17 @@
           0.6517,
           0.7969
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.085,
           0.2307
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.0
+          0.0183
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.869,
         "mean_conf_wrong": 0.905,
         "distinct_confidence_values": 3,
@@ -1333,8 +1532,18 @@
         "cost_usd": 0.0,
         "p50_latency_s": 0.747,
         "prompt_injection_accuracy": 0.675,
+        "prompt_injection_accuracy_ci": [
+          0.525,
+          0.825
+        ],
+        "prompt_injection_accuracy_ci_method": "bootstrap",
         "confidence_drop_under_injection": -0.026,
-        "social_engineering_accuracy": 0.0
+        "social_engineering_accuracy": 0.0,
+        "social_engineering_accuracy_ci": [
+          0.0,
+          0.1684
+        ],
+        "social_engineering_accuracy_ci_method": "clopper-pearson"
       },
       "router-bare": {
         "n": 120,
@@ -1345,14 +1554,17 @@
           0.5159,
           0.7925
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.2614,
           0.5287
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.0
+          0.0303
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.918,
         "mean_conf_wrong": 1.0,
         "distinct_confidence_values": 2,
@@ -1376,14 +1588,17 @@
           0.4553,
           0.7302
         ],
+        "accuracy_ci_method": "bootstrap",
         "ece_ci": [
           0.2939,
           0.5691
         ],
+        "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.0
+          0.0303
         ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.965,
         "mean_conf_wrong": 1.0,
         "distinct_confidence_values": 2,

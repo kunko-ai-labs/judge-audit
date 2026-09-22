@@ -24,9 +24,10 @@ from consensus_report import by_row, majority, panel_stats, state_groups, votes_
 from judge_audit.metrics.calibration import (  # noqa: E402
     N_BOOT,
     accuracy_ci,
+    ci_fields,
     expected_calibration_error,
 )
-from judge_audit.report import interval  # noqa: E402
+from judge_audit.report import interval_of, with_interval_notes  # noqa: E402
 from judge_audit.runner import load_jsonl  # noqa: E402
 
 JURY = ROOT / "docs" / "runs" / "jury"
@@ -40,10 +41,11 @@ def judge_stats(recs: list[dict], groups: list[str] | None = None) -> dict:
     round-2 record is indexed against the same source dataset, so both rounds cluster
     on the original state, never on the deliberation prompt built around it."""
     if not recs:
-        return {"accuracy": None, "accuracy_ci": None, "ece": None, "mean_conf_wrong": None}
+        return {"accuracy": None, "accuracy_ci": None, "accuracy_ci_method": None,
+                "ece": None, "mean_conf_wrong": None}
     wrong = [r["confidence"] for r in recs if not r["correct"]]
     return {"accuracy": round(statistics.mean(r["correct"] for r in recs), 4),
-            "accuracy_ci": list(accuracy_ci([r["correct"] for r in recs], groups=groups)),
+            **ci_fields("accuracy", accuracy_ci([r["correct"] for r in recs], groups=groups)),
             "ece": round(expected_calibration_error([r["confidence"] for r in recs],
                                                     [r["correct"] for r in recs]), 4),
             "mean_conf_wrong": round(statistics.mean(wrong), 3) if wrong else None}
@@ -133,7 +135,7 @@ def num(x):
 
 def acc_ci(stats: dict) -> str:
     """`86.7% [80.0, 92.5]` from a judge_stats dict."""
-    return pct(stats["accuracy"]) + interval(stats.get("accuracy_ci"), pct=True)
+    return pct(stats["accuracy"]) + interval_of(stats, "accuracy_ci", pct=True)
 
 
 def render(data: dict) -> str:
@@ -166,7 +168,7 @@ def render(data: dict) -> str:
             s = e[key]
             L.append(f"| {label} | {pct(s['pairwise_agreement'])} | {s['unanimous']} ({s['unanimous_wrong']}) | " +
                      f"{s['ties']} | {s['abstentions']} | " +
-                     f"{pct(s['majority_accuracy'])}{interval(s['majority_accuracy_ci'], pct=True)} / " +
+                     f"{pct(s['majority_accuracy'])}{interval_of(s, 'majority_accuracy_ci', pct=True)} / " +
                      f"{pct(s['majority_accuracy_decided'])} | " +
                      f"{num(s['mean_share_when_right'])} / " +
                      f"{num(s['mean_share_when_wrong'])} | {num(s['vote_share_ece'])} | " +
@@ -208,7 +210,7 @@ def render(data: dict) -> str:
           "each other's revisions.",
           "- Judges without a text prompt (zero-shot NLI) keep their round-1 vote in the round-2 panel; " +
           "this is stated per dataset above.", ""]
-    return "\n".join(L)
+    return "\n".join(with_interval_notes(L))
 
 
 def _delta(a: float | None, b: float | None, pct_: bool = True) -> str:

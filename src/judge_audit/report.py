@@ -7,18 +7,66 @@ import math
 import warnings
 
 from .ground_truth import ground_truth_of
+from .metrics.calibration import BOOTSTRAP as BOOTSTRAP_METHOD
+from .metrics.calibration import EXACT as EXACT_METHOD
 from .runner import AuditResult
 
+EXACT_MARK = "†"
+DEGENERATE_MARK = "‡"
+EXACT_NOTE = ("**†** exact 95 % Clopper–Pearson (binomial) interval, published where the "
+              "estimate is 0 % or 100 % and the bootstrap collapses to a point. It assumes "
+              "independent rows, so where the dataset repeats texts it is a *lower bound* "
+              "on the width the clustered interval would have had.")
+DEGENERATE_NOTE = ("**‡** degenerate: every clustered-bootstrap resample returned the same "
+                   "value, so no interval width is published for that number.")
 
-def interval(ci, pct: bool = False, digits: int = 4) -> str:
+
+def interval(ci, pct: bool = False, digits: int = 4, method: str | None = None) -> str:
     """` [52.5, 80.3]` for a (lo, hi) pair — the compact form every report uses next to
-    its point estimate; '' when the interval was not computed."""
+    its point estimate; '' when the interval was not computed.
+
+    `method` (or `ci.method`) says which machinery produced it: an exact Clopper–Pearson
+    interval is marked `†`, and a bootstrap that came back with zero width is marked `‡`
+    instead of printing `[x, x]`. `interval_notes` turns the marks into a legend.
+    """
     if ci is None:
         return ""
     lo, hi = ci
+    method = method or getattr(ci, "method", None)
+    if method == BOOTSTRAP_METHOD and lo == hi:
+        return f" {DEGENERATE_MARK}"
+    mark = EXACT_MARK if method == EXACT_METHOD else ""
     if pct:
-        return f" [{lo * 100:.1f}, {hi * 100:.1f}]"
-    return f" [{lo:.{digits}f}, {hi:.{digits}f}]"
+        return f" [{lo * 100:.1f}, {hi * 100:.1f}]{mark}"
+    return f" [{lo:.{digits}f}, {hi:.{digits}f}]{mark}"
+
+
+def interval_of(d: dict, key: str, pct: bool = False, digits: int = 4) -> str:
+    """`interval(d[key])` with the method stored next to it (`<key>_method`)."""
+    return interval(d.get(key), pct=pct, digits=digits, method=d.get(f"{key}_method"))
+
+
+def interval_notes(*texts: str) -> list[str]:
+    """The legend lines for the interval marks that actually appear in `texts`."""
+    blob = "\n".join(texts)
+    return [note for mark, note in ((EXACT_MARK, EXACT_NOTE),
+                                    (DEGENERATE_MARK, DEGENERATE_NOTE)) if mark in blob]
+
+
+def with_interval_notes(lines: list[str]) -> list[str]:
+    """The rendered lines plus the legend of the interval marks they actually use.
+
+    The note goes right after the bullet that explains the brackets, so a reader who
+    meets a `†` in a table finds what it means in the same list."""
+    notes = interval_notes(*lines)
+    if not notes:
+        return lines
+    out = list(lines)
+    where = next((i for i, ln in enumerate(out) if ln.startswith("- **[a, b]**")),
+                 len(out) - 1)
+    for k, note in enumerate(notes):
+        out.insert(where + 1 + k, f"- {note}")
+    return out
 
 
 def provenance_lines(run: dict) -> list[str]:
@@ -57,9 +105,9 @@ def ground_truth_line(run: dict) -> str:
 
 def render_markdown(result: AuditResult) -> str:
     d = result.to_dict()
-    acc_ci = interval(d.get("accuracy_ci"), pct=True)
-    ece_ci = interval(d.get("ece_ci"))
-    zec_ci = interval(d.get("zero_error_coverage_ci"), pct=True)
+    acc_ci = interval_of(d, "accuracy_ci", pct=True)
+    ece_ci = interval_of(d, "ece_ci")
+    zec_ci = interval_of(d, "zero_error_coverage_ci", pct=True)
     lines = [
         f"# Audit report — {d['judge']}",
         "",
@@ -99,22 +147,25 @@ def render_markdown(result: AuditResult) -> str:
 
 
 def ci_lines(d: dict) -> list[str]:
-    """One line saying what the brackets are, only when a report shows them."""
+    """What the brackets are — and, when one appears, what a † or a ‡ means."""
     b = d.get("bootstrap")
     if not b:
         return []
+    marks = "".join(interval_of(d, k) for k in ("accuracy_ci", "ece_ci",
+                                                "zero_error_coverage_ci"))
     return ["", f"_Brackets are {b['level']:.0%} percentile-bootstrap intervals over the dataset's "
                 f"distinct texts ({b['n_boot']:,} resamples, seed {b['seed']}): how far the number "
-                f"would move on another sample of n={d['n']} drawn the same way._"]
+                f"would move on another sample of n={d['n']} drawn the same way._",
+            *[f"_{note}_" for note in interval_notes(marks)]]
 
 
 def render_html(result: AuditResult, tag: str = "") -> str:
     """Self-contained HTML report with base64-embedded charts. No network needed."""
     from .charts import accuracy_coverage_png, png_to_data_uri, reliability_diagram_png
     d = result.to_dict()
-    acc_ci = interval(d.get("accuracy_ci"), pct=True)
-    ece_ci = interval(d.get("ece_ci"))
-    zec_ci = interval(d.get("zero_error_coverage_ci"), pct=True)
+    acc_ci = interval_of(d, "accuracy_ci", pct=True)
+    ece_ci = interval_of(d, "ece_ci")
+    zec_ci = interval_of(d, "zero_error_coverage_ci", pct=True)
     ci_note = "".join(f"<p class=\"prov\">{html.escape(line.strip('_'))}</p>"
                       for line in ci_lines(d) if line)
     rel = png_to_data_uri(reliability_diagram_png(result))

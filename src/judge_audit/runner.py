@@ -14,8 +14,10 @@ from .judges.base import Judge, Question, QuestionType
 from .metrics.calibration import (
     CI_LEVEL,
     N_BOOT,
+    Interval,
     accuracy_ci,
     accuracy_coverage,
+    ci_fields,
     ece_ci,
     expected_calibration_error,
     reliability_bins,
@@ -43,10 +45,11 @@ class AuditResult:
     p50_latency_s: float = 0.0
     p99_latency_s: float = 0.0
     run: dict = field(default_factory=dict)
-    # 95 % bootstrap intervals (lo, hi) of the three headline numbers; None when skipped.
-    accuracy_ci: tuple[float, float] | None = None
-    ece_ci: tuple[float, float] | None = None
-    zero_error_coverage_ci: tuple[float, float] | None = None
+    # 95 % intervals (lo, hi) of the three headline numbers; None when skipped. Each
+    # knows its method (bootstrap, or exact at the boundary) and publishes it alongside.
+    accuracy_ci: Interval | None = None
+    ece_ci: Interval | None = None
+    zero_error_coverage_ci: Interval | None = None
     # One record per judged (row, question): the raw evidence behind the numbers.
     records: list[dict] = field(default_factory=list)
 
@@ -61,8 +64,9 @@ class AuditResult:
             "run": self.run,
         }
         if self.accuracy_ci is not None:
-            d.update(accuracy_ci=list(self.accuracy_ci), ece_ci=list(self.ece_ci),
-                     zero_error_coverage_ci=list(self.zero_error_coverage_ci),
+            d.update(**ci_fields("accuracy", self.accuracy_ci),
+                     **ci_fields("ece", self.ece_ci),
+                     **ci_fields("zero_error_coverage", self.zero_error_coverage_ci),
                      bootstrap=dict(BOOTSTRAP))
         return d
 

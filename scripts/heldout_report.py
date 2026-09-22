@@ -29,12 +29,13 @@ from judge_audit.ground_truth import parse_ground_truth  # noqa: E402
 from judge_audit.metrics.calibration import (  # noqa: E402
     N_BOOT,
     accuracy_ci,
+    ci_fields,
     ece_ci,
     expected_calibration_error,
     zero_error_coverage,
     zero_error_coverage_ci,
 )
-from judge_audit.report import interval  # noqa: E402
+from judge_audit.report import interval_of, with_interval_notes  # noqa: E402
 from judge_audit.runner import (  # noqa: E402
     is_correct,
     load_jsonl,
@@ -133,11 +134,6 @@ AMENDMENT = [
 ]
 
 
-def ci_of(ci: tuple[float, float] | None) -> list[float] | None:
-    """A (lo, hi) pair as a JSON list; None when the interval was not computed."""
-    return list(ci) if ci else None
-
-
 def training_texts(ds: str) -> set[str]:
     """State texts of the training half the fine-tuned model was trained on (index split)."""
     dataset = DATASET_OF[ds]
@@ -211,10 +207,11 @@ def summarize(recs: list[dict], dataset: str) -> dict:
     unseen = [r for r in recs if not r["text_contains_train"]]
     out = {
         "n": len(recs), "accuracy": round(sum(ok) / len(ok), 4),
-        # 95 % percentile-bootstrap intervals over distinct texts (seed 0).
-        "accuracy_ci": ci_of(accuracy_ci(ok, groups=groups)),
-        "ece_ci": ci_of(ece_ci(conf, ok, groups=groups)),
-        "zero_error_coverage_ci": ci_of(zero_error_coverage_ci(conf, ok, groups=groups)),
+        # 95 % intervals over distinct texts (seed 0), with the method that produced
+        # each one: exact binomial at 0 % / 100 %, clustered bootstrap elsewhere.
+        **ci_fields("accuracy", accuracy_ci(ok, groups=groups)),
+        **ci_fields("ece", ece_ci(conf, ok, groups=groups)),
+        **ci_fields("zero_error_coverage", zero_error_coverage_ci(conf, ok, groups=groups)),
         # Text-level overlap with the training half (the generators repeat texts, #54):
         # rows equal to a training text, rows containing one, and accuracy on the rest.
         "text_equal_train": sum(r["text_equal_train"] for r in recs),
@@ -582,10 +579,10 @@ def render(data: dict) -> str:
             method = j["method"] + (f" (T={s['temperature']:.2f})"
                                     if s.get("temperature", 1.0) != 1.0 else "")
             row = (f"| {label} | {method} | "
-                   f"{fmt(s['accuracy'], True)}{interval(s['accuracy_ci'], pct=True)} | "
-                   f"{fmt(s['ece'])}{interval(s['ece_ci'], digits=3)} | "
+                   f"{fmt(s['accuracy'], True)}{interval_of(s, 'accuracy_ci', pct=True)} | "
+                   f"{fmt(s['ece'])}{interval_of(s, 'ece_ci', digits=3)} | "
                    f"{fmt(s['zero_error_coverage'], True)}"
-                   f"{interval(s['zero_error_coverage_ci'], pct=True)} | "
+                   f"{interval_of(s, 'zero_error_coverage_ci', pct=True)} | "
                    f"{fmt(s['mean_conf_correct'])} / "
                    f"{fmt(s['mean_conf_wrong'])} | {s['no_answer']} |")
             if ds == "email-adversarial":
@@ -670,11 +667,11 @@ def render(data: dict) -> str:
                     continue
                 short = FINETUNED_RUNS[slug]["label"].split(" — ")[1]
                 L.append(f"| {title.split(' — ')[0]} ({s['scored']}, n={s['n']}) | {short} | "
-                         f"{fmt(s['accuracy'], True)}{interval(s['accuracy_ci'], pct=True)} | "
+                         f"{fmt(s['accuracy'], True)}{interval_of(s, 'accuracy_ci', pct=True)} | "
                          f"{fmt(s['accuracy_unseen_text'], True)} (n={s['unseen_text_n']}) | "
-                         f"{fmt(s['ece'])}{interval(s['ece_ci'], digits=3)} | "
+                         f"{fmt(s['ece'])}{interval_of(s, 'ece_ci', digits=3)} | "
                          f"{fmt(s['zero_error_coverage'], True)}"
-                         f"{interval(s['zero_error_coverage_ci'], pct=True)} | "
+                         f"{interval_of(s, 'zero_error_coverage_ci', pct=True)} | "
                          f"{fmt(s['mean_conf_correct'])} / "
                          f"{fmt(s['mean_conf_wrong'])} | {s['p50_latency_s']:.3f} s |")
         L.append("")
@@ -715,7 +712,7 @@ def render(data: dict) -> str:
           "1,069 s for 10 epochs; run 2's took 63 s for 15): read them as orders of magnitude, "
           "not as a benchmark.",
           ""]
-    return "\n".join(L)
+    return "\n".join(with_interval_notes(L))
 
 
 def main() -> None:

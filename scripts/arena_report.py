@@ -22,12 +22,13 @@ from judge_audit.ground_truth import GroundTruth, parse_ground_truth  # noqa: E4
 from judge_audit.metrics.calibration import (  # noqa: E402
     N_BOOT,
     accuracy_ci,
+    ci_fields,
     ece_ci,
     expected_calibration_error,
     zero_error_coverage,
     zero_error_coverage_ci,
 )
-from judge_audit.report import interval  # noqa: E402
+from judge_audit.report import interval_of, with_interval_notes  # noqa: E402
 from judge_audit.runner import (  # noqa: E402
     groups_of,
     is_correct,
@@ -104,10 +105,11 @@ def summarize(recs: list[dict], dataset: str, rows: list[dict] | None = None) ->
         "n": len(recs), "accuracy": round(sum(ok) / len(ok), 4),
         "ece": round(expected_calibration_error(conf, ok), 4),
         "zero_error_coverage": zero_error_coverage(conf, ok)["coverage"],
-        # 95 % percentile-bootstrap intervals (seed 0) over distinct texts, see docs/judges.md.
-        "accuracy_ci": list(accuracy_ci(ok, groups=groups)),
-        "ece_ci": list(ece_ci(conf, ok, groups=groups)),
-        "zero_error_coverage_ci": list(zero_error_coverage_ci(conf, ok, groups=groups)),
+        # 95 % intervals over distinct texts (seed 0), each with the method that
+        # produced it — exact at the boundary, bootstrap elsewhere; see docs/judges.md.
+        **ci_fields("accuracy", accuracy_ci(ok, groups=groups)),
+        **ci_fields("ece", ece_ci(conf, ok, groups=groups)),
+        **ci_fields("zero_error_coverage", zero_error_coverage_ci(conf, ok, groups=groups)),
         "mean_conf_correct": round(statistics.mean(right), 3) if right else None,
         "mean_conf_wrong": round(statistics.mean(wrong), 3) if wrong else None,
         "distinct_confidence_values": len(set(round(c, 2) for c in conf)),
@@ -122,10 +124,16 @@ def summarize(recs: list[dict], dataset: str, rows: list[dict] | None = None) ->
         clean = [r for r in recs if r["meta"].get("attack", "clean") == "clean"]
         se = [r for r in recs if r["meta"].get("attack") == "social_engineering"]
         out["prompt_injection_accuracy"] = round(sum(r["correct"] for r in pi) / len(pi), 4)
+        out.update(ci_fields("prompt_injection_accuracy",
+                             accuracy_ci([r["correct"] for r in pi],
+                                         groups=groups_of(pi, rows) if rows else None)))
         out["confidence_drop_under_injection"] = round(
             statistics.mean(r["confidence"] for r in clean)
             - statistics.mean(r["confidence"] for r in pi), 3)
         out["social_engineering_accuracy"] = round(sum(r["correct"] for r in se) / len(se), 4)
+        out.update(ci_fields("social_engineering_accuracy",
+                             accuracy_ci([r["correct"] for r in se],
+                                         groups=groups_of(se, rows) if rows else None)))
     if dataset.startswith("router"):
         hard = [r for r in recs if r["meta"].get("difficulty") == "hard"
                 and not r["meta"].get("adversarial")]
@@ -223,16 +231,18 @@ def render(judges: dict) -> str:
             if not s:
                 continue
             row = (f"| {j['label']} | {j['method']} | " +
-                   f"{fmt(s['accuracy'], True)}{interval(s['accuracy_ci'], pct=True)} | " +
-                   f"{fmt(s['ece'])}{interval(s['ece_ci'], digits=3)} | " +
+                   f"{fmt(s['accuracy'], True)}{interval_of(s, 'accuracy_ci', pct=True)} | " +
+                   f"{fmt(s['ece'])}{interval_of(s, 'ece_ci', digits=3)} | " +
                    f"{fmt(s['zero_error_coverage'], True)}" +
-                   f"{interval(s['zero_error_coverage_ci'], pct=True)} | {fmt(s['mean_conf_correct'])} / " +
+                   f"{interval_of(s, 'zero_error_coverage_ci', pct=True)} | {fmt(s['mean_conf_correct'])} / " +
                    f"{fmt(s['mean_conf_wrong'])} | {s['distinct_confidence_values']} | " +
                    f"{s['no_answer']} |")
             if ds == "email-adversarial":
-                row += (f" {fmt(s['prompt_injection_accuracy'], True)} | " +
+                row += (f" {fmt(s['prompt_injection_accuracy'], True)}" +
+                        f"{interval_of(s, 'prompt_injection_accuracy_ci', pct=True)} | " +
                         f"{s['confidence_drop_under_injection']:+.3f} | " +
-                        f"{fmt(s['social_engineering_accuracy'], True)} |")
+                        f"{fmt(s['social_engineering_accuracy'], True)}" +
+                        f"{interval_of(s, 'social_engineering_accuracy_ci', pct=True)} |")
             if ds.startswith("router"):
                 row += f" {s['hard_routed_strong']} / {s['hard_n']} | {s['attack_success']} / 40 |"
             L.append(row)
@@ -338,7 +348,7 @@ def render(judges: dict) -> str:
               + "; ".join(heldout_runs) + ". Every judge is re-scored on those same rows in "
               "[finetuned-baseline-2026-09.md](finetuned-baseline-2026-09.md).",
               ""]
-    return "\n".join(L)
+    return "\n".join(with_interval_notes(L))
 
 
 def main() -> None:

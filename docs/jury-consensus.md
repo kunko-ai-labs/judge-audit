@@ -17,13 +17,13 @@ Re-voted after seeing the panel: jev, claude-sonnet-4.5, deepseek-r1, gemini-3-f
 
 | judge | accuracy r1 → r2 | hard accuracy r1 → r2 | ECE r1 → r2 | conf when wrong r1 → r2 | no answer r1 / r2 | switched | → correct / → wrong | followed the panel majority |
 |---|---|---|---|---|---|---|---|---|
-| jev | 66.7% [52.5, 80.3] → 72.5% [58.8, 84.5] | 0.0% [0.0, 0.0] → 17.5% [0.0, 37.5] | 0.318 → 0.208 | 0.926 → 0.860 | 0 / 0 | 7 | 7 / 0 | 7 / 7 |
+| jev | 66.7% [52.5, 80.3] → 72.5% [58.8, 84.5] | 0.0% [0.0, 8.8]† → 17.5% [0.0, 37.5] | 0.318 → 0.208 | 0.926 → 0.860 | 0 / 0 | 7 | 7 / 0 | 7 / 7 |
 | claude-sonnet-4.5 | 65.8% [51.9, 78.7] → 70.0% [56.4, 82.1] | 15.0% [0.0, 34.2] → 25.0% [5.0, 47.5] | 0.235 → 0.231 | 0.832 → 0.877 | 0 / 0 | 5 | 5 / 0 | 4 / 5 |
 | deepseek-r1 | 55.8% [42.5, 68.2] → 55.0% [41.7, 68.2] | 55.0% [32.5, 77.5] → 12.5% [0.0, 29.7] | 0.373 → 0.379 | 0.888 → 0.916 | 1 / 1 | 33 | 16 / 17 | 31 / 33 |
 | gemini-3-flash | 66.7% [52.9, 80.0] → 66.7% [52.2, 79.7] | 7.5% [0.0, 22.5] → 20.0% [0.0, 42.5] | 0.315 → 0.305 | 0.965 → 0.930 | 0 / 0 | 12 | 6 / 6 | 11 / 12 |
 | gemma4 | 59.2% [46.2, 71.2] → 61.7% [48.4, 74.3] | 70.0% [46.2, 90.2] → 17.5% [0.0, 39.0] | 0.345 → 0.310 | 0.954 → 0.920 | 0 / 0 | 45 | 24 / 21 | 42 / 45 |
 | llama-3.3-70b | 65.0% [51.7, 76.7] → 55.0% [41.1, 69.0] | 72.5% [48.6, 92.9] → 7.5% [0.0, 22.5] | 0.233 → 0.390 | 0.926 → 0.936 | 0 / 0 | 42 | 15 / 27 | 39 / 42 |
-| llama32 | 65.8% [51.6, 79.2] → 66.7% [52.5, 80.3] | 0.0% [0.0, 0.0] → 0.0% [0.0, 0.0] | 0.396 → 0.282 | 1.000 → 0.829 | 0 / 0 | 1 | 1 / 0 | 0 / 1 |
+| llama32 | 65.8% [51.6, 79.2] → 66.7% [52.5, 80.3] | 0.0% [0.0, 8.8]† → 0.0% [0.0, 8.8]† | 0.396 → 0.282 | 1.000 → 0.829 | 0 / 0 | 1 | 1 / 0 | 0 / 1 |
 
 ## Task router, described options (n=120)
 
@@ -33,18 +33,18 @@ Re-voted after seeing the panel: jev, claude-sonnet-4.5, deepseek-r1, gemini-3-f
 |---|---|---|---|---|---|---|---|---|
 | all, round 1 | 70.4% | 18 (0) | 13 | 1 | 85.8% [77.7, 92.2] / 96.3% | 0.860 / 0.656 | 0.110 | 75.7% |
 | all, round 2 | 82.8% | 52 (0) | 5 | 1 | 95.0% [90.5, 98.4] / 99.1% | 0.920 / 0.750 | 0.073 | 92.2% |
-| hard, round 1 | 73.7% | 0 (0) | 0 | 0 | 100.0% [100.0, 100.0] / 100.0% | 0.866 / — | 0.134 | 100.0% |
-| hard, round 2 | 96.2% | 34 (0) | 0 | 1 | 100.0% [100.0, 100.0] / 100.0% | 0.981 / — | 0.019 | 100.0% |
+| hard, round 1 | 73.7% | 0 (0) | 0 | 0 | 100.0% [91.2, 100.0]† / 100.0% | 0.866 / — | 0.134 | 100.0% |
+| hard, round 2 | 96.2% | 34 (0) | 0 | 1 | 100.0% [91.2, 100.0]† / 100.0% | 0.981 / — | 0.019 | 100.0% |
 
 | judge | accuracy r1 → r2 | hard accuracy r1 → r2 | ECE r1 → r2 | conf when wrong r1 → r2 | no answer r1 / r2 | switched | → correct / → wrong | followed the panel majority |
 |---|---|---|---|---|---|---|---|---|
-| jev | 97.5% [91.9, 100.0] → 100.0% [100.0, 100.0] | 92.5% [76.9, 100.0] → 100.0% [100.0, 100.0] | 0.053 → 0.044 | 0.583 → — | 0 / 0 | 3 | 3 / 0 | 3 / 3 |
-| claude-sonnet-4.5 | 95.0% [90.3, 98.5] → 95.0% [90.3, 98.5] | 100.0% [100.0, 100.0] → 100.0% [100.0, 100.0] | 0.032 → 0.048 | 0.983 → 0.800 | 0 / 0 | 0 | 0 / 0 | 0 / 0 |
-| deepseek-r1 | 79.2% [69.9, 86.9] → 89.2% [82.3, 94.6] | 100.0% [100.0, 100.0] → 100.0% [100.0, 100.0] | 0.148 → 0.051 | 0.894 → 0.846 | 1 / 0 | 11 | 11 / 0 | 11 / 11 |
-| gemini-3-flash | 98.3% [95.5, 100.0] → 99.2% [97.2, 100.0] | 100.0% [100.0, 100.0] → 100.0% [100.0, 100.0] | 0.012 → 0.024 | 0.825 → 0.900 | 0 / 0 | 1 | 1 / 0 | 1 / 1 |
-| gemma4 | 77.5% [67.2, 87.1] → 93.3% [87.4, 97.6] | 100.0% [100.0, 100.0] → 100.0% [100.0, 100.0] | 0.180 → 0.027 | 0.981 → 0.912 | 0 / 0 | 21 | 20 / 1 | 21 / 21 |
-| llama-3.3-70b | 86.7% [78.5, 93.4] → 96.7% [93.0, 99.2] | 100.0% [100.0, 100.0] → 100.0% [100.0, 100.0] | 0.043 → 0.013 | 0.969 → 0.925 | 0 / 0 | 14 | 13 / 1 | 13 / 14 |
-| llama32 | 59.2% [45.5, 73.0] → 94.2% [86.4, 100.0] | 0.0% [0.0, 0.0] → 82.5% [61.0, 100.0] | 0.429 → 0.135 | 1.000 → 0.600 | 0 / 1 | 42 | 42 / 0 | 39 / 42 |
+| jev | 97.5% [91.9, 100.0] → 100.0% [97.0, 100.0]† | 92.5% [76.9, 100.0] → 100.0% [91.2, 100.0]† | 0.053 → 0.044 | 0.583 → — | 0 / 0 | 3 | 3 / 0 | 3 / 3 |
+| claude-sonnet-4.5 | 95.0% [90.3, 98.5] → 95.0% [90.3, 98.5] | 100.0% [91.2, 100.0]† → 100.0% [91.2, 100.0]† | 0.032 → 0.048 | 0.983 → 0.800 | 0 / 0 | 0 | 0 / 0 | 0 / 0 |
+| deepseek-r1 | 79.2% [69.9, 86.9] → 89.2% [82.3, 94.6] | 100.0% [91.2, 100.0]† → 100.0% [91.2, 100.0]† | 0.148 → 0.051 | 0.894 → 0.846 | 1 / 0 | 11 | 11 / 0 | 11 / 11 |
+| gemini-3-flash | 98.3% [95.5, 100.0] → 99.2% [97.2, 100.0] | 100.0% [91.2, 100.0]† → 100.0% [91.2, 100.0]† | 0.012 → 0.024 | 0.825 → 0.900 | 0 / 0 | 1 | 1 / 0 | 1 / 1 |
+| gemma4 | 77.5% [67.2, 87.1] → 93.3% [87.4, 97.6] | 100.0% [91.2, 100.0]† → 100.0% [91.2, 100.0]† | 0.180 → 0.027 | 0.981 → 0.912 | 0 / 0 | 21 | 20 / 1 | 21 / 21 |
+| llama-3.3-70b | 86.7% [78.5, 93.4] → 96.7% [93.0, 99.2] | 100.0% [91.2, 100.0]† → 100.0% [91.2, 100.0]† | 0.043 → 0.013 | 0.969 → 0.925 | 0 / 0 | 14 | 13 / 1 | 13 / 14 |
+| llama32 | 59.2% [45.5, 73.0] → 94.2% [86.4, 100.0] | 0.0% [0.0, 8.8]† → 82.5% [61.0, 100.0] | 0.429 → 0.135 | 1.000 → 0.600 | 0 / 1 | 42 | 42 / 0 | 39 / 42 |
 
 ## Results vs the pre-registered predictions
 
@@ -58,6 +58,7 @@ Scored mechanically from the tables above with the thresholds fixed in the plan'
 ## How to read it
 
 - **[a, b]** after an accuracy: 95 % percentile-bootstrap interval (2,000 resamples, seed 0) over the dataset's distinct texts — the 40 hard rows carry 14 of them, which is why these intervals are wide (`docs/judges.md` § Confidence intervals). Each interval is that round's own sampling noise; the two rounds are the same judges on the same rows, so what shows whether deliberation changed anything is the paired evidence in this table — the switch counts, where they landed, and how many followed the panel.
+- **†** exact 95 % Clopper–Pearson (binomial) interval, published where the estimate is 0 % or 100 % and the bootstrap collapses to a point. It assumes independent rows, so where the dataset repeats texts it is a *lower bound* on the width the clustered interval would have had.
 - A jury that deliberates well moves **majority accuracy** up and keeps **conf when wrong** low.
 - A jury that merely converges moves **pairwise agreement** and **unanimous** up while accuracy stays put — Shao's "nearly unanimous, mostly incorrect" in miniature.
 - **followed the panel majority** counts switches that landed on the majority of the votes the judge actually saw (committed in its `.r2.input.jsonl`): conformity, whether or not it was right.

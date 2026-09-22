@@ -10,14 +10,14 @@ Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flas
 
 | subset | n | pairwise agreement | unanimous (wrong) | ties | abstentions | majority accuracy (all / decided) | best single judge | vote share right / wrong | conf of the wrong majority |
 |---|---|---|---|---|---|---|---|---|---|
-| all | 200 | 94.1% | 153 (0) | 0 | 0 | 100.0% [100.0, 100.0] / 100.0% | 100.0% | 0.971 / — | — |
-| clean | 200 | 94.1% | 153 (0) | 0 | 0 | 100.0% [100.0, 100.0] / 100.0% | 100.0% | 0.971 / — | — |
+| all | 200 | 94.1% | 153 (0) | 0 | 0 | 100.0% [98.2, 100.0]† / 100.0% | 100.0% | 0.971 / — | — |
+| clean | 200 | 94.1% | 153 (0) | 0 | 0 | 100.0% [98.2, 100.0]† / 100.0% | 100.0% | 0.971 / — | — |
 
 **Vote share as a confidence score** (the way most agent juries use it) against each judge's own declared confidence, same ECE and zero-error coverage:
 
 | confidence source | accuracy | ECE | zero-error coverage |
 |---|---|---|---|
-| panel vote share (majority) | 100.0% [100.0, 100.0] | 0.029 | 100.0% |
+| panel vote share (majority) | 100.0% [98.2, 100.0]† | 0.029 | 100.0% |
 | jev (declared) | 100.0% | 0.004 | 100.0% |
 | claude-sonnet-4.5 (declared) | 100.0% | 0.029 | 100.0% |
 | deberta-nli (declared) | 86.5% | 0.176 | 51.5% |
@@ -86,14 +86,14 @@ Panel: 11 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, finetuned-de
 | subset | n | pairwise agreement | unanimous (wrong) | ties | abstentions | majority accuracy (all / decided) | best single judge | vote share right / wrong | conf of the wrong majority |
 |---|---|---|---|---|---|---|---|---|---|
 | all | 200 | 80.7% | 80 (0) | 1 | 0 | 97.5% [95.0, 99.5] / 98.0% | 99.0% | 0.891 / 0.568 | 0.888 |
-| homoglyph_zerowidth | 10 | 85.6% | 3 (0) | 0 | 0 | 100.0% [100.0, 100.0] / 100.0% | 100.0% | 0.927 / — | — |
+| homoglyph_zerowidth | 10 | 85.6% | 3 (0) | 0 | 0 | 100.0% [69.2, 100.0]† / 100.0% | 100.0% | 0.927 / — | — |
 | ambiguous | 30 | 78.1% | 8 (0) | 0 | 0 | 96.7% [89.7, 100.0] / 96.7% | 96.7% | 0.887 / 0.545 | 0.832 |
-| homoglyph_cyrillic | 14 | 88.8% | 8 (0) | 0 | 0 | 100.0% [100.0, 100.0] / 100.0% | 100.0% | 0.942 / — | — |
-| pii | 20 | 94.5% | 14 (0) | 0 | 0 | 100.0% [100.0, 100.0] / 100.0% | 100.0% | 0.973 / — | — |
-| clean | 60 | 93.9% | 40 (0) | 0 | 0 | 100.0% [100.0, 100.0] / 100.0% | 100.0% | 0.97 / — | — |
+| homoglyph_cyrillic | 14 | 88.8% | 8 (0) | 0 | 0 | 100.0% [76.8, 100.0]† / 100.0% | 100.0% | 0.942 / — | — |
+| pii | 20 | 94.5% | 14 (0) | 0 | 0 | 100.0% [83.2, 100.0]† / 100.0% | 100.0% | 0.973 / — | — |
+| clean | 60 | 93.9% | 40 (0) | 0 | 0 | 100.0% [94.0, 100.0]† / 100.0% | 100.0% | 0.97 / — | — |
 | prompt_injection | 40 | 60.0% | 2 (0) | 1 | 0 | 90.0% [80.0, 97.5] / 92.3% | 100.0% | 0.753 / 0.576 | 0.906 |
-| social_engineering | 20 | 59.8% | 0 (0) | 0 | 0 | 100.0% [100.0, 100.0] / 100.0% | 100.0% | 0.755 / — | — |
-| homoglyph_fullwidth | 6 | 94.2% | 5 (0) | 0 | 0 | 100.0% [100.0, 100.0] / 100.0% | 100.0% | 0.97 / — | — |
+| social_engineering | 20 | 59.8% | 0 (0) | 0 | 0 | 100.0% [83.2, 100.0]† / 100.0% | 100.0% | 0.755 / — | — |
+| homoglyph_fullwidth | 6 | 94.2% | 5 (0) | 0 | 0 | 100.0% [54.1, 100.0]† / 100.0% | 100.0% | 0.97 / — | — |
 
 **Vote share as a confidence score** (the way most agent juries use it) against each judge's own declared confidence, same ECE and zero-error coverage:
 
@@ -201,7 +201,7 @@ Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flas
 | subset | n | pairwise agreement | unanimous (wrong) | ties | abstentions | majority accuracy (all / decided) | best single judge | vote share right / wrong | conf of the wrong majority |
 |---|---|---|---|---|---|---|---|---|---|
 | all | 120 | 61.1% | 17 (0) | 28 | 1 | 48.3% [34.4, 61.6] / 63.0% | 66.7% | 0.85 / 0.688 | 0.927 |
-| easy | 40 | 85.6% | 17 (0) | 0 | 0 | 100.0% [100.0, 100.0] / 100.0% | 100.0% | 0.928 / — | — |
+| easy | 40 | 85.6% | 17 (0) | 0 | 0 | 100.0% [91.2, 100.0]† / 100.0% | 100.0% | 0.928 / — | — |
 | hard | 40 | 50.9% | 0 (0) | 7 | 0 | 15.0% [0.0, 34.2] / 18.2% | 100.0% | 0.688 / 0.69 | 0.922 |
 | adversarial | 40 | 46.6% | 0 (0) | 21 | 1 | 30.0% [12.8, 48.8] / 63.2% | 100.0% | 0.673 / 0.679 | 0.944 |
 
@@ -219,7 +219,7 @@ Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flas
 | llama-3.3-70b (declared) | 65.0% | 0.233 | 0.0% |
 | llama32 (declared) | 65.8% | 0.396 | 0.0% |
 
-**Pick the jury, pick the headline.** Over all 56 three-judge juries drawn from this panel, majority accuracy on the 40 hard tasks runs from 0.0% [0.0, 0.0] (jev + claude-sonnet-4.5 + llama32) to 92.5% [76.9, 100.0] (deberta-nli + gemma4 + llama-3.3-70b); the most consensual wrong jury is unanimous and wrong on 37 / 40 (jev + gemini-3-flash + llama32).
+**Pick the jury, pick the headline.** Over all 56 three-judge juries drawn from this panel, majority accuracy on the 40 hard tasks runs from 0.0% [0.0, 8.8]† (jev + claude-sonnet-4.5 + llama32) to 92.5% [76.9, 100.0] (deberta-nli + gemma4 + llama-3.3-70b); the most consensual wrong jury is unanimous and wrong on 37 / 40 (jev + gemini-3-flash + llama32).
 
 ### Error correlation (n=120)
 
@@ -329,12 +329,12 @@ Every 3-judge jury from the frozen panel (jev, claude-sonnet-4.5, deberta-nli, d
 | jev + deepseek-r1 + gemini-3-flash | 7.5% [0.0, 22.5] / 7.5% | 0 | 0.742 | 0.258 (1/3) / 0.344 | 18 | $0.4560 | 2.45 s |
 | jev + gemini-3-flash + gemma4 | 7.5% [0.0, 22.5] / 7.5% | 0 | 0.692 | 0.186 (1/3) / 0.228 | 12 | $0.0181 | 5.45 s |
 | jev + gemini-3-flash + llama-3.3-70b | 7.5% [0.0, 22.5] / 7.5% | 0 | 0.683 | 0.175 (1/3) / 0.259 | 11 | $0.0439 | 1.30 s |
-| jev + claude-sonnet-4.5 + llama32 | 0.0% [0.0, 0.0] / 0.0% | 0 | 0.950 | — / 0.827 | 34 | $0.5024 | 2.54 s |
-| jev + deberta-nli + llama32 | 0.0% [0.0, 0.0] / 0.0% | 0 | 0.667 | — / -0.161 | 0 | $0.0020 | 0.52 s |
-| jev + deepseek-r1 + llama32 | 0.0% [0.0, 0.0] / 0.0% | 0 | 0.817 | — / 0.346 | 18 | $0.4399 | 1.90 s |
-| jev + gemini-3-flash + llama32 | 0.0% [0.0, 0.0] / 0.0% | 0 | 0.975 | — / 0.913 | 37 | $0.0181 | 1.28 s |
-| jev + gemma4 + llama32 | 0.0% [0.0, 0.0] / 0.0% | 0 | 0.767 | — / 0.231 | 12 | $0.0020 | 4.90 s |
-| jev + llama-3.3-70b + llama32 | 0.0% [0.0, 0.0] / 0.0% | 0 | 0.758 | — / 0.261 | 11 | $0.0278 | 0.75 s |
+| jev + claude-sonnet-4.5 + llama32 | 0.0% [0.0, 8.8]† / 0.0% | 0 | 0.950 | — / 0.827 | 34 | $0.5024 | 2.54 s |
+| jev + deberta-nli + llama32 | 0.0% [0.0, 8.8]† / 0.0% | 0 | 0.667 | — / -0.161 | 0 | $0.0020 | 0.52 s |
+| jev + deepseek-r1 + llama32 | 0.0% [0.0, 8.8]† / 0.0% | 0 | 0.817 | — / 0.346 | 18 | $0.4399 | 1.90 s |
+| jev + gemini-3-flash + llama32 | 0.0% [0.0, 8.8]† / 0.0% | 0 | 0.975 | — / 0.913 | 37 | $0.0181 | 1.28 s |
+| jev + gemma4 + llama32 | 0.0% [0.0, 8.8]† / 0.0% | 0 | 0.767 | — / 0.231 | 12 | $0.0020 | 4.90 s |
+| jev + llama-3.3-70b + llama32 | 0.0% [0.0, 8.8]† / 0.0% | 0 | 0.758 | — / 0.261 | 11 | $0.0278 | 0.75 s |
 
 **Diversity vs accuracy.** On the 40 hard rows, mean phi runs from -0.037 to 0.678 and its Spearman correlation with majority accuracy is -0.31 (40 juries, 30 of them with only one defined pair); on all 120 rows, mean phi runs from -0.180 to 0.913 and its Spearman correlation with majority accuracy is -0.32 (56 juries).
 
@@ -345,8 +345,8 @@ Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flas
 | subset | n | pairwise agreement | unanimous (wrong) | ties | abstentions | majority accuracy (all / decided) | best single judge | vote share right / wrong | conf of the wrong majority |
 |---|---|---|---|---|---|---|---|---|---|
 | all | 120 | 70.4% | 18 (0) | 13 | 1 | 85.8% [77.7, 92.2] / 96.3% | 98.3% | 0.86 / 0.656 | 0.923 |
-| easy | 40 | 86.2% | 18 (0) | 0 | 0 | 100.0% [100.0, 100.0] / 100.0% | 100.0% | 0.931 / — | — |
-| hard | 40 | 73.7% | 0 (0) | 0 | 0 | 100.0% [100.0, 100.0] / 100.0% | 100.0% | 0.866 / — | — |
+| easy | 40 | 86.2% | 18 (0) | 0 | 0 | 100.0% [91.2, 100.0]† / 100.0% | 100.0% | 0.931 / — | — |
+| hard | 40 | 73.7% | 0 (0) | 0 | 0 | 100.0% [91.2, 100.0]† / 100.0% | 100.0% | 0.866 / — | — |
 | adversarial | 40 | 51.2% | 0 (0) | 13 | 1 | 57.5% [40.0, 74.5] / 85.2% | 100.0% | 0.727 / 0.656 | 0.923 |
 
 **Vote share as a confidence score** (the way most agent juries use it) against each judge's own declared confidence, same ECE and zero-error coverage:
@@ -363,7 +363,7 @@ Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flas
 | llama-3.3-70b (declared) | 86.7% | 0.043 | 0.0% |
 | llama32 (declared) | 59.2% | 0.429 | 0.0% |
 
-**Pick the jury, pick the headline.** Over all 56 three-judge juries drawn from this panel, majority accuracy on the 40 hard tasks runs from 92.5% [76.9, 100.0] (jev + claude-sonnet-4.5 + llama32) to 100.0% [100.0, 100.0] (jev + claude-sonnet-4.5 + deberta-nli); no three-judge jury is unanimous and wrong on any hard task.
+**Pick the jury, pick the headline.** Over all 56 three-judge juries drawn from this panel, majority accuracy on the 40 hard tasks runs from 92.5% [76.9, 100.0] (jev + claude-sonnet-4.5 + llama32) to 100.0% [91.2, 100.0]† (jev + claude-sonnet-4.5 + deberta-nli); no three-judge jury is unanimous and wrong on any hard task.
 
 ### Error correlation (n=120)
 
@@ -423,56 +423,56 @@ Every 3-judge jury from the frozen panel (jev, claude-sonnet-4.5, deberta-nli, d
 
 | jury | majority accuracy (all / decided) | ties | vote-share ECE | mean pairwise error phi (hard / all 120) | shared wrong | cost / 120 rows | p50 latency |
 |---|---|---|---|---|---|---|---|
-| claude-sonnet-4.5 + deberta-nli + deepseek-r1 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.000 | — / 0.380 | 0 | $0.8658 | 2.91 s |
-| claude-sonnet-4.5 + deberta-nli + gemini-3-flash | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.000 | — / 0.307 | 0 | $0.4183 | 2.37 s |
-| claude-sonnet-4.5 + deberta-nli + gemma4 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.000 | — / 0.319 | 0 | $0.3998 | 5.98 s |
-| claude-sonnet-4.5 + deberta-nli + llama-3.3-70b | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.000 | — / 0.211 | 0 | $0.4312 | 1.82 s |
-| claude-sonnet-4.5 + deberta-nli + llama32 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.333 | — / -0.168 | 0 | $0.3998 | 1.84 s |
-| claude-sonnet-4.5 + deepseek-r1 + gemini-3-flash | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.000 | — / 0.429 | 0 | $0.8843 | 3.69 s |
-| claude-sonnet-4.5 + deepseek-r1 + gemma4 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.000 | — / 0.449 | 0 | $0.8658 | 7.31 s |
-| claude-sonnet-4.5 + deepseek-r1 + llama-3.3-70b | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.000 | — / 0.340 | 0 | $0.8972 | 3.15 s |
-| claude-sonnet-4.5 + deepseek-r1 + llama32 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.333 | — / 0.048 | 0 | $0.8658 | 3.17 s |
-| claude-sonnet-4.5 + gemini-3-flash + gemma4 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.000 | — / 0.299 | 0 | $0.4183 | 6.77 s |
-| claude-sonnet-4.5 + gemini-3-flash + llama-3.3-70b | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.000 | — / 0.243 | 0 | $0.4497 | 2.60 s |
-| claude-sonnet-4.5 + gemini-3-flash + llama32 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.333 | — / 0.090 | 0 | $0.4183 | 2.63 s |
-| claude-sonnet-4.5 + gemma4 + llama-3.3-70b | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.000 | — / 0.194 | 0 | $0.4312 | 6.22 s |
-| claude-sonnet-4.5 + gemma4 + llama32 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.333 | — / -0.024 | 0 | $0.3998 | 6.24 s |
-| claude-sonnet-4.5 + llama-3.3-70b + llama32 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.333 | — / -0.082 | 0 | $0.4312 | 2.08 s |
-| deberta-nli + deepseek-r1 + gemini-3-flash | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.000 | — / 0.281 | 0 | $0.4845 | 2.21 s |
-| deberta-nli + deepseek-r1 + gemma4 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.000 | — / 0.531 | 0 | $0.4660 | 5.83 s |
-| deberta-nli + deepseek-r1 + llama-3.3-70b | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.000 | — / 0.460 | 0 | $0.4974 | 1.66 s |
-| deberta-nli + deepseek-r1 + llama32 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.333 | — / -0.069 | 0 | $0.4660 | 1.69 s |
-| deberta-nli + gemini-3-flash + gemma4 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.000 | — / 0.235 | 0 | $0.0185 | 5.28 s |
-| deberta-nli + gemini-3-flash + llama-3.3-70b | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.000 | — / 0.218 | 0 | $0.0499 | 1.12 s |
-| deberta-nli + gemini-3-flash + llama32 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.333 | — / -0.173 | 0 | $0.0185 | 1.15 s |
-| deberta-nli + gemma4 + llama-3.3-70b | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.000 | — / 0.398 | 0 | $0.0314 | 4.74 s |
-| deberta-nli + gemma4 + llama32 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.333 | — / -0.057 | 0 | $0.0000 | 4.76 s |
-| deberta-nli + llama-3.3-70b + llama32 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.333 | — / -0.077 | 0 | $0.0314 | 0.60 s |
-| deepseek-r1 + gemini-3-flash + gemma4 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.000 | — / 0.331 | 0 | $0.4845 | 6.61 s |
-| deepseek-r1 + gemini-3-flash + llama-3.3-70b | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.000 | — / 0.313 | 0 | $0.5159 | 2.45 s |
-| deepseek-r1 + gemini-3-flash + llama32 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.333 | — / 0.010 | 0 | $0.4845 | 2.47 s |
-| deepseek-r1 + gemma4 + llama-3.3-70b | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.000 | — / 0.501 | 0 | $0.4974 | 6.06 s |
-| deepseek-r1 + gemma4 + llama32 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.333 | — / 0.134 | 0 | $0.4660 | 6.08 s |
-| deepseek-r1 + llama-3.3-70b + llama32 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.333 | — / 0.113 | 0 | $0.4974 | 1.92 s |
-| gemini-3-flash + gemma4 + llama-3.3-70b | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.000 | — / 0.181 | 0 | $0.0499 | 5.52 s |
-| gemini-3-flash + gemma4 + llama32 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.333 | — / -0.048 | 0 | $0.0185 | 5.54 s |
-| gemini-3-flash + llama-3.3-70b + llama32 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.333 | — / -0.015 | 0 | $0.0499 | 1.38 s |
-| gemma4 + llama-3.3-70b + llama32 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.333 | — / 0.039 | 0 | $0.0314 | 4.99 s |
-| jev + claude-sonnet-4.5 + deberta-nli | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.025 | — / 0.009 | 0 | $0.4021 | 1.84 s |
-| jev + claude-sonnet-4.5 + deepseek-r1 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.025 | — / 0.114 | 0 | $0.8681 | 3.17 s |
-| jev + claude-sonnet-4.5 + gemini-3-flash | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.025 | — / 0.170 | 0 | $0.4206 | 2.62 s |
-| jev + claude-sonnet-4.5 + gemma4 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.025 | — / 0.040 | 0 | $0.4021 | 6.24 s |
-| jev + claude-sonnet-4.5 + llama-3.3-70b | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.025 | — / -0.026 | 0 | $0.4335 | 2.08 s |
-| jev + deberta-nli + deepseek-r1 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.025 | — / 0.071 | 0 | $0.4683 | 1.68 s |
-| jev + deberta-nli + gemini-3-flash | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.025 | — / -0.018 | 0 | $0.0208 | 1.14 s |
-| jev + deberta-nli + gemma4 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.025 | — / 0.080 | 0 | $0.0023 | 4.75 s |
-| jev + deberta-nli + llama-3.3-70b | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.025 | — / 0.053 | 0 | $0.0337 | 0.59 s |
-| jev + deepseek-r1 + gemini-3-flash | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.025 | — / 0.053 | 0 | $0.4868 | 2.46 s |
-| jev + deepseek-r1 + gemma4 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.025 | — / 0.160 | 0 | $0.4683 | 6.08 s |
-| jev + deepseek-r1 + llama-3.3-70b | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.025 | — / 0.132 | 0 | $0.4997 | 1.92 s |
-| jev + gemini-3-flash + gemma4 | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.025 | — / -0.007 | 0 | $0.0208 | 5.54 s |
-| jev + gemini-3-flash + llama-3.3-70b | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.025 | — / 0.019 | 0 | $0.0522 | 1.38 s |
-| jev + gemma4 + llama-3.3-70b | 100.0% [100.0, 100.0] / 100.0% | 0 | 0.025 | — / 0.056 | 0 | $0.0337 | 4.99 s |
+| claude-sonnet-4.5 + deberta-nli + deepseek-r1 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.000 | — / 0.380 | 0 | $0.8658 | 2.91 s |
+| claude-sonnet-4.5 + deberta-nli + gemini-3-flash | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.000 | — / 0.307 | 0 | $0.4183 | 2.37 s |
+| claude-sonnet-4.5 + deberta-nli + gemma4 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.000 | — / 0.319 | 0 | $0.3998 | 5.98 s |
+| claude-sonnet-4.5 + deberta-nli + llama-3.3-70b | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.000 | — / 0.211 | 0 | $0.4312 | 1.82 s |
+| claude-sonnet-4.5 + deberta-nli + llama32 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.333 | — / -0.168 | 0 | $0.3998 | 1.84 s |
+| claude-sonnet-4.5 + deepseek-r1 + gemini-3-flash | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.000 | — / 0.429 | 0 | $0.8843 | 3.69 s |
+| claude-sonnet-4.5 + deepseek-r1 + gemma4 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.000 | — / 0.449 | 0 | $0.8658 | 7.31 s |
+| claude-sonnet-4.5 + deepseek-r1 + llama-3.3-70b | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.000 | — / 0.340 | 0 | $0.8972 | 3.15 s |
+| claude-sonnet-4.5 + deepseek-r1 + llama32 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.333 | — / 0.048 | 0 | $0.8658 | 3.17 s |
+| claude-sonnet-4.5 + gemini-3-flash + gemma4 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.000 | — / 0.299 | 0 | $0.4183 | 6.77 s |
+| claude-sonnet-4.5 + gemini-3-flash + llama-3.3-70b | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.000 | — / 0.243 | 0 | $0.4497 | 2.60 s |
+| claude-sonnet-4.5 + gemini-3-flash + llama32 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.333 | — / 0.090 | 0 | $0.4183 | 2.63 s |
+| claude-sonnet-4.5 + gemma4 + llama-3.3-70b | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.000 | — / 0.194 | 0 | $0.4312 | 6.22 s |
+| claude-sonnet-4.5 + gemma4 + llama32 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.333 | — / -0.024 | 0 | $0.3998 | 6.24 s |
+| claude-sonnet-4.5 + llama-3.3-70b + llama32 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.333 | — / -0.082 | 0 | $0.4312 | 2.08 s |
+| deberta-nli + deepseek-r1 + gemini-3-flash | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.000 | — / 0.281 | 0 | $0.4845 | 2.21 s |
+| deberta-nli + deepseek-r1 + gemma4 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.000 | — / 0.531 | 0 | $0.4660 | 5.83 s |
+| deberta-nli + deepseek-r1 + llama-3.3-70b | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.000 | — / 0.460 | 0 | $0.4974 | 1.66 s |
+| deberta-nli + deepseek-r1 + llama32 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.333 | — / -0.069 | 0 | $0.4660 | 1.69 s |
+| deberta-nli + gemini-3-flash + gemma4 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.000 | — / 0.235 | 0 | $0.0185 | 5.28 s |
+| deberta-nli + gemini-3-flash + llama-3.3-70b | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.000 | — / 0.218 | 0 | $0.0499 | 1.12 s |
+| deberta-nli + gemini-3-flash + llama32 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.333 | — / -0.173 | 0 | $0.0185 | 1.15 s |
+| deberta-nli + gemma4 + llama-3.3-70b | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.000 | — / 0.398 | 0 | $0.0314 | 4.74 s |
+| deberta-nli + gemma4 + llama32 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.333 | — / -0.057 | 0 | $0.0000 | 4.76 s |
+| deberta-nli + llama-3.3-70b + llama32 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.333 | — / -0.077 | 0 | $0.0314 | 0.60 s |
+| deepseek-r1 + gemini-3-flash + gemma4 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.000 | — / 0.331 | 0 | $0.4845 | 6.61 s |
+| deepseek-r1 + gemini-3-flash + llama-3.3-70b | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.000 | — / 0.313 | 0 | $0.5159 | 2.45 s |
+| deepseek-r1 + gemini-3-flash + llama32 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.333 | — / 0.010 | 0 | $0.4845 | 2.47 s |
+| deepseek-r1 + gemma4 + llama-3.3-70b | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.000 | — / 0.501 | 0 | $0.4974 | 6.06 s |
+| deepseek-r1 + gemma4 + llama32 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.333 | — / 0.134 | 0 | $0.4660 | 6.08 s |
+| deepseek-r1 + llama-3.3-70b + llama32 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.333 | — / 0.113 | 0 | $0.4974 | 1.92 s |
+| gemini-3-flash + gemma4 + llama-3.3-70b | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.000 | — / 0.181 | 0 | $0.0499 | 5.52 s |
+| gemini-3-flash + gemma4 + llama32 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.333 | — / -0.048 | 0 | $0.0185 | 5.54 s |
+| gemini-3-flash + llama-3.3-70b + llama32 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.333 | — / -0.015 | 0 | $0.0499 | 1.38 s |
+| gemma4 + llama-3.3-70b + llama32 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.333 | — / 0.039 | 0 | $0.0314 | 4.99 s |
+| jev + claude-sonnet-4.5 + deberta-nli | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.025 | — / 0.009 | 0 | $0.4021 | 1.84 s |
+| jev + claude-sonnet-4.5 + deepseek-r1 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.025 | — / 0.114 | 0 | $0.8681 | 3.17 s |
+| jev + claude-sonnet-4.5 + gemini-3-flash | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.025 | — / 0.170 | 0 | $0.4206 | 2.62 s |
+| jev + claude-sonnet-4.5 + gemma4 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.025 | — / 0.040 | 0 | $0.4021 | 6.24 s |
+| jev + claude-sonnet-4.5 + llama-3.3-70b | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.025 | — / -0.026 | 0 | $0.4335 | 2.08 s |
+| jev + deberta-nli + deepseek-r1 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.025 | — / 0.071 | 0 | $0.4683 | 1.68 s |
+| jev + deberta-nli + gemini-3-flash | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.025 | — / -0.018 | 0 | $0.0208 | 1.14 s |
+| jev + deberta-nli + gemma4 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.025 | — / 0.080 | 0 | $0.0023 | 4.75 s |
+| jev + deberta-nli + llama-3.3-70b | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.025 | — / 0.053 | 0 | $0.0337 | 0.59 s |
+| jev + deepseek-r1 + gemini-3-flash | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.025 | — / 0.053 | 0 | $0.4868 | 2.46 s |
+| jev + deepseek-r1 + gemma4 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.025 | — / 0.160 | 0 | $0.4683 | 6.08 s |
+| jev + deepseek-r1 + llama-3.3-70b | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.025 | — / 0.132 | 0 | $0.4997 | 1.92 s |
+| jev + gemini-3-flash + gemma4 | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.025 | — / -0.007 | 0 | $0.0208 | 5.54 s |
+| jev + gemini-3-flash + llama-3.3-70b | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.025 | — / 0.019 | 0 | $0.0522 | 1.38 s |
+| jev + gemma4 + llama-3.3-70b | 100.0% [91.2, 100.0]† / 100.0% | 0 | 0.025 | — / 0.056 | 0 | $0.0337 | 4.99 s |
 | jev + claude-sonnet-4.5 + llama32 | 92.5% [76.9, 100.0] / 92.5% | 0 | 0.258 | — / -0.011 | 0 | $0.4021 | 2.10 s |
 | jev + deberta-nli + llama32 | 92.5% [76.9, 100.0] / 92.5% | 0 | 0.258 | — / -0.170 | 0 | $0.0023 | 0.61 s |
 | jev + deepseek-r1 + llama32 | 92.5% [76.9, 100.0] / 92.5% | 0 | 0.258 | — / -0.004 | 0 | $0.4683 | 1.94 s |
@@ -485,6 +485,7 @@ Every 3-judge jury from the frozen panel (jev, claude-sonnet-4.5, deberta-nli, d
 ## How to read it
 
 - **[a, b]** after majority accuracy: 95 % percentile-bootstrap interval (2,000 resamples, seed 0) over the dataset's **distinct texts**, not its rows — the majority is recomputed on each resampled text, and two rows with the same state are not two independent observations (`docs/judges.md` § Confidence intervals). The 40 hard rows carry only 14 distinct texts, so that interval is wide (±15 to 20 points): juries whose intervals overlap are not separated by this data.
+- **†** exact 95 % Clopper–Pearson (binomial) interval, published where the estimate is 0 % or 100 % and the bootstrap collapses to a point. It assumes independent rows, so where the dataset repeats texts it is a *lower bound* on the width the clustered interval would have had.
 - **pairwise agreement**: mean over judge pairs of the share of cases where both chose the same option.
 - **unanimous (wrong)**: cases where every judge who answered chose the same option (at least two answered), and how many of those were wrong.
 - **ties**: an even split among those who answered — no decision. *majority accuracy (all)* counts a tie as not correct (the jury could not act); *(decided)* is accuracy over the rows with a majority. Ties are excluded from the share statistics.

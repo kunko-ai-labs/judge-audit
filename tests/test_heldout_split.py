@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 
+from judge_audit.metrics.calibration import clopper_pearson
+
 ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -119,7 +121,11 @@ def test_summarize_n1_and_all_correct_have_no_wrong_confidence():
     s = heldout_report.summarize([rec(0, "a", "a", 1.0)], "email-clean")
     assert s["n"] == 1 and s["accuracy"] == 1.0 and s["mean_conf_wrong"] is None
     assert s["zero_error_coverage"] == 1.0
-    assert s["accuracy_ci"] == [1.0, 1.0] and s["ece_ci"] == [0.0, 0.0]
+    # One row, all correct: the bootstrap cannot move, so accuracy gets the exact
+    # binomial interval and the (degenerate) ECE bootstrap says so.
+    assert s["accuracy_ci"] == list(clopper_pearson(1, 1))
+    assert s["accuracy_ci_method"] == "clopper-pearson"
+    assert s["ece_ci"] == [0.0, 0.0] and s["ece_ci_method"] == "bootstrap"
 
 
 def test_intervals_cluster_by_text_so_a_repeated_text_is_one_observation():

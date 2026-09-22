@@ -28,10 +28,11 @@ from arena_report import ARENA, DATASETS, JEV, records  # noqa: E402
 from judge_audit.metrics.calibration import (  # noqa: E402
     N_BOOT,
     accuracy_ci,
+    ci_fields,
     expected_calibration_error,
     zero_error_coverage,
 )
-from judge_audit.report import interval  # noqa: E402
+from judge_audit.report import interval_of, with_interval_notes  # noqa: E402
 from judge_audit.runner import is_correct, load_jsonl  # noqa: E402
 
 JURY_SIZE = 3
@@ -148,9 +149,11 @@ def panel_stats(votes: dict[str, list[dict]], rows: list[dict], question: str,
         "unanimous": unanimous, "unanimous_wrong": unanimous_wrong,
         "ties": ties, "abstentions": abstentions,
         "majority_accuracy": round(statistics.mean(maj_ok), 4),
-        # Bootstrap over rows: the majority is decided per row, so resampling rows and
-        # recomputing it equals resampling the per-row majority outcomes.
-        "majority_accuracy_ci": list(accuracy_ci(maj_ok, groups=state_groups(rows, idxs))),
+        # Bootstrap over texts: the majority is decided per row, so resampling texts and
+        # recomputing it equals resampling the per-row majority outcomes. A jury right (or
+        # wrong) on every row gets the exact binomial interval instead — see docs/judges.md.
+        **ci_fields("majority_accuracy", accuracy_ci(maj_ok,
+                                                     groups=state_groups(rows, idxs))),
         "majority_accuracy_decided": round(statistics.mean(decided_ok), 4) if decided_ok else None,
         "majority_wrong": sum(not ok for ok in maj_ok),
         "best_single_accuracy": round(max(
@@ -281,6 +284,7 @@ def jury_composition(votes: dict[str, list[dict]], rows: list[dict], question: s
             "jury": " + ".join(jury), "members": list(jury), "n": len(idxs),
             "majority_accuracy": s["majority_accuracy"],
             "majority_accuracy_ci": s["majority_accuracy_ci"],
+            "majority_accuracy_ci_method": s["majority_accuracy_ci_method"],
             "majority_accuracy_decided": s["majority_accuracy_decided"],
             "ties": s["ties"], "vote_share_ece": s["vote_share_ece"],
             "mean_phi": phi, "pairs_with_phi": k,
@@ -318,14 +322,15 @@ def jury_sensitivity(votes: dict[str, list[dict]], rows: list[dict], question: s
         s = panel_stats(sub, rows, question, idxs)
         key = " + ".join(jury)
         accs[key] = s["majority_accuracy"]
-        cis[key] = s["majority_accuracy_ci"]
+        cis[key] = {"ci": s["majority_accuracy_ci"],
+                    "ci_method": s["majority_accuracy_ci_method"]}
         unan_wrong[key] = s["unanimous_wrong"]
     lo, hi = min(accs, key=accs.get), max(accs, key=accs.get)
     uw_hi = max(unan_wrong, key=unan_wrong.get)
     return {
         "juries": len(accs),
-        "majority_accuracy_min": {"jury": lo, "value": accs[lo], "ci": cis[lo]},
-        "majority_accuracy_max": {"jury": hi, "value": accs[hi], "ci": cis[hi]},
+        "majority_accuracy_min": {"jury": lo, "value": accs[lo], **cis[lo]},
+        "majority_accuracy_max": {"jury": hi, "value": accs[hi], **cis[hi]},
         "unanimous_wrong_max": {"jury": uw_hi, "value": unan_wrong[uw_hi], "of": len(idxs)},
     }
 
@@ -443,7 +448,7 @@ def render_jury_composition(comp: dict, n: int) -> list[str]:
          "p50 latency |", "|---|---|---|---|---|---|---|---|"]
     for j in comp["juries"]:
         L.append(f"| {j['jury']} | {pct(j['majority_accuracy'])}" +
-                 f"{interval(j['majority_accuracy_ci'], pct=True)} / " +
+                 f"{interval_of(j, 'majority_accuracy_ci', pct=True)} / " +
                  f"{pct(j['majority_accuracy_decided'])} | {j['ties']} | {num(j['vote_share_ece'])} | " +
                  f"{phi_cell(j['mean_phi'], j['pairs_with_phi'])} / " +
                  f"{phi_cell(j['mean_phi_all'], j['pairs_with_phi_all'])} | {j['shared_wrong']} | " +
@@ -500,7 +505,7 @@ def render(data: dict) -> str:
         for name, s in [("all", p)] + list(e["subsets"].items()):
             L.append(f"| {name} | {s['n']} | {pct(s['pairwise_agreement'])} | " +
                      f"{s['unanimous']} ({s['unanimous_wrong']}) | {s['ties']} | {s['abstentions']} | " +
-                     f"{pct(s['majority_accuracy'])}{interval(s['majority_accuracy_ci'], pct=True)} / " +
+                     f"{pct(s['majority_accuracy'])}{interval_of(s, 'majority_accuracy_ci', pct=True)} / " +
                      f"{pct(s['majority_accuracy_decided'])} | " +
                      f"{pct(s['best_single_accuracy'])} | " +
                      f"{s['mean_share_when_right'] if s['mean_share_when_right'] is not None else '—'} / " +
@@ -510,7 +515,7 @@ def render(data: dict) -> str:
               "judge's own declared confidence, same ECE and zero-error coverage:", "",
               "| confidence source | accuracy | ECE | zero-error coverage |", "|---|---|---|---|",
               f"| panel vote share (majority) | {pct(p['majority_accuracy'])}" +
-              f"{interval(p['majority_accuracy_ci'], pct=True)} | {num(p['vote_share_ece'])} | " +
+              f"{interval_of(p, 'majority_accuracy_ci', pct=True)} | {num(p['vote_share_ece'])} | " +
               f"{pct(p['vote_share_zero_error_coverage'])} |"]
         for j, d in e["declared_confidence"].items():
             L.append(f"| {j} (declared) | {pct(d['accuracy'])} | {d['ece']:.3f} | {pct(d['zero_error_coverage'])} |")
@@ -523,10 +528,10 @@ def render(data: dict) -> str:
             L += ["", f"**Pick the jury, pick the headline.** Over all {hard['juries']} three-judge juries " +
                   f"drawn from this panel, majority accuracy on the {e['subsets']['hard']['n']} hard tasks runs from " +
                   f"{pct(hard['majority_accuracy_min']['value'])}" +
-                  f"{interval(hard['majority_accuracy_min']['ci'], pct=True)} " +
+                  f"{interval_of(hard['majority_accuracy_min'], 'ci', pct=True)} " +
                   f"({hard['majority_accuracy_min']['jury']}) to " +
                   f"{pct(hard['majority_accuracy_max']['value'])}" +
-                  f"{interval(hard['majority_accuracy_max']['ci'], pct=True)} " +
+                  f"{interval_of(hard['majority_accuracy_max'], 'ci', pct=True)} " +
                   f"({hard['majority_accuracy_max']['jury']}); " + tail]
         L += [""] + render_error_correlation(e["error_correlation"])
         comp = e["subsets"].get("hard", {}).get("jury_composition")
@@ -575,7 +580,7 @@ def render(data: dict) -> str:
           "(same-model juries are the documented failure mode — Smit et al., ICML 2024).",
           "- Round 1 only: nobody saw anybody else's vote. Round 2 (deliberation) is pre-registered in " +
           "`docs/jury-consensus-plan.md` and reported in `docs/jury-consensus.md` once run.", ""]
-    return "\n".join(L)
+    return "\n".join(with_interval_notes(L))
 
 
 def main() -> None:

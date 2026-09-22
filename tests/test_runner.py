@@ -6,7 +6,7 @@ import pytest
 
 from judge_audit.judges.base import Judge, Judgment, Question
 from judge_audit.judges.simulated import SimulatedJudge
-from judge_audit.metrics.calibration import accuracy_ci
+from judge_audit.metrics.calibration import accuracy_ci, clopper_pearson
 from judge_audit.runner import groups_of, load_jsonl, run_audit, summarize, write_judgments
 
 
@@ -72,11 +72,16 @@ def test_rows_without_a_label_for_the_question_are_skipped(tmp_path):
 def test_summary_carries_bootstrap_intervals_around_the_point_estimates(labels_path):
     rows = load_jsonl(str(labels_path))
     res = run_audit(ConstantJudge("quote_request", 0.9), rows, ci=True)
-    assert res.accuracy_ci == (1.0, 1.0)              # all correct: nothing to resample
-    assert res.ece_ci == (0.1, 0.1)
-    assert res.zero_error_coverage_ci == (1.0, 1.0)
+    # All correct: the bootstrap cannot move, so accuracy and zero-error coverage are
+    # published as exact binomial intervals and ECE keeps its (degenerate) bootstrap.
+    assert res.accuracy_ci == clopper_pearson(res.n, res.n)
+    assert res.accuracy_ci.method == "clopper-pearson"
+    assert res.ece_ci == (0.1, 0.1) and res.ece_ci.degenerate
+    assert res.zero_error_coverage_ci == clopper_pearson(res.n, res.n)
     d = res.to_dict()
-    assert d["accuracy_ci"] == [1.0, 1.0] and d["bootstrap"]["n_boot"] == 2000
+    assert d["accuracy_ci"] == list(clopper_pearson(res.n, res.n))
+    assert d["accuracy_ci_method"] == "clopper-pearson"
+    assert d["ece_ci_method"] == "bootstrap" and d["bootstrap"]["n_boot"] == 2000
     assert d["bootstrap"]["seed"] == 0 and d["bootstrap"]["level"] == 0.95
 
 

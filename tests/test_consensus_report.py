@@ -37,6 +37,7 @@ def test_panel_stats_ties_and_abstentions():
     assert s["ties"] == 1 and s["abstentions"] == 1
     assert s["majority_accuracy"] == 0.5   # row 0 tie = not correct; row 1 decided by y alone
     assert s["majority_accuracy_ci"] == [0.0, 1.0]   # two rows: every resample is 0, 50 or 100 %
+    assert s["majority_accuracy_ci_method"] == "bootstrap"
     assert s["majority_accuracy_decided"] == 1.0
     assert s["unanimous"] == 0                      # one voter is not unanimity
     assert s["mean_share_when_right"] == 1.0 and s["mean_share_when_wrong"] is None
@@ -260,5 +261,6 @@ def test_render_sections_survive_undefined_statistics():
                                    2)
     assert any("Spearman is undefined" in line for line in comp)
     text = "\n".join(comp)
-    assert "| p + q + r | 100.0% [100.0, 100.0] / 100.0% | 0 |" in text and "| — / — |" in text
+    # Right on both rows: the exact 2/2 interval, marked †, not a zero-width bootstrap.
+    assert "| p + q + r | 100.0% [15.8, 100.0]† / 100.0% | 0 |" in text and "| — / — |" in text
     assert spearman([], []) is None

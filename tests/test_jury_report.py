@@ -8,6 +8,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
 from jury_report import judge_stats, predictions, switch_stats  # noqa: E402
 
+from judge_audit.metrics.calibration import clopper_pearson  # noqa: E402
+
 
 def rec(decision, confidence, expected="b"):
     return {"decision": decision, "confidence": confidence,
@@ -15,11 +17,14 @@ def rec(decision, confidence, expected="b"):
 
 
 def test_judge_stats_empty_and_no_errors():
-    assert judge_stats([]) == {"accuracy": None, "accuracy_ci": None, "ece": None,
+    assert judge_stats([]) == {"accuracy": None, "accuracy_ci": None,
+                               "accuracy_ci_method": None, "ece": None,
                                "mean_conf_wrong": None}
     s = judge_stats([rec("b", 0.9), rec("b", 0.8)])
     assert s["accuracy"] == 1.0 and s["mean_conf_wrong"] is None
-    assert s["accuracy_ci"] == [1.0, 1.0]
+    # Two rows, both right: the exact interval, not the bootstrap's [1.0, 1.0].
+    assert s["accuracy_ci"] == list(clopper_pearson(2, 2))
+    assert s["accuracy_ci_method"] == "clopper-pearson"
 
 
 def test_switch_stats_ignores_blanks_and_scores_against_seen_panel():

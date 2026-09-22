@@ -19,9 +19,10 @@
       "abstentions": 0,
       "majority_accuracy": 1,
       "majority_accuracy_ci": [
-        1.0,
+        0.9817,
         1.0
       ],
+      "majority_accuracy_ci_method": "clopper-pearson",
       "majority_accuracy_decided": 1,
       "majority_wrong": 0,
       "best_single_accuracy": 1,
@@ -51,9 +52,10 @@
         "abstentions": 0,
         "majority_accuracy": 1,
         "majority_accuracy_ci": [
-          1.0,
+          0.9817,
           1.0
         ],
+        "majority_accuracy_ci_method": "clopper-pearson",
         "majority_accuracy_decided": 1,
         "majority_wrong": 0,
         "best_single_accuracy": 1,
@@ -563,6 +565,7 @@
         0.9505,
         0.9949
       ],
+      "majority_accuracy_ci_method": "bootstrap",
       "majority_accuracy_decided": 0.9799,
       "majority_wrong": 5,
       "best_single_accuracy": 0.99,
@@ -595,9 +598,10 @@
         "abstentions": 0,
         "majority_accuracy": 1,
         "majority_accuracy_ci": [
-          1.0,
+          0.6915,
           1.0
         ],
+        "majority_accuracy_ci_method": "clopper-pearson",
         "majority_accuracy_decided": 1,
         "majority_wrong": 0,
         "best_single_accuracy": 1,
@@ -632,6 +636,7 @@
           0.8966,
           1.0
         ],
+        "majority_accuracy_ci_method": "bootstrap",
         "majority_accuracy_decided": 0.9667,
         "majority_wrong": 1,
         "best_single_accuracy": 0.9667,
@@ -663,9 +668,10 @@
         "abstentions": 0,
         "majority_accuracy": 1,
         "majority_accuracy_ci": [
-          1.0,
+          0.7684,
           1.0
         ],
+        "majority_accuracy_ci_method": "clopper-pearson",
         "majority_accuracy_decided": 1,
         "majority_wrong": 0,
         "best_single_accuracy": 1,
@@ -697,9 +703,10 @@
         "abstentions": 0,
         "majority_accuracy": 1,
         "majority_accuracy_ci": [
-          1.0,
+          0.8316,
           1.0
         ],
+        "majority_accuracy_ci_method": "clopper-pearson",
         "majority_accuracy_decided": 1,
         "majority_wrong": 0,
         "best_single_accuracy": 1,
@@ -731,9 +738,10 @@
         "abstentions": 0,
         "majority_accuracy": 1,
         "majority_accuracy_ci": [
-          1.0,
+          0.9404,
           1.0
         ],
+        "majority_accuracy_ci_method": "clopper-pearson",
         "majority_accuracy_decided": 1,
         "majority_wrong": 0,
         "best_single_accuracy": 1,
@@ -768,6 +776,7 @@
           0.8,
           0.975
         ],
+        "majority_accuracy_ci_method": "bootstrap",
         "majority_accuracy_decided": 0.9231,
         "majority_wrong": 4,
         "best_single_accuracy": 1,
@@ -799,9 +808,10 @@
         "abstentions": 0,
         "majority_accuracy": 1,
         "majority_accuracy_ci": [
-          1.0,
+          0.8316,
           1.0
         ],
+        "majority_accuracy_ci_method": "clopper-pearson",
         "majority_accuracy_decided": 1,
         "majority_wrong": 0,
         "best_single_accuracy": 1,
@@ -833,9 +843,10 @@
         "abstentions": 0,
         "majority_accuracy": 1,
         "majority_accuracy_ci": [
-          1.0,
+          0.5407,
           1.0
         ],
+        "majority_accuracy_ci_method": "clopper-pearson",
         "majority_accuracy_decided": 1,
         "majority_wrong": 0,
         "best_single_accuracy": 1,
@@ -1741,6 +1752,7 @@
         0.3442,
         0.616
       ],
+      "majority_accuracy_ci_method": "bootstrap",
       "majority_accuracy_decided": 0.6304,
       "majority_wrong": 62,
       "best_single_accuracy": 0.6667,
@@ -1770,9 +1782,10 @@
         "abstentions": 0,
         "majority_accuracy": 1,
         "majority_accuracy_ci": [
-          1.0,
+          0.9119,
           1.0
         ],
+        "majority_accuracy_ci_method": "clopper-pearson",
         "majority_accuracy_decided": 1,
         "majority_wrong": 0,
         "best_single_accuracy": 1,
@@ -1804,6 +1817,7 @@
           0.0,
           0.3415
         ],
+        "majority_accuracy_ci_method": "bootstrap",
         "majority_accuracy_decided": 0.1818,
         "majority_wrong": 34,
         "best_single_accuracy": 1,
@@ -1819,8 +1833,9 @@
             "value": 0,
             "ci": [
               0.0,
-              0.0
-            ]
+              0.0881
+            ],
+            "ci_method": "clopper-pearson"
           },
           "majority_accuracy_max": {
             "jury": "deberta-nli + gemma4 + llama-3.3-70b",
@@ -1828,7 +1843,8 @@
             "ci": [
               0.7691,
               1.0
-            ]
+            ],
+            "ci_method": "bootstrap"
           },
           "unanimous_wrong_max": {
             "jury": "jev + gemini-3-flash + llama32",
@@ -1862,6 +1878,7 @@
                 0.7691,
                 1.0
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.925,
               "ties": 0,
               "vote_share_ece": 0.0917,
@@ -1887,6 +1904,7 @@
                 0.675,
                 1.0
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.875,
               "ties": 0,
               "vote_share_ece": 0.075,
@@ -1912,6 +1930,7 @@
                 0.575,
                 0.9487
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.775,
               "ties": 0,
               "vote_share_ece": 0.05,
@@ -1937,6 +1956,7 @@
                 0.4862,
                 0.9286
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.725,
               "ties": 0,
               "vote_share_ece": 0.0083,
@@ -1962,6 +1982,7 @@
                 0.4862,
                 0.9286
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.725,
               "ties": 0,
               "vote_share_ece": 0.0333,
@@ -1987,6 +2008,7 @@
                 0.4862,
                 0.9286
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.725,
               "ties": 0,
               "vote_share_ece": 0.0583,
@@ -2012,6 +2034,7 @@
                 0.5122,
                 0.9024
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.725,
               "ties": 0,
               "vote_share_ece": 0.075,
@@ -2037,6 +2060,7 @@
                 0.4862,
                 0.9286
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.725,
               "ties": 0,
               "vote_share_ece": 0.0583,
@@ -2062,6 +2086,7 @@
                 0.4615,
                 0.9025
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.7,
               "ties": 0,
               "vote_share_ece": 0.0167,
@@ -2087,6 +2112,7 @@
                 0.4615,
                 0.9025
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.7,
               "ties": 0,
               "vote_share_ece": 0.0083,
@@ -2112,6 +2138,7 @@
                 0.4615,
                 0.9025
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.7,
               "ties": 0,
               "vote_share_ece": 0.0333,
@@ -2137,6 +2164,7 @@
                 0.4615,
                 0.9025
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.7,
               "ties": 0,
               "vote_share_ece": 0.0333,
@@ -2162,6 +2190,7 @@
                 0.325,
                 0.775
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.55,
               "ties": 0,
               "vote_share_ece": 0.1667,
@@ -2187,6 +2216,7 @@
                 0.325,
                 0.775
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.55,
               "ties": 0,
               "vote_share_ece": 0.1417,
@@ -2212,6 +2242,7 @@
                 0.325,
                 0.775
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.55,
               "ties": 0,
               "vote_share_ece": 0.1167,
@@ -2237,6 +2268,7 @@
                 0.325,
                 0.775
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.55,
               "ties": 0,
               "vote_share_ece": 0.1167,
@@ -2262,6 +2294,7 @@
                 0.25,
                 0.7436
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.5,
               "ties": 0,
               "vote_share_ece": 0.2417,
@@ -2287,6 +2320,7 @@
                 0.25,
                 0.7436
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.5,
               "ties": 0,
               "vote_share_ece": 0.2167,
@@ -2312,6 +2346,7 @@
                 0.25,
                 0.7436
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.5,
               "ties": 0,
               "vote_share_ece": 0.1917,
@@ -2337,6 +2372,7 @@
                 0.25,
                 0.7436
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.5,
               "ties": 0,
               "vote_share_ece": 0.1917,
@@ -2362,6 +2398,7 @@
                 0.2381,
                 0.725
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.475,
               "ties": 0,
               "vote_share_ece": 0.3167,
@@ -2387,6 +2424,7 @@
                 0.2381,
                 0.725
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.475,
               "ties": 0,
               "vote_share_ece": 0.2917,
@@ -2412,6 +2450,7 @@
                 0.2381,
                 0.725
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.475,
               "ties": 0,
               "vote_share_ece": 0.2667,
@@ -2437,6 +2476,7 @@
                 0.2381,
                 0.725
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.475,
               "ties": 0,
               "vote_share_ece": 0.2667,
@@ -2462,6 +2502,7 @@
                 0.175,
                 0.6341
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.4,
               "ties": 0,
               "vote_share_ece": 0.3583,
@@ -2487,6 +2528,7 @@
                 0.175,
                 0.6341
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.4,
               "ties": 0,
               "vote_share_ece": 0.3333,
@@ -2512,6 +2554,7 @@
                 0.175,
                 0.6341
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.4,
               "ties": 0,
               "vote_share_ece": 0.3083,
@@ -2537,6 +2580,7 @@
                 0.175,
                 0.6341
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.4,
               "ties": 0,
               "vote_share_ece": 0.3083,
@@ -2562,6 +2606,7 @@
                 0.0,
                 0.3415
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.15,
               "ties": 0,
               "vote_share_ece": 0.5417,
@@ -2587,6 +2632,7 @@
                 0.0,
                 0.3415
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.15,
               "ties": 0,
               "vote_share_ece": 0.5167,
@@ -2612,6 +2658,7 @@
                 0.0,
                 0.3415
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.15,
               "ties": 0,
               "vote_share_ece": 0.6917,
@@ -2637,6 +2684,7 @@
                 0.0,
                 0.3415
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.15,
               "ties": 0,
               "vote_share_ece": 0.6667,
@@ -2662,6 +2710,7 @@
                 0.0,
                 0.3415
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.15,
               "ties": 0,
               "vote_share_ece": 0.6417,
@@ -2687,6 +2736,7 @@
                 0.0,
                 0.3415
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.15,
               "ties": 0,
               "vote_share_ece": 0.6333,
@@ -2712,6 +2762,7 @@
                 0.0,
                 0.3415
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.15,
               "ties": 0,
               "vote_share_ece": 0.6167,
@@ -2737,6 +2788,7 @@
                 0.0,
                 0.3415
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.15,
               "ties": 0,
               "vote_share_ece": 0.6083,
@@ -2762,6 +2814,7 @@
                 0.0,
                 0.3415
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.15,
               "ties": 0,
               "vote_share_ece": 0.5167,
@@ -2787,6 +2840,7 @@
                 0.0,
                 0.3415
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.15,
               "ties": 0,
               "vote_share_ece": 0.6667,
@@ -2812,6 +2866,7 @@
                 0.0,
                 0.3415
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.15,
               "ties": 0,
               "vote_share_ece": 0.6167,
@@ -2837,6 +2892,7 @@
                 0.0,
                 0.3415
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.15,
               "ties": 0,
               "vote_share_ece": 0.6083,
@@ -2862,6 +2918,7 @@
                 0.0,
                 0.225
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.075,
               "ties": 0,
               "vote_share_ece": 0.875,
@@ -2887,6 +2944,7 @@
                 0.0,
                 0.225
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.075,
               "ties": 0,
               "vote_share_ece": 0.5917,
@@ -2912,6 +2970,7 @@
                 0.0,
                 0.225
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.075,
               "ties": 0,
               "vote_share_ece": 0.7417,
@@ -2937,6 +2996,7 @@
                 0.0,
                 0.225
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.075,
               "ties": 0,
               "vote_share_ece": 0.6917,
@@ -2962,6 +3022,7 @@
                 0.0,
                 0.225
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.075,
               "ties": 0,
               "vote_share_ece": 0.6833,
@@ -2987,6 +3048,7 @@
                 0.0,
                 0.225
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.075,
               "ties": 0,
               "vote_share_ece": 0.875,
@@ -3012,6 +3074,7 @@
                 0.0,
                 0.225
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.075,
               "ties": 0,
               "vote_share_ece": 0.5917,
@@ -3037,6 +3100,7 @@
                 0.0,
                 0.225
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.075,
               "ties": 0,
               "vote_share_ece": 0.7417,
@@ -3062,6 +3126,7 @@
                 0.0,
                 0.225
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.075,
               "ties": 0,
               "vote_share_ece": 0.6917,
@@ -3087,6 +3152,7 @@
                 0.0,
                 0.225
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.075,
               "ties": 0,
               "vote_share_ece": 0.6833,
@@ -3110,8 +3176,9 @@
               "majority_accuracy": 0,
               "majority_accuracy_ci": [
                 0.0,
-                0.0
+                0.0881
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 0,
               "ties": 0,
               "vote_share_ece": 0.95,
@@ -3135,8 +3202,9 @@
               "majority_accuracy": 0,
               "majority_accuracy_ci": [
                 0.0,
-                0.0
+                0.0881
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 0,
               "ties": 0,
               "vote_share_ece": 0.6667,
@@ -3160,8 +3228,9 @@
               "majority_accuracy": 0,
               "majority_accuracy_ci": [
                 0.0,
-                0.0
+                0.0881
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 0,
               "ties": 0,
               "vote_share_ece": 0.8167,
@@ -3185,8 +3254,9 @@
               "majority_accuracy": 0,
               "majority_accuracy_ci": [
                 0.0,
-                0.0
+                0.0881
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 0,
               "ties": 0,
               "vote_share_ece": 0.975,
@@ -3210,8 +3280,9 @@
               "majority_accuracy": 0,
               "majority_accuracy_ci": [
                 0.0,
-                0.0
+                0.0881
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 0,
               "ties": 0,
               "vote_share_ece": 0.7667,
@@ -3235,8 +3306,9 @@
               "majority_accuracy": 0,
               "majority_accuracy_ci": [
                 0.0,
-                0.0
+                0.0881
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 0,
               "ties": 0,
               "vote_share_ece": 0.7583,
@@ -3282,6 +3354,7 @@
           0.1282,
           0.4878
         ],
+        "majority_accuracy_ci_method": "bootstrap",
         "majority_accuracy_decided": 0.6316,
         "majority_wrong": 28,
         "best_single_accuracy": 1,
@@ -3788,6 +3861,7 @@
         0.7768,
         0.9217
       ],
+      "majority_accuracy_ci_method": "bootstrap",
       "majority_accuracy_decided": 0.9626,
       "majority_wrong": 17,
       "best_single_accuracy": 0.9833,
@@ -3817,9 +3891,10 @@
         "abstentions": 0,
         "majority_accuracy": 1,
         "majority_accuracy_ci": [
-          1.0,
+          0.9119,
           1.0
         ],
+        "majority_accuracy_ci_method": "clopper-pearson",
         "majority_accuracy_decided": 1,
         "majority_wrong": 0,
         "best_single_accuracy": 1,
@@ -3848,9 +3923,10 @@
         "abstentions": 0,
         "majority_accuracy": 1,
         "majority_accuracy_ci": [
-          1.0,
+          0.9119,
           1.0
         ],
+        "majority_accuracy_ci_method": "clopper-pearson",
         "majority_accuracy_decided": 1,
         "majority_wrong": 0,
         "best_single_accuracy": 1,
@@ -3867,15 +3943,17 @@
             "ci": [
               0.7692,
               1.0
-            ]
+            ],
+            "ci_method": "bootstrap"
           },
           "majority_accuracy_max": {
             "jury": "jev + claude-sonnet-4.5 + deberta-nli",
             "value": 1,
             "ci": [
-              1.0,
+              0.9119,
               1.0
-            ]
+            ],
+            "ci_method": "clopper-pearson"
           },
           "unanimous_wrong_max": {
             "jury": "jev + claude-sonnet-4.5 + deberta-nli",
@@ -3906,9 +3984,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.0,
@@ -3931,9 +4010,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.0,
@@ -3956,9 +4036,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.0,
@@ -3981,9 +4062,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.0,
@@ -4006,9 +4088,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.3333,
@@ -4031,9 +4114,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.0,
@@ -4056,9 +4140,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.0,
@@ -4081,9 +4166,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.0,
@@ -4106,9 +4192,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.3333,
@@ -4131,9 +4218,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.0,
@@ -4156,9 +4244,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.0,
@@ -4181,9 +4270,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.3333,
@@ -4206,9 +4296,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.0,
@@ -4231,9 +4322,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.3333,
@@ -4256,9 +4348,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.3333,
@@ -4281,9 +4374,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.0,
@@ -4306,9 +4400,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.0,
@@ -4331,9 +4426,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.0,
@@ -4356,9 +4452,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.3333,
@@ -4381,9 +4478,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.0,
@@ -4406,9 +4504,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.0,
@@ -4431,9 +4530,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.3333,
@@ -4456,9 +4556,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.0,
@@ -4481,9 +4582,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.3333,
@@ -4506,9 +4608,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.3333,
@@ -4531,9 +4634,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.0,
@@ -4556,9 +4660,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.0,
@@ -4581,9 +4686,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.3333,
@@ -4606,9 +4712,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.0,
@@ -4631,9 +4738,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.3333,
@@ -4656,9 +4764,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.3333,
@@ -4681,9 +4790,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.0,
@@ -4706,9 +4816,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.3333,
@@ -4731,9 +4842,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.3333,
@@ -4756,9 +4868,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.3333,
@@ -4781,9 +4894,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.025,
@@ -4806,9 +4920,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.025,
@@ -4831,9 +4946,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.025,
@@ -4856,9 +4972,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.025,
@@ -4881,9 +4998,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.025,
@@ -4906,9 +5024,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.025,
@@ -4931,9 +5050,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.025,
@@ -4956,9 +5076,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.025,
@@ -4981,9 +5102,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.025,
@@ -5006,9 +5128,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.025,
@@ -5031,9 +5154,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.025,
@@ -5056,9 +5180,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.025,
@@ -5081,9 +5206,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.025,
@@ -5106,9 +5232,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.025,
@@ -5131,9 +5258,10 @@
               "n": 40,
               "majority_accuracy": 1,
               "majority_accuracy_ci": [
-                1.0,
+                0.9119,
                 1.0
               ],
+              "majority_accuracy_ci_method": "clopper-pearson",
               "majority_accuracy_decided": 1,
               "ties": 0,
               "vote_share_ece": 0.025,
@@ -5159,6 +5287,7 @@
                 0.7692,
                 1.0
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.925,
               "ties": 0,
               "vote_share_ece": 0.2583,
@@ -5184,6 +5313,7 @@
                 0.7692,
                 1.0
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.925,
               "ties": 0,
               "vote_share_ece": 0.2583,
@@ -5209,6 +5339,7 @@
                 0.7692,
                 1.0
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.925,
               "ties": 0,
               "vote_share_ece": 0.2583,
@@ -5234,6 +5365,7 @@
                 0.7692,
                 1.0
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.925,
               "ties": 0,
               "vote_share_ece": 0.2583,
@@ -5259,6 +5391,7 @@
                 0.7692,
                 1.0
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.925,
               "ties": 0,
               "vote_share_ece": 0.2583,
@@ -5284,6 +5417,7 @@
                 0.7692,
                 1.0
               ],
+              "majority_accuracy_ci_method": "bootstrap",
               "majority_accuracy_decided": 0.925,
               "ties": 0,
               "vote_share_ece": 0.2583,
@@ -5329,6 +5463,7 @@
           0.4,
           0.7448
         ],
+        "majority_accuracy_ci_method": "bootstrap",
         "majority_accuracy_decided": 0.8519,
         "majority_wrong": 17,
         "best_single_accuracy": 1,
