@@ -67,15 +67,30 @@ def accuracy_coverage(confidences: list[float], correct: list[bool],
 
 
 def zero_error_coverage(confidences: list[float], correct: list[bool]) -> dict:
-    """Largest most-confident prefix with zero observed errors (nikhilmudholkar metric)."""
+    """Largest most-confident prefix with zero observed errors (nikhilmudholkar metric).
+
+    Order-independent: rows are walked from the top in groups of equal confidence and a
+    group counts only when every row in it is correct and no error was seen above it. A
+    tie is one threshold — you cannot automate half of the rows that say 0.9 — so the
+    prefix is cut at whole groups and shuffling the input never changes the result.
+    `threshold` is the lowest confidence in the covered prefix (None when it is empty).
+    """
+    if not confidences:
+        return {"coverage": 0.0, "n": 0, "threshold": None}
     order = sorted(range(len(confidences)), key=lambda j: confidences[j], reverse=True)
-    k = 0
-    for j in order:
-        if not correct[j]:
+    k, threshold = 0, None
+    i, n = 0, len(order)
+    while i < n:
+        c = confidences[order[i]]
+        end, clean = i, True  # the group is the contiguous run of rows at confidence c
+        while end < n and confidences[order[end]] == c:
+            clean = clean and correct[order[end]]
+            end += 1
+        if not clean:
             break
-        k += 1
-    return {"coverage": round(k / len(order), 4) if order else 0.0, "n": k,
-            "threshold": round(confidences[order[k - 1]], 4) if k else None}
+        k, threshold, i = end, c, end
+    return {"coverage": round(k / n, 4), "n": k,
+            "threshold": round(threshold, 4) if k else None}
 
 
 # --- uncertainty: percentile bootstrap over rows or over groups of rows ----------------

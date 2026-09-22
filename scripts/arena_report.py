@@ -299,7 +299,9 @@ def render(judges: dict) -> str:
           "budget). They count as wrong at confidence 0 in every other column; this one keeps " +
           "format failures visible apart from judgment quality.",
           "- **zero-error coverage**: the most-confident share of decisions with no observed error — " +
-          "the automation budget. Retrospective on this dataset.",
+          "the automation budget. Cut at whole confidence groups: a group of tied confidences counts " +
+          "only if every decision in it is right, so the number does not depend on row order. " +
+          "Retrospective on this dataset.",
           "- Costs are as reported by each adapter (vendor list price for Jev; $0 for local models; " +
           "list price for known hosted chat models).",
           "",

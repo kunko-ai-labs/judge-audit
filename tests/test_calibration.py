@@ -1,6 +1,8 @@
 """Metrics on inputs whose answer is known by hand."""
 from __future__ import annotations
 
+import random
+
 import pytest
 
 from judge_audit.metrics.calibration import (
@@ -63,6 +65,42 @@ def test_zero_error_coverage_stops_at_first_error():
 
 def test_zero_error_coverage_empty():
     assert zero_error_coverage([], []) == {"coverage": 0.0, "n": 0, "threshold": None}
+
+
+def test_zero_error_coverage_is_permutation_invariant():
+    # Ties at 0.9 with one error inside the tie: the old prefix cut depended on which
+    # of the tied rows the sort happened to put first.
+    conf = [0.9, 0.9, 0.9, 0.8, 0.7, 0.7, 0.5]
+    ok = [True, False, True, True, True, False, True]
+    expected = zero_error_coverage(conf, ok)
+    rng = random.Random(1)
+    for _ in range(50):
+        idx = list(range(len(conf)))
+        rng.shuffle(idx)
+        shuffled = zero_error_coverage([conf[i] for i in idx], [ok[i] for i in idx])
+        assert shuffled == expected
+
+
+def test_zero_error_coverage_cuts_at_whole_confidence_groups():
+    # Groups from the top: {0.9, 0.9} all correct -> in; {0.8, 0.8, 0.8} has an error -> out,
+    # and nothing below it counts even though the 0.7 row is correct.
+    conf = [0.9, 0.9, 0.8, 0.8, 0.8, 0.7]
+    ok = [True, True, True, False, True, True]
+    assert zero_error_coverage(conf, ok) == {"coverage": 0.3333, "n": 2, "threshold": 0.9}
+    # An error inside the top group -> nothing is covered, even though the group has correct rows.
+    assert zero_error_coverage([0.9, 0.9, 0.5], [True, False, True]) == {
+        "coverage": 0.0, "n": 0, "threshold": None}
+    # With no ties the group rule is the classic first-error prefix.
+    assert zero_error_coverage([0.9, 0.8, 0.7], [True, True, False]) == {
+        "coverage": 0.6667, "n": 2, "threshold": 0.8}
+
+
+def test_zero_error_coverage_degenerate_inputs():
+    assert zero_error_coverage([0.7], [True]) == {"coverage": 1.0, "n": 1, "threshold": 0.7}
+    assert zero_error_coverage([0.7], [False]) == {"coverage": 0.0, "n": 0, "threshold": None}
+    # All tied and all correct: the whole set is one group.
+    assert zero_error_coverage([0.5, 0.5, 0.5], [True, True, True]) == {
+        "coverage": 1.0, "n": 3, "threshold": 0.5}
 
 
 def test_mismatched_lengths_are_a_bug_not_a_silent_truncation():

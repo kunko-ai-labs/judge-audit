@@ -150,7 +150,7 @@ Accuracy tells you who wins a benchmark. Calibration tells you what you can auto
 
 ## Roadmap
 
-Score questions + MCE (the regulator's number) → Judge Arena as a living leaderboard with a submission spec (the first table is above) → AI Act evidence dossier. Details and reasons in [docs/ROADMAP.md](docs/ROADMAP.md); the live backlog is the issues.
+Score questions + MCE (the number we propose for regulators) → Judge Arena as a living leaderboard with a submission spec (the first table is above) → AI Act evidence dossier. Details and reasons in [docs/ROADMAP.md](docs/ROADMAP.md); the live backlog is the issues.
 
 ## FAQ
 

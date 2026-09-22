@@ -923,7 +923,7 @@
       "mean_share_when_wrong": 0.656,
       "mean_conf_of_wrong_majority": 0.923,
       "vote_share_ece": 0.1101,
-      "vote_share_zero_error_coverage": 0.8318
+      "vote_share_zero_error_coverage": 0.757
     },
     "panel_round2": {
       "n": 120,
@@ -954,7 +954,7 @@
       "mean_share_when_wrong": 0.75,
       "mean_conf_of_wrong_majority": 0.844,
       "vote_share_ece": 0.0728,
-      "vote_share_zero_error_coverage": 0.9304
+      "vote_share_zero_error_coverage": 0.9217
     },
     "hard_round1": {
       "n": 40,
