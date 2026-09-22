@@ -183,13 +183,18 @@ def _comparable(current: dict, base: dict) -> list[str]:
     cj, bj = current.get("judge", {}), base.get("judge", {})
     cd, bd = current.get("dataset", {}), base.get("dataset", {})
     pairs = [
-        ("dataset sha256_rows", cd.get("sha256_rows"), bd.get("sha256_rows")),
-        ("dataset sha256", cd.get("sha256"), bd.get("sha256")),
         ("judge name", cj.get("name"), bj.get("name")),
         ("judge model", cj.get("model"), bj.get("model")),
     ]
-    return [f"{what}: {b!r} in the baseline, {c!r} now"
-            for what, c, b in pairs if c is not None and b is not None and c != b]
+    out = [f"{what}: {b!r} in the baseline, {c!r} now"
+           for what, c, b in pairs if c is not None and b is not None and c != b]
+    # The dataset matches when any recorded digest matches any other: a run made before
+    # the ground-truth header line recorded the whole file, which is today's rows digest.
+    cur = {cd.get("sha256"), cd.get("sha256_rows")} - {None}
+    old = {bd.get("sha256"), bd.get("sha256_rows")} - {None}
+    if cur and old and not (cur & old):
+        out.append(f"dataset sha256: {sorted(old)[0]!r} in the baseline, {sorted(cur)[0]!r} now")
+    return out
 
 
 def _finite(value: object, what: str) -> float:

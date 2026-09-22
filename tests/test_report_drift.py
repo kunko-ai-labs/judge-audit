@@ -62,8 +62,18 @@ def test_same_run_against_itself_is_compatible_and_has_no_failures(tmp_path):
 
 def test_a_different_dataset_is_refused(tmp_path):
     with pytest.raises(IncompatibleBaseline) as e:
-        check_drift(result(), baseline(tmp_path, sha256_rows="cc" * 32))
-    assert "sha256_rows" in str(e.value) and "--allow-incompatible" in str(e.value)
+        check_drift(result(), baseline(tmp_path, sha256="cc" * 32, sha256_rows="dd" * 32))
+    assert "sha256" in str(e.value) and "--allow-incompatible" in str(e.value)
+
+
+def test_a_pre_header_baseline_matches_by_rows_digest(tmp_path):
+    """A baseline written before the ground-truth header recorded the whole file;
+    that digest is today's rows digest, so it is the same measurement."""
+    path = Path(baseline(tmp_path, sha256="bb" * 32))
+    d = json.loads(path.read_text(encoding="utf-8"))
+    del d["run"]["dataset"]["sha256_rows"]
+    path.write_text(json.dumps(d), encoding="utf-8")
+    assert check_drift(result(), str(path)) == []
 
 
 def test_a_different_dataset_file_is_refused_when_only_sha256_is_recorded(tmp_path):
