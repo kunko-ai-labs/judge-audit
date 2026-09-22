@@ -21,7 +21,12 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from arena_report import DATASETS, records  # noqa: E402
 from consensus_report import by_row, majority, panel_stats, votes_of  # noqa: E402
 
-from judge_audit.metrics.calibration import expected_calibration_error  # noqa: E402
+from judge_audit.metrics.calibration import (  # noqa: E402
+    N_BOOT,
+    accuracy_ci,
+    expected_calibration_error,
+)
+from judge_audit.report import interval  # noqa: E402
 from judge_audit.runner import load_jsonl  # noqa: E402
 
 JURY = ROOT / "docs" / "runs" / "jury"
@@ -30,9 +35,10 @@ ROUND2_DATASETS = ("router-bare", "router-described")
 
 def judge_stats(recs: list[dict]) -> dict:
     if not recs:
-        return {"accuracy": None, "ece": None, "mean_conf_wrong": None}
+        return {"accuracy": None, "accuracy_ci": None, "ece": None, "mean_conf_wrong": None}
     wrong = [r["confidence"] for r in recs if not r["correct"]]
     return {"accuracy": round(statistics.mean(r["correct"] for r in recs), 4),
+            "accuracy_ci": list(accuracy_ci([r["correct"] for r in recs])),
             "ece": round(expected_calibration_error([r["confidence"] for r in recs],
                                                     [r["correct"] for r in recs]), 4),
             "mean_conf_wrong": round(statistics.mean(wrong), 3) if wrong else None}
@@ -118,6 +124,11 @@ def num(x):
     return "—" if x is None else f"{x:.3f}"
 
 
+def acc_ci(stats: dict) -> str:
+    """`86.7% [80.0, 92.5]` from a judge_stats dict."""
+    return pct(stats["accuracy"]) + interval(stats.get("accuracy_ci"), pct=True)
+
+
 def render(data: dict) -> str:
     names = {"router-bare": "Task router, bare option labels (n=120)",
              "router-described": "Task router, described options (n=120)"}
@@ -148,7 +159,8 @@ def render(data: dict) -> str:
             s = e[key]
             L.append(f"| {label} | {pct(s['pairwise_agreement'])} | {s['unanimous']} ({s['unanimous_wrong']}) | " +
                      f"{s['ties']} | {s['abstentions']} | " +
-                     f"{pct(s['majority_accuracy'])} / {pct(s['majority_accuracy_decided'])} | " +
+                     f"{pct(s['majority_accuracy'])}{interval(s['majority_accuracy_ci'], pct=True)} / " +
+                     f"{pct(s['majority_accuracy_decided'])} | " +
                      f"{num(s['mean_share_when_right'])} / " +
                      f"{num(s['mean_share_when_wrong'])} | {num(s['vote_share_ece'])} | " +
                      f"{pct(s['vote_share_zero_error_coverage'])} |")
@@ -157,8 +169,8 @@ def render(data: dict) -> str:
               "followed the panel majority |",
               "|---|---|---|---|---|---|---|---|---|"]
         for slug, j in e["judges"].items():
-            L.append(f"| {slug} | {pct(j['round1']['accuracy'])} → {pct(j['round2']['accuracy'])} | " +
-                     f"{pct(j['hard_round1']['accuracy'])} → {pct(j['hard_round2']['accuracy'])} | " +
+            L.append(f"| {slug} | {acc_ci(j['round1'])} → {acc_ci(j['round2'])} | " +
+                     f"{acc_ci(j['hard_round1'])} → {acc_ci(j['hard_round2'])} | " +
                      f"{num(j['round1']['ece'])} → {num(j['round2']['ece'])} | " +
                      f"{num(j['round1']['mean_conf_wrong'])} → {num(j['round2']['mean_conf_wrong'])} | " +
                      f"{j['no_answer_round1']} / {j['no_answer_round2']} | " +
@@ -167,6 +179,9 @@ def render(data: dict) -> str:
         L.append("")
     L += predictions(data)
     L += ["## How to read it", "",
+          f"- **[a, b]** after an accuracy: 95 % percentile-bootstrap interval over rows ({N_BOOT:,} " +
+          "resamples, seed 0). On 40 hard rows it is about ±15 points wide: a round-1 → round-2 move " +
+          "inside it is not evidence of a change.",
           "- A jury that deliberates well moves **majority accuracy** up and keeps **conf when wrong** low.",
           "- A jury that merely converges moves **pairwise agreement** and **unanimous** up while accuracy " +
           "stays put — Shao's \"nearly unanimous, mostly incorrect\" in miniature.",

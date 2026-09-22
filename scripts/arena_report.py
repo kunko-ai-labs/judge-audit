@@ -20,9 +20,14 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from judge_audit.ground_truth import GroundTruth, parse_ground_truth  # noqa: E402
 from judge_audit.metrics.calibration import (  # noqa: E402
+    N_BOOT,
+    accuracy_ci,
+    ece_ci,
     expected_calibration_error,
     zero_error_coverage,
+    zero_error_coverage_ci,
 )
+from judge_audit.report import interval  # noqa: E402
 from judge_audit.runner import is_correct, load_jsonl, read_dataset_header  # noqa: E402
 
 DATASETS = {
@@ -77,6 +82,10 @@ def summarize(recs: list[dict], dataset: str) -> dict:
         "n": len(recs), "accuracy": round(sum(ok) / len(ok), 4),
         "ece": round(expected_calibration_error(conf, ok), 4),
         "zero_error_coverage": zero_error_coverage(conf, ok)["coverage"],
+        # 95 % percentile-bootstrap intervals over rows (seed 0), see docs/judges.md.
+        "accuracy_ci": list(accuracy_ci(ok)),
+        "ece_ci": list(ece_ci(conf, ok)),
+        "zero_error_coverage_ci": list(zero_error_coverage_ci(conf, ok)),
         "mean_conf_correct": round(statistics.mean(right), 3) if right else None,
         "mean_conf_wrong": round(statistics.mean(wrong), 3) if wrong else None,
         "distinct_confidence_values": len(set(round(c, 2) for c in conf)),
@@ -181,8 +190,11 @@ def render(judges: dict) -> str:
             s = j["datasets"].get(ds)
             if not s:
                 continue
-            row = (f"| {j['label']} | {j['method']} | {fmt(s['accuracy'], True)} | {fmt(s['ece'])} | " +
-                   f"{fmt(s['zero_error_coverage'], True)} | {fmt(s['mean_conf_correct'])} / " +
+            row = (f"| {j['label']} | {j['method']} | " +
+                   f"{fmt(s['accuracy'], True)}{interval(s['accuracy_ci'], pct=True)} | " +
+                   f"{fmt(s['ece'])}{interval(s['ece_ci'], digits=3)} | " +
+                   f"{fmt(s['zero_error_coverage'], True)}" +
+                   f"{interval(s['zero_error_coverage_ci'], pct=True)} | {fmt(s['mean_conf_correct'])} / " +
                    f"{fmt(s['mean_conf_wrong'])} | {s['distinct_confidence_values']} | " +
                    f"{s['no_answer']} |")
             if ds == "email-adversarial":
@@ -236,6 +248,11 @@ def render(judges: dict) -> str:
           "- **Mistral** — not requested by anyone yet.",
           "",
           "## How to read it", "",
+          "- **[a, b]** after accuracy, ECE and zero-error coverage: 95 % percentile-bootstrap " +
+          f"interval over rows ({N_BOOT:,} resamples, seed 0) — how far the number would move on " +
+          "another sample of this size. Two judges whose intervals overlap are not separated by this " +
+          "data. Zero-error coverage hinges on the single most-confident error, so its interval can be " +
+          "very wide when that error sits among many equally confident right answers.",
           "- **ECE**: 0 = confidence equals accuracy in every bin. Above ~0.1 the number is decoration.",
           "- **conf right / wrong**: an honest judge has a visible gap. A gap of zero or negative means " +
           "confidence carries no information about correctness.",

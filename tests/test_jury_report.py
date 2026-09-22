@@ -15,9 +15,11 @@ def rec(decision, confidence, expected="b"):
 
 
 def test_judge_stats_empty_and_no_errors():
-    assert judge_stats([]) == {"accuracy": None, "ece": None, "mean_conf_wrong": None}
+    assert judge_stats([]) == {"accuracy": None, "accuracy_ci": None, "ece": None,
+                               "mean_conf_wrong": None}
     s = judge_stats([rec("b", 0.9), rec("b", 0.8)])
     assert s["accuracy"] == 1.0 and s["mean_conf_wrong"] is None
+    assert s["accuracy_ci"] == [1.0, 1.0]
 
 
 def test_switch_stats_ignores_blanks_and_scores_against_seen_panel():
