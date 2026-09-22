@@ -1,0 +1,260 @@
+{
+  "judge": "finetuned",
+  "n": 200,
+  "accuracy": 0.97,
+  "ece": 0.4961,
+  "reliability_bins": [
+    {
+      "bin": "0.0-0.1",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.1-0.2",
+      "avg_confidence": 0.1602,
+      "accuracy": 0.4,
+      "n": 10
+    },
+    {
+      "bin": "0.2-0.3",
+      "avg_confidence": 0.2278,
+      "accuracy": 1.0,
+      "n": 21
+    },
+    {
+      "bin": "0.3-0.4",
+      "avg_confidence": 0.3641,
+      "accuracy": 1.0,
+      "n": 30
+    },
+    {
+      "bin": "0.4-0.5",
+      "avg_confidence": 0.4485,
+      "accuracy": 1.0,
+      "n": 33
+    },
+    {
+      "bin": "0.5-0.6",
+      "avg_confidence": 0.5414,
+      "accuracy": 1.0,
+      "n": 70
+    },
+    {
+      "bin": "0.6-0.7",
+      "avg_confidence": 0.6467,
+      "accuracy": 1.0,
+      "n": 20
+    },
+    {
+      "bin": "0.7-0.8",
+      "avg_confidence": 0.7398,
+      "accuracy": 1.0,
+      "n": 16
+    },
+    {
+      "bin": "0.8-0.9",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.9-1.0",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    }
+  ],
+  "accuracy_coverage": [
+    {
+      "coverage": 0.05,
+      "accuracy": 1.0,
+      "n": 10,
+      "min_confidence": 0.7451
+    },
+    {
+      "coverage": 0.1,
+      "accuracy": 1.0,
+      "n": 20,
+      "min_confidence": 0.6606
+    },
+    {
+      "coverage": 0.15,
+      "accuracy": 1.0,
+      "n": 30,
+      "min_confidence": 0.6277
+    },
+    {
+      "coverage": 0.2,
+      "accuracy": 1.0,
+      "n": 40,
+      "min_confidence": 0.5957
+    },
+    {
+      "coverage": 0.25,
+      "accuracy": 1.0,
+      "n": 50,
+      "min_confidence": 0.5607
+    },
+    {
+      "coverage": 0.3,
+      "accuracy": 1.0,
+      "n": 60,
+      "min_confidence": 0.5514
+    },
+    {
+      "coverage": 0.35,
+      "accuracy": 1.0,
+      "n": 70,
+      "min_confidence": 0.5436
+    },
+    {
+      "coverage": 0.4,
+      "accuracy": 1.0,
+      "n": 80,
+      "min_confidence": 0.5297
+    },
+    {
+      "coverage": 0.45,
+      "accuracy": 1.0,
+      "n": 90,
+      "min_confidence": 0.5194
+    },
+    {
+      "coverage": 0.5,
+      "accuracy": 1.0,
+      "n": 100,
+      "min_confidence": 0.5078
+    },
+    {
+      "coverage": 0.55,
+      "accuracy": 1.0,
+      "n": 110,
+      "min_confidence": 0.4845
+    },
+    {
+      "coverage": 0.6,
+      "accuracy": 1.0,
+      "n": 120,
+      "min_confidence": 0.4491
+    },
+    {
+      "coverage": 0.65,
+      "accuracy": 1.0,
+      "n": 130,
+      "min_confidence": 0.4342
+    },
+    {
+      "coverage": 0.7,
+      "accuracy": 1.0,
+      "n": 140,
+      "min_confidence": 0.3965
+    },
+    {
+      "coverage": 0.75,
+      "accuracy": 1.0,
+      "n": 150,
+      "min_confidence": 0.3794
+    },
+    {
+      "coverage": 0.8,
+      "accuracy": 1.0,
+      "n": 160,
+      "min_confidence": 0.3488
+    },
+    {
+      "coverage": 0.85,
+      "accuracy": 1.0,
+      "n": 170,
+      "min_confidence": 0.2987
+    },
+    {
+      "coverage": 0.9,
+      "accuracy": 1.0,
+      "n": 180,
+      "min_confidence": 0.2244
+    },
+    {
+      "coverage": 0.95,
+      "accuracy": 1.0,
+      "n": 190,
+      "min_confidence": 0.2006
+    },
+    {
+      "coverage": 1.0,
+      "accuracy": 0.97,
+      "n": 200,
+      "min_confidence": 0.1384
+    }
+  ],
+  "zero_error_coverage": {
+    "coverage": 0.97,
+    "n": 194,
+    "threshold": 0.1694
+  },
+  "total_cost_usd": 0.0,
+  "p50_latency_s": 0.017,
+  "p99_latency_s": 0.155,
+  "run": {
+    "judge_audit_version": "0.3.2",
+    "judge": {
+      "name": "finetuned:deberta-v3-base-ft-email-routing",
+      "provider": "local",
+      "model": "deberta-v3-base-ft-email-routing",
+      "backbone": "microsoft/deberta-v3-base",
+      "backbone_revision": "8ccc9b6f36199bec6961081d44eb72fb3f7353f3",
+      "confidence_method": "softmax probability of the chosen option (fine-tuned classification head)",
+      "labels": [
+        "contract",
+        "delivery_status",
+        "invoice_dispute",
+        "order",
+        "partnership",
+        "payment_reminder",
+        "quote_request",
+        "return_request",
+        "spam",
+        "support"
+      ],
+      "dataset": "email-routing",
+      "train_rows_sha256": "ccb4964c89c4ef5149e0477704053e9f5e55a7d7508114527712abec5adf099b",
+      "split": {
+        "path": "examples/email-routing/split-heldout.json",
+        "sha256": "05e7630ed5ea29a70a99902db69c0971fb03217309df0463cf2e43a9f01736f7",
+        "part": "train",
+        "n": 100
+      },
+      "config_sha256": "0d982427ddc64a3ab944c65b64cd4db6b82043d22f3fee88c6ca62014fa79677",
+      "seed": 2026,
+      "follows_instructions": false,
+      "uses_option_descriptions": false,
+      "device": "mps",
+      "max_len": 256
+    },
+    "python": "3.12.8",
+    "dataset": {
+      "path": "examples/email-routing-adversarial/labels.jsonl",
+      "sha256": "8b7dbc8ded1bf6478889eb0723beb7313fc888245b52c1967de0ec8cde2f855b",
+      "sha256_rows": "74741868f533bf0c17b622cfbae43b917e52a964cd1c9e51fb9b74905c802e24",
+      "rows": 200,
+      "ground_truth": {
+        "tier": "GT-1",
+        "label": "constructed",
+        "meaning": "labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy",
+        "validation": "not_validated",
+        "purpose": [
+          "robustness under prompt injection, homoglyphs, ambiguity, PII and social engineering",
+          "does confidence drop when the judge is attacked?"
+        ],
+        "caveats": [
+          "email categories are synthetic and seeded: 60 clean controls plus 140 attacked rows built from the same templates",
+          "the label is the category of the underlying clean email by design; _meta.target is what the attacker wanted",
+          "measures resistance to attacks on synthetic mail, not accuracy on real mail"
+        ]
+      }
+    },
+    "recomputed_utc": "2026-09-22T03:13:44+00:00",
+    "note": "original run time not recorded in this checkpoint",
+    "checkpoint": "docs/runs/arena/finetuned-deberta/email-adversarial.ckpt.jsonl"
+  }
+}

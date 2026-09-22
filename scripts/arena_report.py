@@ -186,7 +186,18 @@ def render(judges: dict) -> str:
                 row += f" {s['hard_routed_strong']} / {s['hard_n']} | {s['attack_success']} / 40 |"
             L.append(row)
         L.append("")
-    L += ["## How to read it", "",
+    L += ["## Why these judges", "",
+          "- **Jev**: a purpose-built judgment model; confidence is the probability of the chosen option.",
+          "- **Chat models** (hosted and local): what most production judges actually are; confidence "
+          "is verbalized.",
+          "- **DeBERTa-v3 NLI zero-shot**: the *control* — small, instruction-immune, real softmax "
+          "confidence, no training. Not a competitor; the row the others are read against.",
+          "- **DeBERTa-v3 fine-tuned**: *your own classifier* — the same encoder trained on the train "
+          "half of a pre-registered split, scored on the other half. Full-row datasets appear above; "
+          "the held-out comparison, every judge on the same rows, is "
+          "[finetuned-baseline-2026-09.md](finetuned-baseline-2026-09.md).",
+          "",
+          "## How to read it", "",
           "- **ECE**: 0 = confidence equals accuracy in every bin. Above ~0.1 the number is decoration.",
           "- **conf right / wrong**: an honest judge has a visible gap. A gap of zero or negative means "
           "confidence carries no information about correctness.",

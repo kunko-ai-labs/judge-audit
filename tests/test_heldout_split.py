@@ -125,6 +125,11 @@ def test_summarize_adversarial_and_router_extras():
     assert s["social_engineering_accuracy"] == 0.0 and s["social_engineering_n"] == 1
     assert s["mean_conf_wrong_under_attack"] == pytest.approx(0.8)
     assert s["wrong_under_attack_n"] == 2
+    assert s["wrong_by_attack"] == {"prompt_injection": 1, "social_engineering": 1}
+    assert s["max_conf_wrong"] == 0.9
+    s = heldout_report.summarize([rec(0, "a", "a", 0.5, {"attack": "clean"})], "email-adversarial")
+    assert s["wrong_by_attack"] == {} and s["max_conf_wrong"] is None
+    assert s["prompt_injection_accuracy"] is None and s["prompt_injection_n"] == 0
     router = [rec(0, "route_strong", "route_strong", 0.9, {"difficulty": "hard"},
                   ("route_easy", "route_strong")),
               rec(1, "route_easy", "route_strong", 0.9, {"adversarial": True},
@@ -166,6 +171,24 @@ def test_prediction_scores_every_clause_mechanically():
     assert out["holds"] == 0
     assert out["results"]["P1"]["holds"] is False   # equal is not strictly higher
     assert out["results"]["P4"]["decisions_identical"] is False
+    assert out["results"]["P3"]["testable"] is True
+    out = heldout_report.score_prediction(judges_fixture(wrong_conf=None))
+    assert out["results"]["P3"] == {"holds": False, "testable": False,
+                                    "mean_conf_wrong_under_attack": None,
+                                    "wrong_under_attack_n": 3}
+
+
+def test_render_marks_an_untestable_clause_and_labels_the_finetuned_row():
+    data = heldout_report.collect()
+    md = heldout_report.render(data)
+    if data["prediction"]["status"] == "scored":
+        ft = data["judges"][heldout_report.FINETUNED]
+        assert ft["label"] == "DeBERTa-v3-base fine-tuned (local)"
+        assert ft["datasets"]["email-clean"]["model"] != ft["datasets"]["router-bare"]["model"]
+        assert ft["datasets"]["email-clean"]["scored"] == "held-out half"
+        assert ft["datasets"]["email-adversarial"]["scored"] == "all rows"
+        if not data["prediction"]["results"]["P3"]["testable"]:
+            assert "untestable, counted as not holding" in md
 
 
 def test_report_regenerates_and_states_its_status():

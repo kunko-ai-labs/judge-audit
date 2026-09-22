@@ -60,7 +60,7 @@ Honest limits: every dataset is synthetic and seeded (generators in `examples/`)
 
 ## The Arena: same datasets, other judges
 
-Every judge below ran the same four datasets through the same harness; raw responses under [`docs/runs/arena/`](docs/runs/arena/), full table in [docs/arena-2026-09.md](docs/arena-2026-09.md), regenerated in CI (the chart at the top is the zero-error column of this table). Emails under attack (n=200) and the described-options router (n=120):
+Every judge below ran the same four datasets through the same harness; raw responses under [`docs/runs/arena/`](docs/runs/arena/), full table in [docs/arena-2026-09.md](docs/arena-2026-09.md), regenerated in CI (the chart at the top is the zero-error column of this table). Emails under attack (n=200) and the described-options router (n=120; the fine-tuned classifier on its pre-registered held-out half, n=60):
 
 | judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | conf drop under injection | router (described) | cost-inflation attacks that land | cost / 200 |
 |---|---|---|---|---|---|---|---|---|---|
@@ -69,9 +69,12 @@ Every judge below ran the same four datasets through the same harness; raw respo
 | Llama 3.3 70B | verbalized | 90.5% | 0.015 | **0%** | 0.90 / 0.82 | +0.06 | 86.7% | 16/40 | $0.041 |
 | DeepSeek R1 | verbalized | 80.5% | 0.127 | **0%** | 0.94 / 0.90 | +0.05 | 79.2% | 24/40 | $0.589 |
 | llama3.2 3B (local) | verbalized | 72.5% | 0.154 | **0%** | 0.87 / 0.91 | -0.03 | 59.2% | 9/40 | $0.000 |
-| DeBERTa-v3 NLI zero-shot (local) | NLI entailment softmax over options | 59.5% | 0.125 | **8%** | 0.73 / 0.56 | +0.09 | 49.2% | 39/40 | $0.000 |
+| DeBERTa-v3 NLI zero-shot (local; control) | NLI entailment softmax over options | 59.5% | 0.125 | **8%** | 0.73 / 0.56 | +0.09 | 49.2% | 39/40 | $0.000 |
+| DeBERTa-v3 fine-tuned (local; your own classifier) | softmax of the chosen option | 97.0% | 0.496 | **97%** | 0.48 / 0.15 | +0.09 | 100.0% (held-out half, n=60) | 0/20 (held-out half) | $0.000 |
 
-**Read the zero-error coverage column.** Claude Sonnet 4.5 is slightly *more accurate* than Jev under attack and has a lower ECE — yet you could automate 2 % of its decisions with no observed error, against 73 % with Jev, because its confidence barely moves when it is wrong (0.88). A judge that says 0.60 when it is guessing is worth more than one that says 0.88. The 3B chat model is *more* confident when wrong than when right; its number is decoration. The small NLI encoder cannot be prompt-injected (it does not read instructions) but routes at coin-flip level. Chat-model confidence here is verbalized (the model writes a number); Jev's is the probability of the chosen option, not the API's `confidence` field, which is a rescaling of that probability ([analysis](https://bernoulli.app/articles/is-jev-confident)) and calibrates worse on our data (ECE 0.13 vs 0.05 on the router).
+**Read the zero-error coverage column.** Claude Sonnet 4.5 is slightly *more accurate* than Jev under attack and has a lower ECE — yet you could automate 2 % of its decisions with no observed error, against 73 % with Jev, because its confidence barely moves when it is wrong (0.88). A judge that says 0.60 when it is guessing is worth more than one that says 0.88. The 3B chat model is *more* confident when wrong than when right; its number is decoration. The small NLI encoder is the control: it cannot be prompt-injected (it does not read instructions) but routes at coin-flip level. Chat-model confidence here is verbalized (the model writes a number); Jev's is the probability of the chosen option, not the API's `confidence` field, which is a rescaling of that probability ([analysis](https://bernoulli.app/articles/is-jev-confident)) and calibrates worse on our data (ECE 0.13 vs 0.05 on the router).
+
+**The fine-tuned row is a different animal.** Trained on the other half of the same seeded data, it scores 100.0% on the clean held-out emails (n=100), 97.0% under attack (all 200 rows; none of the 40 prompt injections or 20 social-engineering rows landed — it does not read instructions) and 100.0% on the held-out router (n=60), for $0 per row after 216 s of laptop training; but its softmax is *under*-confident (ECE 0.458, mean confidence 0.54 when right), so its confidence column says little at this training budget. It cannot read option descriptions, and a new category means new labels and a retrain — the full held-out comparison, every judge on the same rows, with the pre-registered predictions scored (0 of 4 hold), is in [docs/finetuned-baseline-2026-09.md](docs/finetuned-baseline-2026-09.md).
 
 ## How it works
 
@@ -108,7 +111,7 @@ class MyJudge(Judge):
         ...  # return Judgment(question=q.name, decision="spam", confidence=0.93)
 ```
 
-Ships with four: `jev` (TypeSafe Jev — and, via `JEV_ENDPOINT`, any Jev-compatible server such as OpenJev), `llm` (any chat model with a confidence prompt: Claude through the official SDK, anything OpenAI-compatible — OpenAI, Gemini, Ollama, vLLM — or your own transport), `nli` (a local zero-shot encoder, the small-model baseline) and `simulated`. Details in [docs/judges.md](docs/judges.md).
+Ships with five: `jev` (TypeSafe Jev — and, via `JEV_ENDPOINT`, any Jev-compatible server such as OpenJev), `llm` (any chat model with a confidence prompt: Claude through the official SDK, anything OpenAI-compatible — OpenAI, Gemini, Ollama, vLLM — or your own transport), `nli` (a local zero-shot encoder, the control), `finetuned` (your own classifier, trained on your labels with `scripts/train_classifier.py`) and `simulated`. Details in [docs/judges.md](docs/judges.md).
 
 ## Why calibration, not accuracy
 

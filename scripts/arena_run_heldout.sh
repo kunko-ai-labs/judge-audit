@@ -19,8 +19,9 @@ for spec in \
   "router-bare examples/task-routing/labels.jsonl task-routing examples/task-routing/split-heldout.json:heldout" \
   "router-described examples/task-routing/labels-described.jsonl task-routing examples/task-routing/split-heldout.json:heldout"; do
   set -- $spec; name=$1; labels=$2; model=$3; rows=$4
-  extra=(); [ "$rows" != "-" ] && extra=(--rows "$rows")
-  echo "== $slug / $name (${rows/-/all rows})"
+  extra=(); scope="all rows"
+  if [ "$rows" != "-" ]; then extra=(--rows "$rows"); scope=$rows; fi
+  echo "== $slug / $name ($scope)"
   env "${ENVS[@]}" FINETUNED_MODEL_DIR="$root/$model" .venv/bin/python scripts/audit_resumable.py "$labels" \
     --judge "$judge" --checkpoint "$out/$name.ckpt.jsonl" --out "$out/$name.md" --json "$out/$name.json" \
     "${extra[@]}" | tail -1

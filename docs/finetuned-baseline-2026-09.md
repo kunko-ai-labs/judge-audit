@@ -1,6 +1,6 @@
 # Fine-tuned classifier baseline — September 2026
 
-**Status: pre-registered.** The split, protocol and prediction below were committed before the first training run; the tables are empty until the fine-tuned checkpoints land.
+**Status: scored.** 0 of 4 pre-registered predictions hold (scored mechanically below). Recompute: `python scripts/heldout_report.py`.
 
 ## The question
 
@@ -15,15 +15,25 @@
 
 ## Prediction (written before training)
 
-- **P1.** On the clean held-out email half the fine-tuned classifier's accuracy is strictly higher than every other judge's on the same rows.
-- **P2.** It is calibrated by softmax on that half: ECE <= 0.10.
-- **P3.** It is overconfident under attack: on email-adversarial rows whose attack is prompt_injection or social_engineering, mean confidence when wrong >= 0.80.
-- **P4.** It cannot use option descriptions on the router: its decisions on the router-described held-out half are identical to those on the router-bare half, and its router-described held-out accuracy is below Jev's on the same rows.
+- **P1.** On the clean held-out email half the fine-tuned classifier's accuracy is strictly higher than every other judge's on the same rows. — **does not hold**
+- **P2.** It is calibrated by softmax on that half: ECE <= 0.10. — **does not hold**
+- **P3.** It is overconfident under attack: on email-adversarial rows whose attack is prompt_injection or social_engineering, mean confidence when wrong >= 0.80. — **untestable, counted as not holding**
+- **P4.** It cannot use option descriptions on the router: its decisions on the router-described held-out half are identical to those on the router-bare half, and its router-described held-out accuracy is below Jev's on the same rows. — **does not hold**
+
+Scoring: P1: fine-tuned 100.0% vs best other Jev (TypeSafe) 100.0%; P2: ECE 0.458; P3: mean confidence on the 0 wrong attacked rows — (no wrong prompt-injection or social-engineering row, so the clause is untestable and counted as not holding); P4: decisions identical = True, described held-out 100.0% vs Jev 98.3%.
+
+## Training runs
+
+| dataset | backbone | revision | epochs | final train loss | wall time | hardware | train rows sha256 |
+|---|---|---|---|---|---|---|---|
+| email-routing | `microsoft/deberta-v3-base` | `8ccc9b6f3619` | 10 | 0.847 | 216 s | Apple M4 (Darwin 25.6.0), device mps | `ccb4964c89c4…` |
+| task-routing | `microsoft/deberta-v3-base` | `8ccc9b6f3619` | 10 | 0.174 | 1069 s | Apple M4 (Darwin 25.6.0), device mps | `a2058c563b31…` |
 
 ## Business emails, clean — held-out half (n=100) — GT-1 constructed
 
 | judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | no answer | cost | p50 latency |
 |---|---|---|---|---|---|---|---|---|
+| **DeBERTa-v3-base fine-tuned (local)** | softmax probability of the chosen option | 100.0% | 0.458 | 100.0% | 0.542 / — | 0 | $0.000 | 0.02 s |
 | Jev (TypeSafe) | option probability | 100.0% | 0.002 | 100.0% | 0.998 / — | 0 | $0.002 | 0.87 s |
 | claude-sonnet-4.5 | verbalized (model-reported probability) | 100.0% | 0.027 | 100.0% | 0.973 / — | 0 | $0.191 | 2.97 s |
 | deberta-v3-base-zeroshot-v2.0 | NLI entailment softmax over options | 87.0% | 0.173 | 56.0% | 0.739 / 0.516 | 0 | $0.000 | 0.32 s |
@@ -36,6 +46,7 @@
 
 | judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | no answer | hard → strong | cost-inflation attacks that land | cost |
 |---|---|---|---|---|---|---|---|---|---|
+| **DeBERTa-v3-base fine-tuned (local)** | softmax probability of the chosen option | 100.0% | 0.133 | 100.0% | 0.867 / — | 0 | 20 / 20 | 0 / 20 | $0.000 |
 | Jev (TypeSafe) | option probability | 66.7% | 0.315 | 8.3% | 0.982 / 0.930 | 0 | 0 / 20 | 0 / 20 | $0.001 |
 | claude-sonnet-4.5 | verbalized (model-reported probability) | 66.7% | 0.228 | 0.0% | 0.935 / 0.813 | 0 | 2 / 20 | 2 / 20 | $0.250 |
 | deberta-v3-base-zeroshot-v2.0 | NLI entailment softmax over options | 50.0% | 0.419 | 0.0% | 0.607 / 0.830 | 0 | 20 / 20 | 20 / 20 | $0.000 |
@@ -48,6 +59,7 @@
 
 | judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | no answer | hard → strong | cost-inflation attacks that land | cost |
 |---|---|---|---|---|---|---|---|---|---|
+| **DeBERTa-v3-base fine-tuned (local)** | softmax probability of the chosen option | 100.0% | 0.133 | 100.0% | 0.867 / — | 0 | 20 / 20 | 0 / 20 | $0.000 |
 | Jev (TypeSafe) | option probability | 98.3% | 0.056 | 95.0% | 0.933 / 0.600 | 0 | 19 / 20 | 0 / 20 | $0.001 |
 | claude-sonnet-4.5 | verbalized (model-reported probability) | 96.7% | 0.023 | 6.7% | 0.943 / 0.975 | 0 | 20 / 20 | 2 / 20 | $0.200 |
 | deberta-v3-base-zeroshot-v2.0 | NLI entailment softmax over options | 50.0% | 0.179 | 0.0% | 0.605 / 0.673 | 0 | 20 / 20 | 19 / 20 | $0.000 |
@@ -60,6 +72,7 @@
 
 | judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | no answer | prompt-injection acc (n=40) | social-eng acc (n=20) | conf when wrong under attack | cost |
 |---|---|---|---|---|---|---|---|---|---|---|
+| **DeBERTa-v3-base fine-tuned (local)** | softmax probability of the chosen option | 97.0% | 0.496 | 97.0% | 0.484 / 0.150 | 0 | 100.0% | 100.0% | — | $0.000 |
 | Jev (TypeSafe) | option probability | 95.5% | 0.039 | 73.0% | 0.933 / 0.597 | 0 | 82.5% | 100.0% | 0.584 | $0.004 |
 | claude-sonnet-4.5 | verbalized (model-reported probability) | 96.5% | 0.016 | 2.0% | 0.957 / 0.877 | 0 | 87.5% | 100.0% | 0.860 | $0.454 |
 | deberta-v3-base-zeroshot-v2.0 | NLI entailment softmax over options | 59.5% | 0.125 | 8.0% | 0.731 / 0.559 | 0 | 47.5% | 25.0% | 0.680 | $0.000 |
@@ -67,6 +80,14 @@
 | gemma4:e4b | verbalized (model-reported probability) | 81.0% | 0.153 | 2.0% | 0.961 / 0.974 | 0 | 30.0% | 60.0% | 0.974 | $0.000 |
 | llama-3.3-70b | verbalized (model-reported probability) | 90.5% | 0.015 | 0.0% | 0.899 / 0.821 | 0 | 62.5% | 90.0% | 0.812 | $0.041 |
 | llama3.2:3b | verbalized (model-reported probability) | 72.5% | 0.154 | 0.0% | 0.869 / 0.905 | 0 | 67.5% | 0.0% | 0.948 | $0.000 |
+
+## Reading it
+
+- **Accuracy**: 100.0% on the clean held-out emails (n=100), 97.0% on the 200 attacked emails, 100.0% on the held-out router rows (n=60, 20/20 hard tasks routed strong, 0/20 cost-inflation attacks landed). On this data — same seeded generator for train and test — the classifier matches the best judges on accuracy at $0 per row.
+- **Calibration is where it differs.** ECE 0.458 on the clean held-out emails with mean confidence 0.542 when right: the softmax is *under*-confident, not over-confident. Ten epochs at lr 2e-5 on 100 rows left the training loss at 0.847, so the head separates the classes but has not sharpened its probabilities. Zero-error coverage is 100.0% only because no held-out row was wrong; the confidence column carries little information at this training budget (router: ECE 0.133, mean confidence 0.867).
+- **Under attack** it made 6 errors in 200, 0 of them on prompt-injection or social-engineering rows (it does not read instructions, so there is nothing to inject into). Errors by attack type: ambiguous 4, homoglyph_cyrillic 1, homoglyph_zerowidth 1; highest confidence on a wrong row 0.159, mean 0.150 — its errors sit in the low-confidence tail, which is the honest direction, even if the whole distribution sits low.
+- **Option descriptions**: the described-options router run is the same model on the same texts and scores identically (100.0%); a classifier cannot read a description. That is also why this row does not generalise: a new category or a drifted inbox needs new labels and a retrain, not a new prompt.
+- **Cost**: $0 per row after 216 s (emails) and 1069 s (router) of training on Apple M4 (Darwin 25.6.0), device mps; p50 latency 0.016 s per row.
 
 ## Caveats (read with every number above)
 

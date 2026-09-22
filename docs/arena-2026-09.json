@@ -340,6 +340,86 @@
       }
     }
   },
+  "finetuned-deberta": {
+    "label": "deberta-v3-base-ft-email-routing",
+    "method": "softmax probability of the chosen option (fine-tuned classification head)",
+    "run": {
+      "timestamp_utc": "2026-09-22T03:13:44+00:00",
+      "judge_audit_version": "0.3.2",
+      "judge": {
+        "name": "finetuned:deberta-v3-base-ft-email-routing",
+        "provider": "local",
+        "model": "deberta-v3-base-ft-email-routing",
+        "backbone": "microsoft/deberta-v3-base",
+        "backbone_revision": "8ccc9b6f36199bec6961081d44eb72fb3f7353f3",
+        "confidence_method": "softmax probability of the chosen option (fine-tuned classification head)",
+        "labels": [
+          "contract",
+          "delivery_status",
+          "invoice_dispute",
+          "order",
+          "partnership",
+          "payment_reminder",
+          "quote_request",
+          "return_request",
+          "spam",
+          "support"
+        ],
+        "dataset": "email-routing",
+        "train_rows_sha256": "ccb4964c89c4ef5149e0477704053e9f5e55a7d7508114527712abec5adf099b",
+        "split": {
+          "path": "examples/email-routing/split-heldout.json",
+          "sha256": "05e7630ed5ea29a70a99902db69c0971fb03217309df0463cf2e43a9f01736f7",
+          "part": "train",
+          "n": 100
+        },
+        "config_sha256": "0d982427ddc64a3ab944c65b64cd4db6b82043d22f3fee88c6ca62014fa79677",
+        "seed": 2026,
+        "follows_instructions": false,
+        "uses_option_descriptions": false,
+        "device": "mps",
+        "max_len": 256
+      },
+      "python": "3.12.8",
+      "dataset": {
+        "path": "examples/email-routing-adversarial/labels.jsonl",
+        "sha256": "8b7dbc8ded1bf6478889eb0723beb7313fc888245b52c1967de0ec8cde2f855b",
+        "sha256_rows": "74741868f533bf0c17b622cfbae43b917e52a964cd1c9e51fb9b74905c802e24",
+        "rows": 200,
+        "ground_truth": {
+          "tier": "GT-1",
+          "label": "constructed",
+          "meaning": "labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy",
+          "validation": "not_validated",
+          "purpose": [
+            "robustness under prompt injection, homoglyphs, ambiguity, PII and social engineering",
+            "does confidence drop when the judge is attacked?"
+          ],
+          "caveats": [
+            "email categories are synthetic and seeded: 60 clean controls plus 140 attacked rows built from the same templates",
+            "the label is the category of the underlying clean email by design; _meta.target is what the attacker wanted",
+            "measures resistance to attacks on synthetic mail, not accuracy on real mail"
+          ]
+        }
+      }
+    },
+    "datasets": {
+      "email-adversarial": {
+        "n": 200,
+        "accuracy": 0.97,
+        "ece": 0.4961,
+        "zero_error_coverage": 0.97,
+        "mean_conf_correct": 0.484,
+        "mean_conf_wrong": 0.15,
+        "distinct_confidence_values": 55,
+        "cost_usd": 0.0,
+        "p50_latency_s": 0.017,
+        "prompt_injection_accuracy": 1.0,
+        "confidence_drop_under_injection": 0.089,
+        "social_engineering_accuracy": 1.0
+      }
+    }
+  },
   "gemma4": {
     "label": "gemma4:e4b",
     "method": "verbalized (model-reported probability)",
