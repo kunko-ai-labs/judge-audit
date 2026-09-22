@@ -38,6 +38,10 @@ JEV = {
     "router-described": "docs/runs/audit-jev-router-described.ckpt.jsonl",
 }
 ARENA = ROOT / "docs" / "runs" / "arena"
+# Runs made on a pre-registered subset of rows (`rows_subset` in the checkpoint header).
+# They are not comparable with the full-dataset rows of this table and belong to
+# docs/finetuned-baseline-2026-09.md, where every judge is re-scored on the same rows.
+HELDOUT_RUNS: list[str] = []
 
 
 def ground_truth_tier(labels: str) -> GroundTruth:
@@ -117,6 +121,11 @@ def collect() -> dict:
                 if not ck.exists():
                     continue
                 recs, run = records(labels, ck, q)
+                subset = run.get("rows_subset")
+                if subset:
+                    HELDOUT_RUNS.append(f"{d.name}/{ds} ({subset.get('part')} of "
+                                        f"`{subset.get('split')}`, n={subset.get('n')})")
+                    continue
                 if len(recs) < len(load_jsonl(str(ROOT / labels))):
                     print(f"skip {d.name}/{ds}: {len(recs)} rows, run not complete", file=sys.stderr)
                     continue
@@ -195,6 +204,11 @@ def render(judges: dict) -> str:
           "the numbers; that is a finding about prompts, not a fix for calibration.",
           "- Local models run through Ollama on a laptop; latency is not comparable with hosted APIs.",
           ""]
+    if HELDOUT_RUNS:
+        L += ["- Runs made on a pre-registered held-out half are not in these tables (their n differs): "
+              + "; ".join(HELDOUT_RUNS) + ". Every judge is re-scored on those same rows in "
+              "[finetuned-baseline-2026-09.md](finetuned-baseline-2026-09.md).",
+              ""]
     return "\n".join(L)
 
 

@@ -65,7 +65,8 @@ def build_predict(model_dir: str, device: str, max_len: int) -> Predict:
     except ImportError as e:
         raise RuntimeError("the finetuned judge needs: pip install 'kunko-judge-audit[nli]'") from e
     tok = AutoTokenizer.from_pretrained(model_dir)
-    model = AutoModelForSequenceClassification.from_pretrained(model_dir).to(device).eval()
+    model = AutoModelForSequenceClassification.from_pretrained(
+        model_dir, dtype=torch.float32).to(device).eval()
 
     def predict(text: str) -> list[float]:
         enc = tok(text, truncation=True, max_length=max_len, return_tensors="pt").to(device)

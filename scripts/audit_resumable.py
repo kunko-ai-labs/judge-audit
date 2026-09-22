@@ -9,6 +9,11 @@ docs/runs/ next to the report so anyone can re-derive every number.
 Usage:
   python scripts/audit_resumable.py LABELS --judge jev --checkpoint docs/runs/NAME.ckpt.jsonl \\
       --out docs/audit-NAME.md --json docs/audit-NAME.json [--html docs/audit-NAME.html]
+
+`--rows examples/<dataset>/split-heldout.json:heldout` judges only the row
+indices that part of a pre-registered split names; the checkpoint header then
+records the split file, its sha256, the part and its size under `rows_subset`,
+and the report's n is the subset's. A run without `--rows` judges every row.
 """
 from __future__ import annotations
 
@@ -31,6 +36,7 @@ from judge_audit.runner import (  # noqa: E402
     load_dataset,
     questions_of,
     run_metadata,
+    sha256_of,
     summarize,
 )
 
@@ -48,6 +54,22 @@ def load_checkpoint(path: Path) -> dict[int, dict]:
     return done
 
 
+def rows_subset(spec: str | None, n_rows: int) -> tuple[list[int], dict | None]:
+    """Row indices to judge from `<split.json>:<part>`; (all rows, None) without a spec."""
+    if not spec:
+        return list(range(n_rows)), None
+    path, sep, part = spec.rpartition(":")
+    if not sep or not part:
+        raise SystemExit(f"--rows expects <split.json>:<part>, got {spec!r}")
+    split = json.loads(Path(path).read_text(encoding="utf-8"))
+    if part not in split or not isinstance(split[part], list):
+        raise SystemExit(f"{path}: no row list named {part!r}")
+    idx = sorted(int(i) for i in split[part])
+    if idx and (idx[0] < 0 or idx[-1] >= n_rows):
+        raise SystemExit(f"{path}:{part} names rows outside 0..{n_rows - 1}")
+    return idx, {"split": path, "sha256": sha256_of(path), "part": part, "n": len(idx)}
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("labels")
@@ -56,16 +78,26 @@ def main() -> None:
     ap.add_argument("--out", required=True)
     ap.add_argument("--json", required=True)
     ap.add_argument("--html", default=None)
+    ap.add_argument("--rows", default=None,
+                    help="<split.json>:<part> — judge only these row indices (held-out runs)")
     args = ap.parse_args()
 
     rows, dataset_meta = load_dataset(args.labels)
+    wanted, subset = rows_subset(args.rows, len(rows))
     ckpt = Path(args.checkpoint)
     ckpt.parent.mkdir(parents=True, exist_ok=True)
     done = load_checkpoint(ckpt)
-    n_done = sum(k >= 0 for k in done)
-    print(f"checkpoint: {n_done}/{len(rows)} rows already done")
+    if -1 in done:
+        was = done[-1]["run"].get("rows_subset") or {}
+        now = subset or {}
+        if (was.get("sha256"), was.get("part")) != (now.get("sha256"), now.get("part")):
+            raise SystemExit(f"{ckpt} was started with a different --rows subset; "
+                             "use a new checkpoint")
+    n_done = sum(k in done for k in wanted)
+    print(f"checkpoint: {n_done}/{len(wanted)} rows already done"
+          + (f" (subset {subset['part']} of {subset['split']})" if subset else ""))
 
-    if n_done >= len(rows):
+    if n_done >= len(wanted):
         # Complete checkpoint: recompute only. No key, no judge, no API call.
         judge, tag = None, ("" if args.judge == "jev" else SIMULATED_TAG)
         started = {"judge": {"name": args.judge, "model": "typesafe-ai/jev", "backend": "gateway"}
@@ -75,12 +107,15 @@ def main() -> None:
     else:
         judge, tag = _judge(args.judge, rows)
         started = run_metadata(judge, args.labels, len(rows), dataset_meta)
+    if subset:
+        started["rows_subset"] = subset
 
     with open(ckpt, "a", encoding="utf-8") as f:
         if not done:
             # First line of a fresh checkpoint: how this run was produced.
             f.write(json.dumps({"idx": -1, "run": started}) + "\n")
-        for idx, row in enumerate(rows):
+        for idx in wanted:
+            row = rows[idx]
             if idx in done:
                 continue
             # If the gateway's rate-limit window outlasts the adapter's backoff,
@@ -110,8 +145,9 @@ def main() -> None:
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
             f.flush()
             done[idx] = rec
-            if (idx + 1) % 10 == 0:
-                print(f"  {idx + 1}/{len(rows)}", flush=True)
+            n_done += 1
+            if n_done % 10 == 0:
+                print(f"  {n_done}/{len(wanted)}", flush=True)
 
     if -1 in done:
         run = done[-1]["run"]
@@ -125,8 +161,11 @@ def main() -> None:
     # file so a checkpoint that predates ground-truth headers still reports it.
     run.setdefault("dataset", {})["ground_truth"] = parse_ground_truth(
         dataset_meta.get("ground_truth")).to_dict()
+    if subset:
+        run["rows_subset"] = subset
     records = []
-    for idx, row in enumerate(rows):
+    for idx in wanted:
+        row = rows[idx]
         labels = row.get("labels", {})
         for j in done[idx]["judgments"]:
             expected = labels.get(j["question"])

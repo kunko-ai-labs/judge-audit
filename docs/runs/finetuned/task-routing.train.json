@@ -1,0 +1,60 @@
+{
+  "dataset": "task-routing",
+  "labels_file": "examples/task-routing/labels.jsonl",
+  "labels_sha256_rows": "27250d78eda62c5e5ad07906abd3c7fdeaecb1131a7d13e12146bed30f55ec8d",
+  "question": "route",
+  "timestamp_utc": "2026-09-21T20:10:57+00:00",
+  "backbone": "microsoft/deberta-v3-base",
+  "backbone_revision": "8ccc9b6f36199bec6961081d44eb72fb3f7353f3",
+  "backbone_choice": "microsoft/deberta-v3-base: the plain pre-trained backbone, chosen because it downloaded in 16 s; the local MoritzLaurer/deberta-v3-base-zeroshot-v2.0 backbone was the pre-registered fallback and was not needed. A plain backbone keeps the fine-tuned row free of any zero-shot NLI training.",
+  "hyper_parameters": {
+    "seed": 2026,
+    "epochs": 10,
+    "lr": 2e-05,
+    "batch": 8,
+    "max_len": 256,
+    "optimizer": "AdamW(weight_decay=0.01), grad clip 1.0",
+    "dtype": "float32 (the backbone config declares float16)",
+    "schedule": "linear, 10% warm-up",
+    "steps": 80
+  },
+  "seed": 2026,
+  "epochs": 10,
+  "labels": [
+    "route_easy",
+    "route_strong"
+  ],
+  "n_train": 60,
+  "train_rows_sha256": "a2058c563b313db6c4955a911ef25927a54ac93336e5d13db748f1cf1da4dd6c",
+  "split": {
+    "path": "examples/task-routing/split-heldout.json",
+    "sha256": "322d113c8c0e67c36362d1d4ff26955c68dd76843158cd8f11462eb8b66ae018",
+    "part": "train",
+    "n": 60
+  },
+  "train_loss_per_epoch": [
+    0.7112,
+    0.6382,
+    0.5531,
+    0.3923,
+    0.3042,
+    0.2468,
+    0.22,
+    0.1941,
+    0.1847,
+    0.1741
+  ],
+  "train_accuracy_final": 1.0,
+  "wall_time_s": 1069.0,
+  "hardware": "Apple M4 (Darwin 25.6.0), device mps",
+  "determinism": "seeded (python, torch, batch order); MPS kernels are not guaranteed bit-reproducible across torch versions",
+  "software": {
+    "python": "3.12.8",
+    "torch": "2.14.0",
+    "transformers": "5.17.0",
+    "judge_audit": "0.3.2"
+  },
+  "model_dir": "/Users/altostratus_1/.cache/judge-audit/finetuned/task-routing",
+  "model_dir_config_sha256": "14663115589699aa76a957d67f5f4a13e0071358a39af2a48fea6863d8788d63",
+  "held_out_evaluated_here": false
+}

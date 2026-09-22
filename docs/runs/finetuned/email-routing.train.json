@@ -1,0 +1,68 @@
+{
+  "dataset": "email-routing",
+  "labels_file": "examples/email-routing/labels.jsonl",
+  "labels_sha256_rows": "c5b4c111290aa657236ea520a8043b14ce23e9b26af01a6c5e7ec9b87082e1cf",
+  "question": "category",
+  "timestamp_utc": "2026-09-21T19:52:42+00:00",
+  "backbone": "microsoft/deberta-v3-base",
+  "backbone_revision": "8ccc9b6f36199bec6961081d44eb72fb3f7353f3",
+  "backbone_choice": "microsoft/deberta-v3-base: the plain pre-trained backbone, chosen because it downloaded in 16 s; the local MoritzLaurer/deberta-v3-base-zeroshot-v2.0 backbone was the pre-registered fallback and was not needed. A plain backbone keeps the fine-tuned row free of any zero-shot NLI training.",
+  "hyper_parameters": {
+    "seed": 2026,
+    "epochs": 10,
+    "lr": 2e-05,
+    "batch": 8,
+    "max_len": 256,
+    "optimizer": "AdamW(weight_decay=0.01), grad clip 1.0",
+    "dtype": "float32 (the backbone config declares float16)",
+    "schedule": "linear, 10% warm-up",
+    "steps": 130
+  },
+  "seed": 2026,
+  "epochs": 10,
+  "labels": [
+    "contract",
+    "delivery_status",
+    "invoice_dispute",
+    "order",
+    "partnership",
+    "payment_reminder",
+    "quote_request",
+    "return_request",
+    "spam",
+    "support"
+  ],
+  "n_train": 100,
+  "train_rows_sha256": "ccb4964c89c4ef5149e0477704053e9f5e55a7d7508114527712abec5adf099b",
+  "split": {
+    "path": "examples/email-routing/split-heldout.json",
+    "sha256": "05e7630ed5ea29a70a99902db69c0971fb03217309df0463cf2e43a9f01736f7",
+    "part": "train",
+    "n": 100
+  },
+  "train_loss_per_epoch": [
+    2.3069,
+    2.2668,
+    2.141,
+    1.9177,
+    1.6568,
+    1.3982,
+    1.1865,
+    1.0276,
+    0.9177,
+    0.8468
+  ],
+  "train_accuracy_final": 1.0,
+  "wall_time_s": 215.5,
+  "hardware": "Apple M4 (Darwin 25.6.0), device mps",
+  "determinism": "seeded (python, torch, batch order); MPS kernels are not guaranteed bit-reproducible across torch versions",
+  "software": {
+    "python": "3.12.8",
+    "torch": "2.14.0",
+    "transformers": "5.17.0",
+    "judge_audit": "0.3.2"
+  },
+  "model_dir": "/Users/altostratus_1/.cache/judge-audit/finetuned/email-routing",
+  "model_dir_config_sha256": "0d982427ddc64a3ab944c65b64cd4db6b82043d22f3fee88c6ca62014fa79677",
+  "held_out_evaluated_here": false
+}

@@ -39,7 +39,8 @@ DPI = 160
 
 ARENA_LABELS = {"jev": "Jev", "claude-sonnet-4.5": "Claude Sonnet 4.5", "llama-3.3-70b": "Llama 3.3 70B",
                 "deepseek-r1": "DeepSeek R1", "gemma4": "gemma4 (local)", "llama32": "llama3.2 3B (local)",
-                "deberta-nli": "DeBERTa NLI (local)"}
+                "deberta-nli": "DeBERTa NLI (local)",
+                "finetuned-deberta": "DeBERTa fine-tuned (local)"}
 SEG_LABELS = {"clean_easy": "easy tasks\n(label: cheap)", "clean_hard": "hard tasks\n(label: strong)",
               "adversarial": "easy + injection\n(label: cheap)"}
 
@@ -125,7 +126,7 @@ def hero_arena(theme: str) -> Path | None:
         s = j["datasets"].get("email-adversarial")
         if s:
             kind = ("prob" if j["method"].startswith("option")
-                    else "nli" if "NLI" in j["method"] else "verb")
+                    else "nli" if "NLI" in j["method"] or "softmax" in j["method"] else "verb")
             rows.append((ARENA_LABELS.get(slug, j["label"]), s["zero_error_coverage"],
                          s["accuracy"], s["mean_conf_wrong"], kind))
     rows.sort(key=lambda r: r[1], reverse=True)
@@ -162,7 +163,7 @@ def hero_arena(theme: str) -> Path | None:
     ax.set_xticklabels(["0", "25%", "50%", "75%", "100%"])
     ax.legend(handles=[Patch(color=t["prob"], label="confidence = option probability"),
                        Patch(color=t["verb"], label="verbalized by a chat model"),
-                       Patch(color=t["nli"], label="NLI entailment")],
+                       Patch(color=t["nli"], label="local encoder softmax")],
               frameon=False, loc="lower left", bbox_to_anchor=(-0.02, 1.07), ncol=3, fontsize=9,
               handlelength=1.2, columnspacing=1.4)
     _titles(fig, t, "The automation budget each judge earns",
