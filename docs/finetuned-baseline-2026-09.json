@@ -540,9 +540,9 @@
           "ece_ci_method": "bootstrap",
           "zero_error_coverage_ci": [
             0.0,
-            0.0596
+            0.5741
           ],
-          "zero_error_coverage_ci_method": "clopper-pearson",
+          "zero_error_coverage_ci_method": "bootstrap",
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -1126,9 +1126,9 @@
           "ece_ci_method": "bootstrap",
           "zero_error_coverage_ci": [
             0.0,
-            0.0183
+            0.9086
           ],
-          "zero_error_coverage_ci_method": "clopper-pearson",
+          "zero_error_coverage_ci_method": "bootstrap",
           "text_equal_train": 13,
           "text_contains_train": 49,
           "unseen_text_n": 151,
@@ -1372,9 +1372,9 @@
           "ece_ci_method": "bootstrap",
           "zero_error_coverage_ci": [
             0.0,
-            0.0596
+            0.5903
           ],
-          "zero_error_coverage_ci_method": "clopper-pearson",
+          "zero_error_coverage_ci_method": "bootstrap",
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -1531,9 +1531,9 @@
           "ece_ci_method": "bootstrap",
           "zero_error_coverage_ci": [
             0.0,
-            0.0596
+            1.0
           ],
-          "zero_error_coverage_ci_method": "clopper-pearson",
+          "zero_error_coverage_ci_method": "bootstrap",
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -3188,9 +3188,9 @@
           "ece_ci_method": "bootstrap",
           "zero_error_coverage_ci": [
             0.0,
-            0.0596
+            0.746
           ],
-          "zero_error_coverage_ci_method": "clopper-pearson",
+          "zero_error_coverage_ci_method": "bootstrap",
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -7798,9 +7798,9 @@
           "ece_ci_method": "bootstrap",
           "zero_error_coverage_ci": [
             0.0,
-            0.0362
+            1.0
           ],
-          "zero_error_coverage_ci_method": "clopper-pearson",
+          "zero_error_coverage_ci_method": "bootstrap",
           "text_equal_train": 20,
           "text_contains_train": 20,
           "unseen_text_n": 80,

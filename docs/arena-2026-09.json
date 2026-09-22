@@ -92,9 +92,9 @@
         "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.0303
+          0.448
         ],
-        "zero_error_coverage_ci_method": "clopper-pearson",
+        "zero_error_coverage_ci_method": "bootstrap",
         "mean_conf_correct": 0.976,
         "mean_conf_wrong": 0.926,
         "distinct_confidence_values": 25,
@@ -219,9 +219,9 @@
         "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.0183
+          0.9086
         ],
-        "zero_error_coverage_ci_method": "clopper-pearson",
+        "zero_error_coverage_ci_method": "bootstrap",
         "mean_conf_correct": 0.957,
         "mean_conf_wrong": 0.877,
         "distinct_confidence_values": 7,
@@ -259,9 +259,9 @@
         "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.0303
+          0.1032
         ],
-        "zero_error_coverage_ci_method": "clopper-pearson",
+        "zero_error_coverage_ci_method": "bootstrap",
         "mean_conf_correct": 0.926,
         "mean_conf_wrong": 0.832,
         "distinct_confidence_values": 10,
@@ -1495,9 +1495,9 @@
         "ece_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.0183
+          1.0
         ],
-        "zero_error_coverage_ci_method": "clopper-pearson",
+        "zero_error_coverage_ci_method": "bootstrap",
         "mean_conf_correct": 0.868,
         "mean_conf_wrong": 0.845,
         "distinct_confidence_values": 2,

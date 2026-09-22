@@ -49,7 +49,7 @@ def test_no_published_interval_has_zero_width(root):
 
 def test_every_interval_mark_carries_its_legend(root):
     """A † or a ‡ in a report means nothing without the line that defines it."""
-    for md in sorted((root / "docs").rglob("*.md")):
+    for md in [root / "README.md", *sorted((root / "docs").rglob("*.md"))]:
         text = md.read_text(encoding="utf-8")
         if "†" in text:
             assert "Clopper–Pearson" in text, f"{md.name} uses † without its legend"

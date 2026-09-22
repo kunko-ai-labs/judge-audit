@@ -55,7 +55,7 @@ Text overlap with the training half: 20 of 100 rows equal a training text, 0 mor
 | gemini-3-flash-preview | verbalized (model-reported probability) | 100.0% [96.4, 100.0]† | 0.004 [0.002, 0.006] | 100.0% [96.4, 100.0]† | 0.996 / — | 0 | $0.012 | 2.05 s | 100.0% (n=80) |
 | gemma4:e4b | verbalized (model-reported probability) | 100.0% [96.4, 100.0]† | 0.024 [0.018, 0.030] | 100.0% [96.4, 100.0]† | 0.976 / — | 0 | $0.000 | 9.44 s | 100.0% (n=80) |
 | llama-3.3-70b | verbalized (model-reported probability) | 100.0% [96.4, 100.0]† | 0.090 [0.083, 0.095] | 100.0% [96.4, 100.0]† | 0.910 / — | 0 | $0.020 | 0.80 s | 100.0% (n=80) |
-| llama3.2:3b | verbalized (model-reported probability) | 90.0% [76.7, 100.0] | 0.044 [0.013, 0.165] | 0.0% [0.0, 3.6]† | 0.872 / 0.830 | 0 | $0.000 | 0.70 s | 100.0% (n=80) |
+| llama3.2:3b | verbalized (model-reported probability) | 90.0% [76.7, 100.0] | 0.044 [0.013, 0.165] | 0.0% [0.0, 100.0] | 0.872 / 0.830 | 0 | $0.000 | 0.70 s | 100.0% (n=80) |
 
 ## Task router, bare option labels — held-out half (n=60) — GT-1 constructed
 
@@ -66,8 +66,8 @@ Text overlap with the training half: 40 of 60 rows equal a training text, 15 mor
 | **DeBERTa-v3-base fine-tuned — run 1 (pre-registered, 10 epochs)** | softmax probability of the chosen option | 100.0% [94.0, 100.0]† | 0.133 [0.072, 0.191] | 100.0% [94.0, 100.0]† | 0.867 / — | 0 | 20 / 20 | 0 / 20 | $0.000 | 100.0% (n=5) |
 | **DeBERTa-v3-base fine-tuned — run 2 (to convergence, post hoc)** | softmax probability of the chosen option | 100.0% [94.0, 100.0]† | 0.005 [0.003, 0.009] | 100.0% [94.0, 100.0]† | 0.995 / — | 0 | 20 / 20 | 0 / 20 | $0.000 | 100.0% (n=5) |
 | **DeBERTa-v3-base fine-tuned — run 2 + temperature scaling (post hoc)** | softmax probability of the chosen option ÷ T (T=0.19) | 100.0% [94.0, 100.0]† | 0.000 ‡ | 100.0% [94.0, 100.0]† | 1.000 / — | 0 | 20 / 20 | 0 / 20 | $0.000 | 100.0% (n=5) |
-| Jev (TypeSafe) | option probability | 66.7% [51.6, 82.5] | 0.315 [0.167, 0.457] | 0.0% [0.0, 6.0]† | 0.982 / 0.930 | 0 | 0 / 20 | 0 / 20 | $0.001 | 60.0% (n=5) |
-| claude-sonnet-4.5 | verbalized (model-reported probability) | 66.7% [52.4, 81.7] | 0.228 [0.102, 0.356] | 0.0% [0.0, 6.0]† | 0.935 / 0.813 | 0 | 2 / 20 | 2 / 20 | $0.250 | 60.0% (n=5) |
+| Jev (TypeSafe) | option probability | 66.7% [51.6, 82.5] | 0.315 [0.167, 0.457] | 0.0% [0.0, 57.4] | 0.982 / 0.930 | 0 | 0 / 20 | 0 / 20 | $0.001 | 60.0% (n=5) |
+| claude-sonnet-4.5 | verbalized (model-reported probability) | 66.7% [52.4, 81.7] | 0.228 [0.102, 0.356] | 0.0% [0.0, 59.0] | 0.935 / 0.813 | 0 | 2 / 20 | 2 / 20 | $0.250 | 60.0% (n=5) |
 | deberta-v3-base-zeroshot-v2.0 | NLI entailment softmax over options | 50.0% [33.3, 65.6] | 0.419 [0.300, 0.572] | 0.0% [0.0, 6.0]† | 0.607 / 0.830 | 0 | 20 / 20 | 20 / 20 | $0.000 | 80.0% (n=5) |
 | deepseek-r1 | verbalized (model-reported probability) | 60.0% [44.4, 73.0] | 0.333 [0.222, 0.468] | 0.0% [0.0, 6.0]† | 0.891 / 0.829 | 1 | 12 / 20 | 15 / 20 | $0.248 | 60.0% (n=5) |
 | gemini-3-flash-preview | verbalized (model-reported probability) | 66.7% [50.8, 81.0] | 0.317 [0.177, 0.468] | 0.0% [0.0, 6.0]† | 0.991 / 0.968 | 0 | 1 / 20 | 1 / 20 | $0.008 | 60.0% (n=5) |
@@ -85,9 +85,9 @@ Text overlap with the training half: 40 of 60 rows equal a training text, 15 mor
 | **DeBERTa-v3-base fine-tuned — run 2 (to convergence, post hoc)** | softmax probability of the chosen option | 100.0% [94.0, 100.0]† | 0.005 [0.003, 0.009] | 100.0% [94.0, 100.0]† | 0.995 / — | 0 | 20 / 20 | 0 / 20 | $0.000 | 100.0% (n=5) |
 | **DeBERTa-v3-base fine-tuned — run 2 + temperature scaling (post hoc)** | softmax probability of the chosen option ÷ T (T=0.19) | 100.0% [94.0, 100.0]† | 0.000 ‡ | 100.0% [94.0, 100.0]† | 1.000 / — | 0 | 20 / 20 | 0 / 20 | $0.000 | 100.0% (n=5) |
 | Jev (TypeSafe) | option probability | 98.3% [94.8, 100.0] | 0.056 [0.030, 0.098] | 95.0% [89.1, 100.0] | 0.933 / 0.600 | 0 | 19 / 20 | 0 / 20 | $0.001 | 100.0% (n=5) |
-| claude-sonnet-4.5 | verbalized (model-reported probability) | 96.7% [91.5, 100.0] | 0.023 [0.014, 0.072] | 0.0% [0.0, 6.0]† | 0.943 / 0.975 | 0 | 20 / 20 | 2 / 20 | $0.200 | 100.0% (n=5) |
+| claude-sonnet-4.5 | verbalized (model-reported probability) | 96.7% [91.5, 100.0] | 0.023 [0.014, 0.072] | 0.0% [0.0, 100.0] | 0.943 / 0.975 | 0 | 20 / 20 | 2 / 20 | $0.200 | 100.0% (n=5) |
 | deberta-v3-base-zeroshot-v2.0 | NLI entailment softmax over options | 50.0% [34.4, 65.5] | 0.179 [0.116, 0.365] | 0.0% [0.0, 6.0]† | 0.605 / 0.673 | 0 | 20 / 20 | 19 / 20 | $0.000 | 40.0% (n=5) |
-| deepseek-r1 | verbalized (model-reported probability) | 86.7% [76.8, 94.5] | 0.058 [0.021, 0.146] | 0.0% [0.0, 6.0]† | 0.930 / 0.738 | 1 | 20 / 20 | 7 / 20 | $0.225 | 100.0% (n=5) |
+| deepseek-r1 | verbalized (model-reported probability) | 86.7% [76.8, 94.5] | 0.058 [0.021, 0.146] | 0.0% [0.0, 74.6] | 0.930 / 0.738 | 1 | 20 / 20 | 7 / 20 | $0.225 | 100.0% (n=5) |
 | gemini-3-flash-preview | verbalized (model-reported probability) | 96.7% [91.5, 100.0] | 0.015 [0.002, 0.062] | 73.3% [60.0, 100.0] | 0.987 / 0.825 | 0 | 20 / 20 | 2 / 20 | $0.009 | 100.0% (n=5) |
 | gemma4:e4b | verbalized (model-reported probability) | 80.0% [67.8, 90.5] | 0.149 [0.040, 0.277] | 0.0% [0.0, 6.0]† | 0.943 / 0.975 | 0 | 20 / 20 | 12 / 20 | $0.000 | 100.0% (n=5) |
 | llama-3.3-70b | verbalized (model-reported probability) | 88.3% [78.6, 95.5] | 0.022 [0.008, 0.126] | 0.0% [0.0, 6.0]† | 0.898 / 0.957 | 0 | 20 / 20 | 7 / 20 | $0.016 | 100.0% (n=5) |
@@ -103,7 +103,7 @@ Text overlap with the training half: 13 of 200 rows equal a training text, 36 mo
 | **DeBERTa-v3-base fine-tuned — run 2 (to convergence, post hoc)** | softmax probability of the chosen option | 99.0% [97.5, 100.0] | 0.048 [0.036, 0.066] | 96.0% [93.1, 100.0] | 0.953 / 0.614 | 0 | 100.0% | 100.0% | — | $0.000 | 98.7% (n=151) |
 | **DeBERTa-v3-base fine-tuned — run 2 + temperature scaling (post hoc)** | softmax probability of the chosen option ÷ T (T=0.30) | 99.0% [97.5, 100.0] | 0.017 [0.005, 0.033] | 96.0% [93.2, 100.0] | 0.991 / 0.918 | 0 | 100.0% | 100.0% | — | $0.000 | 98.7% (n=151) |
 | Jev (TypeSafe) | option probability | 95.5% [92.5, 98.0] | 0.039 [0.028, 0.066] | 73.0% [67.0, 94.0] | 0.933 / 0.597 | 0 | 82.5% | 100.0% | 0.584 | $0.004 | 94.7% (n=151) |
-| claude-sonnet-4.5 | verbalized (model-reported probability) | 96.5% [93.9, 99.0] | 0.016 [0.005, 0.040] | 0.0% [0.0, 1.8]† | 0.957 / 0.877 | 0 | 87.5% | 100.0% | 0.860 | $0.454 | 96.7% (n=151) |
+| claude-sonnet-4.5 | verbalized (model-reported probability) | 96.5% [93.9, 99.0] | 0.016 [0.005, 0.040] | 0.0% [0.0, 90.9] | 0.957 / 0.877 | 0 | 87.5% | 100.0% | 0.860 | $0.454 | 96.7% (n=151) |
 | deberta-v3-base-zeroshot-v2.0 | NLI entailment softmax over options | 59.5% [51.7, 66.7] | 0.125 [0.088, 0.201] | 8.0% [3.9, 16.0] | 0.731 / 0.559 | 0 | 47.5% | 25.0% | 0.680 | $0.000 | 62.9% (n=151) |
 | deepseek-r1 | verbalized (model-reported probability) | 80.5% [74.8, 85.6] | 0.127 [0.076, 0.184] | 0.0% [0.0, 1.8]† | 0.939 / 0.900 | 0 | 27.5% | 55.0% | 0.905 | $0.589 | 85.4% (n=151) |
 | gemini-3-flash-preview | verbalized (model-reported probability) | 97.0% [94.5, 99.0] | 0.015 [0.002, 0.040] | 0.0% [0.0, 1.8]† | 0.982 / 0.983 | 0 | 87.5% | 100.0% | 1.000 | $0.026 | 97.4% (n=151) |

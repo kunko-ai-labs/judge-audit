@@ -272,3 +272,16 @@ def test_ece_ci_stays_a_bootstrap_and_flags_a_degenerate_resample():
     assert ci[0] == ci[1] == pytest.approx(0.1)
     assert ci.method == "bootstrap" and ci.degenerate
     assert not ece_ci([0.9, 0.9, 0.5, 0.5], [True, False, True, False]).degenerate
+
+
+def test_a_proportion_that_can_still_move_keeps_its_clustered_bootstrap():
+    """0 % is not automatically exact: what decides is whether the resamples move.
+
+    Zero-error coverage is 0 here because the single most confident row is wrong, but a
+    resample that misses that text covers everything — so the bootstrap has width and it
+    is the one published; the exact interval would claim a precision the data denies.
+    """
+    conf = [1.0] + [0.9] * 5
+    ok = [False] + [True] * 5
+    ci = zero_error_coverage_ci(conf, ok, groups=[f"t{i}" for i in range(6)])
+    assert ci[0] == 0.0 < ci[1] and ci.method == "bootstrap"

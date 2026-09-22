@@ -258,19 +258,25 @@ def bootstrap_ci(values: Sequence[T], statistic: Callable[[list[T]], float],
 def proportion_ci(successes: int, values: Sequence[T], statistic: Callable[[list[T]], float],
                   n_boot: int = N_BOOT, seed: int = 0,
                   groups: Sequence[Hashable] | None = None) -> Interval | None:
-    """Interval of a proportion: exact at the boundary, clustered bootstrap elsewhere.
+    """Interval of a proportion: the clustered bootstrap, exact where it degenerates.
 
-    `successes` is the numerator of the point estimate over `len(values)` rows. When it
-    is 0 or n the bootstrap has nothing to resample — every draw returns the same value —
-    so the published interval is the exact binomial one, which ignores `groups`.
+    The bootstrap is always run first, because it is the one that honours the clusters.
+    Only when it comes back with **zero width** — every resample gave the same value, as
+    when every row is correct — is the exact binomial interval of `successes` out of
+    `len(values)` published instead. A statistic that *can* move keeps its bootstrap even
+    at 0 % or 100 %: a judge whose zero-error coverage is 0 % because one confident error
+    sits at the top has a wide interval, and replacing it with the exact one would claim
+    a precision the resamples deny.
     """
     n = len(values)
     if n == 0:
         return None
-    if successes in (0, n):
-        return clopper_pearson(successes, n, alpha=1 - CI_LEVEL)
     ci = bootstrap_ci(list(values), statistic, n_boot, seed, groups=groups)
-    return None if ci is None else Interval(ci[0], ci[1], BOOTSTRAP)
+    if ci is None:
+        return None
+    if ci[0] == ci[1]:
+        return clopper_pearson(successes, n, alpha=1 - CI_LEVEL)
+    return Interval(ci[0], ci[1], BOOTSTRAP)
 
 
 def ci_fields(name: str, ci: Interval | None) -> dict:
