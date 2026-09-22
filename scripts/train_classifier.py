@@ -286,11 +286,16 @@ def main() -> None:
             "method": "Guo et al. 2017: one scalar T minimising validation NLL; golden-section "
                       f"search on log T within T in [{T_BOUNDS[0]}, {T_BOUNDS[1]}]",
             "temperature": round(t_fit, 4), "hit_bound": bounded, "n_val": len(val_rows),
+            # A perfectly classified slice has no NLL minimum: T is wherever the NLL
+            # became numerically zero, not a calibrated value. Said here and in the report.
+            "identified": val_acc < 1.0,
             "validation_indices": val_idx, "validation_rows_sha256": sha256_rows(val_rows),
             "val_accuracy": round(val_acc, 4),
             "val_nll_before": round(nll_before, 4), "val_nll_after": round(nll_after, 4),
         }
-        print(f"  temperature {t_fit:.3f}{' (AT BOUND)' if bounded else ''} (validation NLL "
+        flag = " (NOT IDENTIFIED: validation classified perfectly)" if val_acc >= 1.0 else (
+            " (AT BOUND)" if bounded else "")
+        print(f"  temperature {t_fit:.3f}{flag} (validation NLL "
               f"{nll_before:.3f} -> {nll_after:.3f}, n={len(val_rows)}, val accuracy "
               f"{val_acc:.1%})", flush=True)
 
@@ -341,7 +346,9 @@ def main() -> None:
         "software": {"python": platform.python_version(), "torch": torch.__version__,
                      "transformers": __import__("transformers").__version__,
                      "judge_audit": __version__},
-        "model_dir": str(out_dir), "model_dir_config_sha256": config_sha,
+        "model_dir": "~/" + str(out_dir.relative_to(Path.home())) if out_dir.is_relative_to(
+            Path.home()) else str(out_dir),
+        "model_dir_config_sha256": config_sha,
         "held_out_evaluated_here": False,
     }
     train_json.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n",

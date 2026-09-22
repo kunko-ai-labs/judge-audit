@@ -42,6 +42,13 @@ ARENA = ROOT / "docs" / "runs" / "arena"
 # They are not comparable with the full-dataset rows of this table and belong to
 # docs/finetuned-baseline-2026-09.md, where every judge is re-scored on the same rows.
 HELDOUT_RUNS: list[str] = []
+# The fine-tuned slugs share a model name per dataset; label them by run so the rows
+# stay distinguishable (run 1 is the pre-registered one, the others the post-hoc amendment).
+FINETUNED_LABELS = {
+    "finetuned-deberta": "DeBERTa-v3 fine-tuned, run 1 (local)",
+    "finetuned-deberta-run2": "DeBERTa-v3 fine-tuned, run 2 (local, post hoc)",
+    "finetuned-deberta-run2-ts": "DeBERTa-v3 fine-tuned, run 2 + temperature scaling (local, post hoc)",
+}
 
 
 def ground_truth_tier(labels: str) -> GroundTruth:
@@ -132,7 +139,7 @@ def collect() -> dict:
                 if run:
                     entry["run"] = run
                     j = run.get("judge", {})
-                    entry["label"] = j.get("model", d.name)
+                    entry["label"] = FINETUNED_LABELS.get(d.name, j.get("model", d.name))
                     entry["method"] = ("option probability" if j.get("name") == "jev"
                                        else j.get("confidence_method", "verbalized"))
                 entry["datasets"][ds] = summarize(recs, ds)
@@ -193,9 +200,10 @@ def render(judges: dict) -> str:
           "- **DeBERTa-v3 NLI zero-shot**: the *control* — small, instruction-immune, real softmax "
           "confidence, no training. Not a competitor; the row the others are read against.",
           "- **DeBERTa-v3 fine-tuned**: *your own classifier* — the same encoder trained on the train "
-          "half of a pre-registered split, scored on the other half. Full-row datasets appear above; "
-          "the held-out comparison, every judge on the same rows, is "
-          "[finetuned-baseline-2026-09.md](finetuned-baseline-2026-09.md).",
+          "half of a pre-registered split, scored on the other half. Run 1 is the pre-registered "
+          "run; run 2 (trained to convergence) and run 2 + temperature scaling are a disclosed "
+          "post-hoc amendment. Full-row datasets appear above; the held-out comparison, every judge "
+          "on the same rows, is [finetuned-baseline-2026-09.md](finetuned-baseline-2026-09.md).",
           "",
           "## How to read it", "",
           "- **ECE**: 0 = confidence equals accuracy in every bin. Above ~0.1 the number is decoration.",

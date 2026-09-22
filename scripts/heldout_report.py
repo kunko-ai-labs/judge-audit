@@ -110,8 +110,11 @@ AMENDMENT = [
     "by minimising the negative log-likelihood of the validation slice's logits divided by T. "
     "NLL is convex in 1/T, so the fit is a golden-section search on log T, bounded to "
     "T ∈ [0.1, 10]: if the validation slice is classified perfectly the NLL has no minimum "
-    "(T → 0 would push every confidence to 1), the search stops at the bound and the record and "
-    "this report say so. `judge-audit.json` next to the model carries `temperature` and "
+    "(T → 0 would push every confidence to 1): the search stops where the NLL is numerically "
+    "zero or at the bound, the fitted T is **not identified**, and the record and this report say "
+    "so — the temperature-scaled row is then reported as what the standard recipe produces on a "
+    "slice this small, not as a calibrated model. `judge-audit.json` next to the model carries "
+    "`temperature` and "
     "the `finetuned` judge divides the logits by it before the softmax. Temperature scaling "
     "changes no decision, only the confidence, so accuracy is identical to run 2 by construction. "
     "Evaluated as a separate slug, `finetuned-deberta-run2-ts`, on the same rows; the run-2 row is "
@@ -415,8 +418,11 @@ def render(data: dict) -> str:
                 losses = t.get("train_loss_per_epoch", [])
                 stop = t.get("stopped_by", "epoch cap")
                 ts = t.get("temperature_scaling")
+                flag = ("" if not ts else " **not identified: validation classified perfectly**"
+                        if ts.get("identified") is False else
+                        " **at bound**" if ts.get("hit_bound") else "")
                 tcol = ("—" if not ts else
-                        f"{ts['temperature']:.3f}{' **at bound**' if ts.get('hit_bound') else ''} "
+                        f"{ts['temperature']:.3f}{flag} "
                         f"({ts['val_nll_before']:.3f} → {ts['val_nll_after']:.3f}, n={ts['n_val']}, "
                         f"val acc {ts['val_accuracy']:.0%})")
                 L.append(f"| {FINETUNED_RUNS[slug]['label'].split(' — ')[1]} | {dataset} | "

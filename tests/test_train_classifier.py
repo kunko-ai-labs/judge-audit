@@ -67,6 +67,20 @@ def test_fit_temperature_recovers_a_known_scale_and_reports_bounds():
     assert bounded and math.isclose(t, tc.T_BOUNDS[0], rel_tol=1e-2)
 
 
+def test_run2_records_declare_whether_the_temperature_is_identified():
+    for dataset in ("email-routing", "task-routing"):
+        path = ROOT / "docs" / "runs" / "finetuned" / f"{dataset}.train-run2.json"
+        if not path.exists():
+            continue
+        import json
+        t = json.loads(path.read_text())
+        ts = t["temperature_scaling"]
+        assert t["run"] == 2 and t["epochs"] <= tc.RUN2_MAX_EPOCHS and t["n_val"] > 0
+        assert not set(t["validation_indices"]) & set(t["train_indices"])
+        assert ts["identified"] == (ts["val_accuracy"] < 1.0)
+        assert 0.0 < ts["temperature"] and "hit_bound" in ts
+
+
 def test_early_stopping_constants_are_the_amendment_protocol():
     assert (tc.RUN2_STOP_LOSS, tc.RUN2_PATIENCE, tc.RUN2_MAX_EPOCHS) == (0.05, 3, 40)
     assert tc.RUN2_VAL_FRAC == 0.2 and tc.T_BOUNDS == (0.1, 10.0)

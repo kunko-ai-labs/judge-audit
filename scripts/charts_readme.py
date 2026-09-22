@@ -40,7 +40,9 @@ DPI = 160
 ARENA_LABELS = {"jev": "Jev", "claude-sonnet-4.5": "Claude Sonnet 4.5", "llama-3.3-70b": "Llama 3.3 70B",
                 "deepseek-r1": "DeepSeek R1", "gemma4": "gemma4 (local)", "llama32": "llama3.2 3B (local)",
                 "deberta-nli": "DeBERTa NLI (local)",
-                "finetuned-deberta": "DeBERTa fine-tuned (local)"}
+                "finetuned-deberta": "DeBERTa fine-tuned, run 1 (local)",
+                "finetuned-deberta-run2": "DeBERTa fine-tuned, run 2 (local)",
+                "finetuned-deberta-run2-ts": "DeBERTa fine-tuned, run 2 + temp. scaling (local)"}
 SEG_LABELS = {"clean_easy": "easy tasks\n(label: cheap)", "clean_hard": "hard tasks\n(label: strong)",
               "adversarial": "easy + injection\n(label: cheap)"}
 
@@ -170,7 +172,7 @@ def hero_arena(theme: str) -> Path | None:
             "200 emails under attack · share of decisions automatable with zero observed errors, "
             "most confident first",
             "examples/email-routing-adversarial · n=200 per judge · raw responses in docs/runs/ · "
-            "judge-audit")
+            "fine-tuned rows trained on the clean emails' train half, same generator · judge-audit")
     return _save(fig, "hero-arena", theme)
 
 
