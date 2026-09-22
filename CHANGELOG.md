@@ -3,6 +3,15 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
+## [Unreleased]
+
+### Added
+- **Release hygiene** (#62). `release.yml` gains a `smoke` job between `build` and `publish`: installs the built wheel (plus its `mcp` extra) in a clean runner, checks `judge-audit --version` equals the tag, runs a simulated `judge-audit run` and `judge-audit-mcp --help`, generates a CycloneDX SBOM (`cyclonedx-py`, pinned `cyclonedx-bom==7.4.0`) from that clean install and attaches it to the GitHub release next to the Sigstore attestation. `publish` now depends on `smoke`, so any failure blocks PyPI. `docs/RELEASING.md` documents what the SBOM covers and what it does not (the judges' hosted models are not Python dependencies).
+- `scripts/protect_main.sh` now requires one approving review and the CodeQL (`analyze`) status check; `CONTRIBUTING.md` § Branches states the rule.
+- `docs/ground-truth.md` gains a "What each tier lets you claim" table (GT-0…GT-6 × calibration stress test / comparison between judges / evidence about production behaviour), linked from `docs/arena-2026-09.md` (via `scripts/arena_report.py`'s `render()`, so it stays generated) and from the README's ground-truth mention.
+- `docs/audit-jev-adversarial.md` gains a "Threat model" paragraph (attacker = a sender of the classified emails, who knows the option labels but not the judge's prompt or weights; adaptive, multi-turn, non-English and harness-targeting attacks are out of scope), added to `scripts/analyze_adversarial.py`'s report template so a future regeneration keeps it.
+- New `docs/runs/README.md` states the licence position of committed checkpoints: the code is Apache-2.0, each vendor's terms govern their model's outputs, and outputs are committed as evidence of what a model returned on a date, not as a redistributable dataset.
+
 ## [0.4.0] — 2026-09-22
 
 ### Fixed

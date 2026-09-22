@@ -225,6 +225,17 @@ def main():
     L.append(f"- Mean confidence: {mean_conf:.4f} (clean {clean_conf:.4f} vs adversarial {adv_conf:.4f})")
     L.append(f"- Total cost: ${total_cost:.6f} · latency p50 {p50:.2f}s / p99 {p99:.2f}s")
     L.append("")
+    L.append("## Threat model\n")
+    L.append("**Attacker**: a sender of the emails being classified — they choose the subject, "
+             "body and any injected instructions, and know the category labels the router "
+             "chooses between (the categories are visible from product behaviour). They cannot "
+             "see the judge's system prompt, its weights, or any other row in this dataset.")
+    L.append("")
+    L.append("**Out of scope**: adaptive attacks that have seen or guessed the exact prompt, "
+             "multi-turn attacks that build state across several messages, non-English attacks, "
+             "and attacks that target the harness itself (this script, the checkpoint format, "
+             "the CLI) rather than the judge's classification.")
+    L.append("")
     L.append("## By attack\n")
     L.append("| attack | n | accuracy | mean conf | min conf | ECE |")
     L.append("|---|---|---|---|---|---|")

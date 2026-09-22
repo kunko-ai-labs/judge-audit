@@ -7,9 +7,9 @@ repo="${1:-kunko-ai-labs/judge-audit}"
 gh api -X PUT "repos/$repo/branches/main/protection" --input - <<'JSON'
 {
   "required_status_checks": {"strict": true,
-    "contexts": ["test (3.10)", "test (3.11)", "test (3.12)", "datasets"]},
+    "contexts": ["test (3.10)", "test (3.11)", "test (3.12)", "datasets", "analyze"]},
   "enforce_admins": false,
-  "required_pull_request_reviews": null,
+  "required_pull_request_reviews": {"required_approving_review_count": 1},
   "restrictions": null,
   "required_linear_history": true,
   "allow_force_pushes": false,
@@ -25,4 +25,4 @@ gh api -X POST "repos/$repo/rulesets" --input - <<'JSON'
 }
 JSON
 gh api "repos/$repo/branches/main/protection" \
-  --jq '{checks: .required_status_checks.contexts, force_push: .allow_force_pushes.enabled, deletions: .allow_deletions.enabled, linear: .required_linear_history.enabled}'
+  --jq '{checks: .required_status_checks.contexts, reviews: .required_pull_request_reviews.required_approving_review_count, force_push: .allow_force_pushes.enabled, deletions: .allow_deletions.enabled, linear: .required_linear_history.enabled}'

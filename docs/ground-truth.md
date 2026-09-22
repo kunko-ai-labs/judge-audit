@@ -30,6 +30,33 @@ by the generator, email categories are synthetic and seeded, and downstream task
 quality (does the cheap model really solve the "easy" tasks?) is not measured.
 Their caveats say so in every report that uses them.
 
+## What each tier lets you claim
+
+The same accuracy number is evidence of different things depending on the tier. This
+table is what a report is allowed to say out loud about a judge, given the tier of the
+labels it was measured against — not a ranking of the tiers themselves.
+
+| Tier | Calibration stress test | Comparison between judges on this data | Evidence about production behaviour |
+|---|---|---|---|
+| GT-0 unknown | ✗ | ✗ | ✗ |
+| GT-1 constructed | ✓ | ✓ | ✗ |
+| GT-2 synthetic, validated | ✓ | ✓ | with caveats |
+| GT-3 human-annotated | ✓ | ✓ | with caveats |
+| GT-4 expert consensus | ✓ | ✓ | with caveats |
+| GT-5 empirically validated | ✓ | ✓ | ✓ |
+| GT-6 production outcome | ✓ | ✓ | ✓ |
+
+GT-0 supports no claim at all — an undeclared provenance means the accuracy carries no
+known evidential weight, full stop. GT-1 through GT-4 can already stress-test
+calibration and compare judges against each other, because both claims only need labels
+that are *internally consistent*, not *true of the world*: a judge that is well
+calibrated or better-calibrated-than-another on constructed labels really is, on those
+labels. Only GT-5 and GT-6 support a claim about production behaviour without a
+caveat, because only they check a label against something that happened independently
+of the annotation — GT-2 through GT-4 read "with caveats" because a human or expert
+panel's judgment, however careful, is not the same evidence as an outcome that actually
+occurred.
+
 ## Declaring the tier: the dataset header line
 
 A labels JSONL declares its provenance with **one header line as its first line**.

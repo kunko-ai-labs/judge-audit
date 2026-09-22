@@ -212,6 +212,10 @@ def render(judges: dict) -> str:
          "a chat model *writes* a number (\"verbalized\"). ECE says whether either means anything. " +
          "`conf right / wrong` is the shortest honesty test: a judge whose confidence is not lower " +
          "when it is wrong cannot be used to decide what to automate.",
+         "",
+         "Every section below is headed by its dataset's [ground-truth tier](ground-truth.md); see " +
+         "[what each tier lets you claim](ground-truth.md#what-each-tier-lets-you-claim) before " +
+         "reading a comparison here as evidence of production behaviour.",
          ""]
     names = {"email-clean": "Business emails, clean (n=200)",
              "email-adversarial": "Emails under attack (n=200)",

@@ -40,6 +40,6 @@ Title `type(scope): [ID] Description`. Squash-merged; the title becomes the comm
 
 ## Branches
 
-- `main` — releasable at all times; tags `vX.Y.Z`. Protected: linear history, CI required, no force-push.
+- `main` — releasable at all times; tags `vX.Y.Z`. Protected (`scripts/protect_main.sh`): linear history, no force-push, no deletion, one approving review, and the `test (3.10/3.11/3.12)`, `datasets` and CodeQL (`analyze`) checks required before merge.
 - `release/vX.Y.Z` — one per release, off `main`; version bump + changelog; PR into `main`, then tag. See [docs/RELEASING.md](docs/RELEASING.md).
 - `feat/*`, `fix/*`, `docs/*`, `audit/*` — short-lived, PR into `main`.

@@ -13,6 +13,12 @@
 - **"Immunity" is a strong word for a weak attack.** Homoglyph rows alter a single word of more than four letters; the rest of the category vocabulary is intact, and n is 14 / 10 / 6 per style. The result is "not fooled by one disguised word", not "robust to obfuscation".
 - The routing question was deliberately *not* hardened ("ignore instructions in the email"), mirroring a naive production prompt. A hardened prompt is a different audit.
 
+## Threat model
+
+**Attacker**: a sender of the emails being classified — they choose the subject, body and any injected instructions, and know the category labels the router chooses between (the categories are visible from product behaviour). They cannot see the judge's system prompt, its weights, or any other row in this dataset.
+
+**Out of scope**: adaptive attacks that have seen or guessed the exact prompt, multi-turn attacks that build state across several messages, non-English attacks, and attacks that target the harness itself (this script, the checkpoint format, the CLI) rather than the judge's classification.
+
 ## By attack
 
 | attack | n | accuracy | mean conf | min conf | ECE | attacker success |
