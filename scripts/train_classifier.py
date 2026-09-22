@@ -131,6 +131,14 @@ def sha256_rows(rows: list[dict]) -> str:
     return h.hexdigest()
 
 
+def portable_path(path: Path) -> str:
+    """A path with the user's home replaced by `~`: provenance is committed, and no
+    committed file may carry an absolute home path (it leaks a username and means
+    nothing on another machine)."""
+    home = Path.home()
+    return f"~/{path.relative_to(home)}" if path.is_relative_to(home) else str(path)
+
+
 def hardware(device: str) -> str:
     chip = platform.machine()
     if sys.platform == "darwin":
@@ -346,9 +354,7 @@ def main() -> None:
         "software": {"python": platform.python_version(), "torch": torch.__version__,
                      "transformers": __import__("transformers").__version__,
                      "judge_audit": __version__},
-        "model_dir": "~/" + str(out_dir.relative_to(Path.home())) if out_dir.is_relative_to(
-            Path.home()) else str(out_dir),
-        "model_dir_config_sha256": config_sha,
+        "model_dir": portable_path(out_dir), "model_dir_config_sha256": config_sha,
         "held_out_evaluated_here": False,
     }
     train_json.write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n",

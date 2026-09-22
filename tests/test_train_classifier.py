@@ -81,6 +81,29 @@ def test_run2_records_declare_whether_the_temperature_is_identified():
         assert 0.0 < ts["temperature"] and "hit_bound" in ts
 
 
+def test_portable_path_hides_the_home_directory():
+    home = Path.home()
+    assert tc.portable_path(home / ".cache" / "x") == "~/.cache/x"
+    assert tc.portable_path(home) == "~/."          # relative_to(home) is "."
+    outside = Path("/opt/models/x")
+    assert tc.portable_path(outside) == "/opt/models/x"
+
+
+def test_no_committed_file_of_this_story_carries_an_absolute_home_path():
+    """A committed provenance file must not leak a username or a path that means
+    nothing on another machine. Scoped to the files this story owns; the jury and
+    launch files that still carry one come from other stories."""
+    owned = [ROOT / "docs" / "finetuned-baseline-2026-09.json",
+             ROOT / "docs" / "finetuned-baseline-2026-09.md",
+             *(ROOT / "docs" / "runs" / "finetuned").glob("*.json"),
+             *(ROOT / "docs" / "runs" / "arena").glob("finetuned-deberta*/*")]
+    assert len(owned) > 10
+    for f in owned:
+        text = f.read_text(encoding="utf-8", errors="replace")
+        for needle in ("/Users/", "/home/", str(Path.home())):
+            assert needle not in text, f"{f.name} carries {needle}"
+
+
 def test_early_stopping_constants_are_the_amendment_protocol():
     assert (tc.RUN2_STOP_LOSS, tc.RUN2_PATIENCE, tc.RUN2_MAX_EPOCHS) == (0.05, 3, 40)
     assert tc.RUN2_VAL_FRAC == 0.2 and tc.T_BOUNDS == (0.1, 10.0)

@@ -54,7 +54,7 @@
     "transformers": "5.17.0",
     "judge_audit": "0.3.2"
   },
-  "model_dir": "/Users/altostratus_1/.cache/judge-audit/finetuned/task-routing",
+  "model_dir": "~/.cache/judge-audit/finetuned/task-routing",
   "model_dir_config_sha256": "14663115589699aa76a957d67f5f4a13e0071358a39af2a48fea6863d8788d63",
   "held_out_evaluated_here": false
 }

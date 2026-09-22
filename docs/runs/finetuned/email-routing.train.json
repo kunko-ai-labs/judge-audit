@@ -62,7 +62,7 @@
     "transformers": "5.17.0",
     "judge_audit": "0.3.2"
   },
-  "model_dir": "/Users/altostratus_1/.cache/judge-audit/finetuned/email-routing",
+  "model_dir": "~/.cache/judge-audit/finetuned/email-routing",
   "model_dir_config_sha256": "0d982427ddc64a3ab944c65b64cd4db6b82043d22f3fee88c6ca62014fa79677",
   "held_out_evaluated_here": false
 }
