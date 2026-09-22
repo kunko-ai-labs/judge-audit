@@ -15,7 +15,7 @@ from .judges.jev import JevJudge
 from .judges.llm import LLMJudge
 from .judges.nli import NLIJudge
 from .judges.simulated import SIMULATED_TAG, SimulatedJudge
-from .report import check_drift, render_html, render_markdown
+from .report import check_drift, interval, render_html, render_markdown
 from .runner import load_dataset, run_audit, write_judgments
 
 JUDGES = ("jev", "llm", "nli", "simulated")
@@ -55,6 +55,8 @@ def _parser() -> argparse.ArgumentParser:
     r.add_argument("--json", default="audit-result.json", help="metrics + run metadata")
     r.add_argument("--judgments", default="audit-judgments.jsonl",
                    help="per-decision evidence (JSONL); pass '' to skip")
+    r.add_argument("--no-ci", action="store_true",
+                   help="skip the bootstrap confidence intervals (also JUDGE_AUDIT_BOOTSTRAP=0)")
 
     c = sub.add_parser("check", help="CI gate: fail if drifted vs baseline")
     c.add_argument("labels")
@@ -66,6 +68,8 @@ def _parser() -> argparse.ArgumentParser:
     c.add_argument("--json", default=None, help="also write metrics + run metadata here")
     c.add_argument("--drift", default=None,
                    help="write the verdict here: {ok, failures, ece, accuracy, baseline}")
+    c.add_argument("--no-ci", action="store_true",
+                   help="skip the bootstrap confidence intervals (also JUDGE_AUDIT_BOOTSTRAP=0)")
     return ap
 
 
@@ -84,7 +88,8 @@ def main(argv: list[str] | None = None) -> None:
     except (RuntimeError, ValueError) as e:
         _die(f"judge '{args.judge}' is not configured: {e}")
 
-    result = run_audit(judge, rows, labels_path=args.labels, dataset_meta=dataset_meta)
+    result = run_audit(judge, rows, labels_path=args.labels, dataset_meta=dataset_meta,
+                       ci=False if args.no_ci else None)
 
     if args.cmd == "run":
         fmt = args.format
@@ -104,8 +109,10 @@ def main(argv: list[str] | None = None) -> None:
             json.dump(result.to_dict(), f, indent=2)
         if args.judgments:
             write_judgments(result, args.judgments)
-        print(f"judge={result.judge} n={result.n} accuracy={result.accuracy:.1%} "
-              f"ece={result.ece:.4f} gt={ground_truth_of(result.run).tier} "
+        print(f"judge={result.judge} n={result.n} "
+              f"accuracy={result.accuracy:.1%}{interval(result.accuracy_ci, pct=True)} "
+              f"ece={result.ece:.4f}{interval(result.ece_ci)} "
+              f"gt={ground_truth_of(result.run).tier} "
               f"cost=${result.total_cost_usd:.4f} -> {out}")
     else:
         failures: list[str] = []

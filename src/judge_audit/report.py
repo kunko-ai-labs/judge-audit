@@ -8,6 +8,17 @@ from .ground_truth import ground_truth_of
 from .runner import AuditResult
 
 
+def interval(ci, pct: bool = False, digits: int = 4) -> str:
+    """` [55.8, 75.0]` for a (lo, hi) pair — the compact form every report uses next to
+    its point estimate; '' when the interval was not computed."""
+    if ci is None:
+        return ""
+    lo, hi = ci
+    if pct:
+        return f" [{lo * 100:.1f}, {hi * 100:.1f}]"
+    return f" [{lo:.{digits}f}, {hi:.{digits}f}]"
+
+
 def provenance_lines(run: dict) -> list[str]:
     """Who, what, when — so a reader can tell a real vendor run from a demo."""
     if not run:
@@ -44,20 +55,25 @@ def ground_truth_line(run: dict) -> str:
 
 def render_markdown(result: AuditResult) -> str:
     d = result.to_dict()
+    acc_ci = interval(d.get("accuracy_ci"), pct=True)
+    ece_ci = interval(d.get("ece_ci"))
+    zec_ci = interval(d.get("zero_error_coverage_ci"), pct=True)
     lines = [
         f"# Audit report — {d['judge']}",
         "",
-        f"**n={d['n']}** · accuracy **{d['accuracy']:.1%}** · ECE **{d['ece']:.4f}**",
+        f"**n={d['n']}** · accuracy **{d['accuracy']:.1%}**{acc_ci} · ECE **{d['ece']:.4f}**{ece_ci}",
         f"· cost **${d['total_cost_usd']:.4f}** · p50 **{d['p50_latency_s']}s** · p99 **{d['p99_latency_s']}s**",
         "",
         *provenance_lines(d.get("run", {})),
         "",
         f"**{ground_truth_line(d.get('run', {}))}**",
+        *ci_lines(d),
         "",
         "## Can I automate this?",
         "",
-        f"Zero observed errors through the most confident **{d['zero_error_coverage']['coverage']:.1%}** "
-        f"({d['zero_error_coverage']['n']} decisions, confidence ≥ {d['zero_error_coverage']['threshold']}).",
+        f"Zero observed errors through the most confident **{d['zero_error_coverage']['coverage']:.1%}**"
+        f"{zec_ci} ({d['zero_error_coverage']['n']} decisions, "
+        f"confidence ≥ {d['zero_error_coverage']['threshold']}).",
         "Retrospective on this dataset — not a production guarantee.",
         "",
         "## Accuracy vs coverage",
@@ -80,10 +96,25 @@ def render_markdown(result: AuditResult) -> str:
     return "\n".join(lines) + "\n"
 
 
+def ci_lines(d: dict) -> list[str]:
+    """One line saying what the brackets are, only when a report shows them."""
+    b = d.get("bootstrap")
+    if not b:
+        return []
+    return ["", f"_Brackets are {b['level']:.0%} percentile-bootstrap intervals over rows "
+                f"({b['n_boot']:,} resamples, seed {b['seed']}): how far the number would move "
+                f"on another sample of n={d['n']}._"]
+
+
 def render_html(result: AuditResult, tag: str = "") -> str:
     """Self-contained HTML report with base64-embedded charts. No network needed."""
     from .charts import accuracy_coverage_png, png_to_data_uri, reliability_diagram_png
     d = result.to_dict()
+    acc_ci = interval(d.get("accuracy_ci"), pct=True)
+    ece_ci = interval(d.get("ece_ci"))
+    zec_ci = interval(d.get("zero_error_coverage_ci"), pct=True)
+    ci_note = "".join(f"<p class=\"prov\">{html.escape(line.strip('_'))}</p>"
+                      for line in ci_lines(d) if line)
     rel = png_to_data_uri(reliability_diagram_png(result))
     acc = png_to_data_uri(accuracy_coverage_png(result))
     banner = f'<div class="banner">⚠️ {tag}</div>' if tag else ""
@@ -107,12 +138,13 @@ th{{background:#f5f5f5}}img{{max-width:100%;border:1px solid #eee;border-radius:
 h2{{margin-top:2.5rem}}.prov{{color:#666;font-size:.9rem}}</style></head><body>
 {banner}
 <h1>Audit report — {d['judge']}</h1>
-<p class="metric"><b>{d['n']}</b> decisions · accuracy <b>{d['accuracy']:.1%}</b> · ECE <b>{d['ece']:.4f}</b><br>
+<p class="metric"><b>{d['n']}</b> decisions · accuracy <b>{d['accuracy']:.1%}</b>{acc_ci} · ECE <b>{d['ece']:.4f}</b>{ece_ci}<br>
 cost <b>${d['total_cost_usd']:.4f}</b> · p50 <b>{d['p50_latency_s']}s</b> · p99 <b>{d['p99_latency_s']}s</b></p>
 <p class="prov">{prov}</p>
 <p class="gt"><b>{gt}</b></p>
+{ci_note}
 <h2>Can I automate this?</h2>
-<p>Zero observed errors through the most confident <b>{d['zero_error_coverage']['coverage']:.1%}</b>
+<p>Zero observed errors through the most confident <b>{d['zero_error_coverage']['coverage']:.1%}</b>{zec_ci}
 ({d['zero_error_coverage']['n']} decisions, confidence ≥ {d['zero_error_coverage']['threshold']}).<br>
 <em>Retrospective on this dataset — not a production guarantee.</em></p>
 <h2>Reliability diagram</h2>

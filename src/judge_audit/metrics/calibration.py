@@ -2,6 +2,11 @@
 from __future__ import annotations
 
 import math
+import random
+from collections.abc import Callable, Sequence
+from typing import TypeVar
+
+T = TypeVar("T")
 
 
 def expected_calibration_error(confidences: list[float], correct: list[bool],
@@ -71,3 +76,67 @@ def zero_error_coverage(confidences: list[float], correct: list[bool]) -> dict:
         k += 1
     return {"coverage": round(k / len(order), 4) if order else 0.0, "n": k,
             "threshold": round(confidences[order[k - 1]], 4) if k else None}
+
+
+# --- uncertainty: percentile bootstrap over rows ----------------------------------------
+#
+# Every headline number is a statistic of n rows; the interval says how much it would
+# move on another sample of the same size. Rows are resampled with replacement and the
+# statistic recomputed on each resample; the 2.5th and 97.5th percentiles of those
+# values are the 95 % interval. Pure Python, seeded, identical on every Python version:
+# `random.Random(seed).choices` and linear interpolation between order statistics.
+
+N_BOOT = 2000
+CI_LEVEL = 0.95
+
+
+def _percentile(sorted_values: list[float], q: float) -> float:
+    """q-th quantile (0..1) by linear interpolation between order statistics."""
+    pos = q * (len(sorted_values) - 1)
+    i = int(pos)
+    if i + 1 >= len(sorted_values):
+        return sorted_values[-1]
+    frac = pos - i
+    return sorted_values[i] + (sorted_values[i + 1] - sorted_values[i]) * frac
+
+
+def bootstrap_ci(values: Sequence[T], statistic: Callable[[list[T]], float],
+                 n_boot: int = N_BOOT, seed: int = 0,
+                 level: float = CI_LEVEL) -> tuple[float, float] | None:
+    """Percentile bootstrap interval of `statistic(values)` over resampled rows.
+
+    `values` is one entry per row (a bool, a (confidence, correct) pair, …) and
+    `statistic` maps a list of them to a number. Returns (lo, hi) rounded to 4
+    decimals, deterministic for a seed; None when there are no rows. Rows are the
+    unit of resampling — never bins — so any statistic of rows can be bootstrapped."""
+    n = len(values)
+    if n == 0:
+        return None
+    rng = random.Random(seed)
+    idx = range(n)
+    stats = sorted(statistic([values[i] for i in rng.choices(idx, k=n)])
+                   for _ in range(n_boot))
+    tail = (1 - level) / 2
+    return round(_percentile(stats, tail), 4), round(_percentile(stats, 1 - tail), 4)
+
+
+def accuracy_ci(correct: Sequence[bool], n_boot: int = N_BOOT,
+                seed: int = 0) -> tuple[float, float] | None:
+    """95 % interval of the share of correct rows."""
+    return bootstrap_ci(list(correct), lambda ok: sum(ok) / len(ok), n_boot, seed)
+
+
+def ece_ci(confidences: Sequence[float], correct: Sequence[bool], n_bins: int = 10,
+           n_boot: int = N_BOOT, seed: int = 0) -> tuple[float, float] | None:
+    """95 % interval of `expected_calibration_error`, bins recomputed on every resample."""
+    rows = list(zip(confidences, correct, strict=True))
+    return bootstrap_ci(rows, lambda rs: expected_calibration_error(
+        [c for c, _ in rs], [ok for _, ok in rs], n_bins), n_boot, seed)
+
+
+def zero_error_coverage_ci(confidences: Sequence[float], correct: Sequence[bool],
+                           n_boot: int = N_BOOT, seed: int = 0) -> tuple[float, float] | None:
+    """95 % interval of `zero_error_coverage(...)["coverage"]`."""
+    rows = list(zip(confidences, correct, strict=True))
+    return bootstrap_ci(rows, lambda rs: zero_error_coverage(
+        [c for c, _ in rs], [ok for _, ok in rs])["coverage"], n_boot, seed)

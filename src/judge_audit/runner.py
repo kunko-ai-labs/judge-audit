@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 import platform
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -11,11 +12,21 @@ from datetime import datetime, timezone
 from .ground_truth import parse_ground_truth
 from .judges.base import Judge, Question, QuestionType
 from .metrics.calibration import (
+    CI_LEVEL,
+    N_BOOT,
+    accuracy_ci,
     accuracy_coverage,
+    ece_ci,
     expected_calibration_error,
     reliability_bins,
     zero_error_coverage,
+    zero_error_coverage_ci,
 )
+
+# Percentile bootstrap over rows (docs/judges.md § Confidence intervals); the seed is
+# fixed so a published interval recomputes to the digit from its checkpoint.
+BOOTSTRAP = {"method": "percentile bootstrap over rows", "level": CI_LEVEL,
+             "n_boot": N_BOOT, "seed": 0}
 
 
 @dataclass
@@ -31,11 +42,15 @@ class AuditResult:
     p50_latency_s: float = 0.0
     p99_latency_s: float = 0.0
     run: dict = field(default_factory=dict)
+    # 95 % bootstrap intervals (lo, hi) of the three headline numbers; None when skipped.
+    accuracy_ci: tuple[float, float] | None = None
+    ece_ci: tuple[float, float] | None = None
+    zero_error_coverage_ci: tuple[float, float] | None = None
     # One record per judged (row, question): the raw evidence behind the numbers.
     records: list[dict] = field(default_factory=list)
 
     def to_dict(self) -> dict:
-        return {
+        d = {
             "judge": self.judge, "n": self.n, "accuracy": self.accuracy,
             "ece": self.ece, "reliability_bins": self.reliability,
             "accuracy_coverage": self.curve, "zero_error_coverage": self.zero_error,
@@ -44,6 +59,11 @@ class AuditResult:
             "p99_latency_s": round(self.p99_latency_s, 3),
             "run": self.run,
         }
+        if self.accuracy_ci is not None:
+            d.update(accuracy_ci=list(self.accuracy_ci), ece_ci=list(self.ece_ci),
+                     zero_error_coverage_ci=list(self.zero_error_coverage_ci),
+                     bootstrap=dict(BOOTSTRAP))
+        return d
 
 
 def _percentile(xs: list[float], p: float) -> float:
@@ -115,13 +135,24 @@ def sha256_rows_of(path: str) -> str:
     return hashlib.sha256(rows).hexdigest()
 
 
-def summarize(judge_name: str, records: list[dict], run: dict | None = None) -> AuditResult:
-    """Metrics from per-question records ({confidence, correct, latency_s, cost_usd, ...})."""
+def bootstrap_enabled() -> bool:
+    """`JUDGE_AUDIT_BOOTSTRAP=0` (or `false`, `no`, `off`) skips the intervals."""
+    return os.environ.get("JUDGE_AUDIT_BOOTSTRAP", "1").strip().lower() not in (
+        "0", "false", "no", "off")
+
+
+def summarize(judge_name: str, records: list[dict], run: dict | None = None,
+              ci: bool | None = None) -> AuditResult:
+    """Metrics from per-question records ({confidence, correct, latency_s, cost_usd, ...}).
+
+    `ci` adds the bootstrap intervals; None defers to `JUDGE_AUDIT_BOOTSTRAP`."""
     confidences = [r["confidence"] for r in records]
     correct = [bool(r["correct"]) for r in records]
     latencies = [r.get("latency_s", 0.0) for r in records]
     total = len(records)
     hits = sum(correct)
+    if ci is None:
+        ci = bootstrap_enabled()
     return AuditResult(
         judge=judge_name, n=total,
         accuracy=round(hits / total, 4) if total else 0.0,
@@ -133,6 +164,10 @@ def summarize(judge_name: str, records: list[dict], run: dict | None = None) -> 
         p50_latency_s=_percentile(latencies, 50),
         p99_latency_s=_percentile(latencies, 99),
         run=run or {},
+        accuracy_ci=accuracy_ci(correct) if ci and total else None,
+        ece_ci=ece_ci(confidences, correct) if ci and total else None,
+        zero_error_coverage_ci=(zero_error_coverage_ci(confidences, correct)
+                                if ci and total else None),
         records=records,
     )
 
@@ -153,9 +188,10 @@ def record_of(idx: int, row: dict, judgment, expected: str) -> dict:
 
 
 def run_audit(judge: Judge, rows: list[dict], labels_path: str | None = None,
-              dataset_meta: dict | None = None) -> AuditResult:
+              dataset_meta: dict | None = None, ci: bool | None = None) -> AuditResult:
     """rows: [{state, questions: [{name, type, instructions, options?, descriptions?}],
-              labels: {name: expected}}]; dataset_meta: the header from `load_dataset`."""
+              labels: {name: expected}}]; dataset_meta: the header from `load_dataset`;
+    ci: bootstrap intervals (None: unless `JUDGE_AUDIT_BOOTSTRAP=0`)."""
     records: list[dict] = []
     for idx, row in enumerate(rows):
         labels: dict = row.get("labels", {})
@@ -165,7 +201,7 @@ def run_audit(judge: Judge, rows: list[dict], labels_path: str | None = None,
                 continue
             records.append(record_of(idx, row, judgment, expected))
     return summarize(judge.name, records,
-                     run_metadata(judge, labels_path, len(rows), dataset_meta))
+                     run_metadata(judge, labels_path, len(rows), dataset_meta), ci=ci)
 
 
 def write_judgments(result: AuditResult, path: str) -> None:
