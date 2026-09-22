@@ -218,7 +218,8 @@ def predictions(data: dict) -> list[str]:
     verdict = "held" if small and follows else ("partly held" if small or follows else "not held")
     L.append(f"2. **Bare labels: hard-task majority accuracy does not rise materially (< 10 points) and the "
              f"3B model follows the panel** — {verdict}. Hard-task majority accuracy {_delta(h1, h2)}; "
-             + (f"llama3.2 switched {j['switched']} votes, {j['switched_toward_panel_majority']} of them "
+             + (f"llama3.2 switched {j['switched']} vote{'s' if j['switched'] != 1 else ''}, "
+                f"{j['switched_toward_panel_majority']} of them "
                 f"onto the panel majority." if j else "llama3.2 did not re-vote."))
     # 3. described: right judges keep their vote (switches to wrong <= 5 % of votes), majority accuracy rises (>= 0)
     to_wrong = sum(x["switched_to_wrong"] for x in desc["judges"].values())

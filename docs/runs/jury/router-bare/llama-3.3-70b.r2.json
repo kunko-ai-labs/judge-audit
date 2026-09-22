@@ -1,0 +1,237 @@
+{
+  "judge": "llm",
+  "n": 120,
+  "accuracy": 0.55,
+  "ece": 0.3903,
+  "reliability_bins": [
+    {
+      "bin": "0.0-0.1",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.1-0.2",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.2-0.3",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.3-0.4",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.4-0.5",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.5-0.6",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.6-0.7",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.7-0.8",
+      "avg_confidence": 0.7,
+      "accuracy": 1.0,
+      "n": 2
+    },
+    {
+      "bin": "0.8-0.9",
+      "avg_confidence": 0.8132,
+      "accuracy": 0.72,
+      "n": 25
+    },
+    {
+      "bin": "0.9-1.0",
+      "avg_confidence": 0.9667,
+      "accuracy": 0.4946,
+      "n": 93
+    }
+  ],
+  "accuracy_coverage": [
+    {
+      "coverage": 0.05,
+      "accuracy": 0.6667,
+      "n": 6,
+      "min_confidence": 0.99
+    },
+    {
+      "coverage": 0.1,
+      "accuracy": 0.8333,
+      "n": 12,
+      "min_confidence": 0.99
+    },
+    {
+      "coverage": 0.15,
+      "accuracy": 0.8889,
+      "n": 18,
+      "min_confidence": 0.99
+    },
+    {
+      "coverage": 0.2,
+      "accuracy": 0.9167,
+      "n": 24,
+      "min_confidence": 0.99
+    },
+    {
+      "coverage": 0.25,
+      "accuracy": 0.9333,
+      "n": 30,
+      "min_confidence": 0.99
+    },
+    {
+      "coverage": 0.3,
+      "accuracy": 0.9444,
+      "n": 36,
+      "min_confidence": 0.98
+    },
+    {
+      "coverage": 0.35,
+      "accuracy": 0.8333,
+      "n": 42,
+      "min_confidence": 0.98
+    },
+    {
+      "coverage": 0.4,
+      "accuracy": 0.75,
+      "n": 48,
+      "min_confidence": 0.98
+    },
+    {
+      "coverage": 0.45,
+      "accuracy": 0.6852,
+      "n": 54,
+      "min_confidence": 0.98
+    },
+    {
+      "coverage": 0.5,
+      "accuracy": 0.6667,
+      "n": 60,
+      "min_confidence": 0.96
+    },
+    {
+      "coverage": 0.55,
+      "accuracy": 0.6212,
+      "n": 66,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.6,
+      "accuracy": 0.5972,
+      "n": 72,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 0.65,
+      "accuracy": 0.5513,
+      "n": 78,
+      "min_confidence": 0.92
+    },
+    {
+      "coverage": 0.7,
+      "accuracy": 0.5119,
+      "n": 84,
+      "min_confidence": 0.92
+    },
+    {
+      "coverage": 0.75,
+      "accuracy": 0.4778,
+      "n": 90,
+      "min_confidence": 0.92
+    },
+    {
+      "coverage": 0.8,
+      "accuracy": 0.4896,
+      "n": 96,
+      "min_confidence": 0.85
+    },
+    {
+      "coverage": 0.85,
+      "accuracy": 0.5098,
+      "n": 102,
+      "min_confidence": 0.8
+    },
+    {
+      "coverage": 0.9,
+      "accuracy": 0.5278,
+      "n": 108,
+      "min_confidence": 0.8
+    },
+    {
+      "coverage": 0.95,
+      "accuracy": 0.5351,
+      "n": 114,
+      "min_confidence": 0.8
+    },
+    {
+      "coverage": 1.0,
+      "accuracy": 0.55,
+      "n": 120,
+      "min_confidence": 0.7
+    }
+  ],
+  "zero_error_coverage": {
+    "coverage": 0.0,
+    "n": 0,
+    "threshold": null
+  },
+  "total_cost_usd": 0.03664,
+  "p50_latency_s": 0.914,
+  "p99_latency_s": 2.779,
+  "run": {
+    "judge_audit_version": "0.3.2",
+    "judge": {
+      "name": "llm:llama-3.3-70b",
+      "provider": "hosted-api",
+      "model": "llama-3.3-70b",
+      "confidence_method": "verbalized (model-reported probability)",
+      "prices_usd_per_mtok": [
+        0.72,
+        0.72
+      ],
+      "max_tokens": 4096
+    },
+    "python": "3.12.8",
+    "dataset": {
+      "path": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-bare/llama-3.3-70b.r2.input.jsonl",
+      "sha256": "c786038b2a7d6347be111129c1274fcd7c927d5f302376032cbd887495ef0095",
+      "sha256_rows": "4b2cfa6967838acb0cc1f0a17a151aeaf1ab8ee0390b4ee16b39c282628656cd",
+      "rows": 120,
+      "ground_truth": {
+        "tier": "GT-1",
+        "label": "constructed",
+        "meaning": "labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy",
+        "validation": "not_validated",
+        "purpose": [
+          "model-routing calibration",
+          "cost-inflation attack resistance"
+        ],
+        "caveats": [
+          "the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome",
+          "downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified",
+          "40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted"
+        ]
+      }
+    },
+    "recomputed_utc": "2026-09-21T19:08:47+00:00",
+    "note": "original run time not recorded in this checkpoint",
+    "checkpoint": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-bare/llama-3.3-70b.r2.ckpt.jsonl"
+  }
+}
