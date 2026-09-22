@@ -57,6 +57,62 @@ def test_accuracy_coverage_is_sorted_by_confidence_desc():
     assert curve[0]["min_confidence"] == 0.9
 
 
+def test_accuracy_coverage_is_permutation_invariant():
+    # Same fixture as zero_error_coverage's permutation test: ties at 0.9 and 0.7 with a
+    # mix of right/wrong inside the ties. Any cut that split a tied group used to depend
+    # on which of the tied rows the stable sort happened to put first.
+    conf = [0.9, 0.9, 0.9, 0.8, 0.7, 0.7, 0.5]
+    ok = [True, False, True, True, True, False, True]
+    expected = accuracy_coverage(conf, ok, steps=7)
+    rng = random.Random(2)
+    for _ in range(1000):
+        idx = list(range(len(conf)))
+        rng.shuffle(idx)
+        shuffled = accuracy_coverage([conf[i] for i in idx], [ok[i] for i in idx], steps=7)
+        assert shuffled == expected
+
+
+def test_accuracy_coverage_cuts_at_whole_confidence_groups():
+    # Group {0.9, 0.9} (k=2), group {0.8, 0.8, 0.8} (k=5, one wrong), group {0.7} (k=6).
+    # A target that would have cut inside the {0.8} group (k=3 or k=4, straddling the old
+    # cut) snaps up to the end of that group instead, so every reported point's accuracy
+    # is well defined regardless of which tied row sorted first.
+    conf = [0.9, 0.9, 0.8, 0.8, 0.8, 0.7]
+    ok = [True, True, True, False, True, True]
+    curve = accuracy_coverage(conf, ok, steps=6)
+    assert [(r["coverage"], r["n"], r["min_confidence"]) for r in curve] == [
+        (0.3333, 2, 0.9), (0.8333, 5, 0.8), (1.0, 6, 0.7)]
+    assert [r["accuracy"] for r in curve] == [1.0, 0.8, 0.8333]
+
+
+def test_accuracy_coverage_all_rows_tied():
+    # One group covering everything: no point can be reported before the whole set.
+    conf = [0.5] * 5
+    ok = [True, True, False, True, False]
+    curve = accuracy_coverage(conf, ok, steps=5)
+    assert curve == [{"coverage": 1.0, "accuracy": 0.6, "n": 5, "min_confidence": 0.5}]
+
+
+def test_accuracy_coverage_two_groups():
+    conf = [0.9, 0.9, 0.9, 0.9, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
+    ok = [True, True, False, True, True, True, True, False, True, True]
+    curve = accuracy_coverage(conf, ok, steps=10)
+    # Every target below k=4 snaps up to the group boundary; every target above it (and
+    # below n) snaps to the only remaining boundary, k=10.
+    assert [(r["coverage"], r["n"]) for r in curve] == [(0.4, 4), (1.0, 10)]
+    assert curve[0]["accuracy"] == 0.75
+    assert curve[1]["accuracy"] == 0.8
+
+
+def test_accuracy_coverage_degenerate_n_1():
+    curve = accuracy_coverage([0.6], [True])
+    assert curve == [{"coverage": 1.0, "accuracy": 1.0, "n": 1, "min_confidence": 0.6}]
+
+
+def test_accuracy_coverage_empty():
+    assert accuracy_coverage([], []) == []
+
+
 def test_zero_error_coverage_stops_at_first_error():
     conf = [0.9, 0.8, 0.7, 0.6]
     ok = [True, True, False, True]

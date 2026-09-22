@@ -53,16 +53,41 @@ def accuracy_coverage(confidences: list[float], correct: list[bool],
     """Selective prediction: sort by confidence desc, accuracy at each coverage level.
 
     Answers the business question: 'what share can I automate at what error rate?'
+
+    Order-independent, like `zero_error_coverage`: rows are walked from the top in groups
+    of equal confidence, and a coverage point is only reported at a cut that includes a
+    whole group. A tie is one threshold — you cannot automate half of the rows that say
+    0.9 — so each of the `steps` target coverage levels snaps *up* to the end of the group
+    it falls inside instead of splitting it; several targets that land inside the same
+    group collapse to that group's single point instead of repeating it. `min_confidence`
+    is the covered group's own confidence, which is what makes it a valid threshold.
     """
-    order = sorted(range(len(confidences)), key=lambda j: confidences[j], reverse=True)
+    n = len(confidences)
+    if not n:
+        return []
+    order = sorted(range(n), key=lambda j: confidences[j], reverse=True)
+    boundaries: list[tuple[int, float]] = []  # (k, confidence) after each whole group
+    i = 0
+    while i < n:
+        c = confidences[order[i]]
+        j = i
+        while j < n and confidences[order[j]] == c:
+            j += 1
+        boundaries.append((j, c))
+        i = j
+
     curve = []
+    last_k = None
     for s in range(1, steps + 1):
-        k = max(1, int(len(order) * s / steps))
+        target = max(1, int(n * s / steps))
+        k, conf = next((b for b in boundaries if b[0] >= target), boundaries[-1])
+        if k == last_k:
+            continue  # several targets snapped to the same group boundary
+        last_k = k
         top = order[:k]
         acc = sum(correct[j] for j in top) / k
-        curve.append({"coverage": round(k / len(order), 4),
-                      "accuracy": round(acc, 4), "n": k,
-                      "min_confidence": round(confidences[top[-1]], 4)})
+        curve.append({"coverage": round(k / n, 4), "accuracy": round(acc, 4), "n": k,
+                      "min_confidence": round(conf, 4)})
     return curve
 
 
