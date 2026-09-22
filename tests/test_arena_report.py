@@ -34,7 +34,8 @@ def test_render_states_why_these_judges_and_the_blank_column():
         assert missing in md
     assert "cannot hijack it;" in md          # no NLI row here: no degradation figures rendered
     assert "| no answer |" in md
-    assert "| Jev | option probability | 50.0% |" in md and "| 1 |" in md
+    # two rows, one right: the bootstrap can land on 0, 50 or 100 % — the interval says so
+    assert "| Jev | option probability | 50.0% [0.0, 100.0] |" in md and "| 1 |" in md
 
 
 def test_render_states_the_controls_degradation_from_its_own_numbers():

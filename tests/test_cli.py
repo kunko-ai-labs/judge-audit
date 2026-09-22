@@ -62,3 +62,30 @@ def test_bad_jev_backend_is_exit_2(labels_path, tmp_path, monkeypatch):
     monkeypatch.setenv("JEV_BACKEND", "foo")
     r = run("run", str(labels_path), "--judge", "jev", cwd=tmp_path)
     assert r.returncode == 2 and "unknown backend" in r.stderr
+
+
+def test_run_prints_and_writes_intervals_unless_no_ci(labels_path, tmp_path):
+    r = run("run", str(labels_path), "--judge", "simulated", cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    res = json.loads((tmp_path / "audit-result.json").read_text())
+    lo, hi = res["accuracy_ci"]
+    assert lo <= res["accuracy"] <= hi
+    assert len(res["ece_ci"]) == 2 and len(res["zero_error_coverage_ci"]) == 2
+    report = (tmp_path / "audit-report.md").read_text()
+    assert f"accuracy **{res['accuracy']:.1%}** [{lo * 100:.1f}, {hi * 100:.1f}]" in report
+    assert "percentile-bootstrap" in report
+    assert f"accuracy={res['accuracy']:.1%} [{lo * 100:.1f}, {hi * 100:.1f}]" in r.stdout
+
+    r = run("run", str(labels_path), "--judge", "simulated", "--no-ci", cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    res = json.loads((tmp_path / "audit-result.json").read_text())
+    assert "accuracy_ci" not in res and "bootstrap" not in res
+    assert "[" not in r.stdout
+    assert "percentile-bootstrap" not in (tmp_path / "audit-report.md").read_text()
+
+
+def test_bootstrap_env_var_skips_intervals(labels_path, tmp_path, monkeypatch):
+    monkeypatch.setenv("JUDGE_AUDIT_BOOTSTRAP", "0")
+    r = run("run", str(labels_path), "--judge", "simulated", cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert "accuracy_ci" not in json.loads((tmp_path / "audit-result.json").read_text())

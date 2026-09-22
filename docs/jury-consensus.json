@@ -16,21 +16,37 @@
       "jev": {
         "round1": {
           "accuracy": 0.6667,
+          "accuracy_ci": [
+            0.5246,
+            0.8032
+          ],
           "ece": 0.3181,
           "mean_conf_wrong": 0.926
         },
         "round2": {
           "accuracy": 0.725,
+          "accuracy_ci": [
+            0.5878,
+            0.8455
+          ],
           "ece": 0.2083,
           "mean_conf_wrong": 0.86
         },
         "hard_round1": {
           "accuracy": 0,
+          "accuracy_ci": [
+            0.0,
+            0.0
+          ],
           "ece": 0.9263,
           "mean_conf_wrong": 0.926
         },
         "hard_round2": {
           "accuracy": 0.175,
+          "accuracy_ci": [
+            0.0,
+            0.375
+          ],
           "ece": 0.6605,
           "mean_conf_wrong": 0.86
         },
@@ -52,21 +68,37 @@
       "claude-sonnet-4.5": {
         "round1": {
           "accuracy": 0.6583,
+          "accuracy_ci": [
+            0.5191,
+            0.7869
+          ],
           "ece": 0.2353,
           "mean_conf_wrong": 0.832
         },
         "round2": {
           "accuracy": 0.7,
+          "accuracy_ci": [
+            0.5641,
+            0.8208
+          ],
           "ece": 0.2311,
           "mean_conf_wrong": 0.877
         },
         "hard_round1": {
           "accuracy": 0.15,
+          "accuracy_ci": [
+            0.0,
+            0.3415
+          ],
           "ece": 0.6583,
           "mean_conf_wrong": 0.816
         },
         "hard_round2": {
           "accuracy": 0.25,
+          "accuracy_ci": [
+            0.05,
+            0.475
+          ],
           "ece": 0.6433,
           "mean_conf_wrong": 0.874
         },
@@ -91,21 +123,37 @@
       "deepseek-r1": {
         "round1": {
           "accuracy": 0.5583,
+          "accuracy_ci": [
+            0.4248,
+            0.6818
+          ],
           "ece": 0.3734,
           "mean_conf_wrong": 0.888
         },
         "round2": {
           "accuracy": 0.55,
+          "accuracy_ci": [
+            0.4173,
+            0.6818
+          ],
           "ece": 0.3787,
           "mean_conf_wrong": 0.916
         },
         "hard_round1": {
           "accuracy": 0.55,
+          "accuracy_ci": [
+            0.325,
+            0.775
+          ],
           "ece": 0.3925,
           "mean_conf_wrong": 0.881
         },
         "hard_round2": {
           "accuracy": 0.125,
+          "accuracy_ci": [
+            0.0,
+            0.2974
+          ],
           "ece": 0.794,
           "mean_conf_wrong": 0.932
         },
@@ -130,21 +178,37 @@
       "gemini-3-flash": {
         "round1": {
           "accuracy": 0.6667,
+          "accuracy_ci": [
+            0.5289,
+            0.8
+          ],
           "ece": 0.3154,
           "mean_conf_wrong": 0.965
         },
         "round2": {
           "accuracy": 0.6667,
+          "accuracy_ci": [
+            0.5217,
+            0.7965
+          ],
           "ece": 0.3047,
           "mean_conf_wrong": 0.93
         },
         "hard_round1": {
           "accuracy": 0.075,
+          "accuracy_ci": [
+            0.0,
+            0.225
+          ],
           "ece": 0.8862,
           "mean_conf_wrong": 0.966
         },
         "hard_round2": {
           "accuracy": 0.2,
+          "accuracy_ci": [
+            0.0,
+            0.425
+          ],
           "ece": 0.7562,
           "mean_conf_wrong": 0.933
         },
@@ -165,21 +229,37 @@
       "gemma4": {
         "round1": {
           "accuracy": 0.5917,
+          "accuracy_ci": [
+            0.4615,
+            0.712
+          ],
           "ece": 0.3446,
           "mean_conf_wrong": 0.954
         },
         "round2": {
           "accuracy": 0.6167,
+          "accuracy_ci": [
+            0.4836,
+            0.7426
+          ],
           "ece": 0.3098,
           "mean_conf_wrong": 0.92
         },
         "hard_round1": {
           "accuracy": 0.7,
+          "accuracy_ci": [
+            0.4615,
+            0.9025
+          ],
           "ece": 0.1775,
           "mean_conf_wrong": 0.858
         },
         "hard_round2": {
           "accuracy": 0.175,
+          "accuracy_ci": [
+            0.0,
+            0.3902
+          ],
           "ece": 0.7283,
           "mean_conf_wrong": 0.91
         },
@@ -200,21 +280,37 @@
       "llama-3.3-70b": {
         "round1": {
           "accuracy": 0.65,
+          "accuracy_ci": [
+            0.5167,
+            0.7669
+          ],
           "ece": 0.2333,
           "mean_conf_wrong": 0.926
         },
         "round2": {
           "accuracy": 0.55,
+          "accuracy_ci": [
+            0.4107,
+            0.6905
+          ],
           "ece": 0.3903,
           "mean_conf_wrong": 0.936
         },
         "hard_round1": {
           "accuracy": 0.725,
+          "accuracy_ci": [
+            0.4862,
+            0.9286
+          ],
           "ece": 0.135,
           "mean_conf_wrong": 0.8
         },
         "hard_round2": {
           "accuracy": 0.075,
+          "accuracy_ci": [
+            0.0,
+            0.225
+          ],
           "ece": 0.857,
           "mean_conf_wrong": 0.938
         },
@@ -239,21 +335,37 @@
       "llama32": {
         "round1": {
           "accuracy": 0.6583,
+          "accuracy_ci": [
+            0.5159,
+            0.7925
+          ],
           "ece": 0.3958,
           "mean_conf_wrong": 1.0
         },
         "round2": {
           "accuracy": 0.6667,
+          "accuracy_ci": [
+            0.5246,
+            0.8032
+          ],
           "ece": 0.2816,
           "mean_conf_wrong": 0.829
         },
         "hard_round1": {
           "accuracy": 0,
+          "accuracy_ci": [
+            0.0,
+            0.0
+          ],
           "ece": 1.0,
           "mean_conf_wrong": 1.0
         },
         "hard_round2": {
           "accuracy": 0,
+          "accuracy_ci": [
+            0.0,
+            0.0
+          ],
           "ece": 0.8287,
           "mean_conf_wrong": 0.829
         },
@@ -290,6 +402,10 @@
       "ties": 28,
       "abstentions": 1,
       "majority_accuracy": 0.4833,
+      "majority_accuracy_ci": [
+        0.3442,
+        0.616
+      ],
       "majority_accuracy_decided": 0.6304,
       "majority_wrong": 62,
       "best_single_accuracy": 0.6667,
@@ -317,6 +433,10 @@
       "ties": 4,
       "abstentions": 1,
       "majority_accuracy": 0.6333,
+      "majority_accuracy_ci": [
+        0.4927,
+        0.7607
+      ],
       "majority_accuracy_decided": 0.6552,
       "majority_wrong": 44,
       "best_single_accuracy": 0.725,
@@ -344,6 +464,10 @@
       "ties": 7,
       "abstentions": 0,
       "majority_accuracy": 0.15,
+      "majority_accuracy_ci": [
+        0.0,
+        0.3415
+      ],
       "majority_accuracy_decided": 0.1818,
       "majority_wrong": 34,
       "best_single_accuracy": 1,
@@ -371,6 +495,10 @@
       "ties": 1,
       "abstentions": 0,
       "majority_accuracy": 0.175,
+      "majority_accuracy_ci": [
+        0.0,
+        0.375
+      ],
       "majority_accuracy_decided": 0.1795,
       "majority_wrong": 33,
       "best_single_accuracy": 1,
@@ -398,21 +526,37 @@
       "jev": {
         "round1": {
           "accuracy": 0.975,
+          "accuracy_ci": [
+            0.9189,
+            1.0
+          ],
           "ece": 0.053,
           "mean_conf_wrong": 0.583
         },
         "round2": {
           "accuracy": 1,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
           "ece": 0.0436,
           "mean_conf_wrong": null
         },
         "hard_round1": {
           "accuracy": 0.925,
+          "accuracy_ci": [
+            0.7692,
+            1.0
+          ],
           "ece": 0.1457,
           "mean_conf_wrong": 0.583
         },
         "hard_round2": {
           "accuracy": 1,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
           "ece": 0.1238,
           "mean_conf_wrong": null
         },
@@ -434,21 +578,37 @@
       "claude-sonnet-4.5": {
         "round1": {
           "accuracy": 0.95,
+          "accuracy_ci": [
+            0.9035,
+            0.9849
+          ],
           "ece": 0.0322,
           "mean_conf_wrong": 0.983
         },
         "round2": {
           "accuracy": 0.95,
+          "accuracy_ci": [
+            0.9035,
+            0.9849
+          ],
           "ece": 0.0484,
           "mean_conf_wrong": 0.8
         },
         "hard_round1": {
           "accuracy": 1,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
           "ece": 0.07,
           "mean_conf_wrong": null
         },
         "hard_round2": {
           "accuracy": 1,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
           "ece": 0.085,
           "mean_conf_wrong": null
         },
@@ -473,21 +633,37 @@
       "deepseek-r1": {
         "round1": {
           "accuracy": 0.7917,
+          "accuracy_ci": [
+            0.6992,
+            0.8692
+          ],
           "ece": 0.1478,
           "mean_conf_wrong": 0.894
         },
         "round2": {
           "accuracy": 0.8917,
+          "accuracy_ci": [
+            0.823,
+            0.9457
+          ],
           "ece": 0.0507,
           "mean_conf_wrong": 0.846
         },
         "hard_round1": {
           "accuracy": 1,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
           "ece": 0.0925,
           "mean_conf_wrong": null
         },
         "hard_round2": {
           "accuracy": 1,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
           "ece": 0.0535,
           "mean_conf_wrong": null
         },
@@ -512,21 +688,37 @@
       "gemini-3-flash": {
         "round1": {
           "accuracy": 0.9833,
+          "accuracy_ci": [
+            0.9554,
+            1.0
+          ],
           "ece": 0.0121,
           "mean_conf_wrong": 0.825
         },
         "round2": {
           "accuracy": 0.9917,
+          "accuracy_ci": [
+            0.9717,
+            1.0
+          ],
           "ece": 0.0236,
           "mean_conf_wrong": 0.9
         },
         "hard_round1": {
           "accuracy": 1,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
           "ece": 0.0312,
           "mean_conf_wrong": null
         },
         "hard_round2": {
           "accuracy": 1,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
           "ece": 0.065,
           "mean_conf_wrong": null
         },
@@ -547,21 +739,37 @@
       "gemma4": {
         "round1": {
           "accuracy": 0.775,
+          "accuracy_ci": [
+            0.6721,
+            0.8705
+          ],
           "ece": 0.18,
           "mean_conf_wrong": 0.981
         },
         "round2": {
           "accuracy": 0.9333,
+          "accuracy_ci": [
+            0.8738,
+            0.976
+          ],
           "ece": 0.0266,
           "mean_conf_wrong": 0.912
         },
         "hard_round1": {
           "accuracy": 1,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
           "ece": 0.05,
           "mean_conf_wrong": null
         },
         "hard_round2": {
           "accuracy": 1,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
           "ece": 0.0437,
           "mean_conf_wrong": null
         },
@@ -582,21 +790,37 @@
       "llama-3.3-70b": {
         "round1": {
           "accuracy": 0.8667,
+          "accuracy_ci": [
+            0.7845,
+            0.9339
+          ],
           "ece": 0.0433,
           "mean_conf_wrong": 0.969
         },
         "round2": {
           "accuracy": 0.9667,
+          "accuracy_ci": [
+            0.9298,
+            0.9922
+          ],
           "ece": 0.0133,
           "mean_conf_wrong": 0.925
         },
         "hard_round1": {
           "accuracy": 1,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
           "ece": 0.0925,
           "mean_conf_wrong": null
         },
         "hard_round2": {
           "accuracy": 1,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
           "ece": 0.0262,
           "mean_conf_wrong": null
         },
@@ -621,21 +845,37 @@
       "llama32": {
         "round1": {
           "accuracy": 0.5917,
+          "accuracy_ci": [
+            0.4553,
+            0.7302
+          ],
           "ece": 0.4292,
           "mean_conf_wrong": 1.0
         },
         "round2": {
           "accuracy": 0.9417,
+          "accuracy_ci": [
+            0.864,
+            1.0
+          ],
           "ece": 0.1349,
           "mean_conf_wrong": 0.6
         },
         "hard_round1": {
           "accuracy": 0,
+          "accuracy_ci": [
+            0.0,
+            0.0
+          ],
           "ece": 1.0,
           "mean_conf_wrong": 1.0
         },
         "hard_round2": {
           "accuracy": 0.825,
+          "accuracy_ci": [
+            0.6098,
+            1.0
+          ],
           "ece": 0.1405,
           "mean_conf_wrong": 0.6
         },
@@ -672,6 +912,10 @@
       "ties": 13,
       "abstentions": 1,
       "majority_accuracy": 0.8583,
+      "majority_accuracy_ci": [
+        0.7768,
+        0.9217
+      ],
       "majority_accuracy_decided": 0.9626,
       "majority_wrong": 17,
       "best_single_accuracy": 0.9833,
@@ -699,6 +943,10 @@
       "ties": 5,
       "abstentions": 1,
       "majority_accuracy": 0.95,
+      "majority_accuracy_ci": [
+        0.9047,
+        0.9843
+      ],
       "majority_accuracy_decided": 0.9913,
       "majority_wrong": 6,
       "best_single_accuracy": 1,
@@ -726,6 +974,10 @@
       "ties": 0,
       "abstentions": 0,
       "majority_accuracy": 1,
+      "majority_accuracy_ci": [
+        1.0,
+        1.0
+      ],
       "majority_accuracy_decided": 1,
       "majority_wrong": 0,
       "best_single_accuracy": 1,
@@ -753,6 +1005,10 @@
       "ties": 0,
       "abstentions": 1,
       "majority_accuracy": 1,
+      "majority_accuracy_ci": [
+        1.0,
+        1.0
+      ],
       "majority_accuracy_decided": 1,
       "majority_wrong": 0,
       "best_single_accuracy": 1,
