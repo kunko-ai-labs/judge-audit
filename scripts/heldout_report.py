@@ -53,11 +53,25 @@ JEV = {
     "router-described": "docs/runs/audit-jev-router-described.ckpt.jsonl",
 }
 ARENA = ROOT / "docs" / "runs" / "arena"
-FINETUNED = "finetuned-deberta"
-TRAIN_JSON = {"email-clean": "docs/runs/finetuned/email-routing.train.json",
-              "email-adversarial": "docs/runs/finetuned/email-routing.train.json",
-              "router-bare": "docs/runs/finetuned/task-routing.train.json",
-              "router-described": "docs/runs/finetuned/task-routing.train.json"}
+FINETUNED = "finetuned-deberta"          # run 1: the pre-registered run; the prediction is scored on it
+# Every fine-tuned slug, in table order, with its label and the training records behind it.
+# Runs 2 and 2+TS are the post-hoc amendment (see AMENDMENT); they never touch the prediction.
+FINETUNED_RUNS = {
+    "finetuned-deberta": {
+        "label": "DeBERTa-v3-base fine-tuned — run 1 (pre-registered, 10 epochs)",
+        "train": {"email-routing": "docs/runs/finetuned/email-routing.train.json",
+                  "task-routing": "docs/runs/finetuned/task-routing.train.json"}},
+    "finetuned-deberta-run2": {
+        "label": "DeBERTa-v3-base fine-tuned — run 2 (to convergence, post hoc)",
+        "train": {"email-routing": "docs/runs/finetuned/email-routing.train-run2.json",
+                  "task-routing": "docs/runs/finetuned/task-routing.train-run2.json"}},
+    "finetuned-deberta-run2-ts": {
+        "label": "DeBERTa-v3-base fine-tuned — run 2 + temperature scaling (post hoc)",
+        "train": {"email-routing": "docs/runs/finetuned/email-routing.train-run2.json",
+                  "task-routing": "docs/runs/finetuned/task-routing.train-run2.json"}},
+}
+DATASET_OF = {"email-clean": "email-routing", "email-adversarial": "email-routing",
+              "router-bare": "task-routing", "router-described": "task-routing"}
 OUT_MD = ROOT / "docs" / "finetuned-baseline-2026-09.md"
 OUT_JSON = ROOT / "docs" / "finetuned-baseline-2026-09.json"
 
@@ -73,6 +87,42 @@ PREDICTION = {
           "router-described held-out half are identical to those on the router-bare half, "
           "and its router-described held-out accuracy is below Jev's on the same rows.",
 }
+
+
+AMENDMENT = [
+    "## Amendment, after the first run: convergence and temperature scaling (post hoc)", "",
+    "Written after run 1 was scored (commit `475e97b`) and committed before run 2 was trained. "
+    "Two things an auditor asks of a classifier you own, neither pre-registered: the prediction "
+    "above stays scored on run 1; run 2 is exploratory and is published with the same evidence.",
+    "",
+    "- **Run 2 — train to convergence.** Same split, same seed (2026), same backbone, lr, batch "
+    "and max length; early stopping on the epoch's mean training loss (stop when it is below 0.05, "
+    "or when it has not improved for 3 consecutive epochs), hard cap 40 epochs, linear schedule "
+    "laid out over the 40-epoch cap with 10 % warm-up. One difference in the data, forced by the "
+    "second point: run 2 trains on 80 % of the train half and keeps the other 20 % as a validation "
+    "slice (label-stratified, `random.Random(2026)`, the first ceil(20 %) of each stratum after "
+    "shuffling the train indices; the indices are listed in `docs/runs/finetuned/"
+    "<dataset>.train-run2.json`). Emails: 80 train / 20 validation; router: 48 / 12. The held-out "
+    "half is not touched. Model under `~/.cache/judge-audit/finetuned/<dataset>-run2/`, never "
+    "committed. Evaluated exactly as run 1: slug `finetuned-deberta-run2`, held-out rows only, "
+    "email-adversarial in full.",
+    "- **Run 2 + temperature scaling** (Guo et al. 2017). One scalar temperature T per model, fitted "
+    "by minimising the negative log-likelihood of the validation slice's logits divided by T. "
+    "NLL is convex in 1/T, so the fit is a golden-section search on log T, bounded to "
+    "T ∈ [0.1, 10]: if the validation slice is classified perfectly the NLL has no minimum "
+    "(T → 0 would push every confidence to 1), the search stops at the bound and the record and "
+    "this report say so. `judge-audit.json` next to the model carries `temperature` and "
+    "the `finetuned` judge divides the logits by it before the softmax. Temperature scaling "
+    "changes no decision, only the confidence, so accuracy is identical to run 2 by construction. "
+    "Evaluated as a separate slug, `finetuned-deberta-run2-ts`, on the same rows; the run-2 row is "
+    "the same model with `FINETUNED_TEMPERATURE=1` (scaling off), so both rows are direct runs "
+    "with their own checkpoints. This is the standard calibration step for a classifier you own; "
+    "a vendor judge exposes no such knob.",
+    "- **What to compare**: ECE, zero-error coverage and mean confidence right / wrong on the held-"
+    "out rows, run 1 vs run 2 vs run 2 + TS, in the side-by-side table below; the loss curves and "
+    "wall times in the training table.",
+    "",
+]
 
 
 def heldout_indices(split_file: str | None) -> tuple[set[int] | None, dict]:
@@ -170,10 +220,13 @@ def judge_label(slug: str, run: dict) -> tuple[str, str]:
     j = run.get("judge", {})
     if slug == "jev":
         return "Jev (TypeSafe)", "option probability"
-    if slug == FINETUNED:
+    if slug in FINETUNED_RUNS:
         # One slug, one model per dataset (emails, router): a stable label; the
         # per-dataset model name is recorded in each dataset summary.
-        return "DeBERTa-v3-base fine-tuned (local)", "softmax probability of the chosen option"
+        method = "softmax probability of the chosen option"
+        if float(j.get("temperature") or 1.0) != 1.0:
+            method += f", temperature {float(j['temperature']):.2f}"
+        return FINETUNED_RUNS[slug]["label"], method
     return j.get("model", slug), ("option probability" if j.get("name") == "jev"
                                   else j.get("confidence_method", "verbalized"))
 
@@ -211,13 +264,16 @@ def collect() -> dict:
             entry["datasets"][ds]["scored"] = "held-out half" if keep is not None else "all rows"
             entry["datasets"][ds]["rows_in_checkpoint"] = seen
             entry["datasets"][ds]["model"] = run.get("judge", {}).get("model", slug)
+            entry["datasets"][ds]["temperature"] = float(
+                run.get("judge", {}).get("temperature") or 1.0)
         if entry["datasets"]:
             judges[slug] = entry
-    training = {}
-    for ds, path in TRAIN_JSON.items():
-        p = ROOT / path
-        if p.exists():
-            training[ds] = json.loads(p.read_text(encoding="utf-8"))
+    training: dict[str, dict[str, dict]] = {}
+    for slug, spec in FINETUNED_RUNS.items():
+        for dataset, path in spec["train"].items():
+            p = ROOT / path
+            if p.exists():
+                training.setdefault(slug, {})[dataset] = json.loads(p.read_text(encoding="utf-8"))
     return {"splits": {ds: meta for ds, (_k, meta) in splits.items() if meta},
             "judges": judges, "training": training,
             "prediction": score_prediction(judges)}
@@ -233,7 +289,7 @@ def score_prediction(judges: dict) -> dict:
     clean = ft["datasets"].get("email-clean")
     if clean:
         others = {s: j["datasets"]["email-clean"]["accuracy"] for s, j in judges.items()
-                  if s != FINETUNED and "email-clean" in j["datasets"]}
+                  if s not in FINETUNED_RUNS and "email-clean" in j["datasets"]}
         best = max(others, key=lambda s: others[s]) if others else None
         res["P1"] = {"holds": bool(others) and clean["accuracy"] > others[best],
                      "finetuned_accuracy": clean["accuracy"],
@@ -346,17 +402,28 @@ def render(data: dict) -> str:
                           f"vs Jev {fmt(r['P4']['jev_described_accuracy'], True)}")
         L += ["", "Scoring: " + "; ".join(detail) + "."]
     L.append("")
+    L += AMENDMENT
     if training:
         L += ["## Training runs", "",
-              "| dataset | backbone | revision | epochs | final train loss | wall time | hardware | "
-              "train rows sha256 |", "|---|---|---|---|---|---|---|---|"]
-        for ds, t in sorted(training.items(), key=lambda kv: kv[1]["dataset"]):
-            if ds in ("email-adversarial", "router-described"):
-                continue
-            losses = t.get("train_loss_per_epoch", [])
-            L.append(f"| {t['dataset']} | `{t['backbone']}` | `{t.get('backbone_revision', '?')[:12]}` | "
-                     f"{t['epochs']} | {fmt(losses[-1]) if losses else '—'} | "
-                     f"{t['wall_time_s']:.0f} s | {t['hardware']} | `{t['train_rows_sha256'][:12]}…` |")
+              "| run | dataset | backbone | revision | train rows | epochs (stop) | final train loss | "
+              "wall time | temperature (val NLL before → after) | hardware | train rows sha256 |",
+              "|---|---|---|---|---|---|---|---|---|---|---|"]
+        for slug, per_dataset in training.items():
+            if slug == "finetuned-deberta-run2-ts":
+                continue  # same training record as run 2; the temperature column carries it
+            for dataset, t in sorted(per_dataset.items()):
+                losses = t.get("train_loss_per_epoch", [])
+                stop = t.get("stopped_by", "epoch cap")
+                ts = t.get("temperature_scaling")
+                tcol = ("—" if not ts else
+                        f"{ts['temperature']:.3f}{' **at bound**' if ts.get('hit_bound') else ''} "
+                        f"({ts['val_nll_before']:.3f} → {ts['val_nll_after']:.3f}, n={ts['n_val']}, "
+                        f"val acc {ts['val_accuracy']:.0%})")
+                L.append(f"| {FINETUNED_RUNS[slug]['label'].split(' — ')[1]} | {dataset} | "
+                         f"`{t['backbone']}` | `{t.get('backbone_revision', '?')[:12]}` | "
+                         f"{t['n_train']} | {t['epochs']} ({stop}) | "
+                         f"{fmt(losses[-1]) if losses else '—'} | {t['wall_time_s']:.0f} s | {tcol} | "
+                         f"{t['hardware']} | `{t['train_rows_sha256'][:12]}…` |")
         L.append("")
     names = {"email-clean": ("Business emails, clean — held-out half", "email-clean"),
              "router-bare": ("Task router, bare option labels — held-out half", "router-bare"),
@@ -381,13 +448,14 @@ def render(data: dict) -> str:
             L += ["| judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | "
                   "no answer | cost | p50 latency |",
                   "|---|---|---|---|---|---|---|---|---|"]
-        ordered = ([FINETUNED] if FINETUNED in judges else []) + [s for s in judges if s != FINETUNED]
+        ordered = ([s for s in FINETUNED_RUNS if s in judges]
+                   + [s for s in judges if s not in FINETUNED_RUNS])
         for slug in ordered:
             j = judges[slug]
             s = j["datasets"].get(ds)
             if not s:
                 continue
-            label = f"**{j['label']}**" if slug == FINETUNED else j["label"]
+            label = f"**{j['label']}**" if slug in FINETUNED_RUNS else j["label"]
             row = (f"| {label} | {j['method']} | {fmt(s['accuracy'], True)} | {fmt(s['ece'])} | "
                    f"{fmt(s['zero_error_coverage'], True)} | {fmt(s['mean_conf_correct'])} / "
                    f"{fmt(s['mean_conf_wrong'])} | {s['no_answer']} |")
@@ -405,7 +473,8 @@ def render(data: dict) -> str:
             L.append("_no complete run yet_")
         L.append("")
     if ft:
-        te, tr = training.get("email-clean", {}), training.get("router-bare", {})
+        te = training.get(FINETUNED, {}).get("email-routing", {})
+        tr = training.get(FINETUNED, {}).get("task-routing", {})
         clean = ft["datasets"].get("email-clean", {})
         adv = ft["datasets"].get("email-adversarial", {})
         bare, desc = ft["datasets"].get("router-bare", {}), ft["datasets"].get("router-described", {})
@@ -445,6 +514,27 @@ def render(data: dict) -> str:
               f"{tr.get('wall_time_s', 0):.0f} s (router) of training on {te.get('hardware', '?')}; "
               f"p50 latency {clean.get('p50_latency_s', 0):.3f} s per row.",
               ""]
+    present = [s for s in FINETUNED_RUNS if s in judges]
+    if len(present) > 1:
+        L += ["## Run 1 vs run 2 vs run 2 + temperature scaling (same held-out rows)", "",
+              "Run 1 is the pre-registered run the prediction was scored on. Run 2 and its "
+              "temperature-scaled variant are the post-hoc amendment above: exploratory, not "
+              "pre-registered, published with the same evidence. Accuracy is unchanged by "
+              "temperature scaling by construction (it rescales logits, it does not reorder them).",
+              "",
+              "| dataset (rows) | run | accuracy | ECE | zero-error coverage | conf right / wrong | "
+              "p50 latency |", "|---|---|---|---|---|---|---|"]
+        for ds, (title, _key) in names.items():
+            for slug in present:
+                s = judges[slug]["datasets"].get(ds)
+                if not s:
+                    continue
+                short = FINETUNED_RUNS[slug]["label"].split(" — ")[1]
+                L.append(f"| {title.split(' — ')[0]} ({s['scored']}, n={s['n']}) | {short} | "
+                         f"{fmt(s['accuracy'], True)} | {fmt(s['ece'])} | "
+                         f"{fmt(s['zero_error_coverage'], True)} | {fmt(s['mean_conf_correct'])} / "
+                         f"{fmt(s['mean_conf_wrong'])} | {s['p50_latency_s']:.3f} s |")
+        L.append("")
     L += ["## Caveats (read with every number above)", "",
           "- **Synthetic GT-1 data.** Both datasets come from seeded generators with labels by "
           "construction; the categories are clean and the vocabulary is narrow. A classifier "
@@ -460,6 +550,9 @@ def render(data: dict) -> str:
           "classifier would move the numbers; that would be a different, unregistered experiment.",
           "- The other judges' held-out rows are re-scored from their full Arena runs; they were "
           "not re-run. Their prompts and settings are those of the Arena.",
+          "- **Run 2 and temperature scaling are post hoc.** They were decided after run 1's "
+          "numbers were known (the amendment says when and why). Nothing in them is pre-registered; "
+          "the prediction stays scored on run 1.",
           ""]
     return "\n".join(L)
 

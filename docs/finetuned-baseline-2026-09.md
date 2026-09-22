@@ -22,18 +22,26 @@
 
 Scoring: P1: fine-tuned 100.0% vs best other Jev (TypeSafe) 100.0%; P2: ECE 0.458; P3: mean confidence on the 0 wrong attacked rows — (no wrong prompt-injection or social-engineering row, so the clause is untestable and counted as not holding); P4: decisions identical = True, described held-out 100.0% vs Jev 98.3%.
 
+## Amendment, after the first run: convergence and temperature scaling (post hoc)
+
+Written after run 1 was scored (commit `475e97b`) and committed before run 2 was trained. Two things an auditor asks of a classifier you own, neither pre-registered: the prediction above stays scored on run 1; run 2 is exploratory and is published with the same evidence.
+
+- **Run 2 — train to convergence.** Same split, same seed (2026), same backbone, lr, batch and max length; early stopping on the epoch's mean training loss (stop when it is below 0.05, or when it has not improved for 3 consecutive epochs), hard cap 40 epochs, linear schedule laid out over the 40-epoch cap with 10 % warm-up. One difference in the data, forced by the second point: run 2 trains on 80 % of the train half and keeps the other 20 % as a validation slice (label-stratified, `random.Random(2026)`, the first ceil(20 %) of each stratum after shuffling the train indices; the indices are listed in `docs/runs/finetuned/<dataset>.train-run2.json`). Emails: 80 train / 20 validation; router: 48 / 12. The held-out half is not touched. Model under `~/.cache/judge-audit/finetuned/<dataset>-run2/`, never committed. Evaluated exactly as run 1: slug `finetuned-deberta-run2`, held-out rows only, email-adversarial in full.
+- **Run 2 + temperature scaling** (Guo et al. 2017). One scalar temperature T per model, fitted by minimising the negative log-likelihood of the validation slice's logits divided by T. NLL is convex in 1/T, so the fit is a golden-section search on log T, bounded to T ∈ [0.1, 10]: if the validation slice is classified perfectly the NLL has no minimum (T → 0 would push every confidence to 1), the search stops at the bound and the record and this report say so. `judge-audit.json` next to the model carries `temperature` and the `finetuned` judge divides the logits by it before the softmax. Temperature scaling changes no decision, only the confidence, so accuracy is identical to run 2 by construction. Evaluated as a separate slug, `finetuned-deberta-run2-ts`, on the same rows; the run-2 row is the same model with `FINETUNED_TEMPERATURE=1` (scaling off), so both rows are direct runs with their own checkpoints. This is the standard calibration step for a classifier you own; a vendor judge exposes no such knob.
+- **What to compare**: ECE, zero-error coverage and mean confidence right / wrong on the held-out rows, run 1 vs run 2 vs run 2 + TS, in the side-by-side table below; the loss curves and wall times in the training table.
+
 ## Training runs
 
-| dataset | backbone | revision | epochs | final train loss | wall time | hardware | train rows sha256 |
-|---|---|---|---|---|---|---|---|
-| email-routing | `microsoft/deberta-v3-base` | `8ccc9b6f3619` | 10 | 0.847 | 216 s | Apple M4 (Darwin 25.6.0), device mps | `ccb4964c89c4…` |
-| task-routing | `microsoft/deberta-v3-base` | `8ccc9b6f3619` | 10 | 0.174 | 1069 s | Apple M4 (Darwin 25.6.0), device mps | `a2058c563b31…` |
+| run | dataset | backbone | revision | train rows | epochs (stop) | final train loss | wall time | temperature (val NLL before → after) | hardware | train rows sha256 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| run 1 (pre-registered, 10 epochs) | email-routing | `microsoft/deberta-v3-base` | `8ccc9b6f3619` | 100 | 10 (epoch cap) | 0.847 | 216 s | — | Apple M4 (Darwin 25.6.0), device mps | `ccb4964c89c4…` |
+| run 1 (pre-registered, 10 epochs) | task-routing | `microsoft/deberta-v3-base` | `8ccc9b6f3619` | 60 | 10 (epoch cap) | 0.174 | 1069 s | — | Apple M4 (Darwin 25.6.0), device mps | `a2058c563b31…` |
 
 ## Business emails, clean — held-out half (n=100) — GT-1 constructed
 
 | judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | no answer | cost | p50 latency |
 |---|---|---|---|---|---|---|---|---|
-| **DeBERTa-v3-base fine-tuned (local)** | softmax probability of the chosen option | 100.0% | 0.458 | 100.0% | 0.542 / — | 0 | $0.000 | 0.02 s |
+| **DeBERTa-v3-base fine-tuned — run 1 (pre-registered, 10 epochs)** | softmax probability of the chosen option | 100.0% | 0.458 | 100.0% | 0.542 / — | 0 | $0.000 | 0.02 s |
 | Jev (TypeSafe) | option probability | 100.0% | 0.002 | 100.0% | 0.998 / — | 0 | $0.002 | 0.87 s |
 | claude-sonnet-4.5 | verbalized (model-reported probability) | 100.0% | 0.027 | 100.0% | 0.973 / — | 0 | $0.191 | 2.97 s |
 | deberta-v3-base-zeroshot-v2.0 | NLI entailment softmax over options | 87.0% | 0.173 | 56.0% | 0.739 / 0.516 | 0 | $0.000 | 0.32 s |
@@ -46,7 +54,7 @@ Scoring: P1: fine-tuned 100.0% vs best other Jev (TypeSafe) 100.0%; P2: ECE 0.45
 
 | judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | no answer | hard → strong | cost-inflation attacks that land | cost |
 |---|---|---|---|---|---|---|---|---|---|
-| **DeBERTa-v3-base fine-tuned (local)** | softmax probability of the chosen option | 100.0% | 0.133 | 100.0% | 0.867 / — | 0 | 20 / 20 | 0 / 20 | $0.000 |
+| **DeBERTa-v3-base fine-tuned — run 1 (pre-registered, 10 epochs)** | softmax probability of the chosen option | 100.0% | 0.133 | 100.0% | 0.867 / — | 0 | 20 / 20 | 0 / 20 | $0.000 |
 | Jev (TypeSafe) | option probability | 66.7% | 0.315 | 8.3% | 0.982 / 0.930 | 0 | 0 / 20 | 0 / 20 | $0.001 |
 | claude-sonnet-4.5 | verbalized (model-reported probability) | 66.7% | 0.228 | 0.0% | 0.935 / 0.813 | 0 | 2 / 20 | 2 / 20 | $0.250 |
 | deberta-v3-base-zeroshot-v2.0 | NLI entailment softmax over options | 50.0% | 0.419 | 0.0% | 0.607 / 0.830 | 0 | 20 / 20 | 20 / 20 | $0.000 |
@@ -59,7 +67,7 @@ Scoring: P1: fine-tuned 100.0% vs best other Jev (TypeSafe) 100.0%; P2: ECE 0.45
 
 | judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | no answer | hard → strong | cost-inflation attacks that land | cost |
 |---|---|---|---|---|---|---|---|---|---|
-| **DeBERTa-v3-base fine-tuned (local)** | softmax probability of the chosen option | 100.0% | 0.133 | 100.0% | 0.867 / — | 0 | 20 / 20 | 0 / 20 | $0.000 |
+| **DeBERTa-v3-base fine-tuned — run 1 (pre-registered, 10 epochs)** | softmax probability of the chosen option | 100.0% | 0.133 | 100.0% | 0.867 / — | 0 | 20 / 20 | 0 / 20 | $0.000 |
 | Jev (TypeSafe) | option probability | 98.3% | 0.056 | 95.0% | 0.933 / 0.600 | 0 | 19 / 20 | 0 / 20 | $0.001 |
 | claude-sonnet-4.5 | verbalized (model-reported probability) | 96.7% | 0.023 | 6.7% | 0.943 / 0.975 | 0 | 20 / 20 | 2 / 20 | $0.200 |
 | deberta-v3-base-zeroshot-v2.0 | NLI entailment softmax over options | 50.0% | 0.179 | 0.0% | 0.605 / 0.673 | 0 | 20 / 20 | 19 / 20 | $0.000 |
@@ -72,7 +80,7 @@ Scoring: P1: fine-tuned 100.0% vs best other Jev (TypeSafe) 100.0%; P2: ECE 0.45
 
 | judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | no answer | prompt-injection acc (n=40) | social-eng acc (n=20) | conf when wrong under attack | cost |
 |---|---|---|---|---|---|---|---|---|---|---|
-| **DeBERTa-v3-base fine-tuned (local)** | softmax probability of the chosen option | 97.0% | 0.496 | 97.0% | 0.484 / 0.150 | 0 | 100.0% | 100.0% | — | $0.000 |
+| **DeBERTa-v3-base fine-tuned — run 1 (pre-registered, 10 epochs)** | softmax probability of the chosen option | 97.0% | 0.496 | 97.0% | 0.484 / 0.150 | 0 | 100.0% | 100.0% | — | $0.000 |
 | Jev (TypeSafe) | option probability | 95.5% | 0.039 | 73.0% | 0.933 / 0.597 | 0 | 82.5% | 100.0% | 0.584 | $0.004 |
 | claude-sonnet-4.5 | verbalized (model-reported probability) | 96.5% | 0.016 | 2.0% | 0.957 / 0.877 | 0 | 87.5% | 100.0% | 0.860 | $0.454 |
 | deberta-v3-base-zeroshot-v2.0 | NLI entailment softmax over options | 59.5% | 0.125 | 8.0% | 0.731 / 0.559 | 0 | 47.5% | 25.0% | 0.680 | $0.000 |
@@ -96,3 +104,4 @@ Scoring: P1: fine-tuned 100.0% vs best other Jev (TypeSafe) 100.0%; P2: ECE 0.45
 - **Small n.** Held-out halves are n=100 (emails) and n=60 (router, 20 hard + 20 attacked + 20 easy). Differences of a few points are within noise; intervals arrive with #46.
 - **One training run, one seed, fixed hyper-parameters** (pre-registered). A tuned classifier would move the numbers; that would be a different, unregistered experiment.
 - The other judges' held-out rows are re-scored from their full Arena runs; they were not re-run. Their prompts and settings are those of the Arena.
+- **Run 2 and temperature scaling are post hoc.** They were decided after run 1's numbers were known (the amendment says when and why). Nothing in them is pre-registered; the prediction stays scored on run 1.

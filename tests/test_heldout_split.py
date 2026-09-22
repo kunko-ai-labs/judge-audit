@@ -183,7 +183,13 @@ def test_render_marks_an_untestable_clause_and_labels_the_finetuned_row():
     md = heldout_report.render(data)
     if data["prediction"]["status"] == "scored":
         ft = data["judges"][heldout_report.FINETUNED]
-        assert ft["label"] == "DeBERTa-v3-base fine-tuned (local)"
+        assert ft["label"].startswith("DeBERTa-v3-base fine-tuned — run 1 (pre-registered")
+        assert "## Amendment, after the first run" in md
+        assert ft["datasets"]["email-clean"]["temperature"] == 1.0
+        for slug in data["judges"]:
+            if slug in heldout_report.FINETUNED_RUNS and slug != heldout_report.FINETUNED:
+                # A post-hoc run never enters the prediction's "best other" comparison.
+                assert data["prediction"]["results"]["P1"]["best_other"] != slug
         assert ft["datasets"]["email-clean"]["model"] != ft["datasets"]["router-bare"]["model"]
         assert ft["datasets"]["email-clean"]["scored"] == "held-out half"
         assert ft["datasets"]["email-adversarial"]["scored"] == "all rows"

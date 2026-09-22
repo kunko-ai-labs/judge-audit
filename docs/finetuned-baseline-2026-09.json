@@ -57,7 +57,8 @@
           "p50_latency_s": 0.868,
           "scored": "held-out half",
           "rows_in_checkpoint": 200,
-          "model": "jev"
+          "model": "jev",
+          "temperature": 1.0
         },
         "email-adversarial": {
           "n": 200,
@@ -83,7 +84,8 @@
           "max_conf_wrong": 0.91,
           "scored": "all rows",
           "rows_in_checkpoint": 200,
-          "model": "jev"
+          "model": "jev",
+          "temperature": 1.0
         },
         "router-bare": {
           "n": 60,
@@ -102,7 +104,8 @@
           "attack_n": 20,
           "scored": "held-out half",
           "rows_in_checkpoint": 120,
-          "model": "jev"
+          "model": "jev",
+          "temperature": 1.0
         },
         "router-described": {
           "n": 60,
@@ -121,7 +124,8 @@
           "attack_n": 20,
           "scored": "held-out half",
           "rows_in_checkpoint": 120,
-          "model": "typesafe-ai/jev"
+          "model": "typesafe-ai/jev",
+          "temperature": 1.0
         }
       }
     },
@@ -169,7 +173,8 @@
           "p50_latency_s": 2.967,
           "scored": "held-out half",
           "rows_in_checkpoint": 200,
-          "model": "claude-sonnet-4.5"
+          "model": "claude-sonnet-4.5",
+          "temperature": 1.0
         },
         "email-adversarial": {
           "n": 200,
@@ -195,7 +200,8 @@
           "max_conf_wrong": 1.0,
           "scored": "all rows",
           "rows_in_checkpoint": 200,
-          "model": "claude-sonnet-4.5"
+          "model": "claude-sonnet-4.5",
+          "temperature": 1.0
         },
         "router-bare": {
           "n": 60,
@@ -214,7 +220,8 @@
           "attack_n": 20,
           "scored": "held-out half",
           "rows_in_checkpoint": 120,
-          "model": "claude-sonnet-4.5"
+          "model": "claude-sonnet-4.5",
+          "temperature": 1.0
         },
         "router-described": {
           "n": 60,
@@ -233,7 +240,8 @@
           "attack_n": 20,
           "scored": "held-out half",
           "rows_in_checkpoint": 120,
-          "model": "claude-sonnet-4.5"
+          "model": "claude-sonnet-4.5",
+          "temperature": 1.0
         }
       }
     },
@@ -273,7 +281,8 @@
           "p50_latency_s": 0.318,
           "scored": "held-out half",
           "rows_in_checkpoint": 200,
-          "model": "deberta-v3-base-zeroshot-v2.0"
+          "model": "deberta-v3-base-zeroshot-v2.0",
+          "temperature": 1.0
         },
         "email-adversarial": {
           "n": 200,
@@ -305,7 +314,8 @@
           "max_conf_wrong": 0.93,
           "scored": "all rows",
           "rows_in_checkpoint": 200,
-          "model": "deberta-v3-base-zeroshot-v2.0"
+          "model": "deberta-v3-base-zeroshot-v2.0",
+          "temperature": 1.0
         },
         "router-bare": {
           "n": 60,
@@ -324,7 +334,8 @@
           "attack_n": 20,
           "scored": "held-out half",
           "rows_in_checkpoint": 120,
-          "model": "deberta-v3-base-zeroshot-v2.0"
+          "model": "deberta-v3-base-zeroshot-v2.0",
+          "temperature": 1.0
         },
         "router-described": {
           "n": 60,
@@ -343,7 +354,8 @@
           "attack_n": 20,
           "scored": "held-out half",
           "rows_in_checkpoint": 120,
-          "model": "deberta-v3-base-zeroshot-v2.0"
+          "model": "deberta-v3-base-zeroshot-v2.0",
+          "temperature": 1.0
         }
       }
     },
@@ -385,7 +397,8 @@
           "p50_latency_s": 3.032,
           "scored": "held-out half",
           "rows_in_checkpoint": 200,
-          "model": "deepseek-r1"
+          "model": "deepseek-r1",
+          "temperature": 1.0
         },
         "email-adversarial": {
           "n": 200,
@@ -412,7 +425,8 @@
           "max_conf_wrong": 1.0,
           "scored": "all rows",
           "rows_in_checkpoint": 200,
-          "model": "deepseek-r1"
+          "model": "deepseek-r1",
+          "temperature": 1.0
         },
         "router-bare": {
           "n": 60,
@@ -431,7 +445,8 @@
           "attack_n": 20,
           "scored": "held-out half",
           "rows_in_checkpoint": 120,
-          "model": "deepseek-r1"
+          "model": "deepseek-r1",
+          "temperature": 1.0
         },
         "router-described": {
           "n": 60,
@@ -450,12 +465,13 @@
           "attack_n": 20,
           "scored": "held-out half",
           "rows_in_checkpoint": 120,
-          "model": "deepseek-r1"
+          "model": "deepseek-r1",
+          "temperature": 1.0
         }
       }
     },
     "finetuned-deberta": {
-      "label": "DeBERTa-v3-base fine-tuned (local)",
+      "label": "DeBERTa-v3-base fine-tuned — run 1 (pre-registered, 10 epochs)",
       "method": "softmax probability of the chosen option",
       "run": {
         "timestamp_utc": "2026-09-22T03:13:55+00:00",
@@ -530,7 +546,8 @@
           "p50_latency_s": 0.016,
           "scored": "held-out half",
           "rows_in_checkpoint": 100,
-          "model": "deberta-v3-base-ft-email-routing"
+          "model": "deberta-v3-base-ft-email-routing",
+          "temperature": 1.0
         },
         "email-adversarial": {
           "n": 200,
@@ -557,7 +574,8 @@
           "max_conf_wrong": 0.159,
           "scored": "all rows",
           "rows_in_checkpoint": 200,
-          "model": "deberta-v3-base-ft-email-routing"
+          "model": "deberta-v3-base-ft-email-routing",
+          "temperature": 1.0
         },
         "router-bare": {
           "n": 60,
@@ -576,7 +594,8 @@
           "attack_n": 20,
           "scored": "held-out half",
           "rows_in_checkpoint": 60,
-          "model": "deberta-v3-base-ft-task-routing"
+          "model": "deberta-v3-base-ft-task-routing",
+          "temperature": 1.0
         },
         "router-described": {
           "n": 60,
@@ -595,7 +614,8 @@
           "attack_n": 20,
           "scored": "held-out half",
           "rows_in_checkpoint": 60,
-          "model": "deberta-v3-base-ft-task-routing"
+          "model": "deberta-v3-base-ft-task-routing",
+          "temperature": 1.0
         }
       }
     },
@@ -633,7 +653,8 @@
           "p50_latency_s": 9.444,
           "scored": "held-out half",
           "rows_in_checkpoint": 200,
-          "model": "gemma4:e4b"
+          "model": "gemma4:e4b",
+          "temperature": 1.0
         },
         "email-adversarial": {
           "n": 200,
@@ -660,7 +681,8 @@
           "max_conf_wrong": 1.0,
           "scored": "all rows",
           "rows_in_checkpoint": 200,
-          "model": "gemma4:e4b"
+          "model": "gemma4:e4b",
+          "temperature": 1.0
         },
         "router-bare": {
           "n": 60,
@@ -679,7 +701,8 @@
           "attack_n": 20,
           "scored": "held-out half",
           "rows_in_checkpoint": 120,
-          "model": "gemma4:e4b"
+          "model": "gemma4:e4b",
+          "temperature": 1.0
         },
         "router-described": {
           "n": 60,
@@ -698,7 +721,8 @@
           "attack_n": 20,
           "scored": "held-out half",
           "rows_in_checkpoint": 120,
-          "model": "gemma4:e4b"
+          "model": "gemma4:e4b",
+          "temperature": 1.0
         }
       }
     },
@@ -739,7 +763,8 @@
           "p50_latency_s": 0.799,
           "scored": "held-out half",
           "rows_in_checkpoint": 200,
-          "model": "llama-3.3-70b"
+          "model": "llama-3.3-70b",
+          "temperature": 1.0
         },
         "email-adversarial": {
           "n": 200,
@@ -766,7 +791,8 @@
           "max_conf_wrong": 1.0,
           "scored": "all rows",
           "rows_in_checkpoint": 200,
-          "model": "llama-3.3-70b"
+          "model": "llama-3.3-70b",
+          "temperature": 1.0
         },
         "router-bare": {
           "n": 60,
@@ -785,7 +811,8 @@
           "attack_n": 20,
           "scored": "held-out half",
           "rows_in_checkpoint": 120,
-          "model": "llama-3.3-70b"
+          "model": "llama-3.3-70b",
+          "temperature": 1.0
         },
         "router-described": {
           "n": 60,
@@ -804,7 +831,8 @@
           "attack_n": 20,
           "scored": "held-out half",
           "rows_in_checkpoint": 120,
-          "model": "llama-3.3-70b"
+          "model": "llama-3.3-70b",
+          "temperature": 1.0
         }
       }
     },
@@ -842,7 +870,8 @@
           "p50_latency_s": 0.705,
           "scored": "held-out half",
           "rows_in_checkpoint": 200,
-          "model": "llama3.2:3b"
+          "model": "llama3.2:3b",
+          "temperature": 1.0
         },
         "email-adversarial": {
           "n": 200,
@@ -874,7 +903,8 @@
           "max_conf_wrong": 1.0,
           "scored": "all rows",
           "rows_in_checkpoint": 200,
-          "model": "llama3.2:3b"
+          "model": "llama3.2:3b",
+          "temperature": 1.0
         },
         "router-bare": {
           "n": 60,
@@ -893,7 +923,8 @@
           "attack_n": 20,
           "scored": "held-out half",
           "rows_in_checkpoint": 120,
-          "model": "llama3.2:3b"
+          "model": "llama3.2:3b",
+          "temperature": 1.0
         },
         "router-described": {
           "n": 60,
@@ -912,267 +943,142 @@
           "attack_n": 20,
           "scored": "held-out half",
           "rows_in_checkpoint": 120,
-          "model": "llama3.2:3b"
+          "model": "llama3.2:3b",
+          "temperature": 1.0
         }
       }
     }
   },
   "training": {
-    "email-clean": {
-      "dataset": "email-routing",
-      "labels_file": "examples/email-routing/labels.jsonl",
-      "labels_sha256_rows": "c5b4c111290aa657236ea520a8043b14ce23e9b26af01a6c5e7ec9b87082e1cf",
-      "question": "category",
-      "timestamp_utc": "2026-09-21T19:52:42+00:00",
-      "backbone": "microsoft/deberta-v3-base",
-      "backbone_revision": "8ccc9b6f36199bec6961081d44eb72fb3f7353f3",
-      "backbone_choice": "microsoft/deberta-v3-base: the plain pre-trained backbone, chosen because it downloaded in 16 s; the local MoritzLaurer/deberta-v3-base-zeroshot-v2.0 backbone was the pre-registered fallback and was not needed. A plain backbone keeps the fine-tuned row free of any zero-shot NLI training.",
-      "hyper_parameters": {
+    "finetuned-deberta": {
+      "email-routing": {
+        "dataset": "email-routing",
+        "labels_file": "examples/email-routing/labels.jsonl",
+        "labels_sha256_rows": "c5b4c111290aa657236ea520a8043b14ce23e9b26af01a6c5e7ec9b87082e1cf",
+        "question": "category",
+        "timestamp_utc": "2026-09-21T19:52:42+00:00",
+        "backbone": "microsoft/deberta-v3-base",
+        "backbone_revision": "8ccc9b6f36199bec6961081d44eb72fb3f7353f3",
+        "backbone_choice": "microsoft/deberta-v3-base: the plain pre-trained backbone, chosen because it downloaded in 16 s; the local MoritzLaurer/deberta-v3-base-zeroshot-v2.0 backbone was the pre-registered fallback and was not needed. A plain backbone keeps the fine-tuned row free of any zero-shot NLI training.",
+        "hyper_parameters": {
+          "seed": 2026,
+          "epochs": 10,
+          "lr": 2e-05,
+          "batch": 8,
+          "max_len": 256,
+          "optimizer": "AdamW(weight_decay=0.01), grad clip 1.0",
+          "dtype": "float32 (the backbone config declares float16)",
+          "schedule": "linear, 10% warm-up",
+          "steps": 130
+        },
         "seed": 2026,
         "epochs": 10,
-        "lr": 2e-05,
-        "batch": 8,
-        "max_len": 256,
-        "optimizer": "AdamW(weight_decay=0.01), grad clip 1.0",
-        "dtype": "float32 (the backbone config declares float16)",
-        "schedule": "linear, 10% warm-up",
-        "steps": 130
+        "labels": [
+          "contract",
+          "delivery_status",
+          "invoice_dispute",
+          "order",
+          "partnership",
+          "payment_reminder",
+          "quote_request",
+          "return_request",
+          "spam",
+          "support"
+        ],
+        "n_train": 100,
+        "train_rows_sha256": "ccb4964c89c4ef5149e0477704053e9f5e55a7d7508114527712abec5adf099b",
+        "split": {
+          "path": "examples/email-routing/split-heldout.json",
+          "sha256": "05e7630ed5ea29a70a99902db69c0971fb03217309df0463cf2e43a9f01736f7",
+          "part": "train",
+          "n": 100
+        },
+        "train_loss_per_epoch": [
+          2.3069,
+          2.2668,
+          2.141,
+          1.9177,
+          1.6568,
+          1.3982,
+          1.1865,
+          1.0276,
+          0.9177,
+          0.8468
+        ],
+        "train_accuracy_final": 1.0,
+        "wall_time_s": 215.5,
+        "hardware": "Apple M4 (Darwin 25.6.0), device mps",
+        "determinism": "seeded (python, torch, batch order); MPS kernels are not guaranteed bit-reproducible across torch versions",
+        "software": {
+          "python": "3.12.8",
+          "torch": "2.14.0",
+          "transformers": "5.17.0",
+          "judge_audit": "0.3.2"
+        },
+        "model_dir": "/Users/altostratus_1/.cache/judge-audit/finetuned/email-routing",
+        "model_dir_config_sha256": "0d982427ddc64a3ab944c65b64cd4db6b82043d22f3fee88c6ca62014fa79677",
+        "held_out_evaluated_here": false
       },
-      "seed": 2026,
-      "epochs": 10,
-      "labels": [
-        "contract",
-        "delivery_status",
-        "invoice_dispute",
-        "order",
-        "partnership",
-        "payment_reminder",
-        "quote_request",
-        "return_request",
-        "spam",
-        "support"
-      ],
-      "n_train": 100,
-      "train_rows_sha256": "ccb4964c89c4ef5149e0477704053e9f5e55a7d7508114527712abec5adf099b",
-      "split": {
-        "path": "examples/email-routing/split-heldout.json",
-        "sha256": "05e7630ed5ea29a70a99902db69c0971fb03217309df0463cf2e43a9f01736f7",
-        "part": "train",
-        "n": 100
-      },
-      "train_loss_per_epoch": [
-        2.3069,
-        2.2668,
-        2.141,
-        1.9177,
-        1.6568,
-        1.3982,
-        1.1865,
-        1.0276,
-        0.9177,
-        0.8468
-      ],
-      "train_accuracy_final": 1.0,
-      "wall_time_s": 215.5,
-      "hardware": "Apple M4 (Darwin 25.6.0), device mps",
-      "determinism": "seeded (python, torch, batch order); MPS kernels are not guaranteed bit-reproducible across torch versions",
-      "software": {
-        "python": "3.12.8",
-        "torch": "2.14.0",
-        "transformers": "5.17.0",
-        "judge_audit": "0.3.2"
-      },
-      "model_dir": "/Users/altostratus_1/.cache/judge-audit/finetuned/email-routing",
-      "model_dir_config_sha256": "0d982427ddc64a3ab944c65b64cd4db6b82043d22f3fee88c6ca62014fa79677",
-      "held_out_evaluated_here": false
-    },
-    "email-adversarial": {
-      "dataset": "email-routing",
-      "labels_file": "examples/email-routing/labels.jsonl",
-      "labels_sha256_rows": "c5b4c111290aa657236ea520a8043b14ce23e9b26af01a6c5e7ec9b87082e1cf",
-      "question": "category",
-      "timestamp_utc": "2026-09-21T19:52:42+00:00",
-      "backbone": "microsoft/deberta-v3-base",
-      "backbone_revision": "8ccc9b6f36199bec6961081d44eb72fb3f7353f3",
-      "backbone_choice": "microsoft/deberta-v3-base: the plain pre-trained backbone, chosen because it downloaded in 16 s; the local MoritzLaurer/deberta-v3-base-zeroshot-v2.0 backbone was the pre-registered fallback and was not needed. A plain backbone keeps the fine-tuned row free of any zero-shot NLI training.",
-      "hyper_parameters": {
+      "task-routing": {
+        "dataset": "task-routing",
+        "labels_file": "examples/task-routing/labels.jsonl",
+        "labels_sha256_rows": "27250d78eda62c5e5ad07906abd3c7fdeaecb1131a7d13e12146bed30f55ec8d",
+        "question": "route",
+        "timestamp_utc": "2026-09-21T20:10:57+00:00",
+        "backbone": "microsoft/deberta-v3-base",
+        "backbone_revision": "8ccc9b6f36199bec6961081d44eb72fb3f7353f3",
+        "backbone_choice": "microsoft/deberta-v3-base: the plain pre-trained backbone, chosen because it downloaded in 16 s; the local MoritzLaurer/deberta-v3-base-zeroshot-v2.0 backbone was the pre-registered fallback and was not needed. A plain backbone keeps the fine-tuned row free of any zero-shot NLI training.",
+        "hyper_parameters": {
+          "seed": 2026,
+          "epochs": 10,
+          "lr": 2e-05,
+          "batch": 8,
+          "max_len": 256,
+          "optimizer": "AdamW(weight_decay=0.01), grad clip 1.0",
+          "dtype": "float32 (the backbone config declares float16)",
+          "schedule": "linear, 10% warm-up",
+          "steps": 80
+        },
         "seed": 2026,
         "epochs": 10,
-        "lr": 2e-05,
-        "batch": 8,
-        "max_len": 256,
-        "optimizer": "AdamW(weight_decay=0.01), grad clip 1.0",
-        "dtype": "float32 (the backbone config declares float16)",
-        "schedule": "linear, 10% warm-up",
-        "steps": 130
-      },
-      "seed": 2026,
-      "epochs": 10,
-      "labels": [
-        "contract",
-        "delivery_status",
-        "invoice_dispute",
-        "order",
-        "partnership",
-        "payment_reminder",
-        "quote_request",
-        "return_request",
-        "spam",
-        "support"
-      ],
-      "n_train": 100,
-      "train_rows_sha256": "ccb4964c89c4ef5149e0477704053e9f5e55a7d7508114527712abec5adf099b",
-      "split": {
-        "path": "examples/email-routing/split-heldout.json",
-        "sha256": "05e7630ed5ea29a70a99902db69c0971fb03217309df0463cf2e43a9f01736f7",
-        "part": "train",
-        "n": 100
-      },
-      "train_loss_per_epoch": [
-        2.3069,
-        2.2668,
-        2.141,
-        1.9177,
-        1.6568,
-        1.3982,
-        1.1865,
-        1.0276,
-        0.9177,
-        0.8468
-      ],
-      "train_accuracy_final": 1.0,
-      "wall_time_s": 215.5,
-      "hardware": "Apple M4 (Darwin 25.6.0), device mps",
-      "determinism": "seeded (python, torch, batch order); MPS kernels are not guaranteed bit-reproducible across torch versions",
-      "software": {
-        "python": "3.12.8",
-        "torch": "2.14.0",
-        "transformers": "5.17.0",
-        "judge_audit": "0.3.2"
-      },
-      "model_dir": "/Users/altostratus_1/.cache/judge-audit/finetuned/email-routing",
-      "model_dir_config_sha256": "0d982427ddc64a3ab944c65b64cd4db6b82043d22f3fee88c6ca62014fa79677",
-      "held_out_evaluated_here": false
-    },
-    "router-bare": {
-      "dataset": "task-routing",
-      "labels_file": "examples/task-routing/labels.jsonl",
-      "labels_sha256_rows": "27250d78eda62c5e5ad07906abd3c7fdeaecb1131a7d13e12146bed30f55ec8d",
-      "question": "route",
-      "timestamp_utc": "2026-09-21T20:10:57+00:00",
-      "backbone": "microsoft/deberta-v3-base",
-      "backbone_revision": "8ccc9b6f36199bec6961081d44eb72fb3f7353f3",
-      "backbone_choice": "microsoft/deberta-v3-base: the plain pre-trained backbone, chosen because it downloaded in 16 s; the local MoritzLaurer/deberta-v3-base-zeroshot-v2.0 backbone was the pre-registered fallback and was not needed. A plain backbone keeps the fine-tuned row free of any zero-shot NLI training.",
-      "hyper_parameters": {
-        "seed": 2026,
-        "epochs": 10,
-        "lr": 2e-05,
-        "batch": 8,
-        "max_len": 256,
-        "optimizer": "AdamW(weight_decay=0.01), grad clip 1.0",
-        "dtype": "float32 (the backbone config declares float16)",
-        "schedule": "linear, 10% warm-up",
-        "steps": 80
-      },
-      "seed": 2026,
-      "epochs": 10,
-      "labels": [
-        "route_easy",
-        "route_strong"
-      ],
-      "n_train": 60,
-      "train_rows_sha256": "a2058c563b313db6c4955a911ef25927a54ac93336e5d13db748f1cf1da4dd6c",
-      "split": {
-        "path": "examples/task-routing/split-heldout.json",
-        "sha256": "322d113c8c0e67c36362d1d4ff26955c68dd76843158cd8f11462eb8b66ae018",
-        "part": "train",
-        "n": 60
-      },
-      "train_loss_per_epoch": [
-        0.7112,
-        0.6382,
-        0.5531,
-        0.3923,
-        0.3042,
-        0.2468,
-        0.22,
-        0.1941,
-        0.1847,
-        0.1741
-      ],
-      "train_accuracy_final": 1.0,
-      "wall_time_s": 1069.0,
-      "hardware": "Apple M4 (Darwin 25.6.0), device mps",
-      "determinism": "seeded (python, torch, batch order); MPS kernels are not guaranteed bit-reproducible across torch versions",
-      "software": {
-        "python": "3.12.8",
-        "torch": "2.14.0",
-        "transformers": "5.17.0",
-        "judge_audit": "0.3.2"
-      },
-      "model_dir": "/Users/altostratus_1/.cache/judge-audit/finetuned/task-routing",
-      "model_dir_config_sha256": "14663115589699aa76a957d67f5f4a13e0071358a39af2a48fea6863d8788d63",
-      "held_out_evaluated_here": false
-    },
-    "router-described": {
-      "dataset": "task-routing",
-      "labels_file": "examples/task-routing/labels.jsonl",
-      "labels_sha256_rows": "27250d78eda62c5e5ad07906abd3c7fdeaecb1131a7d13e12146bed30f55ec8d",
-      "question": "route",
-      "timestamp_utc": "2026-09-21T20:10:57+00:00",
-      "backbone": "microsoft/deberta-v3-base",
-      "backbone_revision": "8ccc9b6f36199bec6961081d44eb72fb3f7353f3",
-      "backbone_choice": "microsoft/deberta-v3-base: the plain pre-trained backbone, chosen because it downloaded in 16 s; the local MoritzLaurer/deberta-v3-base-zeroshot-v2.0 backbone was the pre-registered fallback and was not needed. A plain backbone keeps the fine-tuned row free of any zero-shot NLI training.",
-      "hyper_parameters": {
-        "seed": 2026,
-        "epochs": 10,
-        "lr": 2e-05,
-        "batch": 8,
-        "max_len": 256,
-        "optimizer": "AdamW(weight_decay=0.01), grad clip 1.0",
-        "dtype": "float32 (the backbone config declares float16)",
-        "schedule": "linear, 10% warm-up",
-        "steps": 80
-      },
-      "seed": 2026,
-      "epochs": 10,
-      "labels": [
-        "route_easy",
-        "route_strong"
-      ],
-      "n_train": 60,
-      "train_rows_sha256": "a2058c563b313db6c4955a911ef25927a54ac93336e5d13db748f1cf1da4dd6c",
-      "split": {
-        "path": "examples/task-routing/split-heldout.json",
-        "sha256": "322d113c8c0e67c36362d1d4ff26955c68dd76843158cd8f11462eb8b66ae018",
-        "part": "train",
-        "n": 60
-      },
-      "train_loss_per_epoch": [
-        0.7112,
-        0.6382,
-        0.5531,
-        0.3923,
-        0.3042,
-        0.2468,
-        0.22,
-        0.1941,
-        0.1847,
-        0.1741
-      ],
-      "train_accuracy_final": 1.0,
-      "wall_time_s": 1069.0,
-      "hardware": "Apple M4 (Darwin 25.6.0), device mps",
-      "determinism": "seeded (python, torch, batch order); MPS kernels are not guaranteed bit-reproducible across torch versions",
-      "software": {
-        "python": "3.12.8",
-        "torch": "2.14.0",
-        "transformers": "5.17.0",
-        "judge_audit": "0.3.2"
-      },
-      "model_dir": "/Users/altostratus_1/.cache/judge-audit/finetuned/task-routing",
-      "model_dir_config_sha256": "14663115589699aa76a957d67f5f4a13e0071358a39af2a48fea6863d8788d63",
-      "held_out_evaluated_here": false
+        "labels": [
+          "route_easy",
+          "route_strong"
+        ],
+        "n_train": 60,
+        "train_rows_sha256": "a2058c563b313db6c4955a911ef25927a54ac93336e5d13db748f1cf1da4dd6c",
+        "split": {
+          "path": "examples/task-routing/split-heldout.json",
+          "sha256": "322d113c8c0e67c36362d1d4ff26955c68dd76843158cd8f11462eb8b66ae018",
+          "part": "train",
+          "n": 60
+        },
+        "train_loss_per_epoch": [
+          0.7112,
+          0.6382,
+          0.5531,
+          0.3923,
+          0.3042,
+          0.2468,
+          0.22,
+          0.1941,
+          0.1847,
+          0.1741
+        ],
+        "train_accuracy_final": 1.0,
+        "wall_time_s": 1069.0,
+        "hardware": "Apple M4 (Darwin 25.6.0), device mps",
+        "determinism": "seeded (python, torch, batch order); MPS kernels are not guaranteed bit-reproducible across torch versions",
+        "software": {
+          "python": "3.12.8",
+          "torch": "2.14.0",
+          "transformers": "5.17.0",
+          "judge_audit": "0.3.2"
+        },
+        "model_dir": "/Users/altostratus_1/.cache/judge-audit/finetuned/task-routing",
+        "model_dir_config_sha256": "14663115589699aa76a957d67f5f4a13e0071358a39af2a48fea6863d8788d63",
+        "held_out_evaluated_here": false
+      }
     }
   },
   "prediction": {
