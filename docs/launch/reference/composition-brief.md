@@ -10,7 +10,7 @@ Create a short launch-style brag video for agent-assurance.
 - Duration: 22 seconds
 
 ## Source Material
-- Project root: `/Users/altostratus_1/Documents/Vane/kunko/agent-assurance`
+- Project root: the `agent-assurance` repository (every path below is relative to it)
 - Primary files read: README.md, docs/video-script.md, docs/pr-comment.png, examples/demo/analytics-helper/agent-assurance.yaml, examples/demo/analytics-helper/.mcp.json
 - Product name: agent-assurance
 - Tagline / strongest claim: "Declare what your agent may do. Verify it on every edit, every PR, every release." · "No LLM in the verdict."

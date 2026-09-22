@@ -79,3 +79,30 @@ def test_jev_records_the_version_of_its_criteria_rendering(monkeypatch):
     # Jev has no text prompt; what it is shown is the criteria map this version renders.
     assert d["criteria_version"] == CRITERIA_VERSION
     assert "prompt_sha256" not in d
+
+
+def test_display_path_never_publishes_a_home_directory(tmp_path, monkeypatch):
+    """Provenance names files, not the machine they sat on (#58)."""
+    from pathlib import Path
+
+    from judge_audit.runner import display_path
+
+    monkeypatch.chdir(tmp_path)
+    assert display_path("docs/runs/x.ckpt.jsonl") == "docs/runs/x.ckpt.jsonl"
+    assert display_path(tmp_path / "docs" / "x.jsonl") == "docs/x.jsonl"
+    home = Path.home()
+    assert display_path(home / "elsewhere" / "labels.jsonl") == "~/elsewhere/labels.jsonl"
+    for p in ("docs/runs/x.ckpt.jsonl", str(tmp_path / "docs" / "x.jsonl"),
+              str(home / "elsewhere" / "labels.jsonl")):
+        out = display_path(p)
+        assert str(home) not in out and not out.startswith("/Users/")
+
+
+def test_run_metadata_publishes_a_relative_dataset_path(tmp_path, monkeypatch):
+    from judge_audit.runner import run_metadata
+
+    labels = tmp_path / "labels.jsonl"
+    labels.write_text('{"state": "s", "questions": [], "labels": {}}\n', encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+    meta = run_metadata(SimulatedJudge([]), str(labels), 1)
+    assert meta["dataset"]["path"] == "labels.jsonl"

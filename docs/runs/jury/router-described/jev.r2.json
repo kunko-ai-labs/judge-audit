@@ -207,7 +207,7 @@
     },
     "python": "3.12.8",
     "dataset": {
-      "path": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-described/jev.r2.input.jsonl",
+      "path": "docs/runs/jury/router-described/jev.r2.input.jsonl",
       "sha256": "c00355b6ede73e757758a8ae7908b240368047466bf88edb233ad286a6d6cd7d",
       "sha256_rows": "399ce7c0220acea6903a8d5907e2717d1f241757f6443b179477583cf6742e7e",
       "rows": 120,
@@ -230,6 +230,6 @@
     },
     "recomputed_utc": "2026-09-21T19:06:02+00:00",
     "note": "original run time not recorded in this checkpoint",
-    "checkpoint": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-described/jev.r2.ckpt.jsonl"
+    "checkpoint": "docs/runs/jury/router-described/jev.r2.ckpt.jsonl"
   }
 }

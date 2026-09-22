@@ -206,7 +206,7 @@
     },
     "python": "3.12.8",
     "dataset": {
-      "path": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-described/gemini-3-flash.r2.input.jsonl",
+      "path": "docs/runs/jury/router-described/gemini-3-flash.r2.input.jsonl",
       "sha256": "59fd7ce735e5b6d71950b1e7497102a34cfaa95356485b2b3cde8d711a287480",
       "sha256_rows": "6f65974f58906d15aad59366ec6b27bb7f72e8a2a8b181d50fa5480cd1866a4a",
       "rows": 120,
@@ -229,6 +229,6 @@
     },
     "recomputed_utc": "2026-09-21T19:07:14+00:00",
     "note": "original run time not recorded in this checkpoint",
-    "checkpoint": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-described/gemini-3-flash.r2.ckpt.jsonl"
+    "checkpoint": "docs/runs/jury/router-described/gemini-3-flash.r2.ckpt.jsonl"
   }
 }

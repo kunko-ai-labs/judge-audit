@@ -206,7 +206,7 @@
     },
     "python": "3.12.8",
     "dataset": {
-      "path": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-described/llama32.r2.input.jsonl",
+      "path": "docs/runs/jury/router-described/llama32.r2.input.jsonl",
       "sha256": "d6c7faf60dab5889ca790b12e305dab6ee2f60ecb7d6537669729f460233f9c4",
       "sha256_rows": "7d5124bffb672633f18fe69aeaab67d6904cff198682f908f214955ea5b4f61c",
       "rows": 120,
@@ -229,6 +229,6 @@
     },
     "recomputed_utc": "2026-09-21T20:15:03+00:00",
     "note": "original run time not recorded in this checkpoint",
-    "checkpoint": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-described/llama32.r2.ckpt.jsonl"
+    "checkpoint": "docs/runs/jury/router-described/llama32.r2.ckpt.jsonl"
   }
 }

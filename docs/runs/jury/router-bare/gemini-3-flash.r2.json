@@ -206,7 +206,7 @@
     },
     "python": "3.12.8",
     "dataset": {
-      "path": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-bare/gemini-3-flash.r2.input.jsonl",
+      "path": "docs/runs/jury/router-bare/gemini-3-flash.r2.input.jsonl",
       "sha256": "bb3c4bd85d5e82b79cd4fcf19d3b7d78ad8f7ab3b6cbc12c210b13c0f5afef5d",
       "sha256_rows": "c651876c4619cdfb50e39f3c791bc7af2f0d4a9f50635402e5a2e2160c0be07a",
       "rows": 120,
@@ -228,6 +228,6 @@
     },
     "recomputed_utc": "2026-09-21T18:54:18+00:00",
     "note": "original run time not recorded in this checkpoint",
-    "checkpoint": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-bare/gemini-3-flash.r2.ckpt.jsonl"
+    "checkpoint": "docs/runs/jury/router-bare/gemini-3-flash.r2.ckpt.jsonl"
   }
 }

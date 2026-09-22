@@ -8,6 +8,7 @@ import os
 import platform
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from pathlib import Path
 
 from .ground_truth import parse_ground_truth
 from .judges.base import Judge, Question, QuestionType
@@ -91,6 +92,24 @@ def is_correct(decision: str, expected: str) -> bool:
     return str(decision).strip().lower() == str(expected).strip().lower()
 
 
+def display_path(path: str | Path) -> str:
+    """The path as a provenance line should publish it: never somebody's home directory.
+
+    A file inside the working directory is named relative to it (`docs/runs/x.ckpt.jsonl`),
+    a file elsewhere under the user's home as `~/…`; anything else is left alone. The
+    point is a report that reads the same on every machine and leaks none of them (#58).
+    """
+    p = Path(path)
+    if not p.is_absolute():
+        return str(path)
+    for base, prefix in ((Path.cwd(), ""), (Path.home(), "~/")):
+        try:
+            return prefix + str(p.relative_to(base))
+        except ValueError:
+            continue
+    return str(path)
+
+
 def run_metadata(judge: Judge, labels_path: str | None = None,
                  n_rows: int | None = None, dataset_meta: dict | None = None) -> dict:
     """Everything an outsider needs to know how these numbers were produced.
@@ -110,7 +129,7 @@ def run_metadata(judge: Judge, labels_path: str | None = None,
         if dataset_meta is None:
             dataset_meta = read_dataset_header(labels_path)
         meta["dataset"] = {
-            "path": labels_path,
+            "path": display_path(labels_path),
             "sha256": sha256_of(labels_path),
             "sha256_rows": sha256_rows_of(labels_path),
             "rows": n_rows,

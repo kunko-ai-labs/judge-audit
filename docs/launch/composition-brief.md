@@ -9,7 +9,7 @@ Create a short launch-style brag video for judge-audit, in the house style of ag
 - Duration: 24 seconds
 
 ## Source Material
-- Project root: `/Users/altostratus_1/Documents/Vane/kunko/judge-audit`
+- Project root: the `judge-audit` repository (every path below is relative to it)
 - Primary files read: README.md, docs/audit-jev-router.md, docs/audit-jev-router-ablation.md, docs/audit-jev-router.json, docs/audit-jev-router-described.json
 - Product name: judge-audit
 - Tagline / strongest claim: "When it says 96 % confident, is it right 96 % of the time?"

@@ -32,6 +32,7 @@ from judge_audit.ground_truth import parse_ground_truth  # noqa: E402
 from judge_audit.judges.simulated import SIMULATED_TAG  # noqa: E402
 from judge_audit.report import render_html, render_markdown  # noqa: E402
 from judge_audit.runner import (  # noqa: E402
+    display_path,
     is_correct,
     load_dataset,
     questions_of,
@@ -156,7 +157,7 @@ def main() -> None:
         run = {k: v for k, v in started.items() if k != "timestamp_utc"}
         run["recomputed_utc"] = started["timestamp_utc"]
         run["note"] = "original run time not recorded in this checkpoint"
-    run["checkpoint"] = str(ckpt)
+    run["checkpoint"] = display_path(ckpt)
     # The tier is a property of the dataset, not of the run: read it from the labels
     # file so a checkpoint that predates ground-truth headers still reports it.
     run.setdefault("dataset", {})["ground_truth"] = parse_ground_truth(

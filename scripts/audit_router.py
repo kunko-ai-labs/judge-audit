@@ -37,7 +37,7 @@ from statistics import median
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from judge_audit.metrics.calibration import expected_calibration_error  # noqa: E402
-from judge_audit.runner import _percentile, load_jsonl  # noqa: E402
+from judge_audit.runner import _percentile, display_path, load_jsonl  # noqa: E402
 
 SEGMENTS = ["clean_easy", "clean_hard", "adversarial"]
 
@@ -77,7 +77,7 @@ def main() -> None:
     if not run:
         run = {"judge": {"name": "jev", "model": "typesafe-ai/jev", "backend": "gateway"},
                "note": "original run time not recorded in this checkpoint"}
-    run["checkpoint"] = args.checkpoint
+    run["checkpoint"] = display_path(args.checkpoint)
     run["options_sent_as"] = "labels with descriptions" if described else "bare labels"
     missing = [i for i in range(len(rows)) if i not in ckpt]
     if missing:

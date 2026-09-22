@@ -210,7 +210,7 @@
     },
     "python": "3.12.8",
     "dataset": {
-      "path": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-described/claude-sonnet-4.5.r2.input.jsonl",
+      "path": "docs/runs/jury/router-described/claude-sonnet-4.5.r2.input.jsonl",
       "sha256": "159c8bc820fe7c0b161fc76e6dce6d81ebf7fdc37d7c47816554e8c3578fe5de",
       "sha256_rows": "8c7b7d4bff525d5ff8a170448b01bd96f448019f0b37b086c79388faeb812ccb",
       "rows": 120,
@@ -233,6 +233,6 @@
     },
     "recomputed_utc": "2026-09-21T19:21:35+00:00",
     "note": "original run time not recorded in this checkpoint",
-    "checkpoint": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-described/claude-sonnet-4.5.r2.ckpt.jsonl"
+    "checkpoint": "docs/runs/jury/router-described/claude-sonnet-4.5.r2.ckpt.jsonl"
   }
 }

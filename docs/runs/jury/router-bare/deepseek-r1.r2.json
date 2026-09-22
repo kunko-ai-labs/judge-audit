@@ -210,7 +210,7 @@
     },
     "python": "3.12.8",
     "dataset": {
-      "path": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-bare/deepseek-r1.r2.input.jsonl",
+      "path": "docs/runs/jury/router-bare/deepseek-r1.r2.input.jsonl",
       "sha256": "7d2bb8dc595fd897ca967615ee843f73c2878918fe2754870ead2f0830d81ac9",
       "sha256_rows": "d463c86a54965e9ee7bbfbbea43fe78932d67be557d62acdfc81aa413eab46a7",
       "rows": 120,
@@ -232,6 +232,6 @@
     },
     "recomputed_utc": "2026-09-21T19:10:50+00:00",
     "note": "original run time not recorded in this checkpoint",
-    "checkpoint": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-bare/deepseek-r1.r2.ckpt.jsonl"
+    "checkpoint": "docs/runs/jury/router-bare/deepseek-r1.r2.ckpt.jsonl"
   }
 }

@@ -206,7 +206,7 @@
     },
     "python": "3.12.8",
     "dataset": {
-      "path": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-described/gemma4.r2.input.jsonl",
+      "path": "docs/runs/jury/router-described/gemma4.r2.input.jsonl",
       "sha256": "ab827da374f34fae0aa7768a15f5decb2d4a50714df7f003003b49623c195b42",
       "sha256_rows": "e8d2f85a837279d8cf97adcb4c1bd8397631ef7f2dbfcd28194e72231e64ac3f",
       "rows": 120,
@@ -229,6 +229,6 @@
     },
     "recomputed_utc": "2026-09-21T19:29:07+00:00",
     "note": "original run time not recorded in this checkpoint",
-    "checkpoint": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-described/gemma4.r2.ckpt.jsonl"
+    "checkpoint": "docs/runs/jury/router-described/gemma4.r2.ckpt.jsonl"
   }
 }

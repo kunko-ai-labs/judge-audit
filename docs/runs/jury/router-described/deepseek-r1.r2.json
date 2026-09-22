@@ -210,7 +210,7 @@
     },
     "python": "3.12.8",
     "dataset": {
-      "path": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-described/deepseek-r1.r2.input.jsonl",
+      "path": "docs/runs/jury/router-described/deepseek-r1.r2.input.jsonl",
       "sha256": "c0ed19f9c9607260c6aa33caf7b7ab2a165d16f5c6fae83de04b5e649dc628b9",
       "sha256_rows": "8793753143147f82ddc67e194202702158c469fe201964bc8a386309465c9aee",
       "rows": 120,
@@ -233,6 +233,6 @@
     },
     "recomputed_utc": "2026-09-21T19:39:01+00:00",
     "note": "original run time not recorded in this checkpoint",
-    "checkpoint": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-described/deepseek-r1.r2.ckpt.jsonl"
+    "checkpoint": "docs/runs/jury/router-described/deepseek-r1.r2.ckpt.jsonl"
   }
 }

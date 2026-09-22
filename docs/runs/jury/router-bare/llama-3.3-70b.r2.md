@@ -4,7 +4,7 @@
 · cost **$0.0366** · p50 **0.914s** · p99 **2.779s**
 
 _judge `llm:llama-3.3-70b` · model `llama-3.3-70b` · recomputed 2026-09-21T19:08:47+00:00 (original run time not recorded) · judge-audit 0.3.2_
-_dataset `/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-bare/llama-3.3-70b.r2.input.jsonl` · 120 rows · sha256 `c786038b2a7d…`_
+_dataset `docs/runs/jury/router-bare/llama-3.3-70b.r2.input.jsonl` · 120 rows · sha256 `c786038b2a7d…`_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome; downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified; 40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted**
 

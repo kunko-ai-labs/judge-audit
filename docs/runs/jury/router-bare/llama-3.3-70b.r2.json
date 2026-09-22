@@ -210,7 +210,7 @@
     },
     "python": "3.12.8",
     "dataset": {
-      "path": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-bare/llama-3.3-70b.r2.input.jsonl",
+      "path": "docs/runs/jury/router-bare/llama-3.3-70b.r2.input.jsonl",
       "sha256": "c786038b2a7d6347be111129c1274fcd7c927d5f302376032cbd887495ef0095",
       "sha256_rows": "4b2cfa6967838acb0cc1f0a17a151aeaf1ab8ee0390b4ee16b39c282628656cd",
       "rows": 120,
@@ -232,6 +232,6 @@
     },
     "recomputed_utc": "2026-09-21T19:08:47+00:00",
     "note": "original run time not recorded in this checkpoint",
-    "checkpoint": "/Users/altostratus_1/Documents/Vane/kunko/judge-audit/docs/runs/jury/router-bare/llama-3.3-70b.r2.ckpt.jsonl"
+    "checkpoint": "docs/runs/jury/router-bare/llama-3.3-70b.r2.ckpt.jsonl"
   }
 }
