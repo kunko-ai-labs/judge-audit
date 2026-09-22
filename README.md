@@ -113,7 +113,7 @@ Exit codes: `0` ok · `1` drift detected · `2` usage or configuration error (th
   env: { AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }} }
 ```
 
-One sticky PR comment with the audit table (n, accuracy, ECE, zero-error coverage, cost, p99, verdict vs baseline), the report in the job summary, evidence as an artifact. Outputs `accuracy`, `ece`, `zero-error-coverage`, `drift` for anything downstream.
+One sticky PR comment with the audit table (n, accuracy, ECE, zero-error coverage, cost, p99, verdict vs baseline), the report in the job summary, the report and result JSON as an artifact. The per-decision judgments stay on the runner unless you ask for them (`upload-evidence: "true"`). Outputs `accuracy`, `ece`, `zero-error-coverage`, `drift` for anything downstream.
 
 **From inside an agent:** `pip install "kunko-judge-audit[mcp]"` then `claude mcp add judge-audit -- judge-audit-mcp` (or the equivalent in Cursor). The agent gets `run_audit`, `check_drift` and `list_judges` and can audit the judge it is about to rely on without leaving the session. See [docs/integrations.md](docs/integrations.md).
 
@@ -160,7 +160,7 @@ Score questions + MCE (the number we propose for regulators) → Judge Arena as 
 
 **Can I trust a 100 % result?** Only as far as the dataset. The clean-email audit says the judge handles templated business email; it says nothing about your inbox. That is why the adversarial and routing audits exist.
 
-**Does it send my data anywhere?** Only to the judge endpoint you configure. Reports and checkpoints are local files; commit them or not.
+**Does it send my data anywhere?** Only to the judge endpoint you configure. Reports and checkpoints are local files; commit them or not. In CI the Action uploads the report and the metrics JSON as a run artifact; the per-decision judgments are uploaded only if you set `upload-evidence: "true"`.
 
 ## License
 

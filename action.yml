@@ -29,6 +29,10 @@ inputs:
     description: "Fail when accuracy drops by more than this vs the baseline (check mode)"
     required: false
     default: "0.01"
+  allow-incompatible:
+    description: "Compare against a baseline that measured another dataset, judge or n (check mode). The gate refuses such a baseline by default"
+    required: false
+    default: "false"
   comment:
     description: "On pull requests, post one sticky comment with the audit table and update it on every push (needs permissions: pull-requests: write)"
     required: false
@@ -37,6 +41,14 @@ inputs:
     description: "In check mode, fail the job when drift is detected. Set to 'false' to only report (the 'drift' output still says what happened)"
     required: false
     default: "true"
+  upload-evidence:
+    description: "Upload the per-decision judgments (judge-audit-judgments.jsonl) as a run artifact. Off by default: those rows are the decisions themselves, and the report and result JSON are enough to read the audit"
+    required: false
+    default: "false"
+  extras:
+    description: "Optional pip extras to install with judge-audit, comma-separated and without brackets (e.g. 'anthropic' or 'charts,mcp'). Empty installs the base package"
+    required: false
+    default: ""
   python-version:
     description: "Python used to install and run judge-audit"
     required: false
@@ -65,6 +77,9 @@ outputs:
     description: "Path of the metrics + provenance JSON"
     value: "judge-audit-result.json"
 
+# Every input below reaches bash through `env:` and is used quoted. Nothing an input
+# contains is ever interpolated into a script by the expression engine, where it would
+# be shell source rather than data (tests/test_action_yaml.py fails the build on that).
 runs:
   using: "composite"
   steps:
@@ -75,40 +90,59 @@ runs:
 
     - name: Install judge-audit
       shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        EXTRAS: ${{ inputs.extras }}
       # The repository at the checked-out SHA, nothing else. No network of its own beyond pip
       # and the judge endpoint configured through the job's env.
-      run: pip install "${{ github.action_path }}"
-
-    - name: Resolve command
-      shell: bash
-      # One place decides the CLI invocation, so the report, the outputs and the comment agree.
       run: |
-        case "${{ inputs.mode }}" in
-          run)
-            cmd=(judge-audit run "${{ inputs.labels }}" --judge "${{ inputs.judge }}"
-                 --out judge-audit-report.md --json judge-audit-result.json
-                 --judgments judge-audit-judgments.jsonl) ;;
-          check)
-            if [ -z "${{ inputs.baseline }}" ]; then
-              echo "::error::mode: check needs a baseline (the audit-result.json of a previous run)"; exit 2
-            fi
-            cmd=(judge-audit check "${{ inputs.labels }}" --judge "${{ inputs.judge }}"
-                 --baseline "${{ inputs.baseline }}"
-                 --max-ece-drift "${{ inputs.max-ece-drift }}" --max-acc-drop "${{ inputs.max-acc-drop }}"
-                 --out judge-audit-report.md --json judge-audit-result.json --drift judge-audit-drift.json) ;;
-          *)
-            echo "::error::unknown mode '${{ inputs.mode }}' (run | check)"; exit 2 ;;
+        set -euo pipefail
+        case "$EXTRAS" in
+          "") spec="$ACTION_PATH" ;;
+          *[!a-zA-Z0-9,_-]*)
+            echo "::error::extras may only contain letters, digits, ',', '-' and '_' (got '$EXTRAS')"
+            exit 2 ;;
+          *) spec="${ACTION_PATH}[${EXTRAS}]" ;;
         esac
-        printf '%q ' "${cmd[@]}" > .judge-audit-cmd
-        echo "command: $(cat .judge-audit-cmd)"
+        pip install "$spec"
 
     - name: Run judge-audit (markdown -> job summary)
       shell: bash
+      env:
+        MODE: ${{ inputs.mode }}
+        LABELS: ${{ inputs.labels }}
+        JUDGE: ${{ inputs.judge }}
+        BASELINE: ${{ inputs.baseline }}
+        MAX_ECE_DRIFT: ${{ inputs.max-ece-drift }}
+        MAX_ACC_DROP: ${{ inputs.max-acc-drop }}
+        ALLOW_INCOMPATIBLE: ${{ inputs.allow-incompatible }}
+      # One step builds the argv array and runs it: no command file, no eval, no string
+      # that bash has to re-parse. `mode` is checked against an allowlist first.
       run: |
-        set +e
-        eval "$(cat .judge-audit-cmd)"
+        set -uo pipefail
+        case "$MODE" in
+          run)
+            cmd=(judge-audit run "$LABELS" --judge "$JUDGE"
+                 --out judge-audit-report.md --json judge-audit-result.json
+                 --judgments judge-audit-judgments.jsonl) ;;
+          check)
+            if [ -z "$BASELINE" ]; then
+              echo "::error::mode: check needs a baseline (the audit-result.json of a previous run)"
+              exit 2
+            fi
+            cmd=(judge-audit check "$LABELS" --judge "$JUDGE"
+                 --baseline "$BASELINE"
+                 --max-ece-drift "$MAX_ECE_DRIFT" --max-acc-drop "$MAX_ACC_DROP"
+                 --out judge-audit-report.md --json judge-audit-result.json
+                 --drift judge-audit-drift.json)
+            if [ "$ALLOW_INCOMPATIBLE" = "true" ]; then cmd+=(--allow-incompatible); fi ;;
+          *)
+            echo "::error::unknown mode '$MODE' (run | check)"
+            exit 2 ;;
+        esac
+
+        "${cmd[@]}"
         code=$?
-        set -e
 
         if [ -f judge-audit-report.md ]; then
           cat judge-audit-report.md >> "$GITHUB_STEP_SUMMARY"
@@ -139,7 +173,7 @@ runs:
         print(f"drift={drift}")
         PY
 
-    - name: Upload report, result and per-decision evidence
+    - name: Upload report, result and drift verdict
       id: upload
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
@@ -148,7 +182,17 @@ runs:
           judge-audit-report.md
           judge-audit-result.json
           judge-audit-drift.json
-          judge-audit-judgments.jsonl
+        if-no-files-found: ignore
+
+    # The per-decision judgments are the decisions themselves (state text, label, the
+    # judge's raw reply). They stay on the runner unless the caller asks for them.
+    - name: Upload per-decision evidence
+      id: upload-evidence
+      if: ${{ inputs.upload-evidence == 'true' }}
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      with:
+        name: judge-audit-evidence-${{ inputs.mode }}-${{ github.job }}
+        path: judge-audit-judgments.jsonl
         if-no-files-found: ignore
 
     - name: Comment on the pull request
@@ -160,14 +204,17 @@ runs:
         REPO: ${{ github.repository }}
         PR: ${{ github.event.pull_request.number }}
         RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        ACTION_PATH: ${{ github.action_path }}
+        LABELS: ${{ inputs.labels }}
       # One comment per labels file, updated on every push instead of a new one.
       run: |
-        marker="<!-- judge-audit:${{ inputs.labels }} -->"
+        set -uo pipefail
+        marker="<!-- judge-audit:${LABELS} -->"
         drift=(); [ -f judge-audit-drift.json ] && drift=(--drift judge-audit-drift.json)
-        python3 "${{ github.action_path }}/scripts/pr_comment.py" judge-audit-result.json \
+        python3 "${ACTION_PATH}/scripts/pr_comment.py" judge-audit-result.json \
           "${drift[@]}" --artifact-url "$RUN_URL" --marker "$marker" > judge-audit-comment.md
-        id=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
-              --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | head -1 || true)
+        id=$(MARKER="$marker" gh api "repos/$REPO/issues/$PR/comments" --paginate \
+              --jq '.[] | select(.body | startswith(env.MARKER)) | .id' | head -1 || true)
         if [ -n "$id" ]; then
           gh api -X PATCH "repos/$REPO/issues/comments/$id" -F body=@judge-audit-comment.md > /dev/null
           echo "updated comment $id"
@@ -178,6 +225,8 @@ runs:
     - name: Fail if drift was detected
       if: ${{ env.JA_DRIFT == '1' && inputs.fail-on-drift == 'true' }}
       shell: bash
+      env:
+        BASELINE: ${{ inputs.baseline }}
       run: |
-        echo "judge-audit: the judge drifted vs ${{ inputs.baseline }} (see the job summary)." >&2
+        echo "judge-audit: the judge drifted vs ${BASELINE} (see the job summary)." >&2
         exit 1

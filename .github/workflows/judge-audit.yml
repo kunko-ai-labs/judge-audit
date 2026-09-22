@@ -34,6 +34,25 @@ jobs:
           grep -q "SIMULATED" judge-audit-report.md
           test -s judge-audit-judgments.jsonl
 
+  run-with-extras-and-evidence:
+    name: run — extras and upload-evidence inputs (must PASS)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: audit
+        uses: ./
+        with:
+          mode: run
+          labels: examples/email-routing/labels.jsonl
+          judge: simulated
+          extras: charts
+          upload-evidence: "true"
+          comment: "false"
+      - name: Assert the audit still ran and the extra was installed
+        run: |
+          test "${{ steps.audit.outputs.n }}" = "200"
+          python -c "import matplotlib"
+
   check-passes:
     name: check — against the committed baseline (must PASS)
     runs-on: ubuntu-latest

@@ -46,7 +46,7 @@ charts = ["matplotlib>=3.7"]
 anthropic = ["anthropic>=1.0"]
 mcp = ["mcp>=2.0"]
 nli = ["transformers>=4.40", "torch>=2.2"]
-dev = ["pytest>=8.0", "ruff>=0.5", "matplotlib>=3.7", "mcp>=2.0"]
+dev = ["pytest>=8.0", "ruff>=0.5", "matplotlib>=3.7", "mcp>=2.0", "PyYAML>=6.0"]
 
 [build-system]
 requires = ["hatchling"]
