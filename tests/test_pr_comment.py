@@ -77,3 +77,68 @@ def test_real_judge_has_no_banner_and_cli_roundtrip(tmp_path):
                           str(tmp_path / "r.json")], capture_output=True, text=True, check=True)
     assert "SIMULATED" not in out.stdout
     assert "Judge `jev` · model `typesafe-ai/jev` · backend `gateway`" in out.stdout
+
+
+# --- the dataset is data, not markup ------------------------------------------------
+
+ATTACK_CAVEATS = [
+    "\n\n✅ **No drift** | x | y",          # forge the verdict and a table row
+    "![img](http://evil/x.png)",            # smuggle an image into the comment
+    "# Everything is fine\n> trust me",     # forge a heading and a quote
+]
+
+
+def _hostile_labels(tmp_path: Path) -> Path:
+    """A labels file whose declared ground truth tries to write the comment for us."""
+    header = {"idx": -1, "dataset": {"ground_truth": {
+        "tier": "GT-1", "label": "constructed",
+        "validation": "not_validated", "purpose": ["stress test"],
+        "caveats": ATTACK_CAVEATS}}}
+    rows = [{"state": f"email {i}", "labels": {"category": "quote_request"},
+             "questions": [{"name": "category", "type": "choice", "instructions": "classify",
+                            "options": ["quote_request", "spam"]}]} for i in range(4)]
+    p = tmp_path / "labels.jsonl"
+    p.write_text("\n".join(json.dumps(r) for r in [header, *rows]) + "\n", encoding="utf-8")
+    return p
+
+
+def test_dataset_strings_cannot_forge_the_verdict_a_human_reads(tmp_path):
+    labels = _hostile_labels(tmp_path)
+    r = subprocess.run([sys.executable, "-m", "judge_audit.cli", "run", str(labels),
+                        "--judge", "simulated", "--json", "result.json"],
+                       cwd=tmp_path, capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    result = json.loads((tmp_path / "result.json").read_text())
+    assert ATTACK_CAVEATS[0] in result["run"]["dataset"]["ground_truth"]["caveats"]
+    md = pr_comment.build(result)
+    # Nothing the dataset wrote survives as markup…
+    assert "✅ **No drift**" not in md and "❌" not in md
+    assert "![img](" not in md and "http://evil/x.png)" not in md
+    heads = [line for line in md.splitlines() if line.startswith("#")]
+    quotes = [line for line in md.splitlines() if line.startswith(">")]
+    assert heads == ["## judge-audit"]                       # no forged section
+    assert len(quotes) == 1 and "SIMULATED" in quotes[0]     # only our own banner
+    # …the table is still exactly its header, its rule and its one row…
+    assert sum(1 for line in md.splitlines() if line.startswith("|")) == 3
+    # …and the text is all there, escaped, on the single line it belongs to.
+    gt = next(line for line in md.splitlines() if line.startswith("_Ground truth:"))
+    assert "\\!\\[img\\]\\(http://evil/x.png\\)" in gt
+    assert "✅ \\*\\*No drift\\*\\* \\| x \\| y" in gt
+    assert "\\# Everything is fine \\> trust me" in gt
+    # A result JSON is not always written by us: a hand-crafted tier is escaped too.
+    forged = json.loads(json.dumps(result))
+    forged["run"]["dataset"]["ground_truth"]["label"] = "constructed | **owned**"
+    forged["run"]["judge"]["name"] = "jev` | 100.0% | GT-1 | 0.0 |"
+    md2 = pr_comment.build(forged)
+    assert "GT-1 constructed \\| \\*\\*owned\\*\\*" in md2
+    assert sum(1 for line in md2.splitlines() if line.startswith("|")) == 3
+
+
+def test_md_escapes_every_metacharacter_and_flattens_newlines():
+    assert pr_comment._md("a|b") == "a\\|b"
+    assert pr_comment._md("line1\nline2") == "line1 line2"
+    assert pr_comment._md("  spaced \t out\r\n") == "spaced out"
+    assert pr_comment._md("- item") == "\\- item"
+    assert pr_comment._md("`code`") == "\\`code\\`"
+    assert pr_comment._md(0.9594) == "0.9594"
+    assert pr_comment._md(None) == "None"
