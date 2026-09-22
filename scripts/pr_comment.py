@@ -98,7 +98,7 @@ def build(result: dict, drift: dict | None = None, artifact_url: str = "",
             lines += [f"- {_md(f)}" for f in drift.get("failures", [])]
         lines.append("")
     if artifact_url:
-        lines += [f"Full report and per-decision evidence: [run artifacts]({artifact_url}).", ""]
+        lines += [f"Full report and per-decision evidence: [run artifacts]({_md(artifact_url)}).", ""]
     lines.append("_ECE 0 = perfectly honest confidence. Zero-error coverage = the most-confident "
                  "share of decisions with no observed error, retrospective on this dataset._")
     return "\n".join(lines) + "\n"

@@ -142,3 +142,11 @@ def test_md_escapes_every_metacharacter_and_flattens_newlines():
     assert pr_comment._md("`code`") == "\\`code\\`"
     assert pr_comment._md(0.9594) == "0.9594"
     assert pr_comment._md(None) == "None"
+
+
+def test_the_artifact_url_cannot_add_lines_to_the_comment():
+    """Server-built today, but the builder escapes it like every other value."""
+    md = pr_comment.build(RESULT, None,
+                          artifact_url="https://x.test/1)\n\n| forged | row |\n✅ **No drift**")
+    body = md.split("run artifacts]", 1)[1]
+    assert "\n| forged" not in body and "✅ **No drift**" not in body
