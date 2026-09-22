@@ -47,7 +47,18 @@
         "email-clean": {
           "n": 100,
           "accuracy": 1.0,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
+          "ece_ci": [
+            0.0,
+            0.0047
+          ],
+          "zero_error_coverage_ci": [
+            1.0,
+            1.0
+          ],
           "text_equal_train": 20,
           "text_contains_train": 20,
           "unseen_text_n": 80,
@@ -268,7 +279,18 @@
         "email-adversarial": {
           "n": 200,
           "accuracy": 0.955,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.925,
+            0.9802
+          ],
+          "ece_ci": [
+            0.0278,
+            0.0659
+          ],
+          "zero_error_coverage_ci": [
+            0.675,
+            0.94
+          ],
           "text_equal_train": 13,
           "text_contains_train": 49,
           "unseen_text_n": 151,
@@ -500,7 +522,18 @@
         "router-bare": {
           "n": 60,
           "accuracy": 0.6667,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.5156,
+            0.8254
+          ],
+          "ece_ci": [
+            0.1673,
+            0.4574
+          ],
+          "zero_error_coverage_ci": [
+            0.0,
+            0.6067
+          ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -645,7 +678,18 @@
         "router-described": {
           "n": 60,
           "accuracy": 0.9833,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.9483,
+            1.0
+          ],
+          "ece_ci": [
+            0.0298,
+            0.0977
+          ],
+          "zero_error_coverage_ci": [
+            0.9,
+            1.0
+          ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -823,7 +867,18 @@
         "email-clean": {
           "n": 100,
           "accuracy": 1.0,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
+          "ece_ci": [
+            0.0219,
+            0.0325
+          ],
+          "zero_error_coverage_ci": [
+            1.0,
+            1.0
+          ],
           "text_equal_train": 20,
           "text_contains_train": 20,
           "unseen_text_n": 80,
@@ -1044,7 +1099,18 @@
         "email-adversarial": {
           "n": 200,
           "accuracy": 0.965,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.9391,
+            0.9898
+          ],
+          "ece_ci": [
+            0.0049,
+            0.0397
+          ],
+          "zero_error_coverage_ci": [
+            0.0,
+            0.9175
+          ],
           "text_equal_train": 13,
           "text_contains_train": 49,
           "unseen_text_n": 151,
@@ -1276,7 +1342,18 @@
         "router-bare": {
           "n": 60,
           "accuracy": 0.6667,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.5238,
+            0.8167
+          ],
+          "ece_ci": [
+            0.1018,
+            0.3562
+          ],
+          "zero_error_coverage_ci": [
+            0.0,
+            0.6066
+          ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -1421,7 +1498,18 @@
         "router-described": {
           "n": 60,
           "accuracy": 0.9667,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.9153,
+            1.0
+          ],
+          "ece_ci": [
+            0.0138,
+            0.0719
+          ],
+          "zero_error_coverage_ci": [
+            0.0,
+            1.0
+          ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -1591,7 +1679,18 @@
         "email-clean": {
           "n": 100,
           "accuracy": 0.87,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.7938,
+            0.934
+          ],
+          "ece_ci": [
+            0.1258,
+            0.2598
+          ],
+          "zero_error_coverage_ci": [
+            0.4343,
+            0.7019
+          ],
           "text_equal_train": 20,
           "text_contains_train": 20,
           "unseen_text_n": 80,
@@ -1812,7 +1911,18 @@
         "email-adversarial": {
           "n": 200,
           "accuracy": 0.595,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.517,
+            0.6667
+          ],
+          "ece_ci": [
+            0.0876,
+            0.2007
+          ],
+          "zero_error_coverage_ci": [
+            0.0391,
+            0.16
+          ],
           "text_equal_train": 13,
           "text_contains_train": 49,
           "unseen_text_n": 151,
@@ -2050,7 +2160,18 @@
         "router-bare": {
           "n": 60,
           "accuracy": 0.5,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.3333,
+            0.6562
+          ],
+          "ece_ci": [
+            0.3003,
+            0.5721
+          ],
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0
+          ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -2195,7 +2316,18 @@
         "router-described": {
           "n": 60,
           "accuracy": 0.5,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.3443,
+            0.6552
+          ],
+          "ece_ci": [
+            0.1155,
+            0.3655
+          ],
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0
+          ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -2367,7 +2499,18 @@
         "email-clean": {
           "n": 100,
           "accuracy": 1.0,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
+          "ece_ci": [
+            0.0462,
+            0.054
+          ],
+          "zero_error_coverage_ci": [
+            1.0,
+            1.0
+          ],
           "text_equal_train": 20,
           "text_contains_train": 20,
           "unseen_text_n": 80,
@@ -2588,7 +2731,18 @@
         "email-adversarial": {
           "n": 200,
           "accuracy": 0.805,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.7476,
+            0.8564
+          ],
+          "ece_ci": [
+            0.0764,
+            0.1839
+          ],
+          "zero_error_coverage_ci": [
+            0.0,
+            0.01
+          ],
           "text_equal_train": 13,
           "text_contains_train": 49,
           "unseen_text_n": 151,
@@ -2821,7 +2975,18 @@
         "router-bare": {
           "n": 60,
           "accuracy": 0.6,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.4444,
+            0.7302
+          ],
+          "ece_ci": [
+            0.2218,
+            0.4682
+          ],
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0
+          ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -2966,7 +3131,18 @@
         "router-described": {
           "n": 60,
           "accuracy": 0.8667,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.7678,
+            0.9445
+          ],
+          "ece_ci": [
+            0.0212,
+            0.1457
+          ],
+          "zero_error_coverage_ci": [
+            0.0,
+            0.7835
+          ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -3176,7 +3352,18 @@
         "email-clean": {
           "n": 100,
           "accuracy": 1.0,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
+          "ece_ci": [
+            0.4241,
+            0.4951
+          ],
+          "zero_error_coverage_ci": [
+            1.0,
+            1.0
+          ],
           "text_equal_train": 20,
           "text_contains_train": 20,
           "unseen_text_n": 80,
@@ -3297,7 +3484,18 @@
         "email-adversarial": {
           "n": 200,
           "accuracy": 0.97,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.9444,
+            0.9902
+          ],
+          "ece_ci": [
+            0.4702,
+            0.522
+          ],
+          "zero_error_coverage_ci": [
+            0.9444,
+            0.9902
+          ],
           "text_equal_train": 13,
           "text_contains_train": 49,
           "unseen_text_n": 151,
@@ -3530,7 +3728,18 @@
         "router-bare": {
           "n": 60,
           "accuracy": 1.0,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
+          "ece_ci": [
+            0.0718,
+            0.1912
+          ],
+          "zero_error_coverage_ci": [
+            1.0,
+            1.0
+          ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -3615,7 +3824,18 @@
         "router-described": {
           "n": 60,
           "accuracy": 1.0,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
+          "ece_ci": [
+            0.0718,
+            0.1912
+          ],
+          "zero_error_coverage_ci": [
+            1.0,
+            1.0
+          ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -3778,7 +3998,18 @@
         "email-clean": {
           "n": 100,
           "accuracy": 1.0,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
+          "ece_ci": [
+            0.016,
+            0.0177
+          ],
+          "zero_error_coverage_ci": [
+            1.0,
+            1.0
+          ],
           "text_equal_train": 20,
           "text_contains_train": 20,
           "unseen_text_n": 80,
@@ -3899,7 +4130,18 @@
         "email-adversarial": {
           "n": 200,
           "accuracy": 0.99,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.9746,
+            1.0
+          ],
+          "ece_ci": [
+            0.036,
+            0.0659
+          ],
+          "zero_error_coverage_ci": [
+            0.931,
+            1.0
+          ],
           "text_equal_train": 13,
           "text_contains_train": 49,
           "unseen_text_n": 151,
@@ -4130,7 +4372,18 @@
         "router-bare": {
           "n": 60,
           "accuracy": 1.0,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
+          "ece_ci": [
+            0.0029,
+            0.0085
+          ],
+          "zero_error_coverage_ci": [
+            1.0,
+            1.0
+          ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -4215,7 +4468,18 @@
         "router-described": {
           "n": 60,
           "accuracy": 1.0,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
+          "ece_ci": [
+            0.0029,
+            0.0085
+          ],
+          "zero_error_coverage_ci": [
+            1.0,
+            1.0
+          ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -4378,7 +4642,18 @@
         "email-clean": {
           "n": 100,
           "accuracy": 1.0,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
+          "ece_ci": [
+            0.0,
+            0.0
+          ],
+          "zero_error_coverage_ci": [
+            1.0,
+            1.0
+          ],
           "text_equal_train": 20,
           "text_contains_train": 20,
           "unseen_text_n": 80,
@@ -4499,7 +4774,18 @@
         "email-adversarial": {
           "n": 200,
           "accuracy": 0.99,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.9746,
+            1.0
+          ],
+          "ece_ci": [
+            0.005,
+            0.0331
+          ],
+          "zero_error_coverage_ci": [
+            0.932,
+            1.0
+          ],
           "text_equal_train": 13,
           "text_contains_train": 49,
           "unseen_text_n": 151,
@@ -4730,7 +5016,18 @@
         "router-bare": {
           "n": 60,
           "accuracy": 1.0,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
+          "ece_ci": [
+            0.0,
+            0.0
+          ],
+          "zero_error_coverage_ci": [
+            1.0,
+            1.0
+          ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -4815,7 +5112,18 @@
         "router-described": {
           "n": 60,
           "accuracy": 1.0,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
+          "ece_ci": [
+            0.0,
+            0.0
+          ],
+          "zero_error_coverage_ci": [
+            1.0,
+            1.0
+          ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -4923,7 +5231,18 @@
         "email-clean": {
           "n": 100,
           "accuracy": 1.0,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
+          "ece_ci": [
+            0.0015,
+            0.0061
+          ],
+          "zero_error_coverage_ci": [
+            1.0,
+            1.0
+          ],
           "text_equal_train": 20,
           "text_contains_train": 20,
           "unseen_text_n": 80,
@@ -5144,7 +5463,18 @@
         "email-adversarial": {
           "n": 200,
           "accuracy": 0.97,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.9447,
+            0.9902
+          ],
+          "ece_ci": [
+            0.002,
+            0.04
+          ],
+          "zero_error_coverage_ci": [
+            0.0,
+            0.4545
+          ],
           "text_equal_train": 13,
           "text_contains_train": 49,
           "unseen_text_n": 151,
@@ -5376,7 +5706,18 @@
         "router-bare": {
           "n": 60,
           "accuracy": 0.6667,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.5085,
+            0.8103
+          ],
+          "ece_ci": [
+            0.1775,
+            0.4683
+          ],
+          "zero_error_coverage_ci": [
+            0.0,
+            0.2727
+          ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -5521,7 +5862,18 @@
         "router-described": {
           "n": 60,
           "accuracy": 0.9667,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.9153,
+            1.0
+          ],
+          "ece_ci": [
+            0.0016,
+            0.062
+          ],
+          "zero_error_coverage_ci": [
+            0.6562,
+            1.0
+          ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -5689,7 +6041,18 @@
         "email-clean": {
           "n": 100,
           "accuracy": 1.0,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
+          "ece_ci": [
+            0.0181,
+            0.0304
+          ],
+          "zero_error_coverage_ci": [
+            1.0,
+            1.0
+          ],
           "text_equal_train": 20,
           "text_contains_train": 20,
           "unseen_text_n": 80,
@@ -5910,7 +6273,18 @@
         "email-adversarial": {
           "n": 200,
           "accuracy": 0.81,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.755,
+            0.8641
+          ],
+          "ece_ci": [
+            0.0997,
+            0.2111
+          ],
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0402
+          ],
           "text_equal_train": 13,
           "text_contains_train": 49,
           "unseen_text_n": 151,
@@ -6143,7 +6517,18 @@
         "router-bare": {
           "n": 60,
           "accuracy": 0.65,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.5082,
+            0.7762
+          ],
+          "ece_ci": [
+            0.1589,
+            0.4407
+          ],
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0
+          ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -6288,7 +6673,18 @@
         "router-described": {
           "n": 60,
           "accuracy": 0.8,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.6778,
+            0.9048
+          ],
+          "ece_ci": [
+            0.0397,
+            0.2771
+          ],
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0
+          ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -6459,7 +6855,18 @@
         "email-clean": {
           "n": 100,
           "accuracy": 1.0,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            1.0,
+            1.0
+          ],
+          "ece_ci": [
+            0.083,
+            0.0954
+          ],
+          "zero_error_coverage_ci": [
+            1.0,
+            1.0
+          ],
           "text_equal_train": 20,
           "text_contains_train": 20,
           "unseen_text_n": 80,
@@ -6680,7 +7087,18 @@
         "email-adversarial": {
           "n": 200,
           "accuracy": 0.905,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.8614,
+            0.945
+          ],
+          "ece_ci": [
+            0.0052,
+            0.0598
+          ],
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0
+          ],
           "text_equal_train": 13,
           "text_contains_train": 49,
           "unseen_text_n": 151,
@@ -6913,7 +7331,18 @@
         "router-bare": {
           "n": 60,
           "accuracy": 0.6333,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.4813,
+            0.7667
+          ],
+          "ece_ci": [
+            0.1174,
+            0.4102
+          ],
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0
+          ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -7058,7 +7487,18 @@
         "router-described": {
           "n": 60,
           "accuracy": 0.8833,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.7857,
+            0.9545
+          ],
+          "ece_ci": [
+            0.0077,
+            0.1262
+          ],
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0308
+          ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -7226,7 +7666,18 @@
         "email-clean": {
           "n": 100,
           "accuracy": 0.9,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.7672,
+            1.0
+          ],
+          "ece_ci": [
+            0.0131,
+            0.1645
+          ],
+          "zero_error_coverage_ci": [
+            0.011,
+            1.0
+          ],
           "text_equal_train": 20,
           "text_contains_train": 20,
           "unseen_text_n": 80,
@@ -7447,7 +7898,18 @@
         "email-adversarial": {
           "n": 200,
           "accuracy": 0.725,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.6517,
+            0.7969
+          ],
+          "ece_ci": [
+            0.085,
+            0.2307
+          ],
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0
+          ],
           "text_equal_train": 13,
           "text_contains_train": 49,
           "unseen_text_n": 151,
@@ -7685,7 +8147,18 @@
         "router-bare": {
           "n": 60,
           "accuracy": 0.6667,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.5156,
+            0.8254
+          ],
+          "ece_ci": [
+            0.2458,
+            0.5403
+          ],
+          "zero_error_coverage_ci": [
+            0.0,
+            0.193
+          ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
@@ -7830,7 +8303,18 @@
         "router-described": {
           "n": 60,
           "accuracy": 0.65,
-          "accuracy_interval": null,
+          "accuracy_ci": [
+            0.5,
+            0.807
+          ],
+          "ece_ci": [
+            0.2455,
+            0.5397
+          ],
+          "zero_error_coverage_ci": [
+            0.0,
+            0.1897
+          ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,

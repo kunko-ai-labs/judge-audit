@@ -11,7 +11,7 @@
 - **Split** (`scripts/split_heldout.py`, seed 2026): label-stratified 50/50 over row indices, committed as `examples/email-routing/split-heldout.json` (train 100, held-out 100) and `examples/task-routing/split-heldout.json` (train 60, held-out 60; the router stratum also fixes difficulty and attack flag, so each half holds 20 hard tasks and 20 cost-inflation attacks). The two router files share states row for row and so share one split. CI regenerates both files and fails on any difference.
 - **Training** (`scripts/train_classifier.py`): `microsoft/deberta-v3-base` (chosen because it downloaded in 16 s; the local zero-shot backbone was the fallback) with a fresh classification head, train half only, seed 2026, at most 10 epochs, lr 2e-5, batch 8, max 256 tokens, laptop MPS. Emails: 10 labels. Router: one model on the task text with 2 labels; the option descriptions of `labels-described.jsonl` are **not** an input — a classifier has no place to put them — so the described run re-uses the bare model. Every hyper-parameter, the loss curve, wall time, hardware and the sha256 of the train rows are in `docs/runs/finetuned/<dataset>.train.json`.
 - **Evaluation**: `scripts/audit_resumable.py --rows <split>:heldout` judges only the held-out indices; the checkpoint header records the split file and its sha256. Email-adversarial is judged **in full** (no adversarial row is a training row by index; text-level overlap with the training emails is counted next to every n below) and labelled a robustness test. Every other judge is re-scored from its committed Arena checkpoint on the identical row indices.
-- **Metrics**: accuracy, ECE, zero-error coverage, mean confidence when right / wrong, no-answer count (decision outside the options), cost, p50 latency — separate, never combined. Confidence intervals: TODO(#46), the columns are wired.
+- **Metrics**: accuracy, ECE, zero-error coverage, mean confidence when right / wrong, no-answer count (decision outside the options), cost, p50 latency — separate, never combined. Accuracy, ECE and zero-error coverage carry a 95 % percentile-bootstrap interval (2,000 resamples, seed 0) clustered by distinct text.
 
 ## Prediction (written before training)
 
@@ -45,17 +45,17 @@ Text overlap with the training half: 20 of 100 rows equal a training text, 0 mor
 
 | judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | no answer | cost | p50 latency | acc on unseen-text rows |
 |---|---|---|---|---|---|---|---|---|---|
-| **DeBERTa-v3-base fine-tuned — run 1 (pre-registered, 10 epochs)** | softmax probability of the chosen option | 100.0% | 0.458 | 100.0% | 0.542 / — | 0 | $0.000 | 0.02 s | 100.0% (n=80) |
-| **DeBERTa-v3-base fine-tuned — run 2 (to convergence, post hoc)** | softmax probability of the chosen option | 100.0% | 0.017 | 100.0% | 0.983 / — | 0 | $0.000 | 0.02 s | 100.0% (n=80) |
-| **DeBERTa-v3-base fine-tuned — run 2 + temperature scaling (post hoc)** | softmax probability of the chosen option ÷ T (T=0.30) | 100.0% | 0.000 | 100.0% | 1.000 / — | 0 | $0.000 | 0.02 s | 100.0% (n=80) |
-| Jev (TypeSafe) | option probability | 100.0% | 0.002 | 100.0% | 0.998 / — | 0 | $0.002 | 0.87 s | 100.0% (n=80) |
-| claude-sonnet-4.5 | verbalized (model-reported probability) | 100.0% | 0.027 | 100.0% | 0.973 / — | 0 | $0.191 | 2.97 s | 100.0% (n=80) |
-| deberta-v3-base-zeroshot-v2.0 | NLI entailment softmax over options | 87.0% | 0.173 | 56.0% | 0.739 / 0.516 | 0 | $0.000 | 0.32 s | 83.8% (n=80) |
-| deepseek-r1 | verbalized (model-reported probability) | 100.0% | 0.050 | 100.0% | 0.950 / — | 0 | $0.194 | 3.03 s | 100.0% (n=80) |
-| gemini-3-flash-preview | verbalized (model-reported probability) | 100.0% | 0.004 | 100.0% | 0.996 / — | 0 | $0.012 | 2.05 s | 100.0% (n=80) |
-| gemma4:e4b | verbalized (model-reported probability) | 100.0% | 0.024 | 100.0% | 0.976 / — | 0 | $0.000 | 9.44 s | 100.0% (n=80) |
-| llama-3.3-70b | verbalized (model-reported probability) | 100.0% | 0.090 | 100.0% | 0.910 / — | 0 | $0.020 | 0.80 s | 100.0% (n=80) |
-| llama3.2:3b | verbalized (model-reported probability) | 90.0% | 0.044 | 5.0% | 0.872 / 0.830 | 0 | $0.000 | 0.70 s | 100.0% (n=80) |
+| **DeBERTa-v3-base fine-tuned — run 1 (pre-registered, 10 epochs)** | softmax probability of the chosen option | 100.0% [100.0, 100.0] | 0.458 [0.424, 0.495] | 100.0% [100.0, 100.0] | 0.542 / — | 0 | $0.000 | 0.02 s | 100.0% (n=80) |
+| **DeBERTa-v3-base fine-tuned — run 2 (to convergence, post hoc)** | softmax probability of the chosen option | 100.0% [100.0, 100.0] | 0.017 [0.016, 0.018] | 100.0% [100.0, 100.0] | 0.983 / — | 0 | $0.000 | 0.02 s | 100.0% (n=80) |
+| **DeBERTa-v3-base fine-tuned — run 2 + temperature scaling (post hoc)** | softmax probability of the chosen option ÷ T (T=0.30) | 100.0% [100.0, 100.0] | 0.000 [0.000, 0.000] | 100.0% [100.0, 100.0] | 1.000 / — | 0 | $0.000 | 0.02 s | 100.0% (n=80) |
+| Jev (TypeSafe) | option probability | 100.0% [100.0, 100.0] | 0.002 [0.000, 0.005] | 100.0% [100.0, 100.0] | 0.998 / — | 0 | $0.002 | 0.87 s | 100.0% (n=80) |
+| claude-sonnet-4.5 | verbalized (model-reported probability) | 100.0% [100.0, 100.0] | 0.027 [0.022, 0.033] | 100.0% [100.0, 100.0] | 0.973 / — | 0 | $0.191 | 2.97 s | 100.0% (n=80) |
+| deberta-v3-base-zeroshot-v2.0 | NLI entailment softmax over options | 87.0% [79.4, 93.4] | 0.173 [0.126, 0.260] | 56.0% [43.4, 70.2] | 0.739 / 0.516 | 0 | $0.000 | 0.32 s | 83.8% (n=80) |
+| deepseek-r1 | verbalized (model-reported probability) | 100.0% [100.0, 100.0] | 0.050 [0.046, 0.054] | 100.0% [100.0, 100.0] | 0.950 / — | 0 | $0.194 | 3.03 s | 100.0% (n=80) |
+| gemini-3-flash-preview | verbalized (model-reported probability) | 100.0% [100.0, 100.0] | 0.004 [0.002, 0.006] | 100.0% [100.0, 100.0] | 0.996 / — | 0 | $0.012 | 2.05 s | 100.0% (n=80) |
+| gemma4:e4b | verbalized (model-reported probability) | 100.0% [100.0, 100.0] | 0.024 [0.018, 0.030] | 100.0% [100.0, 100.0] | 0.976 / — | 0 | $0.000 | 9.44 s | 100.0% (n=80) |
+| llama-3.3-70b | verbalized (model-reported probability) | 100.0% [100.0, 100.0] | 0.090 [0.083, 0.095] | 100.0% [100.0, 100.0] | 0.910 / — | 0 | $0.020 | 0.80 s | 100.0% (n=80) |
+| llama3.2:3b | verbalized (model-reported probability) | 90.0% [76.7, 100.0] | 0.044 [0.013, 0.165] | 5.0% [1.1, 100.0] | 0.872 / 0.830 | 0 | $0.000 | 0.70 s | 100.0% (n=80) |
 
 ## Task router, bare option labels — held-out half (n=60) — GT-1 constructed
 
@@ -63,17 +63,17 @@ Text overlap with the training half: 40 of 60 rows equal a training text, 15 mor
 
 | judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | no answer | hard → strong | cost-inflation attacks that land | cost | acc on unseen-text rows |
 |---|---|---|---|---|---|---|---|---|---|---|
-| **DeBERTa-v3-base fine-tuned — run 1 (pre-registered, 10 epochs)** | softmax probability of the chosen option | 100.0% | 0.133 | 100.0% | 0.867 / — | 0 | 20 / 20 | 0 / 20 | $0.000 | 100.0% (n=5) |
-| **DeBERTa-v3-base fine-tuned — run 2 (to convergence, post hoc)** | softmax probability of the chosen option | 100.0% | 0.005 | 100.0% | 0.995 / — | 0 | 20 / 20 | 0 / 20 | $0.000 | 100.0% (n=5) |
-| **DeBERTa-v3-base fine-tuned — run 2 + temperature scaling (post hoc)** | softmax probability of the chosen option ÷ T (T=0.19) | 100.0% | 0.000 | 100.0% | 1.000 / — | 0 | 20 / 20 | 0 / 20 | $0.000 | 100.0% (n=5) |
-| Jev (TypeSafe) | option probability | 66.7% | 0.315 | 8.3% | 0.982 / 0.930 | 0 | 0 / 20 | 0 / 20 | $0.001 | 60.0% (n=5) |
-| claude-sonnet-4.5 | verbalized (model-reported probability) | 66.7% | 0.228 | 0.0% | 0.935 / 0.813 | 0 | 2 / 20 | 2 / 20 | $0.250 | 60.0% (n=5) |
-| deberta-v3-base-zeroshot-v2.0 | NLI entailment softmax over options | 50.0% | 0.419 | 0.0% | 0.607 / 0.830 | 0 | 20 / 20 | 20 / 20 | $0.000 | 80.0% (n=5) |
-| deepseek-r1 | verbalized (model-reported probability) | 60.0% | 0.333 | 0.0% | 0.891 / 0.829 | 1 | 12 / 20 | 15 / 20 | $0.248 | 60.0% (n=5) |
-| gemini-3-flash-preview | verbalized (model-reported probability) | 66.7% | 0.317 | 3.3% | 0.991 / 0.968 | 0 | 1 / 20 | 1 / 20 | $0.008 | 60.0% (n=5) |
-| gemma4:e4b | verbalized (model-reported probability) | 65.0% | 0.285 | 0.0% | 0.921 / 0.962 | 0 | 17 / 20 | 18 / 20 | $0.000 | 100.0% (n=5) |
-| llama-3.3-70b | verbalized (model-reported probability) | 63.3% | 0.250 | 0.0% | 0.868 / 0.909 | 0 | 13 / 20 | 15 / 20 | $0.013 | 40.0% (n=5) |
-| llama3.2:3b | verbalized (model-reported probability) | 66.7% | 0.392 | 3.3% | 0.912 / 1.000 | 0 | 0 / 20 | 0 / 20 | $0.000 | 60.0% (n=5) |
+| **DeBERTa-v3-base fine-tuned — run 1 (pre-registered, 10 epochs)** | softmax probability of the chosen option | 100.0% [100.0, 100.0] | 0.133 [0.072, 0.191] | 100.0% [100.0, 100.0] | 0.867 / — | 0 | 20 / 20 | 0 / 20 | $0.000 | 100.0% (n=5) |
+| **DeBERTa-v3-base fine-tuned — run 2 (to convergence, post hoc)** | softmax probability of the chosen option | 100.0% [100.0, 100.0] | 0.005 [0.003, 0.009] | 100.0% [100.0, 100.0] | 0.995 / — | 0 | 20 / 20 | 0 / 20 | $0.000 | 100.0% (n=5) |
+| **DeBERTa-v3-base fine-tuned — run 2 + temperature scaling (post hoc)** | softmax probability of the chosen option ÷ T (T=0.19) | 100.0% [100.0, 100.0] | 0.000 [0.000, 0.000] | 100.0% [100.0, 100.0] | 1.000 / — | 0 | 20 / 20 | 0 / 20 | $0.000 | 100.0% (n=5) |
+| Jev (TypeSafe) | option probability | 66.7% [51.6, 82.5] | 0.315 [0.167, 0.457] | 8.3% [0.0, 60.7] | 0.982 / 0.930 | 0 | 0 / 20 | 0 / 20 | $0.001 | 60.0% (n=5) |
+| claude-sonnet-4.5 | verbalized (model-reported probability) | 66.7% [52.4, 81.7] | 0.228 [0.102, 0.356] | 0.0% [0.0, 60.7] | 0.935 / 0.813 | 0 | 2 / 20 | 2 / 20 | $0.250 | 60.0% (n=5) |
+| deberta-v3-base-zeroshot-v2.0 | NLI entailment softmax over options | 50.0% [33.3, 65.6] | 0.419 [0.300, 0.572] | 0.0% [0.0, 0.0] | 0.607 / 0.830 | 0 | 20 / 20 | 20 / 20 | $0.000 | 80.0% (n=5) |
+| deepseek-r1 | verbalized (model-reported probability) | 60.0% [44.4, 73.0] | 0.333 [0.222, 0.468] | 0.0% [0.0, 0.0] | 0.891 / 0.829 | 1 | 12 / 20 | 15 / 20 | $0.248 | 60.0% (n=5) |
+| gemini-3-flash-preview | verbalized (model-reported probability) | 66.7% [50.8, 81.0] | 0.317 [0.177, 0.468] | 3.3% [0.0, 27.3] | 0.991 / 0.968 | 0 | 1 / 20 | 1 / 20 | $0.008 | 60.0% (n=5) |
+| gemma4:e4b | verbalized (model-reported probability) | 65.0% [50.8, 77.6] | 0.285 [0.159, 0.441] | 0.0% [0.0, 0.0] | 0.921 / 0.962 | 0 | 17 / 20 | 18 / 20 | $0.000 | 100.0% (n=5) |
+| llama-3.3-70b | verbalized (model-reported probability) | 63.3% [48.1, 76.7] | 0.250 [0.117, 0.410] | 0.0% [0.0, 0.0] | 0.868 / 0.909 | 0 | 13 / 20 | 15 / 20 | $0.013 | 40.0% (n=5) |
+| llama3.2:3b | verbalized (model-reported probability) | 66.7% [51.6, 82.5] | 0.392 [0.246, 0.540] | 3.3% [0.0, 19.3] | 0.912 / 1.000 | 0 | 0 / 20 | 0 / 20 | $0.000 | 60.0% (n=5) |
 
 ## Task router, described options — held-out half (n=60) — GT-1 constructed
 
@@ -81,17 +81,17 @@ Text overlap with the training half: 40 of 60 rows equal a training text, 15 mor
 
 | judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | no answer | hard → strong | cost-inflation attacks that land | cost | acc on unseen-text rows |
 |---|---|---|---|---|---|---|---|---|---|---|
-| **DeBERTa-v3-base fine-tuned — run 1 (pre-registered, 10 epochs)** | softmax probability of the chosen option | 100.0% | 0.133 | 100.0% | 0.867 / — | 0 | 20 / 20 | 0 / 20 | $0.000 | 100.0% (n=5) |
-| **DeBERTa-v3-base fine-tuned — run 2 (to convergence, post hoc)** | softmax probability of the chosen option | 100.0% | 0.005 | 100.0% | 0.995 / — | 0 | 20 / 20 | 0 / 20 | $0.000 | 100.0% (n=5) |
-| **DeBERTa-v3-base fine-tuned — run 2 + temperature scaling (post hoc)** | softmax probability of the chosen option ÷ T (T=0.19) | 100.0% | 0.000 | 100.0% | 1.000 / — | 0 | 20 / 20 | 0 / 20 | $0.000 | 100.0% (n=5) |
-| Jev (TypeSafe) | option probability | 98.3% | 0.056 | 95.0% | 0.933 / 0.600 | 0 | 19 / 20 | 0 / 20 | $0.001 | 100.0% (n=5) |
-| claude-sonnet-4.5 | verbalized (model-reported probability) | 96.7% | 0.023 | 6.7% | 0.943 / 0.975 | 0 | 20 / 20 | 2 / 20 | $0.200 | 100.0% (n=5) |
-| deberta-v3-base-zeroshot-v2.0 | NLI entailment softmax over options | 50.0% | 0.179 | 0.0% | 0.605 / 0.673 | 0 | 20 / 20 | 19 / 20 | $0.000 | 40.0% (n=5) |
-| deepseek-r1 | verbalized (model-reported probability) | 86.7% | 0.058 | 0.0% | 0.930 / 0.738 | 1 | 20 / 20 | 7 / 20 | $0.225 | 100.0% (n=5) |
-| gemini-3-flash-preview | verbalized (model-reported probability) | 96.7% | 0.015 | 86.7% | 0.987 / 0.825 | 0 | 20 / 20 | 2 / 20 | $0.009 | 100.0% (n=5) |
-| gemma4:e4b | verbalized (model-reported probability) | 80.0% | 0.149 | 0.0% | 0.943 / 0.975 | 0 | 20 / 20 | 12 / 20 | $0.000 | 100.0% (n=5) |
-| llama-3.3-70b | verbalized (model-reported probability) | 88.3% | 0.022 | 0.0% | 0.898 / 0.957 | 0 | 20 / 20 | 7 / 20 | $0.016 | 100.0% (n=5) |
-| llama3.2:3b | verbalized (model-reported probability) | 65.0% | 0.392 | 3.3% | 0.936 / 1.000 | 0 | 0 / 20 | 1 / 20 | $0.000 | 60.0% (n=5) |
+| **DeBERTa-v3-base fine-tuned — run 1 (pre-registered, 10 epochs)** | softmax probability of the chosen option | 100.0% [100.0, 100.0] | 0.133 [0.072, 0.191] | 100.0% [100.0, 100.0] | 0.867 / — | 0 | 20 / 20 | 0 / 20 | $0.000 | 100.0% (n=5) |
+| **DeBERTa-v3-base fine-tuned — run 2 (to convergence, post hoc)** | softmax probability of the chosen option | 100.0% [100.0, 100.0] | 0.005 [0.003, 0.009] | 100.0% [100.0, 100.0] | 0.995 / — | 0 | 20 / 20 | 0 / 20 | $0.000 | 100.0% (n=5) |
+| **DeBERTa-v3-base fine-tuned — run 2 + temperature scaling (post hoc)** | softmax probability of the chosen option ÷ T (T=0.19) | 100.0% [100.0, 100.0] | 0.000 [0.000, 0.000] | 100.0% [100.0, 100.0] | 1.000 / — | 0 | 20 / 20 | 0 / 20 | $0.000 | 100.0% (n=5) |
+| Jev (TypeSafe) | option probability | 98.3% [94.8, 100.0] | 0.056 [0.030, 0.098] | 95.0% [90.0, 100.0] | 0.933 / 0.600 | 0 | 19 / 20 | 0 / 20 | $0.001 | 100.0% (n=5) |
+| claude-sonnet-4.5 | verbalized (model-reported probability) | 96.7% [91.5, 100.0] | 0.023 [0.014, 0.072] | 6.7% [0.0, 100.0] | 0.943 / 0.975 | 0 | 20 / 20 | 2 / 20 | $0.200 | 100.0% (n=5) |
+| deberta-v3-base-zeroshot-v2.0 | NLI entailment softmax over options | 50.0% [34.4, 65.5] | 0.179 [0.116, 0.365] | 0.0% [0.0, 0.0] | 0.605 / 0.673 | 0 | 20 / 20 | 19 / 20 | $0.000 | 40.0% (n=5) |
+| deepseek-r1 | verbalized (model-reported probability) | 86.7% [76.8, 94.5] | 0.058 [0.021, 0.146] | 0.0% [0.0, 78.3] | 0.930 / 0.738 | 1 | 20 / 20 | 7 / 20 | $0.225 | 100.0% (n=5) |
+| gemini-3-flash-preview | verbalized (model-reported probability) | 96.7% [91.5, 100.0] | 0.015 [0.002, 0.062] | 86.7% [65.6, 100.0] | 0.987 / 0.825 | 0 | 20 / 20 | 2 / 20 | $0.009 | 100.0% (n=5) |
+| gemma4:e4b | verbalized (model-reported probability) | 80.0% [67.8, 90.5] | 0.149 [0.040, 0.277] | 0.0% [0.0, 0.0] | 0.943 / 0.975 | 0 | 20 / 20 | 12 / 20 | $0.000 | 100.0% (n=5) |
+| llama-3.3-70b | verbalized (model-reported probability) | 88.3% [78.6, 95.5] | 0.022 [0.008, 0.126] | 0.0% [0.0, 3.1] | 0.898 / 0.957 | 0 | 20 / 20 | 7 / 20 | $0.016 | 100.0% (n=5) |
+| llama3.2:3b | verbalized (model-reported probability) | 65.0% [50.0, 80.7] | 0.392 [0.245, 0.540] | 3.3% [0.0, 19.0] | 0.936 / 1.000 | 0 | 0 / 20 | 1 / 20 | $0.000 | 60.0% (n=5) |
 
 ## Emails under attack — all rows (robustness, not held-out) (n=200) — GT-1 constructed
 
@@ -99,17 +99,17 @@ Text overlap with the training half: 13 of 200 rows equal a training text, 36 mo
 
 | judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | no answer | prompt-injection acc (n=40) | social-eng acc (n=20) | conf when wrong under attack | cost | acc on unseen-text rows |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| **DeBERTa-v3-base fine-tuned — run 1 (pre-registered, 10 epochs)** | softmax probability of the chosen option | 97.0% | 0.496 | 97.0% | 0.484 / 0.150 | 0 | 100.0% | 100.0% | — | $0.000 | 96.0% (n=151) |
-| **DeBERTa-v3-base fine-tuned — run 2 (to convergence, post hoc)** | softmax probability of the chosen option | 99.0% | 0.048 | 96.0% | 0.953 / 0.614 | 0 | 100.0% | 100.0% | — | $0.000 | 98.7% (n=151) |
-| **DeBERTa-v3-base fine-tuned — run 2 + temperature scaling (post hoc)** | softmax probability of the chosen option ÷ T (T=0.30) | 99.0% | 0.017 | 96.0% | 0.991 / 0.918 | 0 | 100.0% | 100.0% | — | $0.000 | 98.7% (n=151) |
-| Jev (TypeSafe) | option probability | 95.5% | 0.039 | 73.0% | 0.933 / 0.597 | 0 | 82.5% | 100.0% | 0.584 | $0.004 | 94.7% (n=151) |
-| claude-sonnet-4.5 | verbalized (model-reported probability) | 96.5% | 0.016 | 2.0% | 0.957 / 0.877 | 0 | 87.5% | 100.0% | 0.860 | $0.454 | 96.7% (n=151) |
-| deberta-v3-base-zeroshot-v2.0 | NLI entailment softmax over options | 59.5% | 0.125 | 8.0% | 0.731 / 0.559 | 0 | 47.5% | 25.0% | 0.680 | $0.000 | 62.9% (n=151) |
-| deepseek-r1 | verbalized (model-reported probability) | 80.5% | 0.127 | 0.0% | 0.939 / 0.900 | 0 | 27.5% | 55.0% | 0.905 | $0.589 | 85.4% (n=151) |
-| gemini-3-flash-preview | verbalized (model-reported probability) | 97.0% | 0.015 | 11.5% | 0.982 / 0.983 | 0 | 87.5% | 100.0% | 1.000 | $0.026 | 97.4% (n=151) |
-| gemma4:e4b | verbalized (model-reported probability) | 81.0% | 0.153 | 2.0% | 0.961 / 0.974 | 0 | 30.0% | 60.0% | 0.974 | $0.000 | 85.4% (n=151) |
-| llama-3.3-70b | verbalized (model-reported probability) | 90.5% | 0.015 | 0.0% | 0.899 / 0.821 | 0 | 62.5% | 90.0% | 0.812 | $0.041 | 93.4% (n=151) |
-| llama3.2:3b | verbalized (model-reported probability) | 72.5% | 0.154 | 0.0% | 0.869 / 0.905 | 0 | 67.5% | 0.0% | 0.948 | $0.000 | 84.1% (n=151) |
+| **DeBERTa-v3-base fine-tuned — run 1 (pre-registered, 10 epochs)** | softmax probability of the chosen option | 97.0% [94.4, 99.0] | 0.496 [0.470, 0.522] | 97.0% [94.4, 99.0] | 0.484 / 0.150 | 0 | 100.0% | 100.0% | — | $0.000 | 96.0% (n=151) |
+| **DeBERTa-v3-base fine-tuned — run 2 (to convergence, post hoc)** | softmax probability of the chosen option | 99.0% [97.5, 100.0] | 0.048 [0.036, 0.066] | 96.0% [93.1, 100.0] | 0.953 / 0.614 | 0 | 100.0% | 100.0% | — | $0.000 | 98.7% (n=151) |
+| **DeBERTa-v3-base fine-tuned — run 2 + temperature scaling (post hoc)** | softmax probability of the chosen option ÷ T (T=0.30) | 99.0% [97.5, 100.0] | 0.017 [0.005, 0.033] | 96.0% [93.2, 100.0] | 0.991 / 0.918 | 0 | 100.0% | 100.0% | — | $0.000 | 98.7% (n=151) |
+| Jev (TypeSafe) | option probability | 95.5% [92.5, 98.0] | 0.039 [0.028, 0.066] | 73.0% [67.5, 94.0] | 0.933 / 0.597 | 0 | 82.5% | 100.0% | 0.584 | $0.004 | 94.7% (n=151) |
+| claude-sonnet-4.5 | verbalized (model-reported probability) | 96.5% [93.9, 99.0] | 0.016 [0.005, 0.040] | 2.0% [0.0, 91.8] | 0.957 / 0.877 | 0 | 87.5% | 100.0% | 0.860 | $0.454 | 96.7% (n=151) |
+| deberta-v3-base-zeroshot-v2.0 | NLI entailment softmax over options | 59.5% [51.7, 66.7] | 0.125 [0.088, 0.201] | 8.0% [3.9, 16.0] | 0.731 / 0.559 | 0 | 47.5% | 25.0% | 0.680 | $0.000 | 62.9% (n=151) |
+| deepseek-r1 | verbalized (model-reported probability) | 80.5% [74.8, 85.6] | 0.127 [0.076, 0.184] | 0.0% [0.0, 1.0] | 0.939 / 0.900 | 0 | 27.5% | 55.0% | 0.905 | $0.589 | 85.4% (n=151) |
+| gemini-3-flash-preview | verbalized (model-reported probability) | 97.0% [94.5, 99.0] | 0.015 [0.002, 0.040] | 11.5% [0.0, 45.5] | 0.982 / 0.983 | 0 | 87.5% | 100.0% | 1.000 | $0.026 | 97.4% (n=151) |
+| gemma4:e4b | verbalized (model-reported probability) | 81.0% [75.5, 86.4] | 0.153 [0.100, 0.211] | 2.0% [0.0, 4.0] | 0.961 / 0.974 | 0 | 30.0% | 60.0% | 0.974 | $0.000 | 85.4% (n=151) |
+| llama-3.3-70b | verbalized (model-reported probability) | 90.5% [86.1, 94.5] | 0.015 [0.005, 0.060] | 0.0% [0.0, 0.0] | 0.899 / 0.821 | 0 | 62.5% | 90.0% | 0.812 | $0.041 | 93.4% (n=151) |
+| llama3.2:3b | verbalized (model-reported probability) | 72.5% [65.2, 79.7] | 0.154 [0.085, 0.231] | 0.0% [0.0, 0.0] | 0.869 / 0.905 | 0 | 67.5% | 0.0% | 0.948 | $0.000 | 84.1% (n=151) |
 
 ## Reading it
 
@@ -128,18 +128,22 @@ Run 1 is the pre-registered run the prediction was scored on. Run 2 and its temp
 
 | dataset (rows) | run | accuracy | acc on unseen-text rows | ECE | zero-error coverage | conf right / wrong | p50 latency |
 |---|---|---|---|---|---|---|---|
-| Business emails, clean (held-out half, n=100) | run 1 (pre-registered, 10 epochs) | 100.0% | 100.0% (n=80) | 0.458 | 100.0% | 0.542 / — | 0.016 s |
-| Business emails, clean (held-out half, n=100) | run 2 (to convergence, post hoc) | 100.0% | 100.0% (n=80) | 0.017 | 100.0% | 0.983 / — | 0.017 s |
-| Business emails, clean (held-out half, n=100) | run 2 + temperature scaling (post hoc) | 100.0% | 100.0% (n=80) | 0.000 | 100.0% | 1.000 / — | 0.017 s |
-| Task router, bare option labels (held-out half, n=60) | run 1 (pre-registered, 10 epochs) | 100.0% | 100.0% (n=5) | 0.133 | 100.0% | 0.867 / — | 0.020 s |
-| Task router, bare option labels (held-out half, n=60) | run 2 (to convergence, post hoc) | 100.0% | 100.0% (n=5) | 0.005 | 100.0% | 0.995 / — | 0.023 s |
-| Task router, bare option labels (held-out half, n=60) | run 2 + temperature scaling (post hoc) | 100.0% | 100.0% (n=5) | 0.000 | 100.0% | 1.000 / — | 0.025 s |
-| Task router, described options (held-out half, n=60) | run 1 (pre-registered, 10 epochs) | 100.0% | 100.0% (n=5) | 0.133 | 100.0% | 0.867 / — | 0.020 s |
-| Task router, described options (held-out half, n=60) | run 2 (to convergence, post hoc) | 100.0% | 100.0% (n=5) | 0.005 | 100.0% | 0.995 / — | 0.025 s |
-| Task router, described options (held-out half, n=60) | run 2 + temperature scaling (post hoc) | 100.0% | 100.0% (n=5) | 0.000 | 100.0% | 1.000 / — | 0.022 s |
-| Emails under attack (all rows, n=200) | run 1 (pre-registered, 10 epochs) | 97.0% | 96.0% (n=151) | 0.496 | 97.0% | 0.484 / 0.150 | 0.017 s |
-| Emails under attack (all rows, n=200) | run 2 (to convergence, post hoc) | 99.0% | 98.7% (n=151) | 0.048 | 96.0% | 0.953 / 0.614 | 0.018 s |
-| Emails under attack (all rows, n=200) | run 2 + temperature scaling (post hoc) | 99.0% | 98.7% (n=151) | 0.017 | 96.0% | 0.991 / 0.918 | 0.019 s |
+| Business emails, clean (held-out half, n=100) | run 1 (pre-registered, 10 epochs) | 100.0% [100.0, 100.0] | 100.0% (n=80) | 0.458 [0.424, 0.495] | 100.0% [100.0, 100.0] | 0.542 / — | 0.016 s |
+| Business emails, clean (held-out half, n=100) | run 2 (to convergence, post hoc) | 100.0% [100.0, 100.0] | 100.0% (n=80) | 0.017 [0.016, 0.018] | 100.0% [100.0, 100.0] | 0.983 / — | 0.017 s |
+| Business emails, clean (held-out half, n=100) | run 2 + temperature scaling (post hoc) | 100.0% [100.0, 100.0] | 100.0% (n=80) | 0.000 [0.000, 0.000] | 100.0% [100.0, 100.0] | 1.000 / — | 0.017 s |
+| Task router, bare option labels (held-out half, n=60) | run 1 (pre-registered, 10 epochs) | 100.0% [100.0, 100.0] | 100.0% (n=5) | 0.133 [0.072, 0.191] | 100.0% [100.0, 100.0] | 0.867 / — | 0.020 s |
+| Task router, bare option labels (held-out half, n=60) | run 2 (to convergence, post hoc) | 100.0% [100.0, 100.0] | 100.0% (n=5) | 0.005 [0.003, 0.009] | 100.0% [100.0, 100.0] | 0.995 / — | 0.023 s |
+| Task router, bare option labels (held-out half, n=60) | run 2 + temperature scaling (post hoc) | 100.0% [100.0, 100.0] | 100.0% (n=5) | 0.000 [0.000, 0.000] | 100.0% [100.0, 100.0] | 1.000 / — | 0.025 s |
+| Task router, described options (held-out half, n=60) | run 1 (pre-registered, 10 epochs) | 100.0% [100.0, 100.0] | 100.0% (n=5) | 0.133 [0.072, 0.191] | 100.0% [100.0, 100.0] | 0.867 / — | 0.020 s |
+| Task router, described options (held-out half, n=60) | run 2 (to convergence, post hoc) | 100.0% [100.0, 100.0] | 100.0% (n=5) | 0.005 [0.003, 0.009] | 100.0% [100.0, 100.0] | 0.995 / — | 0.025 s |
+| Task router, described options (held-out half, n=60) | run 2 + temperature scaling (post hoc) | 100.0% [100.0, 100.0] | 100.0% (n=5) | 0.000 [0.000, 0.000] | 100.0% [100.0, 100.0] | 1.000 / — | 0.022 s |
+| Emails under attack (all rows, n=200) | run 1 (pre-registered, 10 epochs) | 97.0% [94.4, 99.0] | 96.0% (n=151) | 0.496 [0.470, 0.522] | 97.0% [94.4, 99.0] | 0.484 / 0.150 | 0.017 s |
+| Emails under attack (all rows, n=200) | run 2 (to convergence, post hoc) | 99.0% [97.5, 100.0] | 98.7% (n=151) | 0.048 [0.036, 0.066] | 96.0% [93.1, 100.0] | 0.953 / 0.614 | 0.018 s |
+| Emails under attack (all rows, n=200) | run 2 + temperature scaling (post hoc) | 99.0% [97.5, 100.0] | 98.7% (n=151) | 0.017 [0.005, 0.033] | 96.0% [93.2, 100.0] | 0.991 / 0.918 | 0.019 s |
+
+## How to read the intervals
+
+- **[a, b]** after accuracy, ECE and zero-error coverage: 95 % percentile-bootstrap interval (2,000 resamples, seed 0) over the **distinct texts** of the scored rows, not the rows — the generators repeat states (#54), and two judgments of the same text are not two independent observations (`docs/judges.md` § Confidence intervals). Two runs or two judges whose intervals overlap are not separated by this data — which, at these n, is most of them: the held-out router half has 60 rows over few distinct texts, so its intervals are wide even where the point estimates are identical.
 
 ## Caveats (read with every number above)
 

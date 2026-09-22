@@ -27,9 +27,14 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from judge_audit.ground_truth import parse_ground_truth  # noqa: E402
 from judge_audit.metrics.calibration import (  # noqa: E402
+    N_BOOT,
+    accuracy_ci,
+    ece_ci,
     expected_calibration_error,
     zero_error_coverage,
+    zero_error_coverage_ci,
 )
+from judge_audit.report import interval  # noqa: E402
 from judge_audit.runner import (  # noqa: E402
     is_correct,
     load_jsonl,
@@ -128,6 +133,11 @@ AMENDMENT = [
 ]
 
 
+def ci_of(ci: tuple[float, float] | None) -> list[float] | None:
+    """A (lo, hi) pair as a JSON list; None when the interval was not computed."""
+    return list(ci) if ci else None
+
+
 def training_texts(ds: str) -> set[str]:
     """State texts of the training half the fine-tuned model was trained on (index split)."""
     dataset = DATASET_OF[ds]
@@ -177,7 +187,8 @@ def records(labels: str, ckpt: Path, question: str, keep: set[int] | None,
         decision = str(j["decision"])
         equal, contains = text_overlap(row["state"], train) if train else (False, False)
         recs.append({
-            "idx": rec["idx"], "expected": str(row["labels"][question]), "decision": decision,
+            "idx": rec["idx"], "state": str(row["state"]),
+            "expected": str(row["labels"][question]), "decision": decision,
             "correct": is_correct(decision, row["labels"][question]),
             "text_equal_train": equal, "text_contains_train": contains,
             "no_answer": decision.strip().lower() not in [o.lower() for o in options],
@@ -188,20 +199,22 @@ def records(labels: str, ckpt: Path, question: str, keep: set[int] | None,
     return recs, run, seen
 
 
-def interval(values: list[float]) -> None:
-    """TODO(#46): bootstrap confidence interval; report columns are wired to take one."""
-    return None
-
-
 def summarize(recs: list[dict], dataset: str) -> dict:
     conf = [r["confidence"] for r in recs]
     ok = [r["correct"] for r in recs]
+    # Clustered by distinct text, like every other report: the generators repeat states
+    # (#54), and two judgments of the same text are not two independent observations.
+    # A record without a state (hand-built fixtures) is its own cluster.
+    groups = [r.get("state", f"#{i}") for i, r in enumerate(recs)]
     right = [r["confidence"] for r in recs if r["correct"]]
     wrong = [r["confidence"] for r in recs if not r["correct"]]
     unseen = [r for r in recs if not r["text_contains_train"]]
     out = {
         "n": len(recs), "accuracy": round(sum(ok) / len(ok), 4),
-        "accuracy_interval": interval(ok),
+        # 95 % percentile-bootstrap intervals over distinct texts (seed 0).
+        "accuracy_ci": ci_of(accuracy_ci(ok, groups=groups)),
+        "ece_ci": ci_of(ece_ci(conf, ok, groups=groups)),
+        "zero_error_coverage_ci": ci_of(zero_error_coverage_ci(conf, ok, groups=groups)),
         # Text-level overlap with the training half (the generators repeat texts, #54):
         # rows equal to a training text, rows containing one, and accuracy on the rest.
         "text_equal_train": sum(r["text_equal_train"] for r in recs),
@@ -471,7 +484,8 @@ def render(data: dict) -> str:
          "Arena checkpoint on the identical row indices.",
          "- **Metrics**: accuracy, ECE, zero-error coverage, mean confidence when right / wrong, "
          "no-answer count (decision outside the options), cost, p50 latency — separate, never "
-         "combined. Confidence intervals: TODO(#46), the columns are wired.",
+         "combined. Accuracy, ECE and zero-error coverage carry a 95 % percentile-bootstrap "
+         f"interval ({N_BOOT:,} resamples, seed 0) clustered by distinct text.",
          "",
          "## Prediction (written before training)", ""]
     for key, text in PREDICTION.items():
@@ -567,8 +581,12 @@ def render(data: dict) -> str:
             label = f"**{j['label']}**" if slug in FINETUNED_RUNS else j["label"]
             method = j["method"] + (f" (T={s['temperature']:.2f})"
                                     if s.get("temperature", 1.0) != 1.0 else "")
-            row = (f"| {label} | {method} | {fmt(s['accuracy'], True)} | {fmt(s['ece'])} | "
-                   f"{fmt(s['zero_error_coverage'], True)} | {fmt(s['mean_conf_correct'])} / "
+            row = (f"| {label} | {method} | "
+                   f"{fmt(s['accuracy'], True)}{interval(s['accuracy_ci'], pct=True)} | "
+                   f"{fmt(s['ece'])}{interval(s['ece_ci'], digits=3)} | "
+                   f"{fmt(s['zero_error_coverage'], True)}"
+                   f"{interval(s['zero_error_coverage_ci'], pct=True)} | "
+                   f"{fmt(s['mean_conf_correct'])} / "
                    f"{fmt(s['mean_conf_wrong'])} | {s['no_answer']} |")
             if ds == "email-adversarial":
                 row += (f" {fmt(s['prompt_injection_accuracy'], True)} | "
@@ -652,12 +670,24 @@ def render(data: dict) -> str:
                     continue
                 short = FINETUNED_RUNS[slug]["label"].split(" — ")[1]
                 L.append(f"| {title.split(' — ')[0]} ({s['scored']}, n={s['n']}) | {short} | "
-                         f"{fmt(s['accuracy'], True)} | {fmt(s['accuracy_unseen_text'], True)} "
-                         f"(n={s['unseen_text_n']}) | {fmt(s['ece'])} | "
-                         f"{fmt(s['zero_error_coverage'], True)} | {fmt(s['mean_conf_correct'])} / "
+                         f"{fmt(s['accuracy'], True)}{interval(s['accuracy_ci'], pct=True)} | "
+                         f"{fmt(s['accuracy_unseen_text'], True)} (n={s['unseen_text_n']}) | "
+                         f"{fmt(s['ece'])}{interval(s['ece_ci'], digits=3)} | "
+                         f"{fmt(s['zero_error_coverage'], True)}"
+                         f"{interval(s['zero_error_coverage_ci'], pct=True)} | "
+                         f"{fmt(s['mean_conf_correct'])} / "
                          f"{fmt(s['mean_conf_wrong'])} | {s['p50_latency_s']:.3f} s |")
         L.append("")
-    L += ["## Caveats (read with every number above)", "",
+    L += ["## How to read the intervals", "",
+          "- **[a, b]** after accuracy, ECE and zero-error coverage: 95 % percentile-bootstrap "
+          f"interval ({N_BOOT:,} resamples, seed 0) over the **distinct texts** of the scored rows, "
+          "not the rows — the generators repeat states (#54), and two judgments of the same text are "
+          "not two independent observations (`docs/judges.md` § Confidence intervals). Two runs or "
+          "two judges whose intervals overlap are not separated by this data — which, at these n, is "
+          "most of them: the held-out router half has 60 rows over few distinct texts, so its "
+          "intervals are wide even where the point estimates are identical.",
+          "",
+          "## Caveats (read with every number above)", "",
           "- **Synthetic GT-1 data.** Both datasets come from seeded generators with labels by "
           "construction; the categories are clean and the vocabulary is narrow. A classifier "
           "trained on 100 such emails is learning the generator's templates, not business email.",

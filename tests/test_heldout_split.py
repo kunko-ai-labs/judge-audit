@@ -107,13 +107,43 @@ def test_summarize_hand_computed_including_no_answer():
     assert s["n"] == 4 and s["accuracy"] == 0.5 and s["no_answer"] == 1
     assert s["mean_conf_correct"] == pytest.approx(0.85)
     assert s["mean_conf_wrong"] == pytest.approx(0.35)
-    assert s["cost_usd"] == 0.0 and s["accuracy_interval"] is None
+    assert s["cost_usd"] == 0.0
+    # 95 % bootstrap intervals, clustered by text, bracket their point estimate.
+    for key, point in (("accuracy_ci", s["accuracy"]), ("ece_ci", s["ece"]),
+                       ("zero_error_coverage_ci", s["zero_error_coverage"])):
+        lo, hi = s[key]
+        assert lo <= point <= hi, (key, lo, point, hi)
 
 
 def test_summarize_n1_and_all_correct_have_no_wrong_confidence():
     s = heldout_report.summarize([rec(0, "a", "a", 1.0)], "email-clean")
     assert s["n"] == 1 and s["accuracy"] == 1.0 and s["mean_conf_wrong"] is None
     assert s["zero_error_coverage"] == 1.0
+    assert s["accuracy_ci"] == [1.0, 1.0] and s["ece_ci"] == [0.0, 0.0]
+
+
+def test_intervals_cluster_by_text_so_a_repeated_text_is_one_observation():
+    """Ten rows of two texts carry the uncertainty of two clusters, not of ten rows."""
+    rows = [dict(rec(i, "a", "a" if i % 2 else "b", 0.9), state="t1" if i % 2 else "t2")
+            for i in range(10)]
+    clustered = heldout_report.summarize(rows, "email-clean")
+    unclustered = heldout_report.summarize(
+        [dict(r, state=f"t{i}") for i, r in enumerate(rows)], "email-clean")
+    lo_c, hi_c = clustered["accuracy_ci"]
+    lo_u, hi_u = unclustered["accuracy_ci"]
+    assert (hi_c - lo_c) > (hi_u - lo_u)          # clustering widens the interval
+    assert lo_c <= clustered["accuracy"] <= hi_c
+
+
+def test_committed_heldout_report_carries_intervals_for_every_row():
+    data = heldout_report.collect()
+    for judge in data["judges"].values():
+        for s in judge["datasets"].values():
+            for key in ("accuracy_ci", "ece_ci", "zero_error_coverage_ci"):
+                lo, hi = s[key]
+                assert 0.0 <= lo <= hi
+    md = heldout_report.render(data)
+    assert "## How to read the intervals" in md and "percentile-bootstrap" in md
 
 
 def test_summarize_adversarial_and_router_extras():
