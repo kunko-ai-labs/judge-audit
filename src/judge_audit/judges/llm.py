@@ -21,6 +21,7 @@ LLM_BASE_URL, LLM_API_KEY, LLM_EFFORT (anthropic only), LLM_PROVIDER_MODULE (cus
 """
 from __future__ import annotations
 
+import hashlib
 import http.client
 import importlib.util
 import json
@@ -80,6 +81,25 @@ SYSTEM = (
     "Respond with JSON only, no prose, exactly this shape:\n"
     '{"answers": {"<question name>": {"decision": "<option>", "confidence": <0..1>}}}'
 )
+
+
+# Every provider path is asked for temperature 0: an audit has to be reproducible, and a
+# confidence measured at one sampling temperature says nothing about another.
+TEMPERATURE = 0
+
+
+def prompt_sha256() -> str:
+    """Digest of what the judge is actually shown: SYSTEM plus the render template.
+
+    Recorded in `describe()` so two runs can be told apart when the prompt changed
+    rather than the judge. The template is hashed through a fixed sample question, so
+    any edit to `_render` moves the digest.
+    """
+    sample = _render("<state>", [Question(name="<q>", type=QuestionType.CHOICE,
+                                          instructions="<instructions>",
+                                          options=["<a>", "<b>"],
+                                          descriptions={"<a>": "<desc>"})])
+    return hashlib.sha256(f"{SYSTEM}\n---\n{sample}".encode()).hexdigest()
 
 
 def _render(state: str, questions: list[Question]) -> str:
@@ -192,7 +212,8 @@ class LLMJudge(Judge):
 
     def describe(self) -> dict:
         d = {"name": self.name, "provider": self.provider, "model": self.label,
-             "confidence_method": "verbalized (model-reported probability)"}
+             "confidence_method": "verbalized (model-reported probability)",
+             "temperature": TEMPERATURE, "prompt_sha256": prompt_sha256()}
         if self.provider == "custom":
             extra = getattr(self._custom, "describe", None)
             if callable(extra):
@@ -224,6 +245,7 @@ class LLMJudge(Judge):
         try:
             resp = self._client.messages.create(
                 model=self.model, max_tokens=int(os.environ.get("LLM_MAX_TOKENS", "1024")),
+                temperature=TEMPERATURE,  # same as the OpenAI-compatible path
                 system=SYSTEM, messages=[{"role": "user", "content": user}], **kwargs)
         except self._anthropic.RateLimitError as e:
             raise RuntimeError(f"rate-limited by Anthropic: {e.message}") from e
@@ -235,7 +257,7 @@ class LLMJudge(Judge):
         return text, resp.usage.input_tokens, resp.usage.output_tokens
 
     def _call_openai_compatible(self, user: str) -> tuple[str, int, int]:
-        body = {"model": self.model, "temperature": 0,
+        body = {"model": self.model, "temperature": TEMPERATURE,
                 "response_format": {"type": "json_object"},
                 "messages": [{"role": "system", "content": SYSTEM},
                              {"role": "user", "content": user}]}

@@ -5,8 +5,11 @@ Exit codes: 0 ok · 1 drift detected (check) · 2 usage / configuration error.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
+import os
 import sys
+import tempfile
 from typing import NoReturn
 
 from . import __version__
@@ -31,6 +34,30 @@ JUDGES = ("jev", "llm", "nli", "finetuned", "simulated")
 def _die(msg: str) -> NoReturn:
     print(f"judge-audit: {msg}", file=sys.stderr)
     sys.exit(2)
+
+
+def _write_atomic(path: str, content: str) -> None:
+    """Write through a temp file in the same directory, then rename.
+
+    A CI gate that dies mid-write must not leave a half-written report behind for the
+    next run to compare against: either the old file or the new one, never a prefix.
+    """
+    directory = os.path.dirname(os.path.abspath(path)) or "."
+    fd, tmp = tempfile.mkstemp(dir=directory, prefix=".judge-audit-", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            f.write(content)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)  # atomic on POSIX and Windows
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(tmp)
+        raise
+
+
+def _write_json(path: str, obj: dict) -> None:
+    _write_atomic(path, json.dumps(obj, indent=2))
 
 
 def _judge(name: str, rows: list | None = None):
@@ -116,10 +143,8 @@ def main(argv: list[str] | None = None) -> None:
             content = render_markdown(result)
             if tag:
                 content = f"> ⚠️ **{tag}**\n\n" + content
-        with open(out, "w", encoding="utf-8") as f:
-            f.write(content)
-        with open(args.json, "w", encoding="utf-8") as f:
-            json.dump(result.to_dict(), f, indent=2)
+        _write_atomic(out, content)
+        _write_json(args.json, result.to_dict())
         if args.judgments:
             write_judgments(result, args.judgments)
         print(f"judge={result.judge} n={result.n} "
@@ -141,18 +166,16 @@ def main(argv: list[str] | None = None) -> None:
             content = render_markdown(result)
             if tag:
                 content = f"> ⚠️ **{tag}**\n\n" + content
-            with open(args.out, "w", encoding="utf-8") as f:
-                f.write(content)
+            _write_atomic(args.out, content)
         if args.json:
-            with open(args.json, "w", encoding="utf-8") as f:
-                json.dump(result.to_dict(), f, indent=2)
+            _write_json(args.json, result.to_dict())
         if args.drift:
-            with open(args.drift, "w", encoding="utf-8") as f:
-                json.dump({"ok": not failures, "failures": failures, "ece": result.ece,
-                           "accuracy": result.accuracy, "n": result.n,
-                           "baseline": args.baseline,
-                           "max_ece_drift": args.max_ece_drift,
-                           "max_acc_drop": args.max_acc_drop}, f, indent=2)
+            _write_json(args.drift,
+                        {"ok": not failures, "failures": failures, "ece": result.ece,
+                         "accuracy": result.accuracy, "n": result.n,
+                         "baseline": args.baseline,
+                         "max_ece_drift": args.max_ece_drift,
+                         "max_acc_drop": args.max_acc_drop})
         if failures:
             print("DRIFT DETECTED:", file=sys.stderr)
             for fl in failures:

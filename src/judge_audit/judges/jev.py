@@ -29,6 +29,11 @@ from pathlib import Path
 
 from .base import Judge, Judgment, Question, QuestionType
 
+# Version of what the judge is shown: `_sdk_question` / `_direct_question`, the criteria
+# map built from each question's options and descriptions. Jev has no text prompt, so this
+# plays the role `prompt_sha256` plays for a chat model — bump it when that shape changes.
+CRITERIA_VERSION = 1
+
 TYPESAFE_ENDPOINT = "https://api.typesafe.ai/v1/systemone"
 DIRECT_MODEL = "jev-latest"
 INPUT_PRICE_PER_MTOK = 0.042  # USD, per TypeSafe's published pricing (output free)
@@ -96,6 +101,10 @@ class JevJudge(Judge):
         d = {"name": self.name, "model": self.model, "backend": self.backend,
              "bridge": "vercel-ai-sdk/experimental_evaluate" if self.backend == "gateway"
              else "typesafe-systemone-http",
+             # Jev takes no sampling temperature: it returns a distribution, not a sample.
+             # It has no text prompt either — what it is shown is the criteria map below.
+             "temperature": "n/a",
+             "criteria_version": CRITERIA_VERSION,
              "input_price_per_mtok_usd": INPUT_PRICE_PER_MTOK}
         if self.backend == "typesafe":
             d["endpoint"] = self.endpoint

@@ -34,7 +34,9 @@ class SimulatedJudge(Judge):
                 self.oracle[(r["state"], qname)] = str(label)
 
     def describe(self) -> dict:
-        return {"name": self.name, "seed": self.seed, "tag": SIMULATED_TAG}
+        # No model and no sampling: the seed is what makes this run reproducible.
+        return {"name": self.name, "seed": self.seed, "temperature": "n/a",
+                "tag": SIMULATED_TAG}
 
     def decide(self, state: str, questions: list[Question]) -> list[Judgment]:
         out: list[Judgment] = []

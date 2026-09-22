@@ -13,7 +13,11 @@ judge-audit audits anything that maps `(state, questions) -> (decision, confiden
 
 ## Same dataset, several judges = the Arena
 
-Every adapter records `describe()` (model, backend, endpoint, confidence method) into the report's provenance, so runs are comparable and attributable:
+Every adapter records `describe()` (model, backend, endpoint, confidence method) into the report's provenance, so runs are comparable and attributable. Two fields say whether two runs asked the same question in the same way:
+
+- **`temperature`** — every judge declares it, and a judge that has no such parameter declares `"n/a"` rather than leaving it out. Both `llm` paths (the Anthropic SDK and the OpenAI-compatible endpoint) send `temperature: 0`: an audit has to be reproducible, and a confidence measured at one sampling temperature says nothing about another. Jev returns a distribution rather than a sample, and the NLI encoder does not sample, so both are `"n/a"`.
+- **`prompt_sha256`** — the digest of what the `llm` judge is actually shown: the `SYSTEM` prompt plus the render template. Edit either and the digest moves, so a report cannot silently change the question it asked. Jev has no text prompt; it records `criteria_version` instead, the version of the criteria map built from each question's options and descriptions. `judge-audit check` warns (it does not fail) when the baseline's prompt hash differs from the current one.
+
 
 ```bash
 # Jev via gateway

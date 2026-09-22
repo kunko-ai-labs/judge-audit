@@ -64,6 +64,8 @@ class NLIJudge(Judge):
         return {"name": self.name, "provider": "local", "model": self.label,
                 "model_id": self.model,
                 "confidence_method": "NLI entailment softmax over options",
+                # An encoder does not sample; the hypothesis template is its whole prompt.
+                "temperature": "n/a",
                 "hypothesis_template": self.hypothesis, "device": self.device}
 
     @staticmethod

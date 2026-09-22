@@ -124,9 +124,13 @@ def render_html(result: AuditResult, tag: str = "") -> str:
                       for line in ci_lines(d) if line)
     rel = png_to_data_uri(reliability_diagram_png(result))
     acc = png_to_data_uri(accuracy_coverage_png(result))
-    banner = f'<div class="banner">⚠️ {tag}</div>' if tag else ""
-    prov = "<br>".join(line.strip("_") for line in provenance_lines(d.get("run", {})))
+    # Everything below is provenance a caller controls — model names, dataset paths, a
+    # judge's tag — so it is escaped before it reaches the page, not trusted as markup.
+    banner = f'<div class="banner">⚠️ {html.escape(tag)}</div>' if tag else ""
+    prov = "<br>".join(html.escape(line.strip("_"))
+                       for line in provenance_lines(d.get("run", {})))
     gt = html.escape(ground_truth_line(d.get("run", {})))
+    judge = html.escape(str(d["judge"]))
     curve_rows = "".join(
         f"<tr><td>{r['coverage']:.0%}</td><td>{r['accuracy']:.1%}</td>"
         f"<td>{r['min_confidence']:.2f}</td><td>{r['n']}</td></tr>"
@@ -136,7 +140,7 @@ def render_html(result: AuditResult, tag: str = "") -> str:
         f"<td>{b['accuracy']:.1%}</td><td>{b['n']}</td></tr>"
         for b in d["reliability_bins"] if b["n"])
     return f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
-<title>Audit report — {d['judge']}</title>
+<title>Audit report — {judge}</title>
 <style>body{{font-family:system-ui,sans-serif;max-width:900px;margin:2rem auto;padding:0 1rem;color:#1a1a1a}}
 .banner{{background:#fff3cd;border:1px solid #e6a800;padding:.75rem;border-radius:8px;font-weight:600}}
 .metric{{font-size:1.1rem}}.metric b{{font-size:1.6rem}}
@@ -144,7 +148,7 @@ table{{border-collapse:collapse;width:100%;margin:1rem 0}}td,th{{border:1px soli
 th{{background:#f5f5f5}}img{{max-width:100%;border:1px solid #eee;border-radius:8px;margin:1rem 0}}
 h2{{margin-top:2.5rem}}.prov{{color:#666;font-size:.9rem}}</style></head><body>
 {banner}
-<h1>Audit report — {d['judge']}</h1>
+<h1>Audit report — {judge}</h1>
 <p class="metric"><b>{d['n']}</b> decisions · accuracy <b>{d['accuracy']:.1%}</b>{acc_ci} · ECE <b>{d['ece']:.4f}</b>{ece_ci}<br>
 cost <b>${d['total_cost_usd']:.4f}</b> · p50 <b>{d['p50_latency_s']}s</b> · p99 <b>{d['p99_latency_s']}s</b></p>
 <p class="prov">{prov}</p>

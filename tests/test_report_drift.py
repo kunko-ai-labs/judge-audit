@@ -43,6 +43,19 @@ def with_prompt_hash(tmp_path, prompt_sha256: str) -> str:
     return str(path)
 
 
+def test_html_escapes_provenance_strings():
+    pytest.importorskip("matplotlib")
+    from judge_audit.report import render_html
+    r = result()
+    r.run["judge"]["model"] = '<script>alert("xss")</script>'
+    r.zero_error = {"coverage": 1.0, "n": 200, "threshold": 0.9}
+    r.curve = [{"coverage": 1.0, "accuracy": 1.0, "min_confidence": 0.9, "n": 200}]
+    r.reliability = [{"bin": "0.9-1.0", "avg_confidence": 0.9, "accuracy": 1.0, "n": 200}]
+    page = render_html(r, tag="<b>SIMULATED</b>")
+    assert "<script>alert" not in page
+    assert "&lt;script&gt;" in page and "&lt;b&gt;SIMULATED" in page
+
+
 def test_same_run_against_itself_is_compatible_and_has_no_failures(tmp_path):
     assert check_drift(result(), baseline(tmp_path)) == []
 
