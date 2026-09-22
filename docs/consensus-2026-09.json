@@ -532,7 +532,7 @@
       },
       "llama32": {
         "ece": 0.034,
-        "zero_error_coverage": 0.055,
+        "zero_error_coverage": 0.0,
         "accuracy": 0.9
       }
     }
@@ -570,7 +570,7 @@
       "mean_share_when_wrong": 0.568,
       "mean_conf_of_wrong_majority": 0.888,
       "vote_share_ece": 0.095,
-      "vote_share_zero_error_coverage": 0.9246
+      "vote_share_zero_error_coverage": 0.8945
     },
     "subsets": {
       "homoglyph_zerowidth": {
@@ -775,7 +775,7 @@
         "mean_share_when_wrong": 0.576,
         "mean_conf_of_wrong_majority": 0.906,
         "vote_share_ece": 0.1841,
-        "vote_share_zero_error_coverage": 0.7436
+        "vote_share_zero_error_coverage": 0.641
       },
       "social_engineering": {
         "n": 20,
@@ -1668,7 +1668,7 @@
       },
       "claude-sonnet-4.5": {
         "ece": 0.0159,
-        "zero_error_coverage": 0.02,
+        "zero_error_coverage": 0.0,
         "accuracy": 0.965
       },
       "deberta-nli": {
@@ -1698,12 +1698,12 @@
       },
       "gemini-3-flash": {
         "ece": 0.0151,
-        "zero_error_coverage": 0.115,
+        "zero_error_coverage": 0.0,
         "accuracy": 0.97
       },
       "gemma4": {
         "ece": 0.1534,
-        "zero_error_coverage": 0.02,
+        "zero_error_coverage": 0.0,
         "accuracy": 0.81
       },
       "llama-3.3-70b": {
@@ -3725,7 +3725,7 @@
     "declared_confidence": {
       "jev": {
         "ece": 0.3181,
-        "zero_error_coverage": 0.025,
+        "zero_error_coverage": 0.0,
         "accuracy": 0.6667
       },
       "claude-sonnet-4.5": {
@@ -3745,7 +3745,7 @@
       },
       "gemini-3-flash": {
         "ece": 0.3154,
-        "zero_error_coverage": 0.025,
+        "zero_error_coverage": 0.0,
         "accuracy": 0.6667
       },
       "gemma4": {
@@ -3760,7 +3760,7 @@
       },
       "llama32": {
         "ece": 0.3958,
-        "zero_error_coverage": 0.025,
+        "zero_error_coverage": 0.0,
         "accuracy": 0.6583
       }
     }
@@ -3795,7 +3795,7 @@
       "mean_share_when_wrong": 0.656,
       "mean_conf_of_wrong_majority": 0.923,
       "vote_share_ece": 0.1101,
-      "vote_share_zero_error_coverage": 0.8318
+      "vote_share_zero_error_coverage": 0.757
     },
     "subsets": {
       "easy": {
@@ -5336,7 +5336,7 @@
         "mean_share_when_wrong": 0.656,
         "mean_conf_of_wrong_majority": 0.923,
         "vote_share_ece": 0.1356,
-        "vote_share_zero_error_coverage": 0.3704
+        "vote_share_zero_error_coverage": 0.1481
       }
     },
     "error_correlation": {
@@ -5777,7 +5777,7 @@
       },
       "claude-sonnet-4.5": {
         "ece": 0.0322,
-        "zero_error_coverage": 0.0333,
+        "zero_error_coverage": 0.0,
         "accuracy": 0.95
       },
       "deberta-nli": {
@@ -5792,7 +5792,7 @@
       },
       "gemini-3-flash": {
         "ece": 0.0121,
-        "zero_error_coverage": 0.85,
+        "zero_error_coverage": 0.725,
         "accuracy": 0.9833
       },
       "gemma4": {
@@ -5802,12 +5802,12 @@
       },
       "llama-3.3-70b": {
         "ece": 0.0433,
-        "zero_error_coverage": 0.0083,
+        "zero_error_coverage": 0.0,
         "accuracy": 0.8667
       },
       "llama32": {
         "ece": 0.4292,
-        "zero_error_coverage": 0.025,
+        "zero_error_coverage": 0.0,
         "accuracy": 0.5917
       }
     }

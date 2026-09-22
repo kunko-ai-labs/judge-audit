@@ -288,7 +288,7 @@
             0.0659
           ],
           "zero_error_coverage_ci": [
-            0.675,
+            0.6701,
             0.94
           ],
           "text_equal_train": 13,
@@ -532,14 +532,14 @@
           ],
           "zero_error_coverage_ci": [
             0.0,
-            0.6067
+            0.5741
           ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
           "accuracy_unseen_text": 0.6,
           "ece": 0.315,
-          "zero_error_coverage": 0.0833,
+          "zero_error_coverage": 0.0,
           "mean_conf_correct": 0.982,
           "mean_conf_wrong": 0.93,
           "no_answer": 0,
@@ -687,7 +687,7 @@
             0.0977
           ],
           "zero_error_coverage_ci": [
-            0.9,
+            0.8909,
             1.0
           ],
           "text_equal_train": 40,
@@ -1109,14 +1109,14 @@
           ],
           "zero_error_coverage_ci": [
             0.0,
-            0.9175
+            0.9086
           ],
           "text_equal_train": 13,
           "text_contains_train": 49,
           "unseen_text_n": 151,
           "accuracy_unseen_text": 0.9669,
           "ece": 0.0159,
-          "zero_error_coverage": 0.02,
+          "zero_error_coverage": 0.0,
           "mean_conf_correct": 0.957,
           "mean_conf_wrong": 0.877,
           "no_answer": 0,
@@ -1352,7 +1352,7 @@
           ],
           "zero_error_coverage_ci": [
             0.0,
-            0.6066
+            0.5903
           ],
           "text_equal_train": 40,
           "text_contains_train": 55,
@@ -1515,7 +1515,7 @@
           "unseen_text_n": 5,
           "accuracy_unseen_text": 1.0,
           "ece": 0.0228,
-          "zero_error_coverage": 0.0667,
+          "zero_error_coverage": 0.0,
           "mean_conf_correct": 0.943,
           "mean_conf_wrong": 0.975,
           "no_answer": 0,
@@ -2741,7 +2741,7 @@
           ],
           "zero_error_coverage_ci": [
             0.0,
-            0.01
+            0.0
           ],
           "text_equal_train": 13,
           "text_contains_train": 49,
@@ -3141,7 +3141,7 @@
           ],
           "zero_error_coverage_ci": [
             0.0,
-            0.7835
+            0.746
           ],
           "text_equal_train": 40,
           "text_contains_train": 55,
@@ -5473,14 +5473,14 @@
           ],
           "zero_error_coverage_ci": [
             0.0,
-            0.4545
+            0.0
           ],
           "text_equal_train": 13,
           "text_contains_train": 49,
           "unseen_text_n": 151,
           "accuracy_unseen_text": 0.9735,
           "ece": 0.0151,
-          "zero_error_coverage": 0.115,
+          "zero_error_coverage": 0.0,
           "mean_conf_correct": 0.982,
           "mean_conf_wrong": 0.983,
           "no_answer": 0,
@@ -5716,14 +5716,14 @@
           ],
           "zero_error_coverage_ci": [
             0.0,
-            0.2727
+            0.0
           ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
           "accuracy_unseen_text": 0.6,
           "ece": 0.3167,
-          "zero_error_coverage": 0.0333,
+          "zero_error_coverage": 0.0,
           "mean_conf_correct": 0.991,
           "mean_conf_wrong": 0.968,
           "no_answer": 0,
@@ -5871,7 +5871,7 @@
             0.062
           ],
           "zero_error_coverage_ci": [
-            0.6562,
+            0.6,
             1.0
           ],
           "text_equal_train": 40,
@@ -5879,7 +5879,7 @@
           "unseen_text_n": 5,
           "accuracy_unseen_text": 1.0,
           "ece": 0.015,
-          "zero_error_coverage": 0.8667,
+          "zero_error_coverage": 0.7333,
           "mean_conf_correct": 0.987,
           "mean_conf_wrong": 0.825,
           "no_answer": 0,
@@ -6283,14 +6283,14 @@
           ],
           "zero_error_coverage_ci": [
             0.0,
-            0.0402
+            0.0
           ],
           "text_equal_train": 13,
           "text_contains_train": 49,
           "unseen_text_n": 151,
           "accuracy_unseen_text": 0.8543,
           "ece": 0.1534,
-          "zero_error_coverage": 0.02,
+          "zero_error_coverage": 0.0,
           "mean_conf_correct": 0.961,
           "mean_conf_wrong": 0.974,
           "no_answer": 0,
@@ -7497,7 +7497,7 @@
           ],
           "zero_error_coverage_ci": [
             0.0,
-            0.0308
+            0.0
           ],
           "text_equal_train": 40,
           "text_contains_train": 55,
@@ -7675,7 +7675,7 @@
             0.1645
           ],
           "zero_error_coverage_ci": [
-            0.011,
+            0.0,
             1.0
           ],
           "text_equal_train": 20,
@@ -7683,7 +7683,7 @@
           "unseen_text_n": 80,
           "accuracy_unseen_text": 1.0,
           "ece": 0.044,
-          "zero_error_coverage": 0.05,
+          "zero_error_coverage": 0.0,
           "mean_conf_correct": 0.872,
           "mean_conf_wrong": 0.83,
           "no_answer": 0,
@@ -8157,14 +8157,14 @@
           ],
           "zero_error_coverage_ci": [
             0.0,
-            0.193
+            0.0
           ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
           "accuracy_unseen_text": 0.6,
           "ece": 0.3917,
-          "zero_error_coverage": 0.0333,
+          "zero_error_coverage": 0.0,
           "mean_conf_correct": 0.912,
           "mean_conf_wrong": 1.0,
           "no_answer": 0,
@@ -8313,14 +8313,14 @@
           ],
           "zero_error_coverage_ci": [
             0.0,
-            0.1897
+            0.0
           ],
           "text_equal_train": 40,
           "text_contains_train": 55,
           "unseen_text_n": 5,
           "accuracy_unseen_text": 0.6,
           "ece": 0.3917,
-          "zero_error_coverage": 0.0333,
+          "zero_error_coverage": 0.0,
           "mean_conf_correct": 0.936,
           "mean_conf_wrong": 1.0,
           "no_answer": 0,

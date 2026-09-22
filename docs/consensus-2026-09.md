@@ -25,7 +25,7 @@ Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flas
 | gemini-3-flash (declared) | 100.0% | 0.005 | 100.0% |
 | gemma4 (declared) | 100.0% | 0.026 | 100.0% |
 | llama-3.3-70b (declared) | 100.0% | 0.091 | 100.0% |
-| llama32 (declared) | 90.0% | 0.034 | 5.5% |
+| llama32 (declared) | 90.0% | 0.034 | 0.0% |
 
 ### Error correlation (n=200)
 
@@ -99,16 +99,16 @@ Panel: 11 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, finetuned-de
 
 | confidence source | accuracy | ECE | zero-error coverage |
 |---|---|---|---|
-| panel vote share (majority) | 97.5% [95.0, 99.5] | 0.095 | 92.5% |
+| panel vote share (majority) | 97.5% [95.0, 99.5] | 0.095 | 89.5% |
 | jev (declared) | 95.5% | 0.039 | 73.0% |
-| claude-sonnet-4.5 (declared) | 96.5% | 0.016 | 2.0% |
+| claude-sonnet-4.5 (declared) | 96.5% | 0.016 | 0.0% |
 | deberta-nli (declared) | 59.5% | 0.125 | 8.0% |
 | deepseek-r1 (declared) | 80.5% | 0.127 | 0.0% |
 | finetuned-deberta (declared) | 97.0% | 0.496 | 97.0% |
 | finetuned-deberta-run2 (declared) | 99.0% | 0.048 | 96.0% |
 | finetuned-deberta-run2-ts (declared) | 99.0% | 0.017 | 96.0% |
-| gemini-3-flash (declared) | 97.0% | 0.015 | 11.5% |
-| gemma4 (declared) | 81.0% | 0.153 | 2.0% |
+| gemini-3-flash (declared) | 97.0% | 0.015 | 0.0% |
+| gemma4 (declared) | 81.0% | 0.153 | 0.0% |
 | llama-3.3-70b (declared) | 90.5% | 0.015 | 0.0% |
 | llama32 (declared) | 72.5% | 0.154 | 0.0% |
 
@@ -210,14 +210,14 @@ Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flas
 | confidence source | accuracy | ECE | zero-error coverage |
 |---|---|---|---|
 | panel vote share (majority) | 48.3% [34.4, 61.6] | 0.174 | 18.5% |
-| jev (declared) | 66.7% | 0.318 | 2.5% |
+| jev (declared) | 66.7% | 0.318 | 0.0% |
 | claude-sonnet-4.5 (declared) | 65.8% | 0.235 | 0.0% |
 | deberta-nli (declared) | 47.5% | 0.403 | 0.0% |
 | deepseek-r1 (declared) | 55.8% | 0.373 | 0.0% |
-| gemini-3-flash (declared) | 66.7% | 0.315 | 2.5% |
+| gemini-3-flash (declared) | 66.7% | 0.315 | 0.0% |
 | gemma4 (declared) | 59.2% | 0.345 | 0.0% |
 | llama-3.3-70b (declared) | 65.0% | 0.233 | 0.0% |
-| llama32 (declared) | 65.8% | 0.396 | 2.5% |
+| llama32 (declared) | 65.8% | 0.396 | 0.0% |
 
 **Pick the jury, pick the headline.** Over all 56 three-judge juries drawn from this panel, majority accuracy on the 40 hard tasks runs from 0.0% [0.0, 0.0] (jev + claude-sonnet-4.5 + llama32) to 92.5% [76.9, 100.0] (deberta-nli + gemma4 + llama-3.3-70b); the most consensual wrong jury is unanimous and wrong on 37 / 40 (jev + gemini-3-flash + llama32).
 
@@ -353,15 +353,15 @@ Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flas
 
 | confidence source | accuracy | ECE | zero-error coverage |
 |---|---|---|---|
-| panel vote share (majority) | 85.8% [77.7, 92.2] | 0.110 | 83.2% |
+| panel vote share (majority) | 85.8% [77.7, 92.2] | 0.110 | 75.7% |
 | jev (declared) | 97.5% | 0.053 | 94.2% |
-| claude-sonnet-4.5 (declared) | 95.0% | 0.032 | 3.3% |
+| claude-sonnet-4.5 (declared) | 95.0% | 0.032 | 0.0% |
 | deberta-nli (declared) | 49.2% | 0.195 | 0.0% |
 | deepseek-r1 (declared) | 79.2% | 0.148 | 0.0% |
-| gemini-3-flash (declared) | 98.3% | 0.012 | 85.0% |
+| gemini-3-flash (declared) | 98.3% | 0.012 | 72.5% |
 | gemma4 (declared) | 77.5% | 0.180 | 0.0% |
-| llama-3.3-70b (declared) | 86.7% | 0.043 | 0.8% |
-| llama32 (declared) | 59.2% | 0.429 | 2.5% |
+| llama-3.3-70b (declared) | 86.7% | 0.043 | 0.0% |
+| llama32 (declared) | 59.2% | 0.429 | 0.0% |
 
 **Pick the jury, pick the headline.** Over all 56 three-judge juries drawn from this panel, majority accuracy on the 40 hard tasks runs from 92.5% [76.9, 100.0] (jev + claude-sonnet-4.5 + llama32) to 100.0% [100.0, 100.0] (jev + claude-sonnet-4.5 + deberta-nli); no three-judge jury is unanimous and wrong on any hard task.
 

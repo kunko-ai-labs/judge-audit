@@ -31,8 +31,8 @@ Re-voted after seeing the panel: jev, claude-sonnet-4.5, deepseek-r1, gemini-3-f
 
 | panel | pairwise agreement | unanimous (wrong) | ties | abstentions | majority accuracy (all / decided) | vote share right / wrong | vote-share ECE | zero-error coverage |
 |---|---|---|---|---|---|---|---|---|
-| all, round 1 | 70.4% | 18 (0) | 13 | 1 | 85.8% [77.7, 92.2] / 96.3% | 0.860 / 0.656 | 0.110 | 83.2% |
-| all, round 2 | 82.8% | 52 (0) | 5 | 1 | 95.0% [90.5, 98.4] / 99.1% | 0.920 / 0.750 | 0.073 | 93.0% |
+| all, round 1 | 70.4% | 18 (0) | 13 | 1 | 85.8% [77.7, 92.2] / 96.3% | 0.860 / 0.656 | 0.110 | 75.7% |
+| all, round 2 | 82.8% | 52 (0) | 5 | 1 | 95.0% [90.5, 98.4] / 99.1% | 0.920 / 0.750 | 0.073 | 92.2% |
 | hard, round 1 | 73.7% | 0 (0) | 0 | 0 | 100.0% [100.0, 100.0] / 100.0% | 0.866 / — | 0.134 | 100.0% |
 | hard, round 2 | 96.2% | 34 (0) | 0 | 1 | 100.0% [100.0, 100.0] / 100.0% | 0.981 / — | 0.019 | 100.0% |
 

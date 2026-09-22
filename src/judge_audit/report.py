@@ -98,11 +98,6 @@ def render_markdown(result: AuditResult) -> str:
     return "\n".join(lines) + "\n"
 
 
-BOOTSTRAP_CAVEAT = ("Rows are resampled, not unique texts: when the same text appears in "
-                    "several rows, the rows are not independent and the intervals are "
-                    "optimistic (narrower than the truth).")
-
-
 def ci_lines(d: dict) -> list[str]:
     """One line saying what the brackets are, only when a report shows them."""
     b = d.get("bootstrap")

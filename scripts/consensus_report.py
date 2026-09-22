@@ -31,7 +31,7 @@ from judge_audit.metrics.calibration import (  # noqa: E402
     expected_calibration_error,
     zero_error_coverage,
 )
-from judge_audit.report import BOOTSTRAP_CAVEAT, interval  # noqa: E402
+from judge_audit.report import interval  # noqa: E402
 from judge_audit.runner import is_correct, load_jsonl  # noqa: E402
 
 JURY_SIZE = 3

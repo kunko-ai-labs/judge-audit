@@ -46,7 +46,7 @@
           0.0659
         ],
         "zero_error_coverage_ci": [
-          0.675,
+          0.6701,
           0.94
         ],
         "mean_conf_correct": 0.933,
@@ -63,7 +63,7 @@
         "n": 120,
         "accuracy": 0.6667,
         "ece": 0.3181,
-        "zero_error_coverage": 0.025,
+        "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.5246,
           0.8032
@@ -74,7 +74,7 @@
         ],
         "zero_error_coverage_ci": [
           0.0,
-          0.5081
+          0.448
         ],
         "mean_conf_correct": 0.976,
         "mean_conf_wrong": 0.926,
@@ -103,7 +103,7 @@
           0.0999
         ],
         "zero_error_coverage_ci": [
-          0.8621,
+          0.8594,
           1.0
         ],
         "mean_conf_correct": 0.931,
@@ -181,7 +181,7 @@
         "n": 200,
         "accuracy": 0.965,
         "ece": 0.0159,
-        "zero_error_coverage": 0.02,
+        "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.9391,
           0.9898
@@ -192,7 +192,7 @@
         ],
         "zero_error_coverage_ci": [
           0.0,
-          0.9175
+          0.9086
         ],
         "mean_conf_correct": 0.957,
         "mean_conf_wrong": 0.877,
@@ -219,7 +219,7 @@
         ],
         "zero_error_coverage_ci": [
           0.0,
-          0.2624
+          0.1032
         ],
         "mean_conf_correct": 0.926,
         "mean_conf_wrong": 0.832,
@@ -239,7 +239,7 @@
         "n": 120,
         "accuracy": 0.95,
         "ece": 0.0322,
-        "zero_error_coverage": 0.0333,
+        "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.9035,
           0.9849
@@ -250,7 +250,7 @@
         ],
         "zero_error_coverage_ci": [
           0.0,
-          0.1193
+          0.0
         ],
         "mean_conf_correct": 0.943,
         "mean_conf_wrong": 0.983,
@@ -470,7 +470,7 @@
         ],
         "zero_error_coverage_ci": [
           0.0,
-          0.01
+          0.0
         ],
         "mean_conf_correct": 0.939,
         "mean_conf_wrong": 0.9,
@@ -902,7 +902,7 @@
         "n": 200,
         "accuracy": 0.97,
         "ece": 0.0151,
-        "zero_error_coverage": 0.115,
+        "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.9447,
           0.9902
@@ -913,7 +913,7 @@
         ],
         "zero_error_coverage_ci": [
           0.0,
-          0.4545
+          0.0
         ],
         "mean_conf_correct": 0.982,
         "mean_conf_wrong": 0.983,
@@ -929,7 +929,7 @@
         "n": 120,
         "accuracy": 0.6667,
         "ece": 0.3154,
-        "zero_error_coverage": 0.025,
+        "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.5351,
           0.7949
@@ -940,7 +940,7 @@
         ],
         "zero_error_coverage_ci": [
           0.0,
-          0.2344
+          0.0
         ],
         "mean_conf_correct": 0.991,
         "mean_conf_wrong": 0.965,
@@ -960,7 +960,7 @@
         "n": 120,
         "accuracy": 0.9833,
         "ece": 0.0121,
-        "zero_error_coverage": 0.85,
+        "zero_error_coverage": 0.725,
         "accuracy_ci": [
           0.9554,
           1.0
@@ -970,7 +970,7 @@
           0.0335
         ],
         "zero_error_coverage_ci": [
-          0.6609,
+          0.6063,
           1.0
         ],
         "mean_conf_correct": 0.986,
@@ -1038,7 +1038,7 @@
         "n": 200,
         "accuracy": 0.81,
         "ece": 0.1534,
-        "zero_error_coverage": 0.02,
+        "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.755,
           0.8641
@@ -1049,7 +1049,7 @@
         ],
         "zero_error_coverage_ci": [
           0.0,
-          0.0402
+          0.0
         ],
         "mean_conf_correct": 0.961,
         "mean_conf_wrong": 0.974,
@@ -1107,7 +1107,7 @@
         ],
         "zero_error_coverage_ci": [
           0.0,
-          0.0263
+          0.0
         ],
         "mean_conf_correct": 0.947,
         "mean_conf_wrong": 0.981,
@@ -1235,7 +1235,7 @@
         "n": 120,
         "accuracy": 0.8667,
         "ece": 0.0433,
-        "zero_error_coverage": 0.0083,
+        "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.7845,
           0.9339
@@ -1246,7 +1246,7 @@
         ],
         "zero_error_coverage_ci": [
           0.0,
-          0.018
+          0.0
         ],
         "mean_conf_correct": 0.901,
         "mean_conf_wrong": 0.969,
@@ -1289,7 +1289,7 @@
         "n": 200,
         "accuracy": 0.9,
         "ece": 0.034,
-        "zero_error_coverage": 0.055,
+        "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.7783,
           1.0
@@ -1299,7 +1299,7 @@
           0.1431
         ],
         "zero_error_coverage_ci": [
-          0.0136,
+          0.0,
           1.0
         ],
         "mean_conf_correct": 0.868,
@@ -1340,7 +1340,7 @@
         "n": 120,
         "accuracy": 0.6583,
         "ece": 0.3958,
-        "zero_error_coverage": 0.025,
+        "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.5159,
           0.7925
@@ -1351,7 +1351,7 @@
         ],
         "zero_error_coverage_ci": [
           0.0,
-          0.1525
+          0.0
         ],
         "mean_conf_correct": 0.918,
         "mean_conf_wrong": 1.0,
@@ -1371,7 +1371,7 @@
         "n": 120,
         "accuracy": 0.5917,
         "ece": 0.4292,
-        "zero_error_coverage": 0.025,
+        "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.4553,
           0.7302
@@ -1382,7 +1382,7 @@
         ],
         "zero_error_coverage_ci": [
           0.0,
-          0.121
+          0.0
         ],
         "mean_conf_correct": 0.965,
         "mean_conf_wrong": 1.0,

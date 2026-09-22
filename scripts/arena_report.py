@@ -104,7 +104,7 @@ def summarize(recs: list[dict], dataset: str, rows: list[dict] | None = None) ->
         "n": len(recs), "accuracy": round(sum(ok) / len(ok), 4),
         "ece": round(expected_calibration_error(conf, ok), 4),
         "zero_error_coverage": zero_error_coverage(conf, ok)["coverage"],
-        # 95 % percentile-bootstrap intervals over rows (seed 0), see docs/judges.md.
+        # 95 % percentile-bootstrap intervals (seed 0) over distinct texts, see docs/judges.md.
         "accuracy_ci": list(accuracy_ci(ok, groups=groups)),
         "ece_ci": list(ece_ci(conf, ok, groups=groups)),
         "zero_error_coverage_ci": list(zero_error_coverage_ci(conf, ok, groups=groups)),
