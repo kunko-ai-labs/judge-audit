@@ -96,6 +96,7 @@ def rec(idx, expected, decision, conf, meta=None, options=("a", "b")):
     return {"idx": idx, "expected": expected, "decision": decision,
             "correct": decision == expected,
             "no_answer": decision not in options, "confidence": conf,
+            "text_equal_train": False, "text_contains_train": False,
             "latency_s": 0.1, "cost_usd": 0.0, "meta": meta or {}}
 
 
@@ -202,9 +203,104 @@ def test_report_regenerates_and_states_its_status():
     md = heldout_report.render(data)
     assert md.startswith("# Fine-tuned classifier baseline")
     assert f"Status: {data['prediction']['status']}" in md
-    assert "Synthetic GT-1 data" in md and "same generator" in md
+    assert "Synthetic GT-1 data" in md and "generators repeat texts" in md and "#54" in md
     assert "jev" in data["judges"] and data["splits"]["email-clean"]["n_heldout"] == 100
     for j in data["judges"].values():
         for ds, s in j["datasets"].items():
             want = {"email-adversarial": 200, "email-clean": 100}.get(ds, 60)
             assert s["n"] == want
+
+
+# --- leakage regression: the committed held-out checkpoints ---------------------------------
+
+FT_SLUGS = list(heldout_report.FINETUNED_RUNS)
+HELDOUT_DS = {"email-clean": "examples/email-routing/split-heldout.json",
+              "router-bare": "examples/task-routing/split-heldout.json",
+              "router-described": "examples/task-routing/split-heldout.json"}
+
+
+def ckpt_rows(path: Path) -> tuple[dict, list[int]]:
+    header, idx = {}, []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        rec = json.loads(line)
+        if rec["idx"] < 0:
+            header = rec["run"]
+        else:
+            idx.append(rec["idx"])
+    return header, idx
+
+
+def test_committed_finetuned_checkpoints_hold_only_heldout_indices_of_the_committed_split():
+    checked = 0
+    for slug in FT_SLUGS:
+        for ds, split_file in HELDOUT_DS.items():
+            ck = ROOT / "docs" / "runs" / "arena" / slug / f"{ds}.ckpt.jsonl"
+            if not ck.exists():
+                continue
+            split = split_heldout.load_split(ROOT / split_file)
+            header, idx = ckpt_rows(ck)
+            sub = header["rows_subset"]
+            assert sub["part"] == "heldout" and sub["split"] == split_file
+            assert sub["sha256"] == heldout_report.sha256_of(str(ROOT / split_file))
+            assert sorted(idx) == split["heldout"]                       # exactly the held-out rows
+            assert not set(idx) & set(split["train"])                   # and none of the train rows
+            assert header["judge"]["split"]["sha256"] == sub["sha256"]  # the model trained on it
+            checked += 1
+    present = [s for s in FT_SLUGS if (ROOT / "docs" / "runs" / "arena" / s).exists()]
+    assert checked == 3 * len(present) and present
+
+
+def test_finetuned_adversarial_runs_are_full_and_carry_no_subset():
+    for slug in FT_SLUGS:
+        ck = ROOT / "docs" / "runs" / "arena" / slug / "email-adversarial.ckpt.jsonl"
+        if ck.exists():
+            header, idx = ckpt_rows(ck)
+            assert "rows_subset" not in header and sorted(idx) == list(range(200))
+
+
+def test_a_finetuned_run_without_a_subset_header_is_rejected(tmp_path):
+    keep = {1, 2}
+    meta = {"sha256": "x" * 64, "split": "s.json"}
+    ok = {"rows_subset": {"sha256": "x" * 64, "part": "heldout"}}
+    ft, ck = heldout_report.FINETUNED, tmp_path / "c"
+    with pytest.raises(SystemExit, match="no rows_subset"):
+        heldout_report.validate_heldout_run(ft, ck, {}, [1, 2], keep, meta)
+    with pytest.raises(SystemExit, match="outside the held-out split"):
+        heldout_report.validate_heldout_run(ft, ck, ok, [0, 1, 2], keep, meta)
+    with pytest.raises(SystemExit, match="does not match"):
+        heldout_report.validate_heldout_run(
+            ft, ck, {"rows_subset": {"sha256": "y" * 64, "part": "heldout"}}, [1, 2], keep, meta)
+    with pytest.raises(SystemExit, match="does not match"):
+        heldout_report.validate_heldout_run(
+            ft, ck, {"rows_subset": {"sha256": "x" * 64, "part": "train"}}, [1, 2], keep, meta)
+    # Valid header, only held-out rows: passes. Other judges are re-scored from full runs.
+    heldout_report.validate_heldout_run(ft, ck, ok, [1, 2], keep, meta)
+    heldout_report.validate_heldout_run("jev", ck, {}, [0, 1, 2, 3], keep, meta)
+
+
+def test_text_overlap_is_counted_and_unseen_accuracy_computed():
+    train = {"alpha beta", "gamma"}
+    assert heldout_report.text_overlap("alpha beta", train) == (True, True)
+    assert heldout_report.text_overlap("xx gamma yy", train) == (False, True)
+    assert heldout_report.text_overlap("delta", train) == (False, False)
+    recs = [dict(rec(0, "a", "a", 0.9), text_equal_train=True, text_contains_train=True),
+            dict(rec(1, "a", "b", 0.9), text_equal_train=False, text_contains_train=True),
+            dict(rec(2, "a", "a", 0.9), text_equal_train=False, text_contains_train=False),
+            dict(rec(3, "a", "b", 0.9), text_equal_train=False, text_contains_train=False)]
+    s = heldout_report.summarize(recs, "email-clean")
+    assert (s["text_equal_train"], s["text_contains_train"], s["unseen_text_n"]) == (1, 2, 2)
+    assert s["accuracy_unseen_text"] == 0.5
+    s = heldout_report.summarize(recs[:1], "email-clean")
+    assert s["unseen_text_n"] == 0 and s["accuracy_unseen_text"] is None
+
+
+def test_reviewer_overlap_counts_reproduce():
+    data = heldout_report.collect()
+    jev = data["judges"]["jev"]["datasets"]
+    assert (jev["email-clean"]["text_equal_train"], jev["email-clean"]["unseen_text_n"]) == (20, 80)
+    assert (jev["router-bare"]["text_equal_train"],
+            jev["router-bare"]["text_contains_train"]) == (40, 55)
+    assert (jev["email-adversarial"]["text_equal_train"],
+            jev["email-adversarial"]["text_contains_train"]) == (13, 49)

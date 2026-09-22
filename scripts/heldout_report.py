@@ -128,6 +128,24 @@ AMENDMENT = [
 ]
 
 
+def training_texts(ds: str) -> set[str]:
+    """State texts of the training half the fine-tuned model was trained on (index split)."""
+    dataset = DATASET_OF[ds]
+    labels = next(spec[0] for name, spec in DATASETS.items() if DATASET_OF[name] == dataset
+                  and spec[2] is not None)
+    split = json.loads((ROOT / next(spec[2] for name, spec in DATASETS.items()
+                                    if DATASET_OF[name] == dataset and spec[2]))
+                       .read_text(encoding="utf-8"))
+    rows = load_jsonl(str(ROOT / labels))
+    return {rows[i]["state"] for i in split["train"]}
+
+
+def text_overlap(state: str, train: set[str]) -> tuple[bool, bool]:
+    """(equals a training text, contains one verbatim) — the generators repeat texts (#54)."""
+    equal = state in train
+    return equal, equal or any(t in state for t in train)
+
+
 def heldout_indices(split_file: str | None) -> tuple[set[int] | None, dict]:
     """(row indices to score, split metadata) — None means every row."""
     if split_file is None:
@@ -138,11 +156,11 @@ def heldout_indices(split_file: str | None) -> tuple[set[int] | None, dict]:
     return set(split["heldout"]), meta
 
 
-def records(labels: str, ckpt: Path, question: str, keep: set[int] | None
-            ) -> tuple[list[dict], dict, int]:
-    """Per-row records restricted to `keep`; (records, run header, rows the file has in all)."""
+def records(labels: str, ckpt: Path, question: str, keep: set[int] | None,
+            train: set[str] | None = None) -> tuple[list[dict], dict, list[int]]:
+    """Per-row records restricted to `keep`; (records, run header, every row index in the file)."""
     rows = load_jsonl(str(ROOT / labels))
-    recs, run, seen = [], {}, 0
+    recs, run, seen = [], {}, []
     for line in ckpt.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
@@ -150,16 +168,18 @@ def records(labels: str, ckpt: Path, question: str, keep: set[int] | None
         if rec["idx"] < 0:
             run = rec.get("run", {})
             continue
-        seen += 1
+        seen.append(rec["idx"])
         if keep is not None and rec["idx"] not in keep:
             continue
         row = rows[rec["idx"]]
         j = next(x for x in rec["judgments"] if x["question"] == question)
         options = [str(o) for o in row["questions"][0].get("options", [])]
         decision = str(j["decision"])
+        equal, contains = text_overlap(row["state"], train) if train else (False, False)
         recs.append({
             "idx": rec["idx"], "expected": str(row["labels"][question]), "decision": decision,
             "correct": is_correct(decision, row["labels"][question]),
+            "text_equal_train": equal, "text_contains_train": contains,
             "no_answer": decision.strip().lower() not in [o.lower() for o in options],
             "confidence": max(0.0, min(1.0, float(j["confidence"]))),
             "latency_s": j.get("latency_s", 0.0), "cost_usd": j.get("cost_usd", 0.0),
@@ -178,9 +198,17 @@ def summarize(recs: list[dict], dataset: str) -> dict:
     ok = [r["correct"] for r in recs]
     right = [r["confidence"] for r in recs if r["correct"]]
     wrong = [r["confidence"] for r in recs if not r["correct"]]
+    unseen = [r for r in recs if not r["text_contains_train"]]
     out = {
         "n": len(recs), "accuracy": round(sum(ok) / len(ok), 4),
         "accuracy_interval": interval(ok),
+        # Text-level overlap with the training half (the generators repeat texts, #54):
+        # rows equal to a training text, rows containing one, and accuracy on the rest.
+        "text_equal_train": sum(r["text_equal_train"] for r in recs),
+        "text_contains_train": sum(r["text_contains_train"] for r in recs),
+        "unseen_text_n": len(unseen),
+        "accuracy_unseen_text": (round(sum(r["correct"] for r in unseen) / len(unseen), 4)
+                                 if unseen else None),
         "ece": round(expected_calibration_error(conf, ok), 4),
         "zero_error_coverage": zero_error_coverage(conf, ok)["coverage"],
         "mean_conf_correct": round(statistics.mean(right), 3) if right else None,
@@ -228,7 +256,7 @@ def judge_label(slug: str, run: dict) -> tuple[str, str]:
         # per-dataset model name is recorded in each dataset summary.
         method = "softmax probability of the chosen option"
         if float(j.get("temperature") or 1.0) != 1.0:
-            method += f", temperature {float(j['temperature']):.2f}"
+            method += " ÷ T"   # one T per model; the value is printed on each row
         return FINETUNED_RUNS[slug]["label"], method
     return j.get("model", slug), ("option probability" if j.get("name") == "jev"
                                   else j.get("confidence_method", "verbalized"))
@@ -242,6 +270,7 @@ def collect() -> dict:
         for d in sorted(p for p in ARENA.iterdir() if p.is_dir()):
             sources[d.name] = {ds: d / f"{ds}.ckpt.jsonl" for ds in DATASETS}
     judges: dict[str, dict] = {}
+    train_texts = {ds: training_texts(ds) for ds in DATASETS}
     for slug, ckpts in sources.items():
         entry = {"label": slug, "method": "verbalized", "run": {}, "datasets": {}}
         for ds, (labels, question, _split) in DATASETS.items():
@@ -249,17 +278,13 @@ def collect() -> dict:
             if not ck.exists():
                 continue
             keep, _meta = splits[ds]
-            recs, run, seen = records(labels, ck, question, keep)
+            recs, run, seen = records(labels, ck, question, keep, train_texts[ds])
             want = len(load_jsonl(str(ROOT / labels))) if keep is None else len(keep)
             if len(recs) < want:
                 print(f"skip {slug}/{ds}: {len(recs)}/{want} scored rows present", file=sys.stderr)
                 continue
-            subset = run.get("rows_subset")
-            if subset and keep is not None:
-                # A held-out run must have been made on the split committed here, not
-                # on some other subset that happens to have the same size.
-                if subset.get("sha256") != _meta["sha256"] or subset.get("part") != "heldout":
-                    raise SystemExit(f"{ck}: rows_subset does not match {_meta['split']}")
+            if keep is not None:
+                validate_heldout_run(slug, ck, run, seen, keep, _meta)
             if run:
                 entry["run"] = run
                 entry["label"], entry["method"] = judge_label(slug, run)
@@ -280,6 +305,25 @@ def collect() -> dict:
     return {"splits": {ds: meta for ds, (_k, meta) in splits.items() if meta},
             "judges": judges, "training": training,
             "prediction": score_prediction(judges)}
+
+
+def validate_heldout_run(slug: str, ck: Path, run: dict, seen: list[int], keep: set[int],
+                         meta: dict) -> None:
+    """A judge that trained on the data may only be scored from a checkpoint made on the
+    committed held-out split: header `rows_subset` naming that split file (by sha256) and
+    part, and not one row outside it. Other judges are re-scored from full runs."""
+    subset = run.get("rows_subset")
+    if slug in FINETUNED_RUNS:
+        if not subset:
+            raise SystemExit(f"{ck}: no rows_subset header — a fine-tuned judge cannot be scored "
+                             "from a run that may include its training rows")
+        outside = sorted(set(seen) - keep)
+        if outside:
+            raise SystemExit(f"{ck}: {len(outside)} row(s) outside the held-out split "
+                             f"(first {outside[:5]})")
+    if subset and (subset.get("sha256") != meta["sha256"] or subset.get("part") != "heldout"):
+        # Made on some other subset that happens to have the same size: not this split.
+        raise SystemExit(f"{ck}: rows_subset does not match {meta['split']}")
 
 
 def score_prediction(judges: dict) -> dict:
@@ -316,7 +360,56 @@ def score_prediction(judges: dict) -> dict:
                      "jev_described_accuracy": jev_desc["accuracy"]}
     out["holds"] = sum(r["holds"] for r in res.values())
     out["scored"] = len(res)
+    out["testable"] = sum(r.get("testable", True) for r in res.values())
+    out["untestable"] = [k for k, r in res.items() if r.get("testable") is False]
     return out
+
+
+def reading_run2(judges: dict, training: dict) -> list[str]:
+    """The amendment's numbers, read against run 1 — derived, not written."""
+    r1, r2, ts = (judges.get(s) for s in FINETUNED_RUNS)
+    if not (r1 and r2):
+        return []
+    c1, c2 = r1["datasets"].get("email-clean", {}), r2["datasets"].get("email-clean", {})
+    a1, a2 = r1["datasets"].get("email-adversarial", {}), r2["datasets"].get("email-adversarial", {})
+    b1, b2 = r1["datasets"].get("router-bare", {}), r2["datasets"].get("router-bare", {})
+    t2 = training.get("finetuned-deberta-run2", {})
+    te, tr = t2.get("email-routing", {}), t2.get("task-routing", {})
+    out = [f"- **Run 2 (post hoc, trained to convergence)**: {te.get('epochs')} epochs for the emails "
+           f"and {tr.get('epochs')} for the router, each stopped by `{te.get('stopped_by')}`, on "
+           f"{te.get('n_train')} / {tr.get('n_train')} rows (80 % of the train half). The "
+           f"confidence column becomes informative: clean-email ECE {fmt(c1.get('ece'))} → "
+           f"{fmt(c2.get('ece'))} with mean confidence when right {fmt(c1.get('mean_conf_correct'))} → "
+           f"{fmt(c2.get('mean_conf_correct'))}; router ECE {fmt(b1.get('ece'))} → {fmt(b2.get('ece'))}. "
+           f"Under attack: accuracy {fmt(a1.get('accuracy'), True)} → {fmt(a2.get('accuracy'), True)} "
+           f"(unseen-text rows {fmt(a1.get('accuracy_unseen_text'), True)} → "
+           f"{fmt(a2.get('accuracy_unseen_text'), True)}), ECE {fmt(a1.get('ece'))} → "
+           f"{fmt(a2.get('ece'))}, confidence when wrong {fmt(a1.get('mean_conf_wrong'))} → "
+           f"{fmt(a2.get('mean_conf_wrong'))}, zero-error coverage "
+           f"{fmt(a1.get('zero_error_coverage'), True)} → {fmt(a2.get('zero_error_coverage'), True)}. "
+           "Convergence bought calibration on the clean half and accuracy under attack, at the price "
+           "of a smaller gap between right and wrong."]
+    if ts:
+        ct, at = ts["datasets"].get("email-clean", {}), ts["datasets"].get("email-adversarial", {})
+        fits = {ds: (t.get("temperature_scaling") or {}) for ds, t in t2.items()}
+        ident = all(f.get("identified") for f in fits.values())
+        tvals = ", ".join(f"{ds} T={f.get('temperature', 0):.2f}" for ds, f in fits.items())
+        out.append(
+            f"- **Run 2 + temperature scaling (post hoc)**: {tvals}. "
+            + ("Both temperatures were fitted on validation slices the model classified perfectly, so "
+               "neither is identified: the NLL keeps falling as T → 0 and the fit stops where it is "
+               "numerically zero. What the standard recipe produced on slices of 20 and 12 rows is a "
+               "*sharpener*, not a calibrator — "
+               if not ident else "")
+            + f"clean-email ECE {fmt(c2.get('ece'))} → {fmt(ct.get('ece'))} with every confidence "
+            f"at {fmt(ct.get('mean_conf_correct'))} (ECE is 0 only because accuracy is 100 %); under "
+            f"attack ECE {fmt(a2.get('ece'))} → {fmt(at.get('ece'))} but confidence when wrong "
+            f"{fmt(a2.get('mean_conf_wrong'))} → {fmt(at.get('mean_conf_wrong'))}, the wrong direction "
+            f"for the automation decision. Zero-error coverage under attack is unchanged "
+            f"({fmt(at.get('zero_error_coverage'), True)}): scaling does not reorder decisions. "
+            "Temperature scaling is the knob a classifier you own has and a vendor judge does not; "
+            "on a validation slice this small and this clean it has nothing to fit.")
+    return out + [""]
 
 
 def fmt(x, pct=False):
@@ -340,8 +433,10 @@ def render(data: dict) -> str:
              "The split, protocol and prediction below were committed before the first "
              "training run; the tables are empty until the fine-tuned checkpoints land."
              if pred["status"] == "pre-registered" else
-             f"{pred['holds']} of {pred['scored']} pre-registered predictions hold "
-             "(scored mechanically below). Recompute: `python scripts/heldout_report.py`."),
+             f"{pred['holds']} of {pred['testable']} testable pre-registered predictions hold"
+             + (f"; {', '.join(pred['untestable'])} untestable (no wrong attacked row)"
+                if pred.get("untestable") else "")
+             + " — scored mechanically below. Recompute: `python scripts/heldout_report.py`."),
          "",
          "## The question", "",
          "\"Isn't a judgment model just a classifier? A DeBERTa fine-tuned on my own labels "
@@ -370,9 +465,10 @@ def render(data: dict) -> str:
          "train rows are in `docs/runs/finetuned/<dataset>.train.json`.",
          "- **Evaluation**: `scripts/audit_resumable.py --rows <split>:heldout` judges only the "
          "held-out indices; the checkpoint header records the split file and its sha256. "
-         "Email-adversarial is judged **in full** (none of its rows were training rows) and "
-         "labelled a robustness test. Every other judge is re-scored from its committed Arena "
-         "checkpoint on the identical row indices.",
+         "Email-adversarial is judged **in full** (no adversarial row is a training row by "
+         "index; text-level overlap with the training emails is counted next to every n below) "
+         "and labelled a robustness test. Every other judge is re-scored from its committed "
+         "Arena checkpoint on the identical row indices.",
          "- **Metrics**: accuracy, ECE, zero-error coverage, mean confidence when right / wrong, "
          "no-answer count (decision outside the options), cost, p50 latency — separate, never "
          "combined. Confidence intervals: TODO(#46), the columns are wired.",
@@ -439,21 +535,28 @@ def render(data: dict) -> str:
                                    "email-adversarial")}
     for ds, (title, _key) in names.items():
         labels = DATASETS[ds][0]
-        n = next((j["datasets"][ds]["n"] for j in judges.values() if ds in j["datasets"]), None)
+        any_s = next((j["datasets"][ds] for j in judges.values() if ds in j["datasets"]), None)
+        n = any_s["n"] if any_s else None
         L += [f"## {title} (n={n}) — {gt_line(labels)}", ""]
+        if any_s:
+            L += [f"Text overlap with the training half: {any_s['text_equal_train']} of {n} rows "
+                  f"equal a training text, {any_s['text_contains_train'] - any_s['text_equal_train']} "
+                  f"more contain one verbatim → **unseen-text rows n={any_s['unseen_text_n']}** "
+                  "(last column; same rows for every judge).", ""]
         if ds == "email-adversarial":
             L += ["| judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | "
                   "no answer | prompt-injection acc (n=40) | social-eng acc (n=20) | "
-                  "conf when wrong under attack | cost |",
-                  "|---|---|---|---|---|---|---|---|---|---|---|"]
+                  "conf when wrong under attack | cost | acc on unseen-text rows |",
+                  "|---|---|---|---|---|---|---|---|---|---|---|---|"]
         elif ds.startswith("router"):
             L += ["| judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | "
-                  "no answer | hard → strong | cost-inflation attacks that land | cost |",
-                  "|---|---|---|---|---|---|---|---|---|---|"]
+                  "no answer | hard → strong | cost-inflation attacks that land | cost | "
+                  "acc on unseen-text rows |",
+                  "|---|---|---|---|---|---|---|---|---|---|---|"]
         else:
             L += ["| judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | "
-                  "no answer | cost | p50 latency |",
-                  "|---|---|---|---|---|---|---|---|---|"]
+                  "no answer | cost | p50 latency | acc on unseen-text rows |",
+                  "|---|---|---|---|---|---|---|---|---|---|"]
         ordered = ([s for s in FINETUNED_RUNS if s in judges]
                    + [s for s in judges if s not in FINETUNED_RUNS])
         for slug in ordered:
@@ -462,7 +565,9 @@ def render(data: dict) -> str:
             if not s:
                 continue
             label = f"**{j['label']}**" if slug in FINETUNED_RUNS else j["label"]
-            row = (f"| {label} | {j['method']} | {fmt(s['accuracy'], True)} | {fmt(s['ece'])} | "
+            method = j["method"] + (f" (T={s['temperature']:.2f})"
+                                    if s.get("temperature", 1.0) != 1.0 else "")
+            row = (f"| {label} | {method} | {fmt(s['accuracy'], True)} | {fmt(s['ece'])} | "
                    f"{fmt(s['zero_error_coverage'], True)} | {fmt(s['mean_conf_correct'])} / "
                    f"{fmt(s['mean_conf_wrong'])} | {s['no_answer']} |")
             if ds == "email-adversarial":
@@ -474,6 +579,7 @@ def render(data: dict) -> str:
                         f"{s['attack_success']} / {s['attack_n']} | ${s['cost_usd']:.3f} |")
             else:
                 row += f" ${s['cost_usd']:.3f} | {s['p50_latency_s']:.2f} s |"
+            row += f" {fmt(s['accuracy_unseen_text'], True)} (n={s['unseen_text_n']}) |"
             L.append(row)
         if not any(ds in j["datasets"] for j in judges.values()):
             L.append("_no complete run yet_")
@@ -494,9 +600,12 @@ def render(data: dict) -> str:
               f"{fmt(bare.get('accuracy'), True)} on the held-out router rows (n={bare.get('n')}, "
               f"{bare.get('hard_routed_strong')}/{bare.get('hard_n')} hard tasks routed strong, "
               f"{bare.get('attack_success')}/{bare.get('attack_n')} cost-inflation attacks landed). "
+              f"On the rows whose text is not in the training half: emails "
+              f"{fmt(clean.get('accuracy_unseen_text'), True)} (n={clean.get('unseen_text_n')}), "
+              f"router {fmt(bare.get('accuracy_unseen_text'), True)} (n={bare.get('unseen_text_n')}). "
               "On this data — same seeded generator for train and test — the classifier matches "
               "the best judges on accuracy at $0 per row.",
-              f"- **Calibration is where it differs.** ECE {fmt(clean.get('ece'))} on the clean "
+              f"- **Calibration is where it differs (run 1).** ECE {fmt(clean.get('ece'))} on the clean "
               f"held-out emails with mean confidence {fmt(clean.get('mean_conf_correct'))} when "
               "right: the softmax is *under*-confident, not over-confident. Ten epochs at lr 2e-5 "
               f"on {te.get('n_train')} rows left the training loss at {fmt(losses[-1])}, so the "
@@ -506,8 +615,13 @@ def render(data: dict) -> str:
               f"budget (router: ECE {fmt(bare.get('ece'))}, mean confidence "
               f"{fmt(bare.get('mean_conf_correct'))}).",
               f"- **Under attack** it made {errors} errors in {adv.get('n')}, {pi_se_wrong} of "
-              "them on prompt-injection or social-engineering rows (it does not read instructions, "
-              f"so there is nothing to inject into). Errors by attack type: {by_attack or 'none'}; "
+              "them on prompt-injection or social-engineering rows. Two explanations, and the data "
+              "cannot separate them: it does not read instructions, so there is nothing to inject "
+              "into — and every social-engineering row and 11 of 40 prompt injections embed a "
+              "training email verbatim, so memorised text would give the same result. On the "
+              f"{adv.get('unseen_text_n')} attacked rows with no training text it scores "
+              f"{fmt(adv.get('accuracy_unseen_text'), True)}. Errors by attack type: "
+              f"{by_attack or 'none'}; "
               f"highest confidence on a wrong row {fmt(adv.get('max_conf_wrong'))}, mean "
               f"{fmt(adv.get('mean_conf_wrong'))} — its errors sit in the low-confidence tail, "
               "which is the honest direction, even if the whole distribution sits low.",
@@ -520,6 +634,7 @@ def render(data: dict) -> str:
               f"{tr.get('wall_time_s', 0):.0f} s (router) of training on {te.get('hardware', '?')}; "
               f"p50 latency {clean.get('p50_latency_s', 0):.3f} s per row.",
               ""]
+        L += reading_run2(judges, training)
     present = [s for s in FINETUNED_RUNS if s in judges]
     if len(present) > 1:
         L += ["## Run 1 vs run 2 vs run 2 + temperature scaling (same held-out rows)", "",
@@ -528,8 +643,8 @@ def render(data: dict) -> str:
               "pre-registered, published with the same evidence. Accuracy is unchanged by "
               "temperature scaling by construction (it rescales logits, it does not reorder them).",
               "",
-              "| dataset (rows) | run | accuracy | ECE | zero-error coverage | conf right / wrong | "
-              "p50 latency |", "|---|---|---|---|---|---|---|"]
+              "| dataset (rows) | run | accuracy | acc on unseen-text rows | ECE | "
+              "zero-error coverage | conf right / wrong | p50 latency |", "|---|---|---|---|---|---|---|---|"]
         for ds, (title, _key) in names.items():
             for slug in present:
                 s = judges[slug]["datasets"].get(ds)
@@ -537,7 +652,8 @@ def render(data: dict) -> str:
                     continue
                 short = FINETUNED_RUNS[slug]["label"].split(" — ")[1]
                 L.append(f"| {title.split(' — ')[0]} ({s['scored']}, n={s['n']}) | {short} | "
-                         f"{fmt(s['accuracy'], True)} | {fmt(s['ece'])} | "
+                         f"{fmt(s['accuracy'], True)} | {fmt(s['accuracy_unseen_text'], True)} "
+                         f"(n={s['unseen_text_n']}) | {fmt(s['ece'])} | "
                          f"{fmt(s['zero_error_coverage'], True)} | {fmt(s['mean_conf_correct'])} / "
                          f"{fmt(s['mean_conf_wrong'])} | {s['p50_latency_s']:.3f} s |")
         L.append("")
@@ -545,10 +661,16 @@ def render(data: dict) -> str:
           "- **Synthetic GT-1 data.** Both datasets come from seeded generators with labels by "
           "construction; the categories are clean and the vocabulary is narrow. A classifier "
           "trained on 100 such emails is learning the generator's templates, not business email.",
-          "- **Train and test rows come from the same generator.** The held-out half is unseen "
-          "*rows*, not an unseen *distribution*: this shows what a classifier does when the labels "
-          "you train on look exactly like the traffic you score, which is the best case for the "
-          "classifier. It does not show robustness to drift, new categories, or real inboxes.",
+          "- **The split is index-level; the generators repeat texts.** Train and test rows come "
+          "from the same seeded generator, and it re-uses texts: `email-routing` has 161 distinct "
+          "states in 200 rows, `task-routing` 61 in 120, and the adversarial emails wrap clean "
+          "emails. So some held-out rows are byte-identical to a training row, and some attacked "
+          "rows embed one — every table above counts them next to n and reports accuracy on the "
+          "unseen-text rows separately, for every judge. Even the unseen-text rows are the same "
+          "*distribution*: this is the classifier's best case and says nothing about drift, new "
+          "categories or real inboxes. Dataset weakness, tracked in "
+          "[#54](https://github.com/kunko-ai-labs/judge-audit/issues/54) (v2 generators with "
+          "unique texts).",
           f"- **Small n.** Held-out halves are n={email_split.get('n_heldout')} (emails) and "
           f"n={router_split.get('n_heldout')} (router, 20 hard + 20 attacked + 20 easy). "
           "Differences of a few points are within noise; intervals arrive with #46.",
@@ -559,6 +681,9 @@ def render(data: dict) -> str:
           "- **Run 2 and temperature scaling are post hoc.** They were decided after run 1's "
           "numbers were known (the amendment says when and why). Nothing in them is pre-registered; "
           "the prediction stays scored on run 1.",
+          "- **Wall times are from a shared laptop** and vary with load (run 1's router took "
+          "1,069 s for 10 epochs; run 2's took 63 s for 15): read them as orders of magnitude, "
+          "not as a benchmark.",
           ""]
     return "\n".join(L)
 

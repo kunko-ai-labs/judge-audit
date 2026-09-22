@@ -38,10 +38,10 @@ JEV = {
     "router-described": "docs/runs/audit-jev-router-described.ckpt.jsonl",
 }
 ARENA = ROOT / "docs" / "runs" / "arena"
-# Runs made on a pre-registered subset of rows (`rows_subset` in the checkpoint header).
-# They are not comparable with the full-dataset rows of this table and belong to
+# Runs made on a pre-registered subset of rows (`rows_subset` in the checkpoint header)
+# are not comparable with the full-dataset rows of this table and belong to
 # docs/finetuned-baseline-2026-09.md, where every judge is re-scored on the same rows.
-HELDOUT_RUNS: list[str] = []
+# collect() returns them under the "_heldout_runs" key; render() lists them in the caveats.
 # The fine-tuned slugs share a model name per dataset; label them by run so the rows
 # stay distinguishable (run 1 is the pre-registered one, the others the post-hoc amendment).
 FINETUNED_LABELS = {
@@ -114,6 +114,7 @@ def summarize(recs: list[dict], dataset: str) -> dict:
 
 
 def collect() -> dict:
+    heldout_runs: list[str] = []
     judges: dict[str, dict] = {"jev": {"label": "Jev (TypeSafe)", "method": "option probability",
                                        "run": {"judge": {"model": "typesafe-ai/jev"}}, "datasets": {}}}
     for ds, ckpt in JEV.items():
@@ -130,7 +131,7 @@ def collect() -> dict:
                 recs, run = records(labels, ck, q)
                 subset = run.get("rows_subset")
                 if subset:
-                    HELDOUT_RUNS.append(f"{d.name}/{ds} ({subset.get('part')} of "
+                    heldout_runs.append(f"{d.name}/{ds} ({subset.get('part')} of "
                                         f"`{subset.get('split')}`, n={subset.get('n')})")
                     continue
                 if len(recs) < len(load_jsonl(str(ROOT / labels))):
@@ -145,6 +146,7 @@ def collect() -> dict:
                 entry["datasets"][ds] = summarize(recs, ds)
             if entry["datasets"]:
                 judges[d.name] = entry
+    judges["_heldout_runs"] = heldout_runs
     return judges
 
 
@@ -155,6 +157,8 @@ def fmt(x, pct=False):
 
 
 def render(judges: dict) -> str:
+    heldout_runs = judges.get("_heldout_runs", [])
+    judges = {k: v for k, v in judges.items() if not k.startswith("_")}
     L = ["# Judge Arena — September 2026",
          "",
          "Same four datasets, every judge, every raw response committed under `docs/runs/`. "
@@ -223,9 +227,9 @@ def render(judges: dict) -> str:
           "the numbers; that is a finding about prompts, not a fix for calibration.",
           "- Local models run through Ollama on a laptop; latency is not comparable with hosted APIs.",
           ""]
-    if HELDOUT_RUNS:
+    if heldout_runs:
         L += ["- Runs made on a pre-registered held-out half are not in these tables (their n differs): "
-              + "; ".join(HELDOUT_RUNS) + ". Every judge is re-scored on those same rows in "
+              + "; ".join(heldout_runs) + ". Every judge is re-scored on those same rows in "
               "[finetuned-baseline-2026-09.md](finetuned-baseline-2026-09.md).",
               ""]
     return "\n".join(L)
@@ -234,9 +238,10 @@ def render(judges: dict) -> str:
 def main() -> None:
     judges = collect()
     (ROOT / "docs" / "arena-2026-09.md").write_text(render(judges), encoding="utf-8")
-    (ROOT / "docs" / "arena-2026-09.json").write_text(json.dumps(judges, indent=2, ensure_ascii=False),
+    public = {k: v for k, v in judges.items() if not k.startswith("_")}
+    (ROOT / "docs" / "arena-2026-09.json").write_text(json.dumps(public, indent=2, ensure_ascii=False),
                                                        encoding="utf-8")
-    for slug, j in judges.items():
+    for slug, j in public.items():
         print(slug, {ds: (s["accuracy"], s["ece"]) for ds, s in j["datasets"].items()})
 
 

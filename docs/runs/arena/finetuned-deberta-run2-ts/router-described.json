@@ -1,0 +1,272 @@
+{
+  "judge": "finetuned",
+  "n": 60,
+  "accuracy": 1.0,
+  "ece": 0.0,
+  "reliability_bins": [
+    {
+      "bin": "0.0-0.1",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.1-0.2",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.2-0.3",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.3-0.4",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.4-0.5",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.5-0.6",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.6-0.7",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.7-0.8",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.8-0.9",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.9-1.0",
+      "avg_confidence": 1.0,
+      "accuracy": 1.0,
+      "n": 60
+    }
+  ],
+  "accuracy_coverage": [
+    {
+      "coverage": 0.05,
+      "accuracy": 1.0,
+      "n": 3,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.1,
+      "accuracy": 1.0,
+      "n": 6,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.15,
+      "accuracy": 1.0,
+      "n": 9,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.2,
+      "accuracy": 1.0,
+      "n": 12,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.25,
+      "accuracy": 1.0,
+      "n": 15,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.3,
+      "accuracy": 1.0,
+      "n": 18,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.35,
+      "accuracy": 1.0,
+      "n": 21,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.4,
+      "accuracy": 1.0,
+      "n": 24,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.45,
+      "accuracy": 1.0,
+      "n": 27,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.5,
+      "accuracy": 1.0,
+      "n": 30,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.55,
+      "accuracy": 1.0,
+      "n": 33,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.6,
+      "accuracy": 1.0,
+      "n": 36,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.65,
+      "accuracy": 1.0,
+      "n": 39,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.7,
+      "accuracy": 1.0,
+      "n": 42,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.75,
+      "accuracy": 1.0,
+      "n": 45,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.8,
+      "accuracy": 1.0,
+      "n": 48,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.85,
+      "accuracy": 1.0,
+      "n": 51,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.9,
+      "accuracy": 1.0,
+      "n": 54,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.95,
+      "accuracy": 1.0,
+      "n": 57,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 1.0,
+      "accuracy": 1.0,
+      "n": 60,
+      "min_confidence": 1.0
+    }
+  ],
+  "zero_error_coverage": {
+    "coverage": 1.0,
+    "n": 60,
+    "threshold": 1.0
+  },
+  "total_cost_usd": 0.0,
+  "p50_latency_s": 0.023,
+  "p99_latency_s": 0.183,
+  "run": {
+    "judge_audit_version": "0.3.2",
+    "judge": {
+      "name": "finetuned:deberta-v3-base-ft-task-routing-run2",
+      "provider": "local",
+      "model": "deberta-v3-base-ft-task-routing-run2",
+      "backbone": "microsoft/deberta-v3-base",
+      "backbone_revision": "8ccc9b6f36199bec6961081d44eb72fb3f7353f3",
+      "confidence_method": "softmax probability of the chosen option (fine-tuned classification head), temperature-scaled (T=0.188)",
+      "temperature": 0.188,
+      "temperature_source": "sidecar",
+      "temperature_fit": {
+        "method": "Guo et al. 2017: one scalar T minimising validation NLL; golden-section search on log T within T in [0.1, 10.0]",
+        "temperature": 0.188,
+        "hit_bound": false,
+        "n_val": 12,
+        "identified": false,
+        "validation_rows_sha256": "6c602bb00c2db476e4769182b16ae4571058e3c622e7b1cedc81b5f988afb3b8",
+        "val_accuracy": 1.0,
+        "val_nll_before": 0.0073,
+        "val_nll_after": 0.0
+      },
+      "labels": [
+        "route_easy",
+        "route_strong"
+      ],
+      "dataset": "task-routing",
+      "train_rows_sha256": "1d8be83b959527a5c25e7f42a4c6822f0dbf8283b251ae98462fc809650b9b75",
+      "split": {
+        "path": "examples/task-routing/split-heldout.json",
+        "sha256": "322d113c8c0e67c36362d1d4ff26955c68dd76843158cd8f11462eb8b66ae018",
+        "part": "train (80 % slice)",
+        "n": 48
+      },
+      "config_sha256": "14663115589699aa76a957d67f5f4a13e0071358a39af2a48fea6863d8788d63",
+      "seed": 2026,
+      "follows_instructions": false,
+      "uses_option_descriptions": false,
+      "device": "mps",
+      "max_len": 256
+    },
+    "python": "3.12.8",
+    "dataset": {
+      "path": "examples/task-routing/labels-described.jsonl",
+      "sha256": "c2811e2a8cde438f648870a0c477bc19734b08a9335b3c2bd5a9fd1191fad53b",
+      "sha256_rows": "4571c9661a0c8cf91e93f00626c07a4b823f733aa60ed062ef6d4108036b9f3f",
+      "rows": 120,
+      "ground_truth": {
+        "tier": "GT-1",
+        "label": "constructed",
+        "meaning": "labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy",
+        "validation": "not_validated",
+        "purpose": [
+          "model-routing calibration",
+          "cost-inflation attack resistance",
+          "ablation: options carry a description"
+        ],
+        "caveats": [
+          "the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome",
+          "downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified",
+          "40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted"
+        ]
+      }
+    },
+    "rows_subset": {
+      "split": "examples/task-routing/split-heldout.json",
+      "sha256": "322d113c8c0e67c36362d1d4ff26955c68dd76843158cd8f11462eb8b66ae018",
+      "part": "heldout",
+      "n": 60
+    },
+    "recomputed_utc": "2026-09-22T08:17:41+00:00",
+    "note": "original run time not recorded in this checkpoint",
+    "checkpoint": "docs/runs/arena/finetuned-deberta-run2-ts/router-described.ckpt.jsonl"
+  }
+}
