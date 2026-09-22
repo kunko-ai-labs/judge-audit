@@ -21,6 +21,7 @@ import os
 from .cli import JUDGES, _judge
 from .ground_truth import ground_truth_of
 from .judges.simulated import SIMULATED_TAG
+from .report import IncompatibleBaseline
 from .report import check_drift as _check_drift
 from .runner import load_dataset, write_judgments
 from .runner import run_audit as _run_audit
@@ -153,9 +154,11 @@ def run_audit(labels_path: str, judge: str = "simulated",
     "CI-style drift gate: re-audit the judge and compare with a baseline audit-result.json. "
     "ok is false when ECE rose more than max_ece_drift or accuracy fell more than "
     "max_acc_drop; failures explains which. A baseline without numeric ece/accuracy is "
-    "an error."))
+    "an error, and so is one that measured another dataset, judge or n — pass "
+    "allow_incompatible to compare anyway."))
 def check_drift(labels_path: str, baseline_path: str, judge: str = "simulated",
-                max_ece_drift: float = 0.02, max_acc_drop: float = 0.01) -> dict:
+                max_ece_drift: float = 0.02, max_acc_drop: float = 0.01,
+                allow_incompatible: bool = False) -> dict:
     rows, dataset_meta, err = _load(labels_path)
     if err:
         return err
@@ -168,7 +171,10 @@ def check_drift(labels_path: str, baseline_path: str, judge: str = "simulated",
     try:
         result = _run_audit(j, rows, labels_path=os.path.abspath(labels_path),
                             dataset_meta=dataset_meta)
-        failures = _check_drift(result, baseline, max_ece_drift, max_acc_drop)
+        failures = _check_drift(result, baseline, max_ece_drift, max_acc_drop,
+                                allow_incompatible=allow_incompatible)
+    except IncompatibleBaseline as exc:
+        return {"error": str(exc), "incompatible_baseline": True}
     except (OSError, ValueError, KeyError) as exc:
         return {"error": f"cannot use baseline {baseline_path}: {exc}"}
     except Exception as exc:

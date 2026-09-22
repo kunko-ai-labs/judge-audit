@@ -17,6 +17,8 @@ judge-audit check labels.jsonl --judge jev --baseline audit-result.json --max-ec
 
 Exit codes: `0` ok · `1` drift detected · `2` usage or configuration error. Judges and their environment variables: [judges.md](judges.md). Real vendor runs: [real-audits.md](real-audits.md).
 
+**The gate compares like with like.** `check` refuses (exit `2`, with a message naming what differs) when the baseline measured something else: a different dataset (`run.dataset.sha256_rows`, or `sha256` for baselines written before it existed), a different judge name or model, or a different `n`. An ECE that moved between two datasets says nothing about the judge, so the gate will not pretend it does. Fields the baseline does not declare are not compared — a hand-written `{"ece": …, "accuracy": …}` threshold file still gates. Non-finite numbers (`NaN`, `Infinity`) on either side are refused. When the change is deliberate — a new dataset version, a renamed model — pass `--allow-incompatible` and the comparison runs as before. If both sides recorded a `prompt_sha256` and they differ, the gate warns (on stderr) that the two runs answered different questions, but does not fail: a new prompt is a new measurement, not a drifting judge.
+
 ## Inside the agent's own session (MCP)
 
 ```bash

@@ -16,7 +16,13 @@ from .judges.jev import JevJudge
 from .judges.llm import LLMJudge
 from .judges.nli import NLIJudge
 from .judges.simulated import SIMULATED_TAG, SimulatedJudge
-from .report import check_drift, interval, render_html, render_markdown
+from .report import (
+    IncompatibleBaseline,
+    check_drift,
+    interval,
+    render_html,
+    render_markdown,
+)
 from .runner import load_dataset, run_audit, write_judgments
 
 JUDGES = ("jev", "llm", "nli", "finetuned", "simulated")
@@ -72,6 +78,9 @@ def _parser() -> argparse.ArgumentParser:
     c.add_argument("--json", default=None, help="also write metrics + run metadata here")
     c.add_argument("--drift", default=None,
                    help="write the verdict here: {ok, failures, ece, accuracy, baseline}")
+    c.add_argument("--allow-incompatible", action="store_true",
+                   help="compare even when the baseline measured another dataset, judge "
+                        "or n (refused with exit 2 otherwise)")
     c.add_argument("--no-ci", action="store_true",
                    help="skip the bootstrap confidence intervals (also JUDGE_AUDIT_BOOTSTRAP=0)")
     return ap
@@ -122,7 +131,10 @@ def main(argv: list[str] | None = None) -> None:
         failures: list[str] = []
         try:
             failures = check_drift(result, args.baseline,
-                                   args.max_ece_drift, args.max_acc_drop)
+                                   args.max_ece_drift, args.max_acc_drop,
+                                   allow_incompatible=args.allow_incompatible)
+        except IncompatibleBaseline as e:
+            _die(str(e))
         except (OSError, ValueError, KeyError) as e:
             _die(f"cannot use baseline {args.baseline}: {e}")
         if args.out:

@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import html
 import json
+import math
+import warnings
 
 from .ground_truth import ground_truth_of
 from .runner import AuditResult
@@ -164,14 +166,70 @@ cost <b>${d['total_cost_usd']:.4f}</b> · p50 <b>{d['p50_latency_s']}s</b> · p9
 """
 
 
+class IncompatibleBaseline(ValueError):
+    """The baseline measured something else: other dataset, other judge, other n."""
+
+
+def _comparable(current: dict, base: dict) -> list[str]:
+    """What makes the two runs different measurements rather than two measurements.
+
+    Only fields both sides declare are compared: a baseline that records nothing (a
+    hand-written threshold file) has nothing to disagree about, and the gate still gates.
+    """
+    cj, bj = current.get("judge", {}), base.get("judge", {})
+    cd, bd = current.get("dataset", {}), base.get("dataset", {})
+    pairs = [
+        ("dataset sha256_rows", cd.get("sha256_rows"), bd.get("sha256_rows")),
+        ("dataset sha256", cd.get("sha256"), bd.get("sha256")),
+        ("judge name", cj.get("name"), bj.get("name")),
+        ("judge model", cj.get("model"), bj.get("model")),
+    ]
+    return [f"{what}: {b!r} in the baseline, {c!r} now"
+            for what, c, b in pairs if c is not None and b is not None and c != b]
+
+
+def _finite(value: object, what: str) -> float:
+    if not isinstance(value, (int, float)) or isinstance(value, bool):
+        raise KeyError(f"{what} is not numeric (is it an audit-result.json?)")
+    if not math.isfinite(value):
+        raise ValueError(f"{what} is not finite ({value!r}); refusing to compare")
+    return float(value)
+
+
 def check_drift(current: AuditResult, baseline_path: str,
-                max_ece_drift: float = 0.02, max_acc_drop: float = 0.01) -> list[str]:
-    """CI gate: fail the build when the judge degrades vs baseline."""
+                max_ece_drift: float = 0.02, max_acc_drop: float = 0.01,
+                allow_incompatible: bool = False) -> list[str]:
+    """CI gate: fail the build when the judge degrades vs baseline.
+
+    Refuses (`IncompatibleBaseline`) when the two runs are not the same measurement —
+    other dataset, other judge or model, other n — because an ECE that moved between
+    two different datasets says nothing about the judge. `allow_incompatible` compares
+    anyway, for the deliberate case (a new dataset version, a renamed model).
+    """
     with open(baseline_path, encoding="utf-8") as f:
         base = json.load(f)
-    for key in ("ece", "accuracy"):
-        if not isinstance(base.get(key), (int, float)):
-            raise KeyError(f"baseline has no numeric '{key}' (is it an audit-result.json?)")
+    base_ece = _finite(base.get("ece"), "baseline 'ece'")
+    base_acc = _finite(base.get("accuracy"), "baseline 'accuracy'")
+    _finite(current.ece, "current 'ece'")
+    _finite(current.accuracy, "current 'accuracy'")
+
+    mismatches = _comparable(current.run or {}, base.get("run") or {})
+    if isinstance(base.get("n"), int) and base["n"] != current.n:
+        mismatches.append(f"n: {base['n']} in the baseline, {current.n} now")
+    if mismatches and not allow_incompatible:
+        raise IncompatibleBaseline(
+            "the baseline is not the same measurement — " + "; ".join(mismatches) +
+            ". Compare like with like, or pass --allow-incompatible to compare anyway.")
+
+    cur_prompt = (current.run or {}).get("judge", {}).get("prompt_sha256")
+    base_prompt = (base.get("run") or {}).get("judge", {}).get("prompt_sha256")
+    if cur_prompt and base_prompt and cur_prompt != base_prompt:
+        warnings.warn(
+            f"the judge's prompt changed since the baseline (prompt_sha256 "
+            f"{base_prompt[:12]}… → {cur_prompt[:12]}…): the numbers below compare two "
+            "different questions.", UserWarning, stacklevel=2)
+
+    base = {**base, "ece": base_ece, "accuracy": base_acc}
     failures = []
     ece_drift = current.ece - base["ece"]
     if ece_drift > max_ece_drift:

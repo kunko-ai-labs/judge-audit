@@ -53,6 +53,18 @@ def test_check_drift_detects_a_less_honest_judge(labels_path, tmp_path):
     assert out["ok"] is False and any("ECE" in f for f in out["failures"])
 
 
+def test_check_drift_incompatible_baseline_is_a_structured_error(labels_path, tmp_path):
+    base = mcp_server.run_audit(str(labels_path))
+    base["run"]["dataset"]["sha256_rows"] = "00" * 32
+    base["run"]["dataset"]["sha256"] = "00" * 32
+    (tmp_path / "other.json").write_text(json.dumps(base))
+    out = mcp_server.check_drift(str(labels_path), str(tmp_path / "other.json"))
+    assert out.get("incompatible_baseline") is True and "sha256" in out["error"]
+    ok = mcp_server.check_drift(str(labels_path), str(tmp_path / "other.json"),
+                                allow_incompatible=True)
+    assert ok["ok"] is True
+
+
 def test_check_drift_empty_baseline_is_a_structured_error(labels_path, tmp_path):
     (tmp_path / "empty.json").write_text("{}")
     out = mcp_server.check_drift(str(labels_path), str(tmp_path / "empty.json"))
