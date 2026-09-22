@@ -62,7 +62,7 @@ def majority(decisions: list[str]) -> tuple[str | None, float, bool]:
 
     A blank decision (unparseable answer) is an abstention, not a vote.
     A tie is no decision: option None, share 0.5, tie True. No votes: (None, 0.0, False)."""
-    voted = [d for d in decisions if d.strip()]
+    voted = [d.strip().lower() for d in decisions if d.strip()]
     if not voted:
         return None, 0.0, False
     c = Counter(voted)
@@ -85,7 +85,7 @@ def panel_stats(votes: dict[str, list[dict]], rows: list[dict], question: str,
         return {}
 
     def vote(j: str, i: int) -> str:
-        return votes[j][i]["decision"].strip()
+        return votes[j][i]["decision"].strip().lower()
 
     pair_agree = []
     for a, b in combinations(judges, 2):

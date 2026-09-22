@@ -51,7 +51,7 @@ Re-voted after seeing the panel: jev, claude-sonnet-4.5, deepseek-r1, gemini-3-f
 Scored mechanically from the tables above with the thresholds fixed in the plan's Amendments before the rerun.
 
 1. **Agreement and unanimity rise on both datasets** — held. router-bare: agreement 61.1% → 72.4%, unanimous 17 → 17; router-described: agreement 70.4% → 82.8%, unanimous 18 → 52.
-2. **Bare labels: hard-task majority accuracy does not rise materially (< 10 points) and the 3B model follows the panel** — partly held. Hard-task majority accuracy 15.0% → 17.5%; llama3.2 switched 1 vote, 0 of them onto the panel majority.
+2. **Bare labels: hard-task majority accuracy does not rise materially (< 10 points) and the 3B model follows the panel** — partly held. Hard-task majority accuracy 15.0% → 17.5%; llama3.2 switched 1 vote (too few to tell either way), 0 of them onto the panel majority.
 3. **Described options: judges that were right keep their vote (switches to wrong ≤ 5 % of votes) and majority accuracy does not fall** — held. Switches to wrong: 2 of 840 re-votes; majority accuracy 85.8% → 95.0%.
 4. **Chat models are more confident when wrong after deliberation** — not held (4 of 12 judge×dataset cells went up). claude-sonnet-4.5/bare 0.832→0.877; deepseek-r1/bare 0.888→0.916; gemini-3-flash/bare 0.965→0.930; gemma4/bare 0.954→0.920; llama-3.3-70b/bare 0.926→0.936; llama32/bare 1.000→0.829; claude-sonnet-4.5/described 0.983→0.800; deepseek-r1/described 0.894→0.846; gemini-3-flash/described 0.825→0.900; gemma4/described 0.981→0.912; llama-3.3-70b/described 0.969→0.925; llama32/described 1.000→0.600.
 

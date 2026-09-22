@@ -65,3 +65,10 @@ def test_predictions_verdicts():
     assert "majority accuracy does not fall** — held" in text   # 1 wrong of 120 re-votes ≤ 5 %
     assert "after deliberation** — not held (1 of 3" in text    # only x/bare went up
     assert predictions({"router-bare": {"rerun": []}, "router-described": {"rerun": []}}) == []
+
+
+def test_switch_stats_normalises_case_and_whitespace():
+    a = [rec("a", 0.9)]
+    b = [{"decision": "A ", "confidence": 0.9, "correct": False, "meta": {}}]
+    s = switch_stats(a, b, [["p"]], {"p": [rec("b", 0.9)]})
+    assert s["switched"] == 0

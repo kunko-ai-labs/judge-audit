@@ -89,7 +89,7 @@ def check() -> int:
         rows, _ = deliberation_rows(dataset, slug)
         want = input_text(dataset, rows)
         if inp.read_text(encoding="utf-8") != want:
-            print(f"STALE {inp.relative_to(ROOT)}")
+            print(f"STALE {inp}")
             bad += 1
     print(f"{bad} stale round-2 input(s)")
     return 1 if bad else 0

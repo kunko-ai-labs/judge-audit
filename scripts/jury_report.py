@@ -49,11 +49,12 @@ def switch_stats(a: list[dict], b: list[dict], seen: list[list[str]],
     blank1 = [i for i in range(n) if not a[i]["decision"].strip()]
     blank2 = [i for i in range(n) if not b[i]["decision"].strip()]
     answered = [i for i in range(n) if i not in set(blank1) and i not in set(blank2)]
-    switched = [i for i in answered if a[i]["decision"] != b[i]["decision"]]
+    switched = [i for i in answered
+                if a[i]["decision"].strip().lower() != b[i]["decision"].strip().lower()]
     toward = 0
     for i in switched:
         win, _, _ = majority([r1[j][i]["decision"] for j in seen[i]])
-        toward += win is not None and b[i]["decision"] == win
+        toward += win is not None and b[i]["decision"].strip().lower() == win
     return {"no_answer_round1": len(blank1), "no_answer_round2": len(blank2),
             "switched": len(switched),
             "switched_to_correct": sum(b[i]["correct"] for i in switched),
@@ -218,7 +219,8 @@ def predictions(data: dict) -> list[str]:
     verdict = "held" if small and follows else ("partly held" if small or follows else "not held")
     L.append(f"2. **Bare labels: hard-task majority accuracy does not rise materially (< 10 points) and the "
              f"3B model follows the panel** — {verdict}. Hard-task majority accuracy {_delta(h1, h2)}; "
-             + (f"llama3.2 switched {j['switched']} vote{'s' if j['switched'] != 1 else ''}, "
+             + (f"llama3.2 switched {j['switched']} vote{'s' if j['switched'] != 1 else ''}"
+                f"{' (too few to tell either way)' if j['switched'] < 5 else ''}, "
                 f"{j['switched_toward_panel_majority']} of them "
                 f"onto the panel majority." if j else "llama3.2 did not re-vote."))
     # 3. described: right judges keep their vote (switches to wrong <= 5 % of votes), majority accuracy rises (>= 0)

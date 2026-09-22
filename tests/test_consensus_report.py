@@ -24,6 +24,7 @@ VOTES = {
 
 def test_majority_treats_ties_and_blanks_as_no_vote():
     assert majority(["b", "b", "a"]) == ("b", 2 / 3, False)
+    assert majority(["A", "a ", "b"]) == ("a", 2 / 3, False)   # case and whitespace normalised
     assert majority(["a", "b"]) == (None, 0.5, True)           # tie: no decision
     assert majority(["b", "", " "]) == ("b", 1.0, False)        # blanks abstain
     assert majority(["", ""]) == (None, 0.0, False)
@@ -91,3 +92,21 @@ def test_by_row_reorders_and_rejects_incomplete_or_duplicated():
     assert [r["decision"] for r in by_row(recs, 3)] == ["a", "b", "c"]
     assert by_row(recs[:2], 3) is None                      # incomplete
     assert by_row(recs + [{"idx": 1, "decision": "x"}], 3) is None  # duplicated row
+
+
+def test_check_detects_a_stale_input(monkeypatch, tmp_path):
+    import jury_deliberate
+
+    rows = [{"state": "task", "questions": [], "labels": {"q": "b"}, "_meta": {}}]
+    votes = {"alpha": [rec("b", 0.9)], "beta": [rec("a", 0.5)]}
+    monkeypatch.setattr(jury_deliberate, "votes_of", lambda ds: (votes, rows))
+    monkeypatch.setattr(jury_deliberate, "read_dataset_header", lambda path: {})
+    monkeypatch.setattr(jury_deliberate, "JURY", tmp_path)
+    (tmp_path / "router-bare").mkdir()
+    inp = tmp_path / "router-bare" / "beta.r2.input.jsonl"
+    good, _ = jury_deliberate.deliberation_rows("router-bare", "beta", panel=["alpha", "beta"])
+    inp.write_text(jury_deliberate.input_text("router-bare", good), encoding="utf-8")
+    monkeypatch.setattr(jury_deliberate, "frozen_panel", lambda: ["alpha", "beta"])
+    assert jury_deliberate.check() == 0
+    inp.write_text("{}\n", encoding="utf-8")
+    assert jury_deliberate.check() == 1
