@@ -81,7 +81,7 @@ Phi between the two judges' error indicators, over the rows where both answered.
 
 ## Emails under attack (n=200)
 
-Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flash, gemma4, llama-3.3-70b, llama32), the frozen panel of `docs/runs/jury/panel.json`. Majority vote among those who answered; a tie is no decision. Also run on this dataset but not on the jury: finetuned-deberta, finetuned-deberta-run2, finetuned-deberta-run2-ts — they never vote and appear only in the declared-confidence table, each with the reason.
+Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flash, gemma4, llama-3.3-70b, llama32), the frozen panel of `docs/runs/jury/panel.json`. Majority vote among those who answered; a tie is no decision. Also run on this dataset but not on the jury: finetuned-deberta, finetuned-deberta-run2, finetuned-deberta-run2-ts — they never vote and appear only in the declared-confidence table, each with the reason. finetuned-deberta, finetuned-deberta-run2, finetuned-deberta-run2-ts are one model family (microsoft/deberta-v3-base fine-tuned on email-clean), entered 3 times: not 3 independent jurors.
 
 | subset | n | pairwise agreement | unanimous (wrong) | ties | abstentions | majority accuracy (all / decided) | best single judge | vote share right / wrong | conf of the wrong majority |
 |---|---|---|---|---|---|---|---|---|---|
@@ -108,9 +108,9 @@ Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flas
 | gemma4 (declared) | 81.0% | 0.153 | 0.0% |
 | llama-3.3-70b (declared) | 90.5% | 0.015 | 0.0% |
 | llama32 (declared) | 72.5% | 0.154 | 0.0% |
-| finetuned-deberta (declared; not a juror: trained on half of these labels) | 97.0% | 0.496 | 97.0% |
-| finetuned-deberta-run2 (declared; not a juror: trained on half of these labels) | 99.0% | 0.048 | 96.0% |
-| finetuned-deberta-run2-ts (declared; not a juror: trained on half of these labels) | 99.0% | 0.017 | 96.0% |
+| finetuned-deberta (declared; not a juror: fine-tuned on half of email-clean; 49 of these 200 rows contain a training text) | 97.0% | 0.496 | 97.0% |
+| finetuned-deberta-run2 (declared; not a juror: fine-tuned on half of email-clean; 49 of these 200 rows contain a training text) | 99.0% | 0.048 | 96.0% |
+| finetuned-deberta-run2-ts (declared; not a juror: fine-tuned on half of email-clean; 49 of these 200 rows contain a training text) | 99.0% | 0.017 | 96.0% |
 
 ### Error correlation (n=200)
 
@@ -471,5 +471,5 @@ Every 3-judge jury from the frozen panel (jev, claude-sonnet-4.5, deberta-nli, d
 - Synthetic, seeded datasets; ground truth for routing is by construction. n is small; subset rows are indicative.
 - Ties are no decision (see above). An earlier version broke ties alphabetically, which on the router always favoured `route_easy`; changed and disclosed in `jury-consensus-plan.md`.
 - Judges differ in cost, size and confidence method; the panel is heterogeneous on purpose (same-model juries are the documented failure mode — Smit et al., ICML 2024).
-- **Only the frozen panel votes** (`docs/runs/jury/panel.json`) on every dataset, in every panel statistic, subset, jury and error-correlation matrix. A judge added to the Arena later is listed in the declared-confidence table with the reason it is not a juror. The three fine-tuned DeBERTa runs are one model, trained on half of the email labels (`docs/finetuned-baseline-2026-09.md`): on the emails under attack they would be the answer key voting three times, not three independent jurors. An earlier version let them vote there; corrected in v0.4.0 (#65, before → after in the CHANGELOG).
+- **Only the frozen panel votes** (`docs/runs/jury/panel.json`) on every dataset, in every panel statistic, subset, jury and error-correlation matrix; a panel member without a complete run is an error, not a smaller jury. A judge added to the Arena later is listed in the declared-confidence table with the reason it is not a juror. The three fine-tuned DeBERTa runs are one model family, fine-tuned on half of the clean emails from the same generator (`docs/finetuned-baseline-2026-09.md`; the number of rows here that contain a training text is given next to each): on the emails under attack they would be one model entered three times, not three independent jurors. An earlier version let them vote there; corrected in v0.4.0 (#65, before → after in the CHANGELOG).
 - Round 1 only: nobody saw anybody else's vote. Round 2 (deliberation) is pre-registered in `docs/jury-consensus-plan.md` and reported in `docs/jury-consensus.md` once run.

@@ -1,6 +1,7 @@
 """Consensus audit: majority vote, panel statistics and the deliberation prompt."""
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -311,8 +312,6 @@ def test_a_non_panel_judge_never_votes(monkeypatch, tmp_path):
 
 
 def test_fine_tuned_runs_are_listed_but_never_vote():
-    import json
-
     import consensus_report
 
     panel = json.loads(consensus_report.PANEL.read_text(encoding="utf-8"))["panel"]
@@ -320,29 +319,107 @@ def test_fine_tuned_runs_are_listed_but_never_vote():
     assert e["panel"]["judges"] == panel and len(panel) == 8
     assert all(s["judges"] == panel for s in e["subsets"].values())
     assert e["error_correlation"]["judges"] == panel
-    tuned = ["finetuned-deberta", "finetuned-deberta-run2", "finetuned-deberta-run2-ts"]
-    for j in tuned:
+    # trained on the train half of the clean emails; 13 attacked emails equal a training
+    # text and 36 more contain one (docs/finetuned-baseline-2026-09.md): 49 of 200
+    reason = ("not a juror: fine-tuned on half of email-clean; 49 of these 200 rows contain a "
+              "training text")
+    for j in ["finetuned-deberta", "finetuned-deberta-run2", "finetuned-deberta-run2-ts"]:
         d = e["declared_confidence"][j]
-        assert d["juror"] is False and d["not_a_juror"] == consensus_report.TRAINED_ON_LABELS
+        assert d["juror"] is False and d["not_a_juror"] == reason
+        assert (d["trained_on"], d["rows_with_training_text"]) == ("email-clean", 49)
+        assert d["model_family"] == "microsoft/deberta-v3-base fine-tuned on email-clean"
     assert all(e["declared_confidence"][j]["juror"] for j in panel)
     assert "not_a_juror" not in e["declared_confidence"]["jev"]
     text = consensus_report.render({ds: consensus_report.collect_dataset(ds)
                                     for ds in consensus_report.DATASETS})
-    assert "| finetuned-deberta-run2 (declared; not a juror: trained on half of these labels) |" \
-        in text
+    assert f"| finetuned-deberta-run2 (declared; {reason}) |" in text
     under_attack = text.split("## Emails under attack")[1].split("## Task router")[0]
+    assert ("finetuned-deberta, finetuned-deberta-run2, finetuned-deberta-run2-ts are one model "
+            "family (microsoft/deberta-v3-base fine-tuned on email-clean), entered 3 times: not "
+            "3 independent jurors.") in under_attack
     assert "finetuned" not in under_attack.split("### Error correlation")[1]
+
+
+def _checkpoint(arena, slug, dataset, header):
+    (arena / slug).mkdir(parents=True, exist_ok=True)
+    lines = ([json.dumps({"idx": -1, "run": header})] if header is not None else []) + \
+        [json.dumps({"idx": 0, "judgments": []})]
+    (arena / slug / f"{dataset}.ckpt.jsonl").write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def test_not_a_juror_reads_the_data_not_the_slug(monkeypatch, tmp_path):
+    import consensus_report
+    from consensus_report import OUTSIDE_PANEL, TRAINING_UNVERIFIABLE, not_a_juror
+
+    from judge_audit.runner import sha256_of
+
+    monkeypatch.setattr(consensus_report, "ARENA", tmp_path)
+    split = "examples/task-routing/split-heldout.json"
+    trained = {"judge": {"backbone": "b", "train_rows_sha256": "x",
+                         "split": {"path": split,
+                                   "sha256": sha256_of(str(consensus_report.ROOT / split))}}}
+    # no run header at all (like Jev's audits), and a header without a training split
+    _checkpoint(tmp_path, "bare", "email-adversarial", None)
+    _checkpoint(tmp_path, "chat", "email-adversarial", {"judge": {"name": "llm:x"}})
+    assert not_a_juror("email-adversarial", "bare") == {"not_a_juror": OUTSIDE_PANEL}
+    assert not_a_juror("email-adversarial", "chat") == {"not_a_juror": OUTSIDE_PANEL}
+    # trained on another dataset: the reason says so, and no email contains a router text
+    _checkpoint(tmp_path, "router-tuned", "email-adversarial", trained)
+    d = not_a_juror("email-adversarial", "router-tuned")
+    assert (d["trained_on"], d["rows_with_training_text"]) == ("router-bare", 0)
+    assert d["not_a_juror"] == ("not a juror: fine-tuned on half of router-bare; 0 of these 200 "
+                                "rows contain a training text")
+    # on its own dataset, every train-half row is a training text (60 of 120 at least)
+    _checkpoint(tmp_path, "router-tuned", "router-bare", trained)
+    assert not_a_juror("router-bare", "router-tuned")["rows_with_training_text"] >= 60
+    # a split file that no longer hashes to what the header recorded proves nothing
+    trained["judge"]["split"]["sha256"] = "0" * 64
+    _checkpoint(tmp_path, "stale", "email-adversarial", trained)
+    assert not_a_juror("email-adversarial", "stale") == {"not_a_juror": TRAINING_UNVERIFIABLE}
+    del trained["judge"]["split"]
+    _checkpoint(tmp_path, "no-split", "email-adversarial", trained)
+    assert not_a_juror("email-adversarial", "no-split") == {"not_a_juror": TRAINING_UNVERIFIABLE}
+
+
+def test_a_panel_without_jev_lists_jev_as_an_outsider(monkeypatch, tmp_path):
+    import consensus_report
+
+    panel = json.loads(consensus_report.PANEL.read_text(encoding="utf-8"))["panel"]
+    smaller = tmp_path / "panel.json"
+    smaller.write_text(json.dumps({"panel": [j for j in panel if j != "jev"]}), encoding="utf-8")
+    monkeypatch.setattr(consensus_report, "PANEL", smaller)
+    e = consensus_report.collect_dataset("email-clean")      # Jev's checkpoint is not in the Arena
+    assert "jev" not in e["panel"]["judges"] and len(e["panel"]["judges"]) == 7
+    assert e["declared_confidence"]["jev"] == {**e["declared_confidence"]["jev"], "juror": False,
+                                               "not_a_juror": consensus_report.OUTSIDE_PANEL}
 
 
 def test_frozen_panel_keeps_its_order_and_requires_the_panel_file(monkeypatch, tmp_path):
     import consensus_report
 
     panel = tmp_path / "panel.json"
-    panel.write_text('{"panel": ["b", "a", "c"]}', encoding="utf-8")
+    panel.write_text('{"panel": ["b", "a"]}', encoding="utf-8")
     monkeypatch.setattr(consensus_report, "PANEL", panel)
-    # order is the panel's, a member without a complete run drops out, an outsider never enters
+    # order is the panel's; an outsider never enters
     assert consensus_report.frozen_panel({"a": [], "b": [], "z": []}) == ["b", "a"]
-    assert consensus_report.frozen_panel({}) == []
     monkeypatch.setattr(consensus_report, "PANEL", tmp_path / "missing.json")
     with pytest.raises(FileNotFoundError):             # no panel file is not "everyone votes"
         consensus_report.frozen_panel({"a": []})
+
+
+def test_panel_member_without_complete_run_fails_loudly(monkeypatch, tmp_path):
+    import consensus_report
+
+    panel = tmp_path / "panel.json"
+    panel.write_text('{"panel": ["a", "b", "c"]}', encoding="utf-8")
+    monkeypatch.setattr(consensus_report, "PANEL", panel)
+    with pytest.raises(ValueError, match="without a complete run: b, c"):
+        consensus_report.frozen_panel({"a": [], "z": []})
+    with pytest.raises(ValueError, match="a, b, c"):
+        consensus_report.frozen_panel({})
+    # end to end: a panel naming a judge with no run on the dataset stops the report
+    panel.write_text('{"panel": ["jev", "nobody"]}', encoding="utf-8")
+    with pytest.raises(ValueError, match="nobody"):
+        consensus_report.jury_votes("email-clean")
+
+

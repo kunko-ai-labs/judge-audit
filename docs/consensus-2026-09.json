@@ -1322,21 +1322,30 @@
         "zero_error_coverage": 0.97,
         "accuracy": 0.97,
         "juror": false,
-        "not_a_juror": "not a juror: trained on half of these labels"
+        "not_a_juror": "not a juror: fine-tuned on half of email-clean; 49 of these 200 rows contain a training text",
+        "trained_on": "email-clean",
+        "rows_with_training_text": 49,
+        "model_family": "microsoft/deberta-v3-base fine-tuned on email-clean"
       },
       "finetuned-deberta-run2": {
         "ece": 0.048,
         "zero_error_coverage": 0.96,
         "accuracy": 0.99,
         "juror": false,
-        "not_a_juror": "not a juror: trained on half of these labels"
+        "not_a_juror": "not a juror: fine-tuned on half of email-clean; 49 of these 200 rows contain a training text",
+        "trained_on": "email-clean",
+        "rows_with_training_text": 49,
+        "model_family": "microsoft/deberta-v3-base fine-tuned on email-clean"
       },
       "finetuned-deberta-run2-ts": {
         "ece": 0.017,
         "zero_error_coverage": 0.96,
         "accuracy": 0.99,
         "juror": false,
-        "not_a_juror": "not a juror: trained on half of these labels"
+        "not_a_juror": "not a juror: fine-tuned on half of email-clean; 49 of these 200 rows contain a training text",
+        "trained_on": "email-clean",
+        "rows_with_training_text": 49,
+        "model_family": "microsoft/deberta-v3-base fine-tuned on email-clean"
       }
     }
   },
