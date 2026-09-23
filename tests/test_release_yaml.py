@@ -104,16 +104,80 @@ def test_wheel_and_sbom_are_attested_with_the_same_pinned_action_before_upload(j
     assert perms.get("id-token") == "write" and perms.get("attestations") == "write"
 
 
-INSTALLS = re.compile(r"pip (--python \S+ )?install|python -m build|npm (install|ci)|uv (pip|sync)")
+INSTALLS = re.compile(
+    r"\bpip3? (--python \S+ )?install\b"       # pip install, pip3 install, pip --python X install
+    r"|\bpipx\b"                               # pipx install / run
+    r"|\bpython3? -m build\b"                  # isolated build env installs the backend
+    r"|\bnpm (install|ci)\b"
+    r"|\buv (pip|sync|tool)\b")
 
 
-def test_no_job_that_installs_packages_holds_an_oidc_token(jobs):
+def holds_oidc(permissions) -> bool:
+    """`id-token: write`, explicitly or through `write-all`. A string other than write-all
+    (read-all) grants no token; a missing block is handled by the caller (inheritance)."""
+    if isinstance(permissions, str):
+        return permissions.strip() == "write-all"
+    return isinstance(permissions, dict) and permissions.get("id-token") == "write"
+
+
+def oidc_violations(workflow: dict) -> list[str]:
+    """Every job that installs packages while holding an OIDC token, and a workflow-level
+    grant of the token (which every job without its own block would inherit)."""
+    top = workflow.get("permissions")
+    out = [f"workflow-level permissions grant id-token: write ({top!r})"] if holds_oidc(top) else []
+    for name, job in workflow["jobs"].items():
+        perms = job["permissions"] if "permissions" in job else top
+        installs = any(INSTALLS.search(s.get("run", "")) for s in job.get("steps", []))
+        if installs and holds_oidc(perms):
+            out.append(f"{name} installs packages and holds id-token: write ({perms!r})")
+    return out
+
+
+def test_no_job_that_installs_packages_holds_an_oidc_token(workflow, jobs):
     """A dependency that is not hash-pinned could mint Sigstore or PyPI credentials."""
-    for name, job in jobs.items():
-        installs = any(INSTALLS.search(s.get("run", "")) for s in job["steps"])
-        token = job.get("permissions", {}).get("id-token") == "write"
-        assert not (installs and token), f"{name} installs packages and holds id-token: write"
+    assert oidc_violations(workflow) == []
+    assert not holds_oidc(workflow.get("permissions"))
+    assert "id-token" not in (workflow.get("permissions") or {})
+    # the detector is not vacuous: both installing jobs are recognised as installing
     assert INSTALLS.search(runs(jobs["build"])) and INSTALLS.search(runs(jobs["smoke"]))
+
+
+@pytest.mark.parametrize("command", [
+    "pip install build", "pip3 install -r req.txt", "python -m pip --python v/bin/python install x",
+    "pipx run cyclonedx-py", "pipx install x", "python3 -m build", "npm ci", "npm install x",
+    "uv pip install x", "uv sync", "uv tool install ruff"])
+def test_install_detector_catches(command):
+    assert INSTALLS.search(command), command
+
+
+@pytest.mark.parametrize("command", [
+    "gh release upload v1 dist/*", "smoke-venv/bin/judge-audit --version", "echo pipeline"])
+def test_install_detector_ignores(command):
+    assert not INSTALLS.search(command), command
+
+
+def wf(top=None, **job_perms):
+    jobs = {name: {"steps": [{"run": run}], **({"permissions": p} if p is not None else {})}
+            for name, (run, p) in job_perms.items()}
+    return {"jobs": jobs, **({"permissions": top} if top is not None else {})}
+
+
+def test_oidc_check_flags_every_way_a_token_reaches_an_installing_job():
+    token = {"id-token": "write"}
+    assert oidc_violations(wf(a=("pip3 install x", token))) == [
+        "a installs packages and holds id-token: write ({'id-token': 'write'})"]
+    assert oidc_violations(wf(a=("pipx run x", token)))
+    assert oidc_violations(wf(a=("uv tool install x", token)))
+    # write-all is a string, not a dict: a clear failure, never an AttributeError
+    assert oidc_violations(wf(a=("pip install x", "write-all"))) == [
+        "a installs packages and holds id-token: write ('write-all')"]
+    # a workflow-level grant is itself a violation and is inherited by jobs without a block
+    got = oidc_violations(wf(top=token, a=("pip install x", None)))
+    assert got[0].startswith("workflow-level") and got[1].startswith("a installs")
+    assert oidc_violations(wf(top="write-all", a=("echo hi", None)))
+    # no install, or no token: fine
+    assert oidc_violations(wf(a=("gh release upload v1 x", token))) == []
+    assert oidc_violations(wf(top="read-all", a=("pip install x", {"contents": "read"}))) == []
 
 
 def test_checkouts_do_not_persist_credentials(jobs):

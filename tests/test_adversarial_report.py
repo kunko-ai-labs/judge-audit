@@ -195,5 +195,9 @@ def test_read_this_first_says_so_when_confidence_does_not_drop(tmp_path):
     assert "a drop of 0.015, under the 0.05 this page counts as a meaningful drop" in md
     assert "**Where confidence should drop, it does not: ambiguous emails.**" in md
     assert "a drop of 0.030, under the 0.05" in md
+    # the threshold is post hoc and the page says so next to every verdict it decides
+    disclosure = ("(a threshold set after this run was observed, not pre-registered; both "
+                  "numbers are shown so the reader can judge)")
+    assert md.count(disclosure) == 2
     assert "**\"Immunity\" is a strong word for a weak attack.**" in md
     assert "Even a weak attack works" not in md
