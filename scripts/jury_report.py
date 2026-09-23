@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
 from arena_report import DATASETS, records  # noqa: E402
-from consensus_report import by_row, majority, panel_stats, state_groups, votes_of  # noqa: E402
+from consensus_report import by_row, jury_votes, majority, panel_stats, state_groups  # noqa: E402
 
 from judge_audit.metrics.calibration import (  # noqa: E402
     N_BOOT,
@@ -88,7 +88,7 @@ def collect() -> dict:
     out = {}
     for ds in ROUND2_DATASETS:
         labels, q = DATASETS[ds]
-        r1, rows = votes_of(ds)
+        r1, rows = jury_votes(ds)          # the frozen panel only: an outsider never votes
         hard = [i for i, r in enumerate(rows) if r["_meta"].get("difficulty") == "hard"
                 and not r["_meta"].get("adversarial")]
         r2 = dict(r1)

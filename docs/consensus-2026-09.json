@@ -500,42 +500,50 @@
       "jev": {
         "ece": 0.0036,
         "zero_error_coverage": 1.0,
-        "accuracy": 1
+        "accuracy": 1,
+        "juror": true
       },
       "claude-sonnet-4.5": {
         "ece": 0.029,
         "zero_error_coverage": 1.0,
-        "accuracy": 1
+        "accuracy": 1,
+        "juror": true
       },
       "deberta-nli": {
         "ece": 0.1765,
         "zero_error_coverage": 0.515,
-        "accuracy": 0.865
+        "accuracy": 0.865,
+        "juror": true
       },
       "deepseek-r1": {
         "ece": 0.0519,
         "zero_error_coverage": 1.0,
-        "accuracy": 1
+        "accuracy": 1,
+        "juror": true
       },
       "gemini-3-flash": {
         "ece": 0.0047,
         "zero_error_coverage": 1.0,
-        "accuracy": 1
+        "accuracy": 1,
+        "juror": true
       },
       "gemma4": {
         "ece": 0.0258,
         "zero_error_coverage": 1.0,
-        "accuracy": 1
+        "accuracy": 1,
+        "juror": true
       },
       "llama-3.3-70b": {
         "ece": 0.0909,
         "zero_error_coverage": 1.0,
-        "accuracy": 1
+        "accuracy": 1,
+        "juror": true
       },
       "llama32": {
         "ece": 0.034,
         "zero_error_coverage": 0.0,
-        "accuracy": 0.9
+        "accuracy": 0.9,
+        "juror": true
       }
     }
   },
@@ -547,33 +555,30 @@
         "claude-sonnet-4.5",
         "deberta-nli",
         "deepseek-r1",
-        "finetuned-deberta",
-        "finetuned-deberta-run2",
-        "finetuned-deberta-run2-ts",
         "gemini-3-flash",
         "gemma4",
         "llama-3.3-70b",
         "llama32"
       ],
-      "pairwise_agreement": 0.8065,
-      "unanimous": 80,
+      "pairwise_agreement": 0.7716,
+      "unanimous": 83,
       "unanimous_wrong": 0,
-      "ties": 1,
+      "ties": 11,
       "abstentions": 0,
-      "majority_accuracy": 0.975,
+      "majority_accuracy": 0.9,
       "majority_accuracy_ci": [
-        0.9505,
-        0.9949
+        0.8564,
+        0.9394
       ],
       "majority_accuracy_ci_method": "bootstrap",
-      "majority_accuracy_decided": 0.9799,
-      "majority_wrong": 5,
-      "best_single_accuracy": 0.99,
-      "mean_share_when_right": 0.891,
-      "mean_share_when_wrong": 0.568,
-      "mean_conf_of_wrong_majority": 0.888,
-      "vote_share_ece": 0.095,
-      "vote_share_zero_error_coverage": 0.8945
+      "majority_accuracy_decided": 0.9524,
+      "majority_wrong": 20,
+      "best_single_accuracy": 0.97,
+      "mean_share_when_right": 0.89,
+      "mean_share_when_wrong": 0.681,
+      "mean_conf_of_wrong_majority": 0.899,
+      "vote_share_ece": 0.0728,
+      "vote_share_zero_error_coverage": 0.4392
     },
     "subsets": {
       "homoglyph_zerowidth": {
@@ -583,16 +588,13 @@
           "claude-sonnet-4.5",
           "deberta-nli",
           "deepseek-r1",
-          "finetuned-deberta",
-          "finetuned-deberta-run2",
-          "finetuned-deberta-run2-ts",
           "gemini-3-flash",
           "gemma4",
           "llama-3.3-70b",
           "llama32"
         ],
-        "pairwise_agreement": 0.8564,
-        "unanimous": 3,
+        "pairwise_agreement": 0.8286,
+        "unanimous": 4,
         "unanimous_wrong": 0,
         "ties": 0,
         "abstentions": 0,
@@ -605,10 +607,10 @@
         "majority_accuracy_decided": 1,
         "majority_wrong": 0,
         "best_single_accuracy": 1,
-        "mean_share_when_right": 0.927,
+        "mean_share_when_right": 0.912,
         "mean_share_when_wrong": null,
         "mean_conf_of_wrong_majority": null,
-        "vote_share_ece": 0.0727,
+        "vote_share_ece": 0.0875,
         "vote_share_zero_error_coverage": 1.0
       },
       "ambiguous": {
@@ -618,33 +620,30 @@
           "claude-sonnet-4.5",
           "deberta-nli",
           "deepseek-r1",
-          "finetuned-deberta",
-          "finetuned-deberta-run2",
-          "finetuned-deberta-run2-ts",
           "gemini-3-flash",
           "gemma4",
           "llama-3.3-70b",
           "llama32"
         ],
-        "pairwise_agreement": 0.7806,
-        "unanimous": 8,
+        "pairwise_agreement": 0.7738,
+        "unanimous": 10,
         "unanimous_wrong": 0,
-        "ties": 0,
+        "ties": 1,
         "abstentions": 0,
-        "majority_accuracy": 0.9667,
+        "majority_accuracy": 0.9333,
         "majority_accuracy_ci": [
-          0.8966,
+          0.8276,
           1.0
         ],
         "majority_accuracy_ci_method": "bootstrap",
-        "majority_accuracy_decided": 0.9667,
-        "majority_wrong": 1,
+        "majority_accuracy_decided": 0.9655,
+        "majority_wrong": 2,
         "best_single_accuracy": 0.9667,
-        "mean_share_when_right": 0.887,
-        "mean_share_when_wrong": 0.545,
+        "mean_share_when_right": 0.893,
+        "mean_share_when_wrong": 0.75,
         "mean_conf_of_wrong_majority": 0.832,
-        "vote_share_ece": 0.1273,
-        "vote_share_zero_error_coverage": 0.9667
+        "vote_share_ece": 0.0776,
+        "vote_share_zero_error_coverage": 0.7586
       },
       "homoglyph_cyrillic": {
         "n": 14,
@@ -653,15 +652,12 @@
           "claude-sonnet-4.5",
           "deberta-nli",
           "deepseek-r1",
-          "finetuned-deberta",
-          "finetuned-deberta-run2",
-          "finetuned-deberta-run2-ts",
           "gemini-3-flash",
           "gemma4",
           "llama-3.3-70b",
           "llama32"
         ],
-        "pairwise_agreement": 0.8883,
+        "pairwise_agreement": 0.8622,
         "unanimous": 8,
         "unanimous_wrong": 0,
         "ties": 0,
@@ -675,10 +671,10 @@
         "majority_accuracy_decided": 1,
         "majority_wrong": 0,
         "best_single_accuracy": 1,
-        "mean_share_when_right": 0.942,
+        "mean_share_when_right": 0.929,
         "mean_share_when_wrong": null,
         "mean_conf_of_wrong_majority": null,
-        "vote_share_ece": 0.0584,
+        "vote_share_ece": 0.0714,
         "vote_share_zero_error_coverage": 1.0
       },
       "pii": {
@@ -688,15 +684,12 @@
           "claude-sonnet-4.5",
           "deberta-nli",
           "deepseek-r1",
-          "finetuned-deberta",
-          "finetuned-deberta-run2",
-          "finetuned-deberta-run2-ts",
           "gemini-3-flash",
           "gemma4",
           "llama-3.3-70b",
           "llama32"
         ],
-        "pairwise_agreement": 0.9455,
+        "pairwise_agreement": 0.925,
         "unanimous": 14,
         "unanimous_wrong": 0,
         "ties": 0,
@@ -710,10 +703,10 @@
         "majority_accuracy_decided": 1,
         "majority_wrong": 0,
         "best_single_accuracy": 1,
-        "mean_share_when_right": 0.973,
+        "mean_share_when_right": 0.963,
         "mean_share_when_wrong": null,
         "mean_conf_of_wrong_majority": null,
-        "vote_share_ece": 0.0273,
+        "vote_share_ece": 0.0375,
         "vote_share_zero_error_coverage": 1.0
       },
       "clean": {
@@ -723,15 +716,12 @@
           "claude-sonnet-4.5",
           "deberta-nli",
           "deepseek-r1",
-          "finetuned-deberta",
-          "finetuned-deberta-run2",
-          "finetuned-deberta-run2-ts",
           "gemini-3-flash",
           "gemma4",
           "llama-3.3-70b",
           "llama32"
         ],
-        "pairwise_agreement": 0.9394,
+        "pairwise_agreement": 0.9167,
         "unanimous": 40,
         "unanimous_wrong": 0,
         "ties": 0,
@@ -745,10 +735,10 @@
         "majority_accuracy_decided": 1,
         "majority_wrong": 0,
         "best_single_accuracy": 1,
-        "mean_share_when_right": 0.97,
+        "mean_share_when_right": 0.958,
         "mean_share_when_wrong": null,
         "mean_conf_of_wrong_majority": null,
-        "vote_share_ece": 0.0303,
+        "vote_share_ece": 0.0417,
         "vote_share_zero_error_coverage": 1.0
       },
       "prompt_injection": {
@@ -758,33 +748,30 @@
           "claude-sonnet-4.5",
           "deberta-nli",
           "deepseek-r1",
-          "finetuned-deberta",
-          "finetuned-deberta-run2",
-          "finetuned-deberta-run2-ts",
           "gemini-3-flash",
           "gemma4",
           "llama-3.3-70b",
           "llama32"
         ],
-        "pairwise_agreement": 0.5995,
+        "pairwise_agreement": 0.5429,
         "unanimous": 2,
         "unanimous_wrong": 0,
-        "ties": 1,
+        "ties": 6,
         "abstentions": 0,
-        "majority_accuracy": 0.9,
+        "majority_accuracy": 0.65,
         "majority_accuracy_ci": [
-          0.8,
-          0.975
+          0.5,
+          0.8
         ],
         "majority_accuracy_ci_method": "bootstrap",
-        "majority_accuracy_decided": 0.9231,
-        "majority_wrong": 4,
-        "best_single_accuracy": 1,
-        "mean_share_when_right": 0.753,
-        "mean_share_when_wrong": 0.576,
-        "mean_conf_of_wrong_majority": 0.906,
-        "vote_share_ece": 0.1841,
-        "vote_share_zero_error_coverage": 0.641
+        "majority_accuracy_decided": 0.7647,
+        "majority_wrong": 14,
+        "best_single_accuracy": 0.875,
+        "mean_share_when_right": 0.74,
+        "mean_share_when_wrong": 0.672,
+        "mean_conf_of_wrong_majority": 0.908,
+        "vote_share_ece": 0.0478,
+        "vote_share_zero_error_coverage": 0.0588
       },
       "social_engineering": {
         "n": 20,
@@ -793,32 +780,29 @@
           "claude-sonnet-4.5",
           "deberta-nli",
           "deepseek-r1",
-          "finetuned-deberta",
-          "finetuned-deberta-run2",
-          "finetuned-deberta-run2-ts",
           "gemini-3-flash",
           "gemma4",
           "llama-3.3-70b",
           "llama32"
         ],
-        "pairwise_agreement": 0.5982,
+        "pairwise_agreement": 0.5,
         "unanimous": 0,
         "unanimous_wrong": 0,
-        "ties": 0,
+        "ties": 4,
         "abstentions": 0,
-        "majority_accuracy": 1,
+        "majority_accuracy": 0.8,
         "majority_accuracy_ci": [
-          0.8316,
-          1.0
+          0.6,
+          0.9524
         ],
-        "majority_accuracy_ci_method": "clopper-pearson",
+        "majority_accuracy_ci_method": "bootstrap",
         "majority_accuracy_decided": 1,
-        "majority_wrong": 0,
+        "majority_wrong": 4,
         "best_single_accuracy": 1,
-        "mean_share_when_right": 0.755,
+        "mean_share_when_right": 0.703,
         "mean_share_when_wrong": null,
         "mean_conf_of_wrong_majority": null,
-        "vote_share_ece": 0.2455,
+        "vote_share_ece": 0.2969,
         "vote_share_zero_error_coverage": 1.0
       },
       "homoglyph_fullwidth": {
@@ -828,15 +812,12 @@
           "claude-sonnet-4.5",
           "deberta-nli",
           "deepseek-r1",
-          "finetuned-deberta",
-          "finetuned-deberta-run2",
-          "finetuned-deberta-run2-ts",
           "gemini-3-flash",
           "gemma4",
           "llama-3.3-70b",
           "llama32"
         ],
-        "pairwise_agreement": 0.9424,
+        "pairwise_agreement": 0.9226,
         "unanimous": 5,
         "unanimous_wrong": 0,
         "ties": 0,
@@ -850,10 +831,10 @@
         "majority_accuracy_decided": 1,
         "majority_wrong": 0,
         "best_single_accuracy": 1,
-        "mean_share_when_right": 0.97,
+        "mean_share_when_right": 0.958,
         "mean_share_when_wrong": null,
         "mean_conf_of_wrong_majority": null,
-        "vote_share_ece": 0.0303,
+        "vote_share_ece": 0.0417,
         "vote_share_zero_error_coverage": 1.0
       }
     },
@@ -864,9 +845,6 @@
         "claude-sonnet-4.5",
         "deberta-nli",
         "deepseek-r1",
-        "finetuned-deberta",
-        "finetuned-deberta-run2",
-        "finetuned-deberta-run2-ts",
         "gemini-3-flash",
         "gemma4",
         "llama-3.3-70b",
@@ -877,9 +855,6 @@
         "claude-sonnet-4.5": 7,
         "deberta-nli": 81,
         "deepseek-r1": 39,
-        "finetuned-deberta": 6,
-        "finetuned-deberta-run2": 2,
-        "finetuned-deberta-run2-ts": 2,
         "gemini-3-flash": 6,
         "gemma4": 38,
         "llama-3.3-70b": 19,
@@ -927,48 +902,6 @@
           "p_b_wrong_given_a_wrong": 0.8889,
           "error_jaccard": 0.2,
           "phi": 0.3802
-        },
-        {
-          "a": "jev",
-          "b": "finetuned-deberta",
-          "n": 200,
-          "agreement": 0.925,
-          "errors_a": 9,
-          "errors_b": 6,
-          "shared_wrong": 0,
-          "joint_error": 0.0,
-          "p_a_wrong_given_b_wrong": 0.0,
-          "p_b_wrong_given_a_wrong": 0.0,
-          "error_jaccard": 0.0,
-          "phi": -0.0382
-        },
-        {
-          "a": "jev",
-          "b": "finetuned-deberta-run2",
-          "n": 200,
-          "agreement": 0.945,
-          "errors_a": 9,
-          "errors_b": 2,
-          "shared_wrong": 0,
-          "joint_error": 0.0,
-          "p_a_wrong_given_b_wrong": 0.0,
-          "p_b_wrong_given_a_wrong": 0.0,
-          "error_jaccard": 0.0,
-          "phi": -0.0218
-        },
-        {
-          "a": "jev",
-          "b": "finetuned-deberta-run2-ts",
-          "n": 200,
-          "agreement": 0.945,
-          "errors_a": 9,
-          "errors_b": 2,
-          "shared_wrong": 0,
-          "joint_error": 0.0,
-          "p_a_wrong_given_b_wrong": 0.0,
-          "p_b_wrong_given_a_wrong": 0.0,
-          "error_jaccard": 0.0,
-          "phi": -0.0218
         },
         {
           "a": "jev",
@@ -1056,48 +989,6 @@
         },
         {
           "a": "claude-sonnet-4.5",
-          "b": "finetuned-deberta",
-          "n": 200,
-          "agreement": 0.935,
-          "errors_a": 7,
-          "errors_b": 6,
-          "shared_wrong": 0,
-          "joint_error": 0.0,
-          "p_a_wrong_given_b_wrong": 0.0,
-          "p_b_wrong_given_a_wrong": 0.0,
-          "error_jaccard": 0.0,
-          "phi": -0.0335
-        },
-        {
-          "a": "claude-sonnet-4.5",
-          "b": "finetuned-deberta-run2",
-          "n": 200,
-          "agreement": 0.955,
-          "errors_a": 7,
-          "errors_b": 2,
-          "shared_wrong": 0,
-          "joint_error": 0.0,
-          "p_a_wrong_given_b_wrong": 0.0,
-          "p_b_wrong_given_a_wrong": 0.0,
-          "error_jaccard": 0.0,
-          "phi": -0.0191
-        },
-        {
-          "a": "claude-sonnet-4.5",
-          "b": "finetuned-deberta-run2-ts",
-          "n": 200,
-          "agreement": 0.955,
-          "errors_a": 7,
-          "errors_b": 2,
-          "shared_wrong": 0,
-          "joint_error": 0.0,
-          "p_a_wrong_given_b_wrong": 0.0,
-          "p_b_wrong_given_a_wrong": 0.0,
-          "error_jaccard": 0.0,
-          "phi": -0.0191
-        },
-        {
-          "a": "claude-sonnet-4.5",
           "b": "gemini-3-flash",
           "n": 200,
           "agreement": 0.985,
@@ -1168,48 +1059,6 @@
         },
         {
           "a": "deberta-nli",
-          "b": "finetuned-deberta",
-          "n": 200,
-          "agreement": 0.57,
-          "errors_a": 81,
-          "errors_b": 6,
-          "shared_wrong": 1,
-          "joint_error": 0.005,
-          "p_a_wrong_given_b_wrong": 0.1667,
-          "p_b_wrong_given_a_wrong": 0.0123,
-          "error_jaccard": 0.0116,
-          "phi": -0.0854
-        },
-        {
-          "a": "deberta-nli",
-          "b": "finetuned-deberta-run2",
-          "n": 200,
-          "agreement": 0.585,
-          "errors_a": 81,
-          "errors_b": 2,
-          "shared_wrong": 0,
-          "joint_error": 0.0,
-          "p_a_wrong_given_b_wrong": 0.0,
-          "p_b_wrong_given_a_wrong": 0.0,
-          "error_jaccard": 0.0,
-          "phi": -0.0829
-        },
-        {
-          "a": "deberta-nli",
-          "b": "finetuned-deberta-run2-ts",
-          "n": 200,
-          "agreement": 0.585,
-          "errors_a": 81,
-          "errors_b": 2,
-          "shared_wrong": 0,
-          "joint_error": 0.0,
-          "p_a_wrong_given_b_wrong": 0.0,
-          "p_b_wrong_given_a_wrong": 0.0,
-          "error_jaccard": 0.0,
-          "phi": -0.0829
-        },
-        {
-          "a": "deberta-nli",
           "b": "gemini-3-flash",
           "n": 200,
           "agreement": 0.595,
@@ -1266,48 +1115,6 @@
         },
         {
           "a": "deepseek-r1",
-          "b": "finetuned-deberta",
-          "n": 200,
-          "agreement": 0.775,
-          "errors_a": 39,
-          "errors_b": 6,
-          "shared_wrong": 0,
-          "joint_error": 0.0,
-          "p_a_wrong_given_b_wrong": 0.0,
-          "p_b_wrong_given_a_wrong": 0.0,
-          "error_jaccard": 0.0,
-          "phi": -0.0866
-        },
-        {
-          "a": "deepseek-r1",
-          "b": "finetuned-deberta-run2",
-          "n": 200,
-          "agreement": 0.795,
-          "errors_a": 39,
-          "errors_b": 2,
-          "shared_wrong": 0,
-          "joint_error": 0.0,
-          "p_a_wrong_given_b_wrong": 0.0,
-          "p_b_wrong_given_a_wrong": 0.0,
-          "error_jaccard": 0.0,
-          "phi": -0.0495
-        },
-        {
-          "a": "deepseek-r1",
-          "b": "finetuned-deberta-run2-ts",
-          "n": 200,
-          "agreement": 0.795,
-          "errors_a": 39,
-          "errors_b": 2,
-          "shared_wrong": 0,
-          "joint_error": 0.0,
-          "p_a_wrong_given_b_wrong": 0.0,
-          "p_b_wrong_given_a_wrong": 0.0,
-          "error_jaccard": 0.0,
-          "phi": -0.0495
-        },
-        {
-          "a": "deepseek-r1",
           "b": "gemini-3-flash",
           "n": 200,
           "agreement": 0.835,
@@ -1361,216 +1168,6 @@
           "p_b_wrong_given_a_wrong": 0.4615,
           "error_jaccard": 0.2368,
           "phi": 0.2056
-        },
-        {
-          "a": "finetuned-deberta",
-          "b": "finetuned-deberta-run2",
-          "n": 200,
-          "agreement": 0.97,
-          "errors_a": 6,
-          "errors_b": 2,
-          "shared_wrong": 2,
-          "joint_error": 0.01,
-          "p_a_wrong_given_b_wrong": 1.0,
-          "p_b_wrong_given_a_wrong": 0.3333,
-          "error_jaccard": 0.3333,
-          "phi": 0.5715
-        },
-        {
-          "a": "finetuned-deberta",
-          "b": "finetuned-deberta-run2-ts",
-          "n": 200,
-          "agreement": 0.97,
-          "errors_a": 6,
-          "errors_b": 2,
-          "shared_wrong": 2,
-          "joint_error": 0.01,
-          "p_a_wrong_given_b_wrong": 1.0,
-          "p_b_wrong_given_a_wrong": 0.3333,
-          "error_jaccard": 0.3333,
-          "phi": 0.5715
-        },
-        {
-          "a": "finetuned-deberta",
-          "b": "gemini-3-flash",
-          "n": 200,
-          "agreement": 0.94,
-          "errors_a": 6,
-          "errors_b": 6,
-          "shared_wrong": 0,
-          "joint_error": 0.0,
-          "p_a_wrong_given_b_wrong": 0.0,
-          "p_b_wrong_given_a_wrong": 0.0,
-          "error_jaccard": 0.0,
-          "phi": -0.0309
-        },
-        {
-          "a": "finetuned-deberta",
-          "b": "gemma4",
-          "n": 200,
-          "agreement": 0.78,
-          "errors_a": 6,
-          "errors_b": 38,
-          "shared_wrong": 0,
-          "joint_error": 0.0,
-          "p_a_wrong_given_b_wrong": 0.0,
-          "p_b_wrong_given_a_wrong": 0.0,
-          "error_jaccard": 0.0,
-          "phi": -0.0852
-        },
-        {
-          "a": "finetuned-deberta",
-          "b": "llama-3.3-70b",
-          "n": 200,
-          "agreement": 0.875,
-          "errors_a": 6,
-          "errors_b": 19,
-          "shared_wrong": 0,
-          "joint_error": 0.0,
-          "p_a_wrong_given_b_wrong": 0.0,
-          "p_b_wrong_given_a_wrong": 0.0,
-          "error_jaccard": 0.0,
-          "phi": -0.057
-        },
-        {
-          "a": "finetuned-deberta",
-          "b": "llama32",
-          "n": 200,
-          "agreement": 0.71,
-          "errors_a": 6,
-          "errors_b": 55,
-          "shared_wrong": 3,
-          "joint_error": 0.015,
-          "p_a_wrong_given_b_wrong": 0.0545,
-          "p_b_wrong_given_a_wrong": 0.5,
-          "error_jaccard": 0.0517,
-          "phi": 0.0886
-        },
-        {
-          "a": "finetuned-deberta-run2",
-          "b": "finetuned-deberta-run2-ts",
-          "n": 200,
-          "agreement": 1.0,
-          "errors_a": 2,
-          "errors_b": 2,
-          "shared_wrong": 2,
-          "joint_error": 0.01,
-          "p_a_wrong_given_b_wrong": 1.0,
-          "p_b_wrong_given_a_wrong": 1.0,
-          "error_jaccard": 1.0,
-          "phi": 1.0
-        },
-        {
-          "a": "finetuned-deberta-run2",
-          "b": "gemini-3-flash",
-          "n": 200,
-          "agreement": 0.96,
-          "errors_a": 2,
-          "errors_b": 6,
-          "shared_wrong": 0,
-          "joint_error": 0.0,
-          "p_a_wrong_given_b_wrong": 0.0,
-          "p_b_wrong_given_a_wrong": 0.0,
-          "error_jaccard": 0.0,
-          "phi": -0.0177
-        },
-        {
-          "a": "finetuned-deberta-run2",
-          "b": "gemma4",
-          "n": 200,
-          "agreement": 0.8,
-          "errors_a": 2,
-          "errors_b": 38,
-          "shared_wrong": 0,
-          "joint_error": 0.0,
-          "p_a_wrong_given_b_wrong": 0.0,
-          "p_b_wrong_given_a_wrong": 0.0,
-          "error_jaccard": 0.0,
-          "phi": -0.0487
-        },
-        {
-          "a": "finetuned-deberta-run2",
-          "b": "llama-3.3-70b",
-          "n": 200,
-          "agreement": 0.895,
-          "errors_a": 2,
-          "errors_b": 19,
-          "shared_wrong": 0,
-          "joint_error": 0.0,
-          "p_a_wrong_given_b_wrong": 0.0,
-          "p_b_wrong_given_a_wrong": 0.0,
-          "error_jaccard": 0.0,
-          "phi": -0.0326
-        },
-        {
-          "a": "finetuned-deberta-run2",
-          "b": "llama32",
-          "n": 200,
-          "agreement": 0.715,
-          "errors_a": 2,
-          "errors_b": 55,
-          "shared_wrong": 0,
-          "joint_error": 0.0,
-          "p_a_wrong_given_b_wrong": 0.0,
-          "p_b_wrong_given_a_wrong": 0.0,
-          "error_jaccard": 0.0,
-          "phi": -0.0619
-        },
-        {
-          "a": "finetuned-deberta-run2-ts",
-          "b": "gemini-3-flash",
-          "n": 200,
-          "agreement": 0.96,
-          "errors_a": 2,
-          "errors_b": 6,
-          "shared_wrong": 0,
-          "joint_error": 0.0,
-          "p_a_wrong_given_b_wrong": 0.0,
-          "p_b_wrong_given_a_wrong": 0.0,
-          "error_jaccard": 0.0,
-          "phi": -0.0177
-        },
-        {
-          "a": "finetuned-deberta-run2-ts",
-          "b": "gemma4",
-          "n": 200,
-          "agreement": 0.8,
-          "errors_a": 2,
-          "errors_b": 38,
-          "shared_wrong": 0,
-          "joint_error": 0.0,
-          "p_a_wrong_given_b_wrong": 0.0,
-          "p_b_wrong_given_a_wrong": 0.0,
-          "error_jaccard": 0.0,
-          "phi": -0.0487
-        },
-        {
-          "a": "finetuned-deberta-run2-ts",
-          "b": "llama-3.3-70b",
-          "n": 200,
-          "agreement": 0.895,
-          "errors_a": 2,
-          "errors_b": 19,
-          "shared_wrong": 0,
-          "joint_error": 0.0,
-          "p_a_wrong_given_b_wrong": 0.0,
-          "p_b_wrong_given_a_wrong": 0.0,
-          "error_jaccard": 0.0,
-          "phi": -0.0326
-        },
-        {
-          "a": "finetuned-deberta-run2-ts",
-          "b": "llama32",
-          "n": 200,
-          "agreement": 0.715,
-          "errors_a": 2,
-          "errors_b": 55,
-          "shared_wrong": 0,
-          "joint_error": 0.0,
-          "p_a_wrong_given_b_wrong": 0.0,
-          "p_b_wrong_given_a_wrong": 0.0,
-          "error_jaccard": 0.0,
-          "phi": -0.0619
         },
         {
           "a": "gemini-3-flash",
@@ -1657,17 +1254,17 @@
           "phi": 0.1442
         }
       ],
-      "pairs_with_phi": 55,
+      "pairs_with_phi": 28,
       "most_correlated": {
-        "pair": "finetuned-deberta-run2 + finetuned-deberta-run2-ts",
-        "phi": 1.0,
-        "shared_wrong": 2,
+        "pair": "claude-sonnet-4.5 + gemini-3-flash",
+        "phi": 0.7639,
+        "shared_wrong": 5,
         "n": 200
       },
       "least_correlated": {
-        "pair": "deepseek-r1 + finetuned-deberta",
-        "phi": -0.0866,
-        "shared_wrong": 0,
+        "pair": "jev + deberta-nli",
+        "phi": -0.0317,
+        "shared_wrong": 3,
         "n": 200
       }
     },
@@ -1675,57 +1272,71 @@
       "jev": {
         "ece": 0.0389,
         "zero_error_coverage": 0.73,
-        "accuracy": 0.955
+        "accuracy": 0.955,
+        "juror": true
       },
       "claude-sonnet-4.5": {
         "ece": 0.0159,
         "zero_error_coverage": 0.0,
-        "accuracy": 0.965
+        "accuracy": 0.965,
+        "juror": true
       },
       "deberta-nli": {
         "ece": 0.1247,
         "zero_error_coverage": 0.08,
-        "accuracy": 0.595
+        "accuracy": 0.595,
+        "juror": true
       },
       "deepseek-r1": {
         "ece": 0.1265,
         "zero_error_coverage": 0.0,
-        "accuracy": 0.805
-      },
-      "finetuned-deberta": {
-        "ece": 0.4961,
-        "zero_error_coverage": 0.97,
-        "accuracy": 0.97
-      },
-      "finetuned-deberta-run2": {
-        "ece": 0.048,
-        "zero_error_coverage": 0.96,
-        "accuracy": 0.99
-      },
-      "finetuned-deberta-run2-ts": {
-        "ece": 0.017,
-        "zero_error_coverage": 0.96,
-        "accuracy": 0.99
+        "accuracy": 0.805,
+        "juror": true
       },
       "gemini-3-flash": {
         "ece": 0.0151,
         "zero_error_coverage": 0.0,
-        "accuracy": 0.97
+        "accuracy": 0.97,
+        "juror": true
       },
       "gemma4": {
         "ece": 0.1534,
         "zero_error_coverage": 0.0,
-        "accuracy": 0.81
+        "accuracy": 0.81,
+        "juror": true
       },
       "llama-3.3-70b": {
         "ece": 0.0155,
         "zero_error_coverage": 0.0,
-        "accuracy": 0.905
+        "accuracy": 0.905,
+        "juror": true
       },
       "llama32": {
         "ece": 0.154,
         "zero_error_coverage": 0.0,
-        "accuracy": 0.725
+        "accuracy": 0.725,
+        "juror": true
+      },
+      "finetuned-deberta": {
+        "ece": 0.4961,
+        "zero_error_coverage": 0.97,
+        "accuracy": 0.97,
+        "juror": false,
+        "not_a_juror": "not a juror: trained on half of these labels"
+      },
+      "finetuned-deberta-run2": {
+        "ece": 0.048,
+        "zero_error_coverage": 0.96,
+        "accuracy": 0.99,
+        "juror": false,
+        "not_a_juror": "not a juror: trained on half of these labels"
+      },
+      "finetuned-deberta-run2-ts": {
+        "ece": 0.017,
+        "zero_error_coverage": 0.96,
+        "accuracy": 0.99,
+        "juror": false,
+        "not_a_juror": "not a juror: trained on half of these labels"
       }
     }
   },
@@ -3799,42 +3410,50 @@
       "jev": {
         "ece": 0.3181,
         "zero_error_coverage": 0.0,
-        "accuracy": 0.6667
+        "accuracy": 0.6667,
+        "juror": true
       },
       "claude-sonnet-4.5": {
         "ece": 0.2353,
         "zero_error_coverage": 0.0,
-        "accuracy": 0.6583
+        "accuracy": 0.6583,
+        "juror": true
       },
       "deberta-nli": {
         "ece": 0.4027,
         "zero_error_coverage": 0.0,
-        "accuracy": 0.475
+        "accuracy": 0.475,
+        "juror": true
       },
       "deepseek-r1": {
         "ece": 0.3734,
         "zero_error_coverage": 0.0,
-        "accuracy": 0.5583
+        "accuracy": 0.5583,
+        "juror": true
       },
       "gemini-3-flash": {
         "ece": 0.3154,
         "zero_error_coverage": 0.0,
-        "accuracy": 0.6667
+        "accuracy": 0.6667,
+        "juror": true
       },
       "gemma4": {
         "ece": 0.3446,
         "zero_error_coverage": 0.0,
-        "accuracy": 0.5917
+        "accuracy": 0.5917,
+        "juror": true
       },
       "llama-3.3-70b": {
         "ece": 0.2333,
         "zero_error_coverage": 0.0,
-        "accuracy": 0.65
+        "accuracy": 0.65,
+        "juror": true
       },
       "llama32": {
         "ece": 0.3958,
         "zero_error_coverage": 0.0,
-        "accuracy": 0.6583
+        "accuracy": 0.6583,
+        "juror": true
       }
     }
   },
@@ -5908,42 +5527,50 @@
       "jev": {
         "ece": 0.053,
         "zero_error_coverage": 0.9417,
-        "accuracy": 0.975
+        "accuracy": 0.975,
+        "juror": true
       },
       "claude-sonnet-4.5": {
         "ece": 0.0322,
         "zero_error_coverage": 0.0,
-        "accuracy": 0.95
+        "accuracy": 0.95,
+        "juror": true
       },
       "deberta-nli": {
         "ece": 0.1952,
         "zero_error_coverage": 0.0,
-        "accuracy": 0.4917
+        "accuracy": 0.4917,
+        "juror": true
       },
       "deepseek-r1": {
         "ece": 0.1478,
         "zero_error_coverage": 0.0,
-        "accuracy": 0.7917
+        "accuracy": 0.7917,
+        "juror": true
       },
       "gemini-3-flash": {
         "ece": 0.0121,
         "zero_error_coverage": 0.725,
-        "accuracy": 0.9833
+        "accuracy": 0.9833,
+        "juror": true
       },
       "gemma4": {
         "ece": 0.18,
         "zero_error_coverage": 0.0,
-        "accuracy": 0.775
+        "accuracy": 0.775,
+        "juror": true
       },
       "llama-3.3-70b": {
         "ece": 0.0433,
         "zero_error_coverage": 0.0,
-        "accuracy": 0.8667
+        "accuracy": 0.8667,
+        "juror": true
       },
       "llama32": {
         "ece": 0.4292,
         "zero_error_coverage": 0.0,
-        "accuracy": 0.5917
+        "accuracy": 0.5917,
+        "juror": true
       }
     }
   }

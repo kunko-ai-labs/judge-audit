@@ -6,7 +6,7 @@ Does agreement between AI judges tell you anything about whether they are right?
 
 ## Business emails, clean (n=200)
 
-Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flash, gemma4, llama-3.3-70b, llama32). Majority vote among those who answered; a tie is no decision.
+Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flash, gemma4, llama-3.3-70b, llama32), the frozen panel of `docs/runs/jury/panel.json`. Majority vote among those who answered; a tie is no decision.
 
 | subset | n | pairwise agreement | unanimous (wrong) | ties | abstentions | majority accuracy (all / decided) | best single judge | vote share right / wrong | conf of the wrong majority |
 |---|---|---|---|---|---|---|---|---|---|
@@ -81,54 +81,51 @@ Phi between the two judges' error indicators, over the rows where both answered.
 
 ## Emails under attack (n=200)
 
-Panel: 11 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, finetuned-deberta, finetuned-deberta-run2, finetuned-deberta-run2-ts, gemini-3-flash, gemma4, llama-3.3-70b, llama32). Majority vote among those who answered; a tie is no decision.
+Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flash, gemma4, llama-3.3-70b, llama32), the frozen panel of `docs/runs/jury/panel.json`. Majority vote among those who answered; a tie is no decision. Also run on this dataset but not on the jury: finetuned-deberta, finetuned-deberta-run2, finetuned-deberta-run2-ts — they never vote and appear only in the declared-confidence table, each with the reason.
 
 | subset | n | pairwise agreement | unanimous (wrong) | ties | abstentions | majority accuracy (all / decided) | best single judge | vote share right / wrong | conf of the wrong majority |
 |---|---|---|---|---|---|---|---|---|---|
-| all | 200 | 80.7% | 80 (0) | 1 | 0 | 97.5% [95.0, 99.5] / 98.0% | 99.0% | 0.891 / 0.568 | 0.888 |
-| homoglyph_zerowidth | 10 | 85.6% | 3 (0) | 0 | 0 | 100.0% [69.2, 100.0]† / 100.0% | 100.0% | 0.927 / — | — |
-| ambiguous | 30 | 78.1% | 8 (0) | 0 | 0 | 96.7% [89.7, 100.0] / 96.7% | 96.7% | 0.887 / 0.545 | 0.832 |
-| homoglyph_cyrillic | 14 | 88.8% | 8 (0) | 0 | 0 | 100.0% [76.8, 100.0]† / 100.0% | 100.0% | 0.942 / — | — |
-| pii | 20 | 94.5% | 14 (0) | 0 | 0 | 100.0% [83.2, 100.0]† / 100.0% | 100.0% | 0.973 / — | — |
-| clean | 60 | 93.9% | 40 (0) | 0 | 0 | 100.0% [94.0, 100.0]† / 100.0% | 100.0% | 0.97 / — | — |
-| prompt_injection | 40 | 60.0% | 2 (0) | 1 | 0 | 90.0% [80.0, 97.5] / 92.3% | 100.0% | 0.753 / 0.576 | 0.906 |
-| social_engineering | 20 | 59.8% | 0 (0) | 0 | 0 | 100.0% [83.2, 100.0]† / 100.0% | 100.0% | 0.755 / — | — |
-| homoglyph_fullwidth | 6 | 94.2% | 5 (0) | 0 | 0 | 100.0% [54.1, 100.0]† / 100.0% | 100.0% | 0.97 / — | — |
+| all | 200 | 77.2% | 83 (0) | 11 | 0 | 90.0% [85.6, 93.9] / 95.2% | 97.0% | 0.89 / 0.681 | 0.899 |
+| homoglyph_zerowidth | 10 | 82.9% | 4 (0) | 0 | 0 | 100.0% [69.2, 100.0]† / 100.0% | 100.0% | 0.912 / — | — |
+| ambiguous | 30 | 77.4% | 10 (0) | 1 | 0 | 93.3% [82.8, 100.0] / 96.5% | 96.7% | 0.893 / 0.75 | 0.832 |
+| homoglyph_cyrillic | 14 | 86.2% | 8 (0) | 0 | 0 | 100.0% [76.8, 100.0]† / 100.0% | 100.0% | 0.929 / — | — |
+| pii | 20 | 92.5% | 14 (0) | 0 | 0 | 100.0% [83.2, 100.0]† / 100.0% | 100.0% | 0.963 / — | — |
+| clean | 60 | 91.7% | 40 (0) | 0 | 0 | 100.0% [94.0, 100.0]† / 100.0% | 100.0% | 0.958 / — | — |
+| prompt_injection | 40 | 54.3% | 2 (0) | 6 | 0 | 65.0% [50.0, 80.0] / 76.5% | 87.5% | 0.74 / 0.672 | 0.908 |
+| social_engineering | 20 | 50.0% | 0 (0) | 4 | 0 | 80.0% [60.0, 95.2] / 100.0% | 100.0% | 0.703 / — | — |
+| homoglyph_fullwidth | 6 | 92.3% | 5 (0) | 0 | 0 | 100.0% [54.1, 100.0]† / 100.0% | 100.0% | 0.958 / — | — |
 
 **Vote share as a confidence score** (the way most agent juries use it) against each judge's own declared confidence, same ECE and zero-error coverage:
 
 | confidence source | accuracy | ECE | zero-error coverage |
 |---|---|---|---|
-| panel vote share (majority) | 97.5% [95.0, 99.5] | 0.095 | 89.5% |
+| panel vote share (majority) | 90.0% [85.6, 93.9] | 0.073 | 43.9% |
 | jev (declared) | 95.5% | 0.039 | 73.0% |
 | claude-sonnet-4.5 (declared) | 96.5% | 0.016 | 0.0% |
 | deberta-nli (declared) | 59.5% | 0.125 | 8.0% |
 | deepseek-r1 (declared) | 80.5% | 0.127 | 0.0% |
-| finetuned-deberta (declared) | 97.0% | 0.496 | 97.0% |
-| finetuned-deberta-run2 (declared) | 99.0% | 0.048 | 96.0% |
-| finetuned-deberta-run2-ts (declared) | 99.0% | 0.017 | 96.0% |
 | gemini-3-flash (declared) | 97.0% | 0.015 | 0.0% |
 | gemma4 (declared) | 81.0% | 0.153 | 0.0% |
 | llama-3.3-70b (declared) | 90.5% | 0.015 | 0.0% |
 | llama32 (declared) | 72.5% | 0.154 | 0.0% |
+| finetuned-deberta (declared; not a juror: trained on half of these labels) | 97.0% | 0.496 | 97.0% |
+| finetuned-deberta-run2 (declared; not a juror: trained on half of these labels) | 99.0% | 0.048 | 96.0% |
+| finetuned-deberta-run2-ts (declared; not a juror: trained on half of these labels) | 99.0% | 0.017 | 96.0% |
 
 ### Error correlation (n=200)
 
 Phi between the two judges' error indicators, over the rows where both answered. "—": undefined because one judge has no error on those rows. `errors` is the judge's own count; the full pair table (agreement, joint error, conditional error rates, error-set Jaccard, n) is folded below.
 
-| judge (errors) | jev | claude-sonnet-4.5 | deberta-nli | deepseek-r1 | finetuned-deberta | finetuned-deberta-run2 | finetuned-deberta-run2-ts | gemini-3-flash | gemma4 | llama-3.3-70b | llama32 |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| jev (9) |  | 0.484 | -0.032 | 0.380 | -0.038 | -0.022 | -0.022 | 0.245 | 0.387 | 0.423 | 0.028 |
-| claude-sonnet-4.5 (7) |  |  | 0.009 | 0.318 | -0.034 | -0.019 | -0.019 | 0.764 | 0.185 | 0.402 | 0.005 |
-| deberta-nli (81) |  |  |  | 0.160 | -0.085 | -0.083 | -0.083 | 0.094 | 0.172 | 0.115 | 0.222 |
-| deepseek-r1 (39) |  |  |  |  | -0.087 | -0.050 | -0.050 | 0.357 | 0.630 | 0.400 | 0.206 |
-| finetuned-deberta (6) |  |  |  |  |  | 0.572 | 0.572 | -0.031 | -0.085 | -0.057 | 0.089 |
-| finetuned-deberta-run2 (2) |  |  |  |  |  |  | 1.000 | -0.018 | -0.049 | -0.033 | -0.062 |
-| finetuned-deberta-run2-ts (2) |  |  |  |  |  |  |  | -0.018 | -0.049 | -0.033 | -0.062 |
-| gemini-3-flash (6) |  |  |  |  |  |  |  |  | 0.214 | 0.443 | 0.089 |
-| gemma4 (38) |  |  |  |  |  |  |  |  |  | 0.495 | 0.244 |
-| llama-3.3-70b (19) |  |  |  |  |  |  |  |  |  |  | 0.144 |
-| llama32 (55) |  |  |  |  |  |  |  |  |  |  |  |
+| judge (errors) | jev | claude-sonnet-4.5 | deberta-nli | deepseek-r1 | gemini-3-flash | gemma4 | llama-3.3-70b | llama32 |
+|---|---|---|---|---|---|---|---|---|
+| jev (9) |  | 0.484 | -0.032 | 0.380 | 0.245 | 0.387 | 0.423 | 0.028 |
+| claude-sonnet-4.5 (7) |  |  | 0.009 | 0.318 | 0.764 | 0.185 | 0.402 | 0.005 |
+| deberta-nli (81) |  |  |  | 0.160 | 0.094 | 0.172 | 0.115 | 0.222 |
+| deepseek-r1 (39) |  |  |  |  | 0.357 | 0.630 | 0.400 | 0.206 |
+| gemini-3-flash (6) |  |  |  |  |  | 0.214 | 0.443 | 0.089 |
+| gemma4 (38) |  |  |  |  |  |  | 0.495 | 0.244 |
+| llama-3.3-70b (19) |  |  |  |  |  |  |  | 0.144 |
+| llama32 (55) |  |  |  |  |  |  |  |  |
 
 <details><summary>Every pair</summary>
 
@@ -137,52 +134,25 @@ Phi between the two judges' error indicators, over the rows where both answered.
 | jev | claude-sonnet-4.5 | 200 | 96.0% | 2.0% | 57.1% | 44.4% | 0.333 | 0.484 |
 | jev | deberta-nli | 200 | 58.0% | 1.5% | 3.7% | 33.3% | 0.035 | -0.032 |
 | jev | deepseek-r1 | 200 | 84.0% | 4.0% | 20.5% | 88.9% | 0.200 | 0.380 |
-| jev | finetuned-deberta | 200 | 92.5% | 0.0% | 0.0% | 0.0% | 0.000 | -0.038 |
-| jev | finetuned-deberta-run2 | 200 | 94.5% | 0.0% | 0.0% | 0.0% | 0.000 | -0.022 |
-| jev | finetuned-deberta-run2-ts | 200 | 94.5% | 0.0% | 0.0% | 0.0% | 0.000 | -0.022 |
 | jev | gemini-3-flash | 200 | 94.5% | 1.0% | 33.3% | 22.2% | 0.154 | 0.245 |
 | jev | gemma4 | 200 | 84.5% | 4.0% | 21.1% | 88.9% | 0.205 | 0.387 |
 | jev | llama-3.3-70b | 200 | 92.0% | 3.0% | 31.6% | 66.7% | 0.273 | 0.423 |
 | jev | llama32 | 200 | 71.0% | 1.5% | 5.5% | 33.3% | 0.049 | 0.028 |
 | claude-sonnet-4.5 | deberta-nli | 200 | 58.0% | 1.5% | 3.7% | 42.9% | 0.035 | 0.009 |
 | claude-sonnet-4.5 | deepseek-r1 | 200 | 83.0% | 3.0% | 15.4% | 85.7% | 0.150 | 0.318 |
-| claude-sonnet-4.5 | finetuned-deberta | 200 | 93.5% | 0.0% | 0.0% | 0.0% | 0.000 | -0.034 |
-| claude-sonnet-4.5 | finetuned-deberta-run2 | 200 | 95.5% | 0.0% | 0.0% | 0.0% | 0.000 | -0.019 |
-| claude-sonnet-4.5 | finetuned-deberta-run2-ts | 200 | 95.5% | 0.0% | 0.0% | 0.0% | 0.000 | -0.019 |
 | claude-sonnet-4.5 | gemini-3-flash | 200 | 98.5% | 2.5% | 83.3% | 71.4% | 0.625 | 0.764 |
 | claude-sonnet-4.5 | gemma4 | 200 | 81.5% | 2.0% | 10.5% | 57.1% | 0.098 | 0.185 |
 | claude-sonnet-4.5 | llama-3.3-70b | 200 | 92.0% | 2.5% | 26.3% | 71.4% | 0.238 | 0.402 |
 | claude-sonnet-4.5 | llama32 | 200 | 71.0% | 1.0% | 3.6% | 28.6% | 0.033 | 0.005 |
 | deberta-nli | deepseek-r1 | 200 | 58.5% | 11.0% | 56.4% | 27.2% | 0.225 | 0.160 |
-| deberta-nli | finetuned-deberta | 200 | 57.0% | 0.5% | 16.7% | 1.2% | 0.012 | -0.085 |
-| deberta-nli | finetuned-deberta-run2 | 200 | 58.5% | 0.0% | 0.0% | 0.0% | 0.000 | -0.083 |
-| deberta-nli | finetuned-deberta-run2-ts | 200 | 58.5% | 0.0% | 0.0% | 0.0% | 0.000 | -0.083 |
 | deberta-nli | gemini-3-flash | 200 | 59.5% | 2.0% | 66.7% | 4.9% | 0.048 | 0.094 |
 | deberta-nli | gemma4 | 200 | 59.0% | 11.0% | 57.9% | 27.2% | 0.227 | 0.172 |
 | deberta-nli | llama-3.3-70b | 200 | 60.0% | 5.5% | 57.9% | 13.6% | 0.124 | 0.115 |
 | deberta-nli | llama32 | 200 | 56.0% | 16.0% | 58.2% | 39.5% | 0.308 | 0.222 |
-| deepseek-r1 | finetuned-deberta | 200 | 77.5% | 0.0% | 0.0% | 0.0% | 0.000 | -0.087 |
-| deepseek-r1 | finetuned-deberta-run2 | 200 | 79.5% | 0.0% | 0.0% | 0.0% | 0.000 | -0.050 |
-| deepseek-r1 | finetuned-deberta-run2-ts | 200 | 79.5% | 0.0% | 0.0% | 0.0% | 0.000 | -0.050 |
 | deepseek-r1 | gemini-3-flash | 200 | 83.5% | 3.0% | 100.0% | 15.4% | 0.154 | 0.357 |
 | deepseek-r1 | gemma4 | 200 | 88.5% | 13.5% | 71.0% | 69.2% | 0.540 | 0.630 |
 | deepseek-r1 | llama-3.3-70b | 200 | 84.0% | 6.5% | 68.4% | 33.3% | 0.289 | 0.400 |
 | deepseek-r1 | llama32 | 200 | 70.0% | 9.0% | 32.7% | 46.2% | 0.237 | 0.206 |
-| finetuned-deberta | finetuned-deberta-run2 | 200 | 97.0% | 1.0% | 100.0% | 33.3% | 0.333 | 0.572 |
-| finetuned-deberta | finetuned-deberta-run2-ts | 200 | 97.0% | 1.0% | 100.0% | 33.3% | 0.333 | 0.572 |
-| finetuned-deberta | gemini-3-flash | 200 | 94.0% | 0.0% | 0.0% | 0.0% | 0.000 | -0.031 |
-| finetuned-deberta | gemma4 | 200 | 78.0% | 0.0% | 0.0% | 0.0% | 0.000 | -0.085 |
-| finetuned-deberta | llama-3.3-70b | 200 | 87.5% | 0.0% | 0.0% | 0.0% | 0.000 | -0.057 |
-| finetuned-deberta | llama32 | 200 | 71.0% | 1.5% | 5.5% | 50.0% | 0.052 | 0.089 |
-| finetuned-deberta-run2 | finetuned-deberta-run2-ts | 200 | 100.0% | 1.0% | 100.0% | 100.0% | 1.000 | 1.000 |
-| finetuned-deberta-run2 | gemini-3-flash | 200 | 96.0% | 0.0% | 0.0% | 0.0% | 0.000 | -0.018 |
-| finetuned-deberta-run2 | gemma4 | 200 | 80.0% | 0.0% | 0.0% | 0.0% | 0.000 | -0.049 |
-| finetuned-deberta-run2 | llama-3.3-70b | 200 | 89.5% | 0.0% | 0.0% | 0.0% | 0.000 | -0.033 |
-| finetuned-deberta-run2 | llama32 | 200 | 71.5% | 0.0% | 0.0% | 0.0% | 0.000 | -0.062 |
-| finetuned-deberta-run2-ts | gemini-3-flash | 200 | 96.0% | 0.0% | 0.0% | 0.0% | 0.000 | -0.018 |
-| finetuned-deberta-run2-ts | gemma4 | 200 | 80.0% | 0.0% | 0.0% | 0.0% | 0.000 | -0.049 |
-| finetuned-deberta-run2-ts | llama-3.3-70b | 200 | 89.5% | 0.0% | 0.0% | 0.0% | 0.000 | -0.033 |
-| finetuned-deberta-run2-ts | llama32 | 200 | 71.5% | 0.0% | 0.0% | 0.0% | 0.000 | -0.062 |
 | gemini-3-flash | gemma4 | 200 | 82.0% | 2.0% | 10.5% | 66.7% | 0.100 | 0.214 |
 | gemini-3-flash | llama-3.3-70b | 200 | 92.5% | 2.5% | 26.3% | 83.3% | 0.250 | 0.443 |
 | gemini-3-flash | llama32 | 200 | 72.5% | 1.5% | 5.5% | 50.0% | 0.052 | 0.089 |
@@ -192,11 +162,11 @@ Phi between the two judges' error indicators, over the rows where both answered.
 
 </details>
 
-**Reading.** Of 55 pairs with a defined phi, the most correlated errors are finetuned-deberta-run2 + finetuned-deberta-run2-ts (phi 1.000, 2 shared wrong cases of 200) and the least correlated are deepseek-r1 + finetuned-deberta (phi -0.087, 0 shared wrong cases of 200).
+**Reading.** Of 28 pairs with a defined phi, the most correlated errors are claude-sonnet-4.5 + gemini-3-flash (phi 0.764, 5 shared wrong cases of 200) and the least correlated are jev + deberta-nli (phi -0.032, 3 shared wrong cases of 200).
 
 ## Task router, bare option labels (n=120)
 
-Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flash, gemma4, llama-3.3-70b, llama32). Majority vote among those who answered; a tie is no decision.
+Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flash, gemma4, llama-3.3-70b, llama32), the frozen panel of `docs/runs/jury/panel.json`. Majority vote among those who answered; a tie is no decision.
 
 | subset | n | pairwise agreement | unanimous (wrong) | ties | abstentions | majority accuracy (all / decided) | best single judge | vote share right / wrong | conf of the wrong majority |
 |---|---|---|---|---|---|---|---|---|---|
@@ -340,7 +310,7 @@ Every 3-judge jury from the frozen panel (jev, claude-sonnet-4.5, deberta-nli, d
 
 ## Task router, described options (n=120)
 
-Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flash, gemma4, llama-3.3-70b, llama32). Majority vote among those who answered; a tie is no decision.
+Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flash, gemma4, llama-3.3-70b, llama32), the frozen panel of `docs/runs/jury/panel.json`. Majority vote among those who answered; a tie is no decision.
 
 | subset | n | pairwise agreement | unanimous (wrong) | ties | abstentions | majority accuracy (all / decided) | best single judge | vote share right / wrong | conf of the wrong majority |
 |---|---|---|---|---|---|---|---|---|---|
@@ -501,4 +471,5 @@ Every 3-judge jury from the frozen panel (jev, claude-sonnet-4.5, deberta-nli, d
 - Synthetic, seeded datasets; ground truth for routing is by construction. n is small; subset rows are indicative.
 - Ties are no decision (see above). An earlier version broke ties alphabetically, which on the router always favoured `route_easy`; changed and disclosed in `jury-consensus-plan.md`.
 - Judges differ in cost, size and confidence method; the panel is heterogeneous on purpose (same-model juries are the documented failure mode — Smit et al., ICML 2024).
+- **Only the frozen panel votes** (`docs/runs/jury/panel.json`) on every dataset, in every panel statistic, subset, jury and error-correlation matrix. A judge added to the Arena later is listed in the declared-confidence table with the reason it is not a juror. The three fine-tuned DeBERTa runs are one model, trained on half of the email labels (`docs/finetuned-baseline-2026-09.md`): on the emails under attack they would be the answer key voting three times, not three independent jurors. An earlier version let them vote there; corrected in v0.4.0 (#65, before → after in the CHANGELOG).
 - Round 1 only: nobody saw anybody else's vote. Round 2 (deliberation) is pre-registered in `docs/jury-consensus-plan.md` and reported in `docs/jury-consensus.md` once run.
