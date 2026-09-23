@@ -38,11 +38,13 @@ Title `type(scope): [ID] Description`. Squash-merged; the title becomes the comm
 
 This is a single-maintainer repository, and branch protection does **not** require a GitHub approving review. GitHub does not let an author approve their own pull request, so with one maintainer a required approval could only be satisfied by an admin bypass on every merge — and on classic branch protection that bypass skips failing CI as well, which is weaker than requiring the checks alone.
 
-The independent review happens outside GitHub's approval button, and is recorded on the PR:
+The independent review happens outside GitHub's approval button:
 
 1. the `story-reviewer` agent — an adversarial, read-only review that recomputes the statistics by hand and checks every acceptance criterion against the diff;
 2. the `release-qa` agent — a clean-room install from the branch, CLI / MCP / Action smoke, report-regeneration diff, tests on every supported Python;
 3. a human read of the PR by the maintainer before the squash-merge.
+
+Before merge, the team lead who ran the agents for the story posts the `story-reviewer` and `release-qa` verdicts on the PR as a comment, so the review is on the record next to the diff. The agents themselves do not post, and nothing posts automatically. This starts with #63; earlier PRs carry no such comment.
 
 That is not the same as a second person's approval, and we do not claim it is. An external reviewer is sought; when one joins, `required_approving_review_count` in `scripts/protect_main.sh` goes to 1.
 

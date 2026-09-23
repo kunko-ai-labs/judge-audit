@@ -2,8 +2,9 @@
 
 `release.yml` runs build -> smoke -> github-release -> publish. `smoke` installs the built
 wheel in a clean runner and exercises the CLI, a simulated audit and the MCP entry point,
-then generates, checks and attests an SBOM of that install. Only after it passes are the
-files attached to the GitHub release and published to PyPI. These tests fail the build if
+then generates and checks an SBOM of that install. Only after it passes are the wheel and
+SBOM attested (in a job that installs nothing), attached to the GitHub release and
+published to PyPI. These tests fail the build if
 that ordering, the hash-pinned SBOM tool or the credential hygiene ever regresses.
 """
 from __future__ import annotations
@@ -88,17 +89,31 @@ def test_sbom_tool_is_hash_pinned_and_describes_the_package(root, jobs):
     assert '"kunko-judge-audit"' in run_blocks, "the SBOM root is checked, not assumed"
 
 
-def test_sbom_is_attested_with_the_same_pinned_action_as_the_build(jobs):
-    def attest_steps(job):
-        return [s for s in job["steps"] if s.get("uses", "").startswith(ATTEST)]
+def test_wheel_and_sbom_are_attested_with_the_same_pinned_action_before_upload(jobs):
+    for name, job in jobs.items():
+        attests = [s for s in job["steps"] if s.get("uses", "").startswith(ATTEST)]
+        if name != "github-release":
+            assert not attests, f"{name} attests: only github-release may"
+    steps = jobs["github-release"]["steps"]
+    attests = [s for s in steps if s.get("uses", "").startswith(ATTEST)]
+    assert len({s["uses"] for s in attests}) == 1
+    assert [s["with"]["subject-path"] for s in attests] == ["dist/*", "sbom.cdx.json"]
+    upload = next(i for i, s in enumerate(steps) if "gh release upload" in s.get("run", ""))
+    assert all(steps.index(s) < upload for s in attests), "attest before attaching"
+    perms = jobs["github-release"]["permissions"]
+    assert perms.get("id-token") == "write" and perms.get("attestations") == "write"
 
-    (build,) = attest_steps(jobs["build"])
-    (sbom,) = attest_steps(jobs["smoke"])
-    assert build["uses"] == sbom["uses"]
-    assert build["with"]["subject-path"] == "dist/*"
-    assert sbom["with"]["subject-path"] == "sbom.cdx.json"
-    assert jobs["smoke"]["permissions"].get("id-token") == "write"
-    assert jobs["smoke"]["permissions"].get("attestations") == "write"
+
+INSTALLS = re.compile(r"pip (--python \S+ )?install|python -m build|npm (install|ci)|uv (pip|sync)")
+
+
+def test_no_job_that_installs_packages_holds_an_oidc_token(jobs):
+    """A dependency that is not hash-pinned could mint Sigstore or PyPI credentials."""
+    for name, job in jobs.items():
+        installs = any(INSTALLS.search(s.get("run", "")) for s in job["steps"])
+        token = job.get("permissions", {}).get("id-token") == "write"
+        assert not (installs and token), f"{name} installs packages and holds id-token: write"
+    assert INSTALLS.search(runs(jobs["build"])) and INSTALLS.search(runs(jobs["smoke"]))
 
 
 def test_checkouts_do_not_persist_credentials(jobs):

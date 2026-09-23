@@ -20,7 +20,7 @@ in `docs/audit-*.md` / `.json`, `docs/arena-2026-09.md`, `docs/consensus-2026-09
   Judge-audit's Apache-2.0 licence does not, and cannot, relicense that output: whatever
   terms the model's vendor attaches to it — a hosted provider's terms of service, or the
   licence of the open weights a local model was built from — still apply to that text
-  after it is committed here. Checkpoints name models, not platforms (see `CLAUDE.md`),
+  after it is committed here. Hosted chat models are named by model (see `CLAUDE.md`),
   and this repository makes no claim about what any vendor's terms permit a third party
   to do with the output.
 - **These outputs are committed as evidence, not as a dataset for redistribution.** Each
