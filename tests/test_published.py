@@ -145,6 +145,19 @@ def test_runs_report_never_rewrites_an_existing_run_block(root, monkeypatch, jso
                 now="2099-01-01T00:00:00+00:00")
 
 
+def test_a_changed_tier_is_blamed_on_the_labels_file_not_the_checkpoint(root, monkeypatch):
+    """The run block carries the dataset's tier, read from its labels file: when only that
+    differs, the error names the labels file."""
+    rr, t, result, judge_name, on_disk = _target(root, monkeypatch,
+                                                  "docs/runs/arena/gemma4/email-clean.json")
+    old = json.loads(on_disk[t["json"]])
+    old["run"]["dataset"]["ground_truth"]["tier"] = "GT-2"
+    with pytest.raises(SystemExit, match="ground-truth tier") as e:
+        rr.plan(t, result, judge_name, {**on_disk, t["json"]: json.dumps(old)},
+                now="2099-01-01T00:00:00+00:00")
+    assert t["labels"] in str(e.value) and "checkpoint" not in str(e.value)
+
+
 def test_a_regeneration_is_stamped_with_its_own_time_next_to_the_run(root, monkeypatch):
     """When the numbers change, the file records when, by which version and script it was
     regenerated — in its own block; the run block is left exactly as it was."""

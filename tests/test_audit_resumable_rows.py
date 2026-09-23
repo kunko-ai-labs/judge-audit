@@ -72,6 +72,17 @@ def test_a_recompute_names_the_judge_the_checkpoint_recorded(tmp_path):
         assert json.loads((tmp_path / "r.json").read_text())["judge"] == "simulated"
 
 
+def test_an_incomplete_checkpoint_is_not_resumed_by_another_judge(tmp_path):
+    """Rows answered by one judge and rows answered by another are not one audit."""
+    ckpt = tmp_path / "c.ckpt.jsonl"
+    header = {"idx": -1, "run": {"judge": {"name": "llm:some-model"}}}
+    ckpt.write_text(json.dumps(header) + "\n", encoding="utf-8")
+    p = run([str(LABELS), "--judge", "simulated", "--checkpoint", str(ckpt),
+             "--out", str(tmp_path / "r.md"), "--json", str(tmp_path / "r.json")], tmp_path)
+    assert p.returncode != 0 and "was started by judge 'llm'" in p.stderr
+    assert ckpt.read_text(encoding="utf-8") == json.dumps(header) + "\n"  # nothing appended
+
+
 def test_heldout_run_judges_only_the_subset_and_resumes(tmp_path):
     ckpt = tmp_path / "email-clean.ckpt.jsonl"
     args = [str(LABELS), "--judge", "simulated", "--checkpoint", str(ckpt),

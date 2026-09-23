@@ -17,10 +17,11 @@ no judge, no API call — and CI diffs them like every other report:
                                               # PNG bytes vary by version, so CI skips it)
   python scripts/runs_report.py --moved REF   # what moved against the reports at git REF
 
-Provenance is never rewritten. A report's `run` block is what the run said: the checkpoint
-header, or — for the one checkpoint written before headers existed,
-docs/runs/audit-jev-real.ckpt.jsonl — the block its report was first published with in
-v0.2.0, pinned below (not read back from the file it is checked against). When a
+Provenance is never rewritten. A report's `run` block is what the run said — the checkpoint
+header, plus the dataset's ground-truth tier, read from its labels file — or, for the one
+checkpoint written before headers existed, docs/runs/audit-jev-real.ckpt.jsonl, the block
+its report was first published with in v0.2.0, pinned below (not read back from the file it
+is checked against). When a
 committed report's `run` block differs from that evidence this script stops instead of
 overwriting it. A regeneration is recorded beside the run, in a `regenerated` block with
 the real UTC time, version and script, written only when the file's content changes, so
@@ -145,6 +146,12 @@ def stamp(t: dict, result, now: str) -> dict:
     return g
 
 
+def _without_tier(run: dict) -> dict:
+    """The run block minus the tier read from the labels file (not from the checkpoint)."""
+    ds = {k: v for k, v in (run.get("dataset") or {}).items() if k != "ground_truth"}
+    return {**run, "dataset": ds}
+
+
 def plan(t: dict, result, judge_name: str, on_disk: dict[str, str | None],
          now: str) -> dict[str, str]:
     """The files to write for one target ({} when the committed ones are current).
@@ -158,6 +165,11 @@ def plan(t: dict, result, judge_name: str, on_disk: dict[str, str | None],
     if committed is not None:
         old = json.loads(committed)
         if old.get("run") != result.run:
+            if _without_tier(old.get("run") or {}) == _without_tier(result.run):
+                raise SystemExit(f"{t['json']}: the ground-truth tier declared by "
+                                 f"{t['labels']} changed since this report was written; "
+                                 "runs_report.py never rewrites provenance — review the "
+                                 "labels file, then update the report by hand")
             raise SystemExit(f"{t['json']}: its run block differs from the one its checkpoint "
                              "(or pinned provenance) records; runs_report.py never rewrites "
                              "provenance — fix the evidence or the file by hand, with review")
