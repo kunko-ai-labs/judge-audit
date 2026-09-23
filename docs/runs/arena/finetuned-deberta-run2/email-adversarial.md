@@ -1,27 +1,44 @@
 # Audit report — finetuned
 
-**n=200** · accuracy **99.0%** · ECE **0.0480**
+**n=200** · accuracy **99.0%** [97.5, 100.0] · ECE **0.0480** [0.0360, 0.0659]
 · cost **$0.0000** · p50 **0.018s** · p99 **0.039s**
 
-_judge `finetuned:deberta-v3-base-ft-email-routing-run2` · model `deberta-v3-base-ft-email-routing-run2` · seed 2026 · recomputed 2026-09-22T08:17:03+00:00 (original run time not recorded) · judge-audit 0.3.2_
+_judge `finetuned:deberta-v3-base-ft-email-routing-run2` · model `deberta-v3-base-ft-email-routing-run2` · seed 2026 · run 2026-09-22T08:17:03+00:00 · judge-audit 0.3.2_
 _dataset `examples/email-routing-adversarial/labels.jsonl` · 200 rows · sha256 `8b7dbc8ded1b…`_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic and seeded: 60 clean controls plus 140 attacked rows built from the same templates; the label is the category of the underlying clean email by design; _meta.target is what the attacker wanted; measures resistance to attacks on synthetic mail, not accuracy on real mail**
 
+_Brackets are 95% percentile-bootstrap intervals over the dataset's distinct texts (2,000 resamples, seed 0): how far the number would move on another sample of n=200 drawn the same way._
+
 ## Can I automate this?
 
-Zero observed errors through the most confident **96.0%** (192 decisions, confidence ≥ 0.7097).
+Zero observed errors through the most confident **96.0%** [93.1, 100.0] (192 decisions, confidence ≥ 0.7097).
 Retrospective on this dataset — not a production guarantee.
 
 ## Accuracy vs coverage
 
 | coverage | accuracy | min confidence | n |
 |---|---|---|---|
-| 5% | 100.0% | 0.99 | 10 |
-| 25% | 100.0% | 0.98 | 50 |
-| 45% | 100.0% | 0.98 | 90 |
-| 65% | 100.0% | 0.97 | 130 |
-| 85% | 100.0% | 0.96 | 170 |
+| 5.0% | 100.0% | 0.99 | 10 |
+| 11.0% | 100.0% | 0.99 | 22 |
+| 15.0% | 100.0% | 0.98 | 30 |
+| 20.0% | 100.0% | 0.98 | 40 |
+| 25.5% | 100.0% | 0.98 | 51 |
+| 30.0% | 100.0% | 0.98 | 60 |
+| 35.0% | 100.0% | 0.98 | 70 |
+| 40.0% | 100.0% | 0.98 | 80 |
+| 45.0% | 100.0% | 0.98 | 90 |
+| 50.0% | 100.0% | 0.98 | 100 |
+| 55.0% | 100.0% | 0.98 | 110 |
+| 60.0% | 100.0% | 0.98 | 120 |
+| 65.0% | 100.0% | 0.97 | 130 |
+| 70.0% | 100.0% | 0.97 | 140 |
+| 75.0% | 100.0% | 0.97 | 150 |
+| 80.0% | 100.0% | 0.97 | 160 |
+| 85.0% | 100.0% | 0.96 | 170 |
+| 90.0% | 100.0% | 0.94 | 180 |
+| 95.0% | 100.0% | 0.77 | 190 |
+| 100.0% | 99.0% | 0.28 | 200 |
 
 ## Calibration (reliability bins)
 

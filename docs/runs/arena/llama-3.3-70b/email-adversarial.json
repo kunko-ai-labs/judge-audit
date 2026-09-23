@@ -67,117 +67,27 @@
   ],
   "accuracy_coverage": [
     {
-      "coverage": 0.05,
+      "coverage": 0.06,
       "accuracy": 0.0,
-      "n": 10,
+      "n": 12,
       "min_confidence": 1.0
     },
     {
-      "coverage": 0.1,
-      "accuracy": 0.4,
-      "n": 20,
+      "coverage": 0.115,
+      "accuracy": 0.4783,
+      "n": 23,
       "min_confidence": 0.99
     },
     {
-      "coverage": 0.15,
-      "accuracy": 0.6,
-      "n": 30,
+      "coverage": 0.915,
+      "accuracy": 0.9235,
+      "n": 183,
       "min_confidence": 0.9
     },
     {
-      "coverage": 0.2,
-      "accuracy": 0.7,
-      "n": 40,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.25,
-      "accuracy": 0.76,
-      "n": 50,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.3,
-      "accuracy": 0.8,
-      "n": 60,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.35,
-      "accuracy": 0.8286,
-      "n": 70,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.4,
-      "accuracy": 0.85,
-      "n": 80,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.45,
-      "accuracy": 0.8667,
-      "n": 90,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.5,
-      "accuracy": 0.88,
-      "n": 100,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.55,
-      "accuracy": 0.8909,
-      "n": 110,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.6,
-      "accuracy": 0.9,
-      "n": 120,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.65,
-      "accuracy": 0.9077,
-      "n": 130,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.7,
-      "accuracy": 0.9143,
-      "n": 140,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.75,
-      "accuracy": 0.92,
-      "n": 150,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.8,
-      "accuracy": 0.925,
-      "n": 160,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.85,
-      "accuracy": 0.9176,
-      "n": 170,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.9,
-      "accuracy": 0.9222,
-      "n": 180,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.95,
-      "accuracy": 0.9211,
-      "n": 190,
+      "coverage": 0.985,
+      "accuracy": 0.9188,
+      "n": 197,
       "min_confidence": 0.8
     },
     {
@@ -196,6 +106,7 @@
   "p50_latency_s": 0.812,
   "p99_latency_s": 7.172,
   "run": {
+    "timestamp_utc": "2026-09-20T19:04:55+00:00",
     "judge_audit_version": "0.3.1",
     "judge": {
       "name": "llm:llama-3.3-70b",
@@ -211,10 +122,44 @@
     "dataset": {
       "path": "examples/email-routing-adversarial/labels.jsonl",
       "sha256": "74741868f533bf0c17b622cfbae43b917e52a964cd1c9e51fb9b74905c802e24",
-      "rows": 200
+      "rows": 200,
+      "ground_truth": {
+        "tier": "GT-1",
+        "label": "constructed",
+        "meaning": "labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy",
+        "validation": "not_validated",
+        "purpose": [
+          "robustness under prompt injection, homoglyphs, ambiguity, PII and social engineering",
+          "does confidence drop when the judge is attacked?"
+        ],
+        "caveats": [
+          "email categories are synthetic and seeded: 60 clean controls plus 140 attacked rows built from the same templates",
+          "the label is the category of the underlying clean email by design; _meta.target is what the attacker wanted",
+          "measures resistance to attacks on synthetic mail, not accuracy on real mail"
+        ]
+      }
     },
-    "recomputed_utc": "2026-09-20T19:04:55+00:00",
-    "note": "original run time not recorded in this checkpoint",
     "checkpoint": "docs/runs/arena/llama-3.3-70b/email-adversarial.ckpt.jsonl"
+  },
+  "accuracy_ci": [
+    0.8614,
+    0.945
+  ],
+  "accuracy_ci_method": "bootstrap",
+  "ece_ci": [
+    0.0052,
+    0.0598
+  ],
+  "ece_ci_method": "bootstrap",
+  "zero_error_coverage_ci": [
+    0.0,
+    0.0183
+  ],
+  "zero_error_coverage_ci_method": "clopper-pearson",
+  "bootstrap": {
+    "method": "percentile bootstrap over distinct dataset texts (cluster)",
+    "level": 0.95,
+    "n_boot": 2000,
+    "seed": 0
   }
 }

@@ -1,27 +1,28 @@
 # Audit report — llm
 
-**n=120** · accuracy **66.7%** · ECE **0.2816**
+**n=120** · accuracy **66.7%** [52.5, 80.3] · ECE **0.2816** [0.1483, 0.4128]
 · cost **$0.0000** · p50 **1.014s** · p99 **1.326s**
 
-_judge `llm:llama3.2:3b` · model `llama3.2:3b` · recomputed 2026-09-21T19:27:02+00:00 (original run time not recorded) · judge-audit 0.3.2_
+_judge `llm:llama3.2:3b` · model `llama3.2:3b` · run 2026-09-21T19:27:02+00:00 · judge-audit 0.3.2_
 _dataset `docs/runs/jury/router-bare/llama32.r2.input.jsonl` · 120 rows · sha256 `d201d92e237e…`_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome; downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified; 40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted**
 
+_Brackets are 95% percentile-bootstrap intervals over the dataset's distinct texts (2,000 resamples, seed 0): how far the number would move on another sample of n=120 drawn the same way._
+
 ## Can I automate this?
 
-Zero observed errors through the most confident **1.7%** (2 decisions, confidence ≥ 0.95).
+Zero observed errors through the most confident **0.8%** [0.0, 3.1] (1 decisions, confidence ≥ 0.99).
 Retrospective on this dataset — not a production guarantee.
 
 ## Accuracy vs coverage
 
 | coverage | accuracy | min confidence | n |
 |---|---|---|---|
-| 5% | 50.0% | 0.95 | 6 |
-| 25% | 66.7% | 0.90 | 30 |
-| 45% | 59.3% | 0.80 | 54 |
-| 65% | 62.8% | 0.80 | 78 |
-| 85% | 61.8% | 0.50 | 102 |
+| 14.2% | 64.7% | 0.95 | 17 |
+| 30.0% | 72.2% | 0.90 | 36 |
+| 81.7% | 60.2% | 0.80 | 98 |
+| 100.0% | 66.7% | 0.50 | 120 |
 
 ## Calibration (reliability bins)
 

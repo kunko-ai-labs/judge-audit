@@ -67,117 +67,15 @@
   ],
   "accuracy_coverage": [
     {
-      "coverage": 0.05,
+      "coverage": 0.49,
       "accuracy": 1.0,
-      "n": 10,
+      "n": 98,
       "min_confidence": 1.0
     },
     {
-      "coverage": 0.1,
+      "coverage": 0.995,
       "accuracy": 1.0,
-      "n": 20,
-      "min_confidence": 1.0
-    },
-    {
-      "coverage": 0.15,
-      "accuracy": 1.0,
-      "n": 30,
-      "min_confidence": 1.0
-    },
-    {
-      "coverage": 0.2,
-      "accuracy": 1.0,
-      "n": 40,
-      "min_confidence": 1.0
-    },
-    {
-      "coverage": 0.25,
-      "accuracy": 1.0,
-      "n": 50,
-      "min_confidence": 1.0
-    },
-    {
-      "coverage": 0.3,
-      "accuracy": 1.0,
-      "n": 60,
-      "min_confidence": 1.0
-    },
-    {
-      "coverage": 0.35,
-      "accuracy": 1.0,
-      "n": 70,
-      "min_confidence": 1.0
-    },
-    {
-      "coverage": 0.4,
-      "accuracy": 1.0,
-      "n": 80,
-      "min_confidence": 1.0
-    },
-    {
-      "coverage": 0.45,
-      "accuracy": 1.0,
-      "n": 90,
-      "min_confidence": 1.0
-    },
-    {
-      "coverage": 0.5,
-      "accuracy": 1.0,
-      "n": 100,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.55,
-      "accuracy": 1.0,
-      "n": 110,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.6,
-      "accuracy": 1.0,
-      "n": 120,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.65,
-      "accuracy": 1.0,
-      "n": 130,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.7,
-      "accuracy": 1.0,
-      "n": 140,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.75,
-      "accuracy": 1.0,
-      "n": 150,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.8,
-      "accuracy": 1.0,
-      "n": 160,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.85,
-      "accuracy": 1.0,
-      "n": 170,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.9,
-      "accuracy": 1.0,
-      "n": 180,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.95,
-      "accuracy": 1.0,
-      "n": 190,
+      "n": 199,
       "min_confidence": 0.95
     },
     {
@@ -196,6 +94,7 @@
   "p50_latency_s": 9.488,
   "p99_latency_s": 18.068,
   "run": {
+    "timestamp_utc": "2026-09-20T17:08:07+00:00",
     "judge_audit_version": "0.3.0",
     "judge": {
       "name": "llm:gemma4:e4b",
@@ -208,10 +107,44 @@
     "dataset": {
       "path": "examples/email-routing/labels.jsonl",
       "sha256": "c5b4c111290aa657236ea520a8043b14ce23e9b26af01a6c5e7ec9b87082e1cf",
-      "rows": 200
+      "rows": 200,
+      "ground_truth": {
+        "tier": "GT-1",
+        "label": "constructed",
+        "meaning": "labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy",
+        "validation": "not_validated",
+        "purpose": [
+          "calibration stress test",
+          "CI drift baseline"
+        ],
+        "caveats": [
+          "email categories are synthetic: seeded templates with item and number fills, not real mail",
+          "the label is the template's category by design; no human checked it",
+          "100 % here is the floor a judge must clear, not evidence of production routing accuracy"
+        ]
+      }
     },
-    "recomputed_utc": "2026-09-20T17:08:07+00:00",
-    "note": "original run time not recorded in this checkpoint",
     "checkpoint": "docs/runs/arena/gemma4/email-clean.ckpt.jsonl"
+  },
+  "accuracy_ci": [
+    0.9817,
+    1.0
+  ],
+  "accuracy_ci_method": "clopper-pearson",
+  "ece_ci": [
+    0.0204,
+    0.0307
+  ],
+  "ece_ci_method": "bootstrap",
+  "zero_error_coverage_ci": [
+    0.9817,
+    1.0
+  ],
+  "zero_error_coverage_ci_method": "clopper-pearson",
+  "bootstrap": {
+    "method": "percentile bootstrap over distinct dataset texts (cluster)",
+    "level": 0.95,
+    "n_boot": 2000,
+    "seed": 0
   }
 }

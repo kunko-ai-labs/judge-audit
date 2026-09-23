@@ -1,25 +1,30 @@
 # Audit report — llm
 
-**n=200** · accuracy **80.5%** · ECE **0.1265**
+**n=200** · accuracy **80.5%** [74.8, 85.6] · ECE **0.1265** [0.0764, 0.1839]
 · cost **$0.5890** · p50 **3.101s** · p99 **27.752s**
 
-_judge `llm:deepseek-r1` · model `deepseek-r1` · recomputed 2026-09-21T14:55:24+00:00 (original run time not recorded) · judge-audit 0.3.2_
+_judge `llm:deepseek-r1` · model `deepseek-r1` · run 2026-09-21T14:55:24+00:00 · judge-audit 0.3.2_
 _dataset `examples/email-routing-adversarial/labels.jsonl` · 200 rows · sha256 `74741868f533…`_
+
+**Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic and seeded: 60 clean controls plus 140 attacked rows built from the same templates; the label is the category of the underlying clean email by design; _meta.target is what the attacker wanted; measures resistance to attacks on synthetic mail, not accuracy on real mail**
+
+_Brackets are 95% percentile-bootstrap intervals over the dataset's distinct texts (2,000 resamples, seed 0): how far the number would move on another sample of n=200 drawn the same way._
+_**†** exact 95 % Clopper–Pearson (binomial) interval, published where the estimate is 0 % or 100 % and the bootstrap collapses to a point. It assumes independent rows, so where the dataset repeats texts it is a *lower bound* on the width the clustered interval would have had._
 
 ## Can I automate this?
 
-Zero observed errors through the most confident **0.0%** (0 decisions, confidence ≥ None).
+Zero observed errors through the most confident **0.0%** [0.0, 1.8]† (0 decisions, confidence ≥ None).
 Retrospective on this dataset — not a production guarantee.
 
 ## Accuracy vs coverage
 
 | coverage | accuracy | min confidence | n |
 |---|---|---|---|
-| 5% | 20.0% | 1.00 | 10 |
-| 25% | 68.0% | 0.95 | 50 |
-| 45% | 77.8% | 0.95 | 90 |
-| 65% | 80.8% | 0.95 | 130 |
-| 85% | 82.3% | 0.90 | 170 |
+| 10.0% | 20.0% | 1.00 | 20 |
+| 80.5% | 81.4% | 0.95 | 161 |
+| 94.0% | 83.0% | 0.90 | 188 |
+| 97.0% | 82.5% | 0.80 | 194 |
+| 100.0% | 80.5% | 0.10 | 200 |
 
 ## Calibration (reliability bins)
 

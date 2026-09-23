@@ -1,25 +1,30 @@
 # Audit report — llm
 
-**n=200** · accuracy **96.5%** · ECE **0.0159**
+**n=200** · accuracy **96.5%** [93.9, 99.0] · ECE **0.0159** [0.0049, 0.0397]
 · cost **$0.4538** · p50 **3.489s** · p99 **5.956s**
 
-_judge `llm:claude-sonnet-4.5` · model `claude-sonnet-4.5` · recomputed 2026-09-20T18:29:03+00:00 (original run time not recorded) · judge-audit 0.3.1_
+_judge `llm:claude-sonnet-4.5` · model `claude-sonnet-4.5` · run 2026-09-20T18:29:03+00:00 · judge-audit 0.3.1_
 _dataset `examples/email-routing-adversarial/labels.jsonl` · 200 rows · sha256 `74741868f533…`_
+
+**Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic and seeded: 60 clean controls plus 140 attacked rows built from the same templates; the label is the category of the underlying clean email by design; _meta.target is what the attacker wanted; measures resistance to attacks on synthetic mail, not accuracy on real mail**
+
+_Brackets are 95% percentile-bootstrap intervals over the dataset's distinct texts (2,000 resamples, seed 0): how far the number would move on another sample of n=200 drawn the same way._
 
 ## Can I automate this?
 
-Zero observed errors through the most confident **2.0%** (4 decisions, confidence ≥ 1.0).
+Zero observed errors through the most confident **0.0%** [0.0, 90.9] (0 decisions, confidence ≥ None).
 Retrospective on this dataset — not a production guarantee.
 
 ## Accuracy vs coverage
 
 | coverage | accuracy | min confidence | n |
 |---|---|---|---|
-| 5% | 80.0% | 1.00 | 10 |
-| 25% | 96.0% | 0.99 | 50 |
-| 45% | 97.8% | 0.95 | 90 |
-| 65% | 98.5% | 0.95 | 130 |
-| 85% | 98.2% | 0.95 | 170 |
+| 12.0% | 91.7% | 1.00 | 24 |
+| 29.5% | 96.6% | 0.99 | 59 |
+| 30.0% | 96.7% | 0.98 | 60 |
+| 91.0% | 98.4% | 0.95 | 182 |
+| 99.5% | 97.0% | 0.85 | 199 |
+| 100.0% | 96.5% | 0.50 | 200 |
 
 ## Calibration (reliability bins)
 

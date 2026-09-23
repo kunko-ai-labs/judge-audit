@@ -1,27 +1,30 @@
 # Audit report — llm
 
-**n=120** · accuracy **95.0%** · ECE **0.0484**
+**n=120** · accuracy **95.0%** [90.3, 98.5] · ECE **0.0484** [0.0313, 0.0893]
 · cost **$0.7224** · p50 **7.711s** · p99 **10.232s**
 
-_judge `llm:claude-sonnet-4.5` · model `claude-sonnet-4.5` · recomputed 2026-09-21T19:21:35+00:00 (original run time not recorded) · judge-audit 0.3.2_
+_judge `llm:claude-sonnet-4.5` · model `claude-sonnet-4.5` · run 2026-09-21T19:21:35+00:00 · judge-audit 0.3.2_
 _dataset `docs/runs/jury/router-described/claude-sonnet-4.5.r2.input.jsonl` · 120 rows · sha256 `159c8bc820fe…`_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome; downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified; 40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted**
 
+_Brackets are 95% percentile-bootstrap intervals over the dataset's distinct texts (2,000 resamples, seed 0): how far the number would move on another sample of n=120 drawn the same way._
+
 ## Can I automate this?
 
-Zero observed errors through the most confident **89.2%** (107 decisions, confidence ≥ 0.85).
+Zero observed errors through the most confident **84.2%** [75.2, 95.8] (101 decisions, confidence ≥ 0.88).
 Retrospective on this dataset — not a production guarantee.
 
 ## Accuracy vs coverage
 
 | coverage | accuracy | min confidence | n |
 |---|---|---|---|
-| 5% | 100.0% | 1.00 | 6 |
-| 25% | 100.0% | 0.98 | 30 |
-| 45% | 100.0% | 0.95 | 54 |
-| 65% | 100.0% | 0.95 | 78 |
-| 85% | 100.0% | 0.85 | 102 |
+| 21.7% | 100.0% | 1.00 | 26 |
+| 39.2% | 100.0% | 0.98 | 47 |
+| 71.7% | 100.0% | 0.95 | 86 |
+| 81.7% | 100.0% | 0.92 | 98 |
+| 95.8% | 97.4% | 0.85 | 115 |
+| 100.0% | 95.0% | 0.75 | 120 |
 
 ## Calibration (reliability bins)
 

@@ -67,75 +67,15 @@
   ],
   "accuracy_coverage": [
     {
-      "coverage": 0.05,
+      "coverage": 0.5667,
       "accuracy": 1.0,
-      "n": 6,
+      "n": 68,
       "min_confidence": 1.0
     },
     {
-      "coverage": 0.1,
+      "coverage": 0.6083,
       "accuracy": 1.0,
-      "n": 12,
-      "min_confidence": 1.0
-    },
-    {
-      "coverage": 0.15,
-      "accuracy": 1.0,
-      "n": 18,
-      "min_confidence": 1.0
-    },
-    {
-      "coverage": 0.2,
-      "accuracy": 1.0,
-      "n": 24,
-      "min_confidence": 1.0
-    },
-    {
-      "coverage": 0.25,
-      "accuracy": 1.0,
-      "n": 30,
-      "min_confidence": 1.0
-    },
-    {
-      "coverage": 0.3,
-      "accuracy": 1.0,
-      "n": 36,
-      "min_confidence": 1.0
-    },
-    {
-      "coverage": 0.35,
-      "accuracy": 1.0,
-      "n": 42,
-      "min_confidence": 1.0
-    },
-    {
-      "coverage": 0.4,
-      "accuracy": 1.0,
-      "n": 48,
-      "min_confidence": 1.0
-    },
-    {
-      "coverage": 0.45,
-      "accuracy": 1.0,
-      "n": 54,
-      "min_confidence": 1.0
-    },
-    {
-      "coverage": 0.5,
-      "accuracy": 1.0,
-      "n": 60,
-      "min_confidence": 1.0
-    },
-    {
-      "coverage": 0.55,
-      "accuracy": 1.0,
-      "n": 66,
-      "min_confidence": 1.0
-    },
-    {
-      "coverage": 0.6,
-      "accuracy": 1.0,
-      "n": 72,
+      "n": 73,
       "min_confidence": 0.99
     },
     {
@@ -145,33 +85,33 @@
       "min_confidence": 0.98
     },
     {
-      "coverage": 0.7,
+      "coverage": 0.7083,
       "accuracy": 1.0,
-      "n": 84,
+      "n": 85,
       "min_confidence": 0.96
     },
     {
-      "coverage": 0.75,
+      "coverage": 0.7583,
       "accuracy": 1.0,
-      "n": 90,
+      "n": 91,
       "min_confidence": 0.93
     },
     {
-      "coverage": 0.8,
+      "coverage": 0.825,
       "accuracy": 1.0,
-      "n": 96,
+      "n": 99,
       "min_confidence": 0.91
     },
     {
-      "coverage": 0.85,
+      "coverage": 0.8667,
       "accuracy": 1.0,
-      "n": 102,
+      "n": 104,
       "min_confidence": 0.9
     },
     {
-      "coverage": 0.9,
+      "coverage": 0.9083,
       "accuracy": 1.0,
-      "n": 108,
+      "n": 109,
       "min_confidence": 0.87
     },
     {
@@ -196,6 +136,7 @@
   "p50_latency_s": 0.589,
   "p99_latency_s": 0.778,
   "run": {
+    "timestamp_utc": "2026-09-21T19:06:02+00:00",
     "judge_audit_version": "0.3.2",
     "judge": {
       "name": "jev",
@@ -228,8 +169,27 @@
         ]
       }
     },
-    "recomputed_utc": "2026-09-21T19:06:02+00:00",
-    "note": "original run time not recorded in this checkpoint",
     "checkpoint": "docs/runs/jury/router-described/jev.r2.ckpt.jsonl"
+  },
+  "accuracy_ci": [
+    0.9697,
+    1.0
+  ],
+  "accuracy_ci_method": "clopper-pearson",
+  "ece_ci": [
+    0.0235,
+    0.0684
+  ],
+  "ece_ci_method": "bootstrap",
+  "zero_error_coverage_ci": [
+    0.9697,
+    1.0
+  ],
+  "zero_error_coverage_ci_method": "clopper-pearson",
+  "bootstrap": {
+    "method": "percentile bootstrap over distinct dataset texts (cluster)",
+    "level": 0.95,
+    "n_boot": 2000,
+    "seed": 0
   }
 }

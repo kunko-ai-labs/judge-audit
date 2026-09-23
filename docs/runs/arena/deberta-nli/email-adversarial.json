@@ -67,9 +67,9 @@
   ],
   "accuracy_coverage": [
     {
-      "coverage": 0.05,
+      "coverage": 0.065,
       "accuracy": 1.0,
-      "n": 10,
+      "n": 13,
       "min_confidence": 0.961
     },
     {
@@ -196,6 +196,7 @@
   "p50_latency_s": 0.355,
   "p99_latency_s": 0.841,
   "run": {
+    "timestamp_utc": "2026-09-20T18:51:52+00:00",
     "judge_audit_version": "0.3.1",
     "judge": {
       "name": "nli:deberta-v3-base-zeroshot-v2.0",
@@ -210,10 +211,44 @@
     "dataset": {
       "path": "examples/email-routing-adversarial/labels.jsonl",
       "sha256": "74741868f533bf0c17b622cfbae43b917e52a964cd1c9e51fb9b74905c802e24",
-      "rows": 200
+      "rows": 200,
+      "ground_truth": {
+        "tier": "GT-1",
+        "label": "constructed",
+        "meaning": "labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy",
+        "validation": "not_validated",
+        "purpose": [
+          "robustness under prompt injection, homoglyphs, ambiguity, PII and social engineering",
+          "does confidence drop when the judge is attacked?"
+        ],
+        "caveats": [
+          "email categories are synthetic and seeded: 60 clean controls plus 140 attacked rows built from the same templates",
+          "the label is the category of the underlying clean email by design; _meta.target is what the attacker wanted",
+          "measures resistance to attacks on synthetic mail, not accuracy on real mail"
+        ]
+      }
     },
-    "recomputed_utc": "2026-09-20T18:51:52+00:00",
-    "note": "original run time not recorded in this checkpoint",
     "checkpoint": "docs/runs/arena/deberta-nli/email-adversarial.ckpt.jsonl"
+  },
+  "accuracy_ci": [
+    0.517,
+    0.6667
+  ],
+  "accuracy_ci_method": "bootstrap",
+  "ece_ci": [
+    0.0876,
+    0.2007
+  ],
+  "ece_ci_method": "bootstrap",
+  "zero_error_coverage_ci": [
+    0.0391,
+    0.16
+  ],
+  "zero_error_coverage_ci_method": "bootstrap",
+  "bootstrap": {
+    "method": "percentile bootstrap over distinct dataset texts (cluster)",
+    "level": 0.95,
+    "n_boot": 2000,
+    "seed": 0
   }
 }

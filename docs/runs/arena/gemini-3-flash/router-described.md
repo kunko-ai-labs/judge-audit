@@ -1,25 +1,27 @@
 # Audit report — llm
 
-**n=120** · accuracy **98.3%** · ECE **0.0121**
+**n=120** · accuracy **98.3%** [95.5, 100.0] · ECE **0.0121** [0.0013, 0.0335]
 · cost **$0.0185** · p50 **2.452s** · p99 **21.669s**
 
 _judge `llm:gemini-3-flash-preview` · model `gemini-3-flash-preview` · run 2026-09-21T11:06:43+00:00 · judge-audit 0.3.2_
 _dataset `examples/task-routing/labels-described.jsonl` · 120 rows · sha256 `4571c9661a0c…`_
 
+**Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome; downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified; 40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted**
+
+_Brackets are 95% percentile-bootstrap intervals over the dataset's distinct texts (2,000 resamples, seed 0): how far the number would move on another sample of n=120 drawn the same way._
+
 ## Can I automate this?
 
-Zero observed errors through the most confident **85.0%** (102 decisions, confidence ≥ 0.95).
+Zero observed errors through the most confident **72.5%** [60.6, 100.0] (87 decisions, confidence ≥ 1.0).
 Retrospective on this dataset — not a production guarantee.
 
 ## Accuracy vs coverage
 
 | coverage | accuracy | min confidence | n |
 |---|---|---|---|
-| 5% | 100.0% | 1.00 | 6 |
-| 25% | 100.0% | 1.00 | 30 |
-| 45% | 100.0% | 1.00 | 54 |
-| 65% | 100.0% | 1.00 | 78 |
-| 85% | 100.0% | 0.95 | 102 |
+| 72.5% | 100.0% | 1.00 | 87 |
+| 96.7% | 99.1% | 0.95 | 116 |
+| 100.0% | 98.3% | 0.70 | 120 |
 
 ## Calibration (reliability bins)
 

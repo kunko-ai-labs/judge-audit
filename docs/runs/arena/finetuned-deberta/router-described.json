@@ -85,9 +85,9 @@
       "min_confidence": 0.9956
     },
     {
-      "coverage": 0.2,
+      "coverage": 0.2167,
       "accuracy": 1.0,
-      "n": 12,
+      "n": 13,
       "min_confidence": 0.9955
     },
     {
@@ -133,9 +133,9 @@
       "min_confidence": 0.995
     },
     {
-      "coverage": 0.6,
+      "coverage": 0.6167,
       "accuracy": 1.0,
-      "n": 36,
+      "n": 37,
       "min_confidence": 0.9946
     },
     {
@@ -151,9 +151,9 @@
       "min_confidence": 0.6144
     },
     {
-      "coverage": 0.75,
+      "coverage": 0.7667,
       "accuracy": 1.0,
-      "n": 45,
+      "n": 46,
       "min_confidence": 0.6138
     },
     {
@@ -169,15 +169,15 @@
       "min_confidence": 0.6104
     },
     {
-      "coverage": 0.9,
+      "coverage": 0.9167,
       "accuracy": 1.0,
-      "n": 54,
+      "n": 55,
       "min_confidence": 0.609
     },
     {
-      "coverage": 0.95,
+      "coverage": 0.9667,
       "accuracy": 1.0,
-      "n": 57,
+      "n": 58,
       "min_confidence": 0.6071
     },
     {
@@ -196,6 +196,7 @@
   "p50_latency_s": 0.021,
   "p99_latency_s": 0.153,
   "run": {
+    "timestamp_utc": "2026-09-22T03:13:55+00:00",
     "judge_audit_version": "0.3.2",
     "judge": {
       "name": "finetuned:deberta-v3-base-ft-task-routing",
@@ -252,8 +253,27 @@
       "part": "heldout",
       "n": 60
     },
-    "recomputed_utc": "2026-09-22T03:13:55+00:00",
-    "note": "original run time not recorded in this checkpoint",
     "checkpoint": "docs/runs/arena/finetuned-deberta/router-described.ckpt.jsonl"
+  },
+  "accuracy_ci": [
+    0.9404,
+    1.0
+  ],
+  "accuracy_ci_method": "clopper-pearson",
+  "ece_ci": [
+    0.0718,
+    0.1912
+  ],
+  "ece_ci_method": "bootstrap",
+  "zero_error_coverage_ci": [
+    0.9404,
+    1.0
+  ],
+  "zero_error_coverage_ci_method": "clopper-pearson",
+  "bootstrap": {
+    "method": "percentile bootstrap over distinct dataset texts (cluster)",
+    "level": 0.95,
+    "n_boot": 2000,
+    "seed": 0
   }
 }

@@ -67,117 +67,15 @@
   ],
   "accuracy_coverage": [
     {
-      "coverage": 0.05,
-      "accuracy": 0.3333,
-      "n": 6,
+      "coverage": 0.1333,
+      "accuracy": 0.1875,
+      "n": 16,
       "min_confidence": 1.0
     },
     {
-      "coverage": 0.1,
-      "accuracy": 0.25,
-      "n": 12,
-      "min_confidence": 1.0
-    },
-    {
-      "coverage": 0.15,
-      "accuracy": 0.2778,
-      "n": 18,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.2,
-      "accuracy": 0.4583,
-      "n": 24,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.25,
-      "accuracy": 0.5667,
-      "n": 30,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.3,
-      "accuracy": 0.6389,
-      "n": 36,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.35,
-      "accuracy": 0.6905,
-      "n": 42,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.4,
-      "accuracy": 0.7292,
-      "n": 48,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.45,
-      "accuracy": 0.7593,
-      "n": 54,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.5,
-      "accuracy": 0.7833,
-      "n": 60,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.55,
-      "accuracy": 0.803,
-      "n": 66,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.6,
-      "accuracy": 0.8056,
-      "n": 72,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.65,
-      "accuracy": 0.8205,
-      "n": 78,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.7,
-      "accuracy": 0.8333,
-      "n": 84,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.75,
-      "accuracy": 0.8444,
-      "n": 90,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.8,
-      "accuracy": 0.8542,
-      "n": 96,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.85,
-      "accuracy": 0.8627,
-      "n": 102,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.9,
-      "accuracy": 0.8704,
-      "n": 108,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.95,
-      "accuracy": 0.8772,
-      "n": 114,
+      "coverage": 0.9667,
+      "accuracy": 0.8793,
+      "n": 116,
       "min_confidence": 0.9
     },
     {
@@ -188,14 +86,15 @@
     }
   ],
   "zero_error_coverage": {
-    "coverage": 0.0083,
-    "n": 1,
-    "threshold": 1.0
+    "coverage": 0.0,
+    "n": 0,
+    "threshold": null
   },
   "total_cost_usd": 0.031402,
   "p50_latency_s": 0.809,
   "p99_latency_s": 0.997,
   "run": {
+    "timestamp_utc": "2026-09-20T19:09:23+00:00",
     "judge_audit_version": "0.3.1",
     "judge": {
       "name": "llm:llama-3.3-70b",
@@ -211,10 +110,45 @@
     "dataset": {
       "path": "examples/task-routing/labels-described.jsonl",
       "sha256": "4571c9661a0c8cf91e93f00626c07a4b823f733aa60ed062ef6d4108036b9f3f",
-      "rows": 120
+      "rows": 120,
+      "ground_truth": {
+        "tier": "GT-1",
+        "label": "constructed",
+        "meaning": "labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy",
+        "validation": "not_validated",
+        "purpose": [
+          "model-routing calibration",
+          "cost-inflation attack resistance",
+          "ablation: options carry a description"
+        ],
+        "caveats": [
+          "the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome",
+          "downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified",
+          "40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted"
+        ]
+      }
     },
-    "recomputed_utc": "2026-09-20T19:09:23+00:00",
-    "note": "original run time not recorded in this checkpoint",
     "checkpoint": "docs/runs/arena/llama-3.3-70b/router-described.ckpt.jsonl"
+  },
+  "accuracy_ci": [
+    0.7845,
+    0.9339
+  ],
+  "accuracy_ci_method": "bootstrap",
+  "ece_ci": [
+    0.0073,
+    0.1308
+  ],
+  "ece_ci_method": "bootstrap",
+  "zero_error_coverage_ci": [
+    0.0,
+    0.0303
+  ],
+  "zero_error_coverage_ci_method": "clopper-pearson",
+  "bootstrap": {
+    "method": "percentile bootstrap over distinct dataset texts (cluster)",
+    "level": 0.95,
+    "n_boot": 2000,
+    "seed": 0
   }
 }

@@ -1,27 +1,46 @@
 # Audit report — finetuned
 
-**n=100** · accuracy **100.0%** · ECE **0.0000**
+**n=100** · accuracy **100.0%** [96.4, 100.0]† · ECE **0.0000** ‡
 · cost **$0.0000** · p50 **0.018s** · p99 **0.173s**
 
-_judge `finetuned:deberta-v3-base-ft-email-routing-run2` · model `deberta-v3-base-ft-email-routing-run2` · seed 2026 · recomputed 2026-09-22T08:17:21+00:00 (original run time not recorded) · judge-audit 0.3.2_
+_judge `finetuned:deberta-v3-base-ft-email-routing-run2` · model `deberta-v3-base-ft-email-routing-run2` · seed 2026 · run 2026-09-22T08:17:21+00:00 · judge-audit 0.3.2_
 _dataset `examples/email-routing/labels.jsonl` · 200 rows · sha256 `2b2ff2f88b3a…`_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic: seeded templates with item and number fills, not real mail; the label is the template's category by design; no human checked it; 100 % here is the floor a judge must clear, not evidence of production routing accuracy**
 
+_Brackets are 95% percentile-bootstrap intervals over the dataset's distinct texts (2,000 resamples, seed 0): how far the number would move on another sample of n=100 drawn the same way._
+_**†** exact 95 % Clopper–Pearson (binomial) interval, published where the estimate is 0 % or 100 % and the bootstrap collapses to a point. It assumes independent rows, so where the dataset repeats texts it is a *lower bound* on the width the clustered interval would have had._
+_**‡** degenerate: every clustered-bootstrap resample returned the same value, so no interval width is published for that number._
+
 ## Can I automate this?
 
-Zero observed errors through the most confident **100.0%** (100 decisions, confidence ≥ 1.0).
+Zero observed errors through the most confident **100.0%** [96.4, 100.0]† (100 decisions, confidence ≥ 1.0).
 Retrospective on this dataset — not a production guarantee.
 
 ## Accuracy vs coverage
 
 | coverage | accuracy | min confidence | n |
 |---|---|---|---|
-| 5% | 100.0% | 1.00 | 5 |
-| 25% | 100.0% | 1.00 | 25 |
-| 45% | 100.0% | 1.00 | 45 |
-| 65% | 100.0% | 1.00 | 65 |
-| 85% | 100.0% | 1.00 | 85 |
+| 5.0% | 100.0% | 1.00 | 5 |
+| 10.0% | 100.0% | 1.00 | 10 |
+| 15.0% | 100.0% | 1.00 | 15 |
+| 20.0% | 100.0% | 1.00 | 20 |
+| 25.0% | 100.0% | 1.00 | 25 |
+| 32.0% | 100.0% | 1.00 | 32 |
+| 35.0% | 100.0% | 1.00 | 35 |
+| 40.0% | 100.0% | 1.00 | 40 |
+| 45.0% | 100.0% | 1.00 | 45 |
+| 50.0% | 100.0% | 1.00 | 50 |
+| 55.0% | 100.0% | 1.00 | 55 |
+| 60.0% | 100.0% | 1.00 | 60 |
+| 65.0% | 100.0% | 1.00 | 65 |
+| 70.0% | 100.0% | 1.00 | 70 |
+| 77.0% | 100.0% | 1.00 | 77 |
+| 80.0% | 100.0% | 1.00 | 80 |
+| 85.0% | 100.0% | 1.00 | 85 |
+| 90.0% | 100.0% | 1.00 | 90 |
+| 95.0% | 100.0% | 1.00 | 95 |
+| 100.0% | 100.0% | 1.00 | 100 |
 
 ## Calibration (reliability bins)
 

@@ -1,27 +1,33 @@
 # Audit report — llm
 
-**n=120** · accuracy **70.0%** · ECE **0.2311**
+**n=120** · accuracy **70.0%** [56.4, 82.1] · ECE **0.2311** [0.1249, 0.3553]
 · cost **$0.7151** · p50 **7.851s** · p99 **11.985s**
 
-_judge `llm:claude-sonnet-4.5` · model `claude-sonnet-4.5` · recomputed 2026-09-21T18:52:47+00:00 (original run time not recorded) · judge-audit 0.3.2_
+_judge `llm:claude-sonnet-4.5` · model `claude-sonnet-4.5` · run 2026-09-21T18:52:47+00:00 · judge-audit 0.3.2_
 _dataset `docs/runs/jury/router-bare/claude-sonnet-4.5.r2.input.jsonl` · 120 rows · sha256 `3b895b46200d…`_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome; downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified; 40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted**
 
+_Brackets are 95% percentile-bootstrap intervals over the dataset's distinct texts (2,000 resamples, seed 0): how far the number would move on another sample of n=120 drawn the same way._
+
 ## Can I automate this?
 
-Zero observed errors through the most confident **33.3%** (40 decisions, confidence ≥ 0.95).
+Zero observed errors through the most confident **32.5%** [19.5, 47.1] (39 decisions, confidence ≥ 0.98).
 Retrospective on this dataset — not a production guarantee.
 
 ## Accuracy vs coverage
 
 | coverage | accuracy | min confidence | n |
 |---|---|---|---|
-| 5% | 100.0% | 1.00 | 6 |
-| 25% | 100.0% | 0.98 | 30 |
-| 45% | 92.6% | 0.95 | 54 |
-| 65% | 79.5% | 0.92 | 78 |
-| 85% | 72.5% | 0.85 | 102 |
+| 10.0% | 100.0% | 1.00 | 12 |
+| 32.5% | 100.0% | 0.98 | 39 |
+| 57.5% | 87.0% | 0.95 | 69 |
+| 72.5% | 75.9% | 0.92 | 87 |
+| 75.0% | 74.4% | 0.88 | 90 |
+| 87.5% | 72.4% | 0.85 | 105 |
+| 93.3% | 69.6% | 0.75 | 112 |
+| 95.0% | 69.3% | 0.72 | 114 |
+| 100.0% | 70.0% | 0.65 | 120 |
 
 ## Calibration (reliability bins)
 

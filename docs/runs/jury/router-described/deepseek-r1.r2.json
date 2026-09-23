@@ -67,117 +67,39 @@
   ],
   "accuracy_coverage": [
     {
-      "coverage": 0.05,
-      "accuracy": 1.0,
-      "n": 6,
+      "coverage": 0.0833,
+      "accuracy": 0.9,
+      "n": 10,
       "min_confidence": 1.0
     },
     {
-      "coverage": 0.1,
-      "accuracy": 0.9167,
-      "n": 12,
+      "coverage": 0.1583,
+      "accuracy": 0.9474,
+      "n": 19,
       "min_confidence": 0.99
     },
     {
-      "coverage": 0.15,
-      "accuracy": 0.9444,
-      "n": 18,
-      "min_confidence": 0.99
-    },
-    {
-      "coverage": 0.2,
-      "accuracy": 0.9583,
-      "n": 24,
+      "coverage": 0.2583,
+      "accuracy": 0.9677,
+      "n": 31,
       "min_confidence": 0.98
     },
     {
-      "coverage": 0.25,
-      "accuracy": 0.9667,
-      "n": 30,
-      "min_confidence": 0.98
-    },
-    {
-      "coverage": 0.3,
-      "accuracy": 0.9722,
-      "n": 36,
+      "coverage": 0.8583,
+      "accuracy": 0.9515,
+      "n": 103,
       "min_confidence": 0.95
     },
     {
-      "coverage": 0.35,
-      "accuracy": 0.9762,
-      "n": 42,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.4,
-      "accuracy": 0.9583,
-      "n": 48,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.45,
-      "accuracy": 0.963,
-      "n": 54,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.5,
-      "accuracy": 0.9667,
-      "n": 60,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.55,
-      "accuracy": 0.9545,
-      "n": 66,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.6,
-      "accuracy": 0.9583,
-      "n": 72,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.65,
-      "accuracy": 0.9487,
-      "n": 78,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.7,
-      "accuracy": 0.9405,
-      "n": 84,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.75,
-      "accuracy": 0.9444,
-      "n": 90,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.8,
-      "accuracy": 0.9479,
-      "n": 96,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.85,
-      "accuracy": 0.951,
-      "n": 102,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.9,
-      "accuracy": 0.9352,
-      "n": 108,
+      "coverage": 0.9167,
+      "accuracy": 0.9364,
+      "n": 110,
       "min_confidence": 0.9
     },
     {
-      "coverage": 0.95,
-      "accuracy": 0.9298,
-      "n": 114,
+      "coverage": 0.975,
+      "accuracy": 0.9145,
+      "n": 117,
       "min_confidence": 0.8
     },
     {
@@ -188,14 +110,15 @@
     }
   ],
   "zero_error_coverage": {
-    "coverage": 0.0583,
-    "n": 7,
-    "threshold": 1.0
+    "coverage": 0.0,
+    "n": 0,
+    "threshold": null
   },
   "total_cost_usd": 0.440826,
   "p50_latency_s": 4.543,
   "p99_latency_s": 16.27,
   "run": {
+    "timestamp_utc": "2026-09-21T19:39:01+00:00",
     "judge_audit_version": "0.3.2",
     "judge": {
       "name": "llm:deepseek-r1",
@@ -231,8 +154,27 @@
         ]
       }
     },
-    "recomputed_utc": "2026-09-21T19:39:01+00:00",
-    "note": "original run time not recorded in this checkpoint",
     "checkpoint": "docs/runs/jury/router-described/deepseek-r1.r2.ckpt.jsonl"
+  },
+  "accuracy_ci": [
+    0.823,
+    0.9457
+  ],
+  "accuracy_ci_method": "bootstrap",
+  "ece_ci": [
+    0.0158,
+    0.1118
+  ],
+  "ece_ci_method": "bootstrap",
+  "zero_error_coverage_ci": [
+    0.0,
+    0.3411
+  ],
+  "zero_error_coverage_ci_method": "bootstrap",
+  "bootstrap": {
+    "method": "percentile bootstrap over distinct dataset texts (cluster)",
+    "level": 0.95,
+    "n_boot": 2000,
+    "seed": 0
   }
 }

@@ -73,9 +73,9 @@
       "min_confidence": 0.7451
     },
     {
-      "coverage": 0.1,
+      "coverage": 0.105,
       "accuracy": 1.0,
-      "n": 20,
+      "n": 21,
       "min_confidence": 0.6606
     },
     {
@@ -145,9 +145,9 @@
       "min_confidence": 0.4342
     },
     {
-      "coverage": 0.7,
+      "coverage": 0.705,
       "accuracy": 1.0,
-      "n": 140,
+      "n": 141,
       "min_confidence": 0.3965
     },
     {
@@ -196,6 +196,7 @@
   "p50_latency_s": 0.017,
   "p99_latency_s": 0.155,
   "run": {
+    "timestamp_utc": "2026-09-22T03:13:44+00:00",
     "judge_audit_version": "0.3.2",
     "judge": {
       "name": "finetuned:deberta-v3-base-ft-email-routing",
@@ -253,8 +254,27 @@
         ]
       }
     },
-    "recomputed_utc": "2026-09-22T03:13:44+00:00",
-    "note": "original run time not recorded in this checkpoint",
     "checkpoint": "docs/runs/arena/finetuned-deberta/email-adversarial.ckpt.jsonl"
+  },
+  "accuracy_ci": [
+    0.9444,
+    0.9902
+  ],
+  "accuracy_ci_method": "bootstrap",
+  "ece_ci": [
+    0.4702,
+    0.522
+  ],
+  "ece_ci_method": "bootstrap",
+  "zero_error_coverage_ci": [
+    0.9444,
+    0.9902
+  ],
+  "zero_error_coverage_ci_method": "bootstrap",
+  "bootstrap": {
+    "method": "percentile bootstrap over distinct dataset texts (cluster)",
+    "level": 0.95,
+    "n_boot": 2000,
+    "seed": 0
   }
 }

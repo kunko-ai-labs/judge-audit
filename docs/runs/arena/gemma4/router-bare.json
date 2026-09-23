@@ -67,118 +67,22 @@
   ],
   "accuracy_coverage": [
     {
-      "coverage": 0.05,
-      "accuracy": 0.0,
-      "n": 6,
-      "min_confidence": 1.0
-    },
-    {
-      "coverage": 0.1,
-      "accuracy": 0.0,
-      "n": 12,
-      "min_confidence": 1.0
-    },
-    {
-      "coverage": 0.15,
-      "accuracy": 0.0,
-      "n": 18,
-      "min_confidence": 1.0
-    },
-    {
-      "coverage": 0.2,
-      "accuracy": 0.0,
-      "n": 24,
-      "min_confidence": 1.0
-    },
-    {
       "coverage": 0.25,
       "accuracy": 0.0,
       "n": 30,
       "min_confidence": 1.0
     },
     {
-      "coverage": 0.3,
-      "accuracy": 0.1667,
-      "n": 36,
+      "coverage": 0.625,
+      "accuracy": 0.56,
+      "n": 75,
       "min_confidence": 0.95
     },
     {
-      "coverage": 0.35,
-      "accuracy": 0.2619,
-      "n": 42,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.4,
-      "accuracy": 0.3333,
-      "n": 48,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.45,
-      "accuracy": 0.4074,
-      "n": 54,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.5,
-      "accuracy": 0.4667,
-      "n": 60,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.55,
-      "accuracy": 0.5,
-      "n": 66,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.6,
-      "accuracy": 0.5417,
-      "n": 72,
-      "min_confidence": 0.95
-    },
-    {
-      "coverage": 0.65,
-      "accuracy": 0.5641,
-      "n": 78,
+      "coverage": 0.925,
+      "accuracy": 0.6036,
+      "n": 111,
       "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.7,
-      "accuracy": 0.5833,
-      "n": 84,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.75,
-      "accuracy": 0.5889,
-      "n": 90,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.8,
-      "accuracy": 0.6042,
-      "n": 96,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.85,
-      "accuracy": 0.598,
-      "n": 102,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.9,
-      "accuracy": 0.5926,
-      "n": 108,
-      "min_confidence": 0.9
-    },
-    {
-      "coverage": 0.95,
-      "accuracy": 0.6053,
-      "n": 114,
-      "min_confidence": 0.8
     },
     {
       "coverage": 1.0,
@@ -196,6 +100,7 @@
   "p50_latency_s": 13.268,
   "p99_latency_s": 32.085,
   "run": {
+    "timestamp_utc": "2026-09-20T18:26:26+00:00",
     "judge_audit_version": "0.3.1",
     "judge": {
       "name": "llm:gemma4:e4b",
@@ -208,10 +113,44 @@
     "dataset": {
       "path": "examples/task-routing/labels.jsonl",
       "sha256": "27250d78eda62c5e5ad07906abd3c7fdeaecb1131a7d13e12146bed30f55ec8d",
-      "rows": 120
+      "rows": 120,
+      "ground_truth": {
+        "tier": "GT-1",
+        "label": "constructed",
+        "meaning": "labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy",
+        "validation": "not_validated",
+        "purpose": [
+          "model-routing calibration",
+          "cost-inflation attack resistance"
+        ],
+        "caveats": [
+          "the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome",
+          "downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified",
+          "40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted"
+        ]
+      }
     },
-    "recomputed_utc": "2026-09-20T18:26:26+00:00",
-    "note": "original run time not recorded in this checkpoint",
     "checkpoint": "docs/runs/arena/gemma4/router-bare.ckpt.jsonl"
+  },
+  "accuracy_ci": [
+    0.4615,
+    0.712
+  ],
+  "accuracy_ci_method": "bootstrap",
+  "ece_ci": [
+    0.2223,
+    0.4761
+  ],
+  "ece_ci_method": "bootstrap",
+  "zero_error_coverage_ci": [
+    0.0,
+    0.0303
+  ],
+  "zero_error_coverage_ci_method": "clopper-pearson",
+  "bootstrap": {
+    "method": "percentile bootstrap over distinct dataset texts (cluster)",
+    "level": 0.95,
+    "n_boot": 2000,
+    "seed": 0
   }
 }
