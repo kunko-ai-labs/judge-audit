@@ -1,6 +1,7 @@
 """The house rule: every published audit recomputes from its raw checkpoint."""
 from __future__ import annotations
 
+import copy
 import re
 import subprocess
 import sys
@@ -72,3 +73,55 @@ def test_no_absolute_home_path_in_docs(root):
             if any(n in line for n in needles):
                 bad.append(f"{f.relative_to(root)}:{i}: {line.strip()[:80]}")
     assert not bad, "absolute home paths published:\n" + "\n".join(bad[:10])
+
+
+def test_verify_published_compares_the_curve_and_zero_error_coverage(root):
+    """The Jev clean-email audit publishes a curve and a zero-error coverage: both are
+    compared point by point, not only n / accuracy / ECE / cost (#61)."""
+    sys.path.insert(0, str(root / "scripts"))
+    import verify_published as vp
+    keys = next(k for _, _, pub, _, k in vp.PUBLISHED if pub == "docs/audit-jev-real.json")
+    assert {"accuracy_coverage", "zero_error_coverage"} <= set(keys)
+    got = {"n": 3, "accuracy_coverage": [
+               {"coverage": 0.6667, "accuracy": 1.0, "n": 2, "min_confidence": 0.9},
+               {"coverage": 1.0, "accuracy": 0.6667, "n": 3, "min_confidence": 0.5}],
+           "zero_error_coverage": {"coverage": 0.6667, "n": 2, "threshold": 0.9}}
+    compared = ("n", "accuracy_coverage", "zero_error_coverage")
+    assert vp.metric_diffs(copy.deepcopy(got), got, compared) == []
+    stale = copy.deepcopy(got)
+    stale["accuracy_coverage"][0]["n"] = 1  # a cut inside a tie, as published before #61
+    stale["zero_error_coverage"]["threshold"] = 0.5
+    diffs = vp.metric_diffs(stale, got, compared)
+    assert [d.split(":")[0] for d in diffs] == ["accuracy_coverage", "zero_error_coverage"]
+
+
+def test_per_run_reports_regenerate_from_their_checkpoints(root):
+    """Every audit_resumable.py report under docs/runs/ (and docs/audit-jev-real.json) is
+    what scripts/runs_report.py writes from the committed checkpoint today."""
+    r = subprocess.run([sys.executable, "scripts/runs_report.py", "--check"], cwd=root,
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stdout[-2000:] + r.stderr[-2000:]
+
+
+def test_runs_report_covers_every_per_run_report(root):
+    """A per-run report the regeneration does not know about could drift unseen."""
+    sys.path.insert(0, str(root / "scripts"))
+    import runs_report
+    covered = {t["json"] for t in runs_report.targets()}
+    # docs/runs/finetuned/ holds training logs and jury/panel.json the frozen panel:
+    # neither is an audit report.
+    on_disk = {str(p.relative_to(root)) for p in (root / "docs" / "runs").rglob("*.json")
+               if p.name != "panel.json" and p.parent.name != "finetuned"}
+    assert len(on_disk) == 54 and on_disk <= covered, sorted(on_disk - covered)
+    assert "docs/audit-jev-real.json" in covered
+
+
+def test_only_the_simulated_judge_carries_the_simulated_banner(root):
+    """Only the simulated judge carries the SIMULATED banner; a recompute from a complete
+    checkpoint used to stamp it on every non-Jev run (#61)."""
+    sys.path.insert(0, str(root / "scripts"))
+    import audit_resumable
+    assert audit_resumable.tag_of("llm") == audit_resumable.tag_of("nli") == ""
+    assert audit_resumable.tag_of("simulated").startswith("SIMULATED")
+    md = (root / "docs/runs/arena/gemma4/email-clean.md").read_text(encoding="utf-8")
+    assert md.startswith("# Audit report — llm") and "SIMULATED" not in md

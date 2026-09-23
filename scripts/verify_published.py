@@ -32,10 +32,17 @@ ARENA_DATASETS = {
     "router-described": "examples/task-routing/labels-described.jsonl",
 }
 
-# (labels, checkpoint, published json, question name, keys to compare)
+# Compared exactly, not within a tolerance: the curve and the zero-error prefix are lists
+# of cuts, and a cut in a different place is a different claim (#61).
+STRUCTURED = ("accuracy_coverage", "zero_error_coverage")
+
+# (labels, checkpoint, published json, question name, keys to compare). Only
+# docs/audit-jev-real.json carries a curve and a zero-error coverage; the other three come
+# from analyze_adversarial.py / audit_router.py, which publish neither.
 PUBLISHED = [
     ("examples/email-routing/labels.jsonl", "docs/runs/audit-jev-real.ckpt.jsonl",
-     "docs/audit-jev-real.json", "category", ("n", "accuracy", "ece", "total_cost_usd")),
+     "docs/audit-jev-real.json", "category",
+     ("n", "accuracy", "ece", "total_cost_usd", *STRUCTURED)),
     ("examples/email-routing-adversarial/labels.jsonl",
      "docs/runs/audit-jev-adversarial.ckpt.jsonl",
      "docs/audit-jev-adversarial.json", "category", ("n", "accuracy", "ece", "total_cost_usd")),
@@ -63,7 +70,22 @@ def recompute(labels_path: Path, ckpt_path: Path, question: str):
                         "correct": is_correct(j["decision"], expected),
                         "latency_s": j.get("latency_s", 0.0),
                         "cost_usd": j.get("cost_usd", 0.0)})
-    return summarize("recomputed", records).to_dict()
+    return summarize("recomputed", records, ci=False).to_dict()
+
+
+def metric_diffs(head: dict, got: dict, keys: tuple[str, ...]) -> list[str]:
+    """One message per compared key where the published file and the recompute differ."""
+    diffs = []
+    for k in keys:
+        a, b = head.get(k), got.get(k)
+        if a is None or b is None:
+            diffs.append(f"{k}: missing ({a!r} vs {b!r})")
+        elif k in STRUCTURED:
+            if a != b:
+                diffs.append(f"{k}: published {a} vs recomputed {b}")
+        elif abs(float(a) - float(b)) > 1e-4:
+            diffs.append(f"{k}: published {a} vs recomputed {b}")
+    return diffs
 
 
 def recorded_sha256(ckpt_path: Path) -> str | None:
@@ -107,12 +129,7 @@ def main() -> int:
         mismatch = dataset_mismatch(lp, cp)
         if mismatch:
             diffs.append(mismatch)
-        for k in keys:
-            a, b = head.get(k), got.get(k)
-            if a is None or b is None:
-                diffs.append(f"{k}: missing ({a!r} vs {b!r})")
-            elif abs(float(a) - float(b)) > 1e-4:
-                diffs.append(f"{k}: published {a} vs recomputed {b}")
+        diffs += metric_diffs(head, got, keys)
         if "accuracy" in head and "accuracy" not in keys:
             if abs(float(head["accuracy"]) - got["accuracy"]) > 1e-4:
                 diffs.append(f"accuracy: published {head['accuracy']} vs recomputed {got['accuracy']}")
@@ -123,8 +140,8 @@ def main() -> int:
                 print(f"        {d}")
         else:
             print(f"ok    {published}  n={got['n']} acc={got['accuracy']} ece={got['ece']}")
-    # Arena checkpoints carry no published JSON of their own (arena_report.py regenerates
-    # the table and CI diffs it) but they do name the dataset they were run on.
+    # Arena checkpoints' own reports are regenerated whole by runs_report.py and their
+    # table by arena_report.py (CI diffs both); here we check the dataset they name.
     for cp in sorted((ROOT / "docs" / "runs" / "arena").glob("*/*.ckpt.jsonl")):
         labels = ARENA_DATASETS.get(cp.name.removesuffix(".ckpt.jsonl"))
         mismatch = dataset_mismatch(ROOT / labels, cp) if labels else None

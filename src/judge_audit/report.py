@@ -131,8 +131,10 @@ def render_markdown(result: AuditResult) -> str:
         "| coverage | accuracy | min confidence | n |",
         "|---|---|---|---|",
     ]
-    for row in d["accuracy_coverage"][::4]:  # every 5%
-        lines.append(f"| {row['coverage']:.0%} | {row['accuracy']:.1%} | "
+    # Every point: the curve already has one per real threshold (at most 20), and
+    # sampling it would drop thresholds. One decimal, so 93.5 % is not printed as 94 %.
+    for row in d["accuracy_coverage"]:
+        lines.append(f"| {row['coverage']:.1%} | {row['accuracy']:.1%} | "
                      f"{row['min_confidence']:.2f} | {row['n']} |")
     lines += ["", "## Calibration (reliability bins)", "",
               "| confidence bin | avg confidence | accuracy | n |",
@@ -178,9 +180,9 @@ def render_html(result: AuditResult, tag: str = "") -> str:
     gt = html.escape(ground_truth_line(d.get("run", {})))
     judge = html.escape(str(d["judge"]))
     curve_rows = "".join(
-        f"<tr><td>{r['coverage']:.0%}</td><td>{r['accuracy']:.1%}</td>"
+        f"<tr><td>{r['coverage']:.1%}</td><td>{r['accuracy']:.1%}</td>"
         f"<td>{r['min_confidence']:.2f}</td><td>{r['n']}</td></tr>"
-        for r in d["accuracy_coverage"][::2])
+        for r in d["accuracy_coverage"])
     bin_rows = "".join(
         f"<tr><td>{b['bin']}</td><td>{b['avg_confidence']:.3f}</td>"
         f"<td>{b['accuracy']:.1%}</td><td>{b['n']}</td></tr>"

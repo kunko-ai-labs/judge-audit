@@ -32,7 +32,9 @@ from judge_audit.ground_truth import parse_ground_truth  # noqa: E402
 from judge_audit.judges.simulated import SIMULATED_TAG  # noqa: E402
 from judge_audit.report import render_html, render_markdown  # noqa: E402
 from judge_audit.runner import (  # noqa: E402
+    AuditResult,
     display_path,
+    groups_of,
     is_correct,
     load_dataset,
     questions_of,
@@ -71,6 +73,70 @@ def rows_subset(spec: str | None, n_rows: int) -> tuple[list[int], dict | None]:
     return idx, {"split": path, "sha256": sha256_of(path), "part": part, "n": len(idx)}
 
 
+def build_result(judge_name: str, rows: list[dict], dataset_meta: dict, wanted: list[int],
+                 done: dict[int, dict], ckpt: Path, started: dict,
+                 subset: dict | None, cluster_rows: list[dict] | None = None) -> AuditResult:
+    """The report of a complete checkpoint: pure function of the checkpoint and the labels.
+
+    `scripts/runs_report.py` calls this same function to regenerate every committed
+    per-run report, so a fresh run and a regeneration write the same bytes.
+    `cluster_rows` supplies the bootstrap's cluster texts when they are not the judged
+    rows' own: a deliberation dataset clusters on the original texts, as jury_report does.
+    """
+    if -1 in done:
+        run = dict(done[-1]["run"])
+    else:
+        # Checkpoint predates run headers: say so instead of inventing a timestamp.
+        run = {k: v for k, v in started.items() if k != "timestamp_utc"}
+        run["recomputed_utc"] = started["timestamp_utc"]
+        run["note"] = "original run time not recorded in this checkpoint"
+    run["checkpoint"] = display_path(ckpt)
+    # The tier is a property of the dataset, not of the run: read it from the labels
+    # file so a checkpoint that predates ground-truth headers still reports it.
+    run["dataset"] = dict(run.get("dataset") or {})
+    run["dataset"]["ground_truth"] = parse_ground_truth(
+        dataset_meta.get("ground_truth")).to_dict()
+    if subset:
+        run["rows_subset"] = subset
+    records = []
+    # Checkpoint order — the order the judge answered, which a resumed run does not keep
+    # sorted — as the Arena and jury tables read it, so their intervals (seeded bootstrap
+    # over clusters in first-seen order) are the same numbers as this report's.
+    chosen = set(wanted)
+    for idx in [k for k in done if k in chosen]:
+        row = rows[idx]
+        labels = row.get("labels", {})
+        for j in done[idx]["judgments"]:
+            expected = labels.get(j["question"])
+            if expected is None:
+                continue
+            records.append({
+                "idx": idx, "question": j["question"], "expected": str(expected),
+                "decision": str(j["decision"]),
+                "correct": is_correct(j["decision"], expected),
+                "confidence": max(0.0, min(1.0, float(j["confidence"]))),
+                "latency_s": j.get("latency_s", 0.0), "cost_usd": j.get("cost_usd", 0.0),
+                "meta": row.get("_meta", {}), "raw": j.get("raw", {}),
+            })
+    # Intervals resample distinct texts, as every published interval does (the report
+    # says so); without `groups` they would silently be row-i.i.d. and too narrow.
+    return summarize(judge_name, records, run,
+                     groups=groups_of(records, cluster_rows or rows))
+
+
+def tag_of(judge_name: str) -> str:
+    """The banner a report of this judge carries: only the simulated judge is fake."""
+    return SIMULATED_TAG if judge_name == "simulated" else ""
+
+
+def report_markdown(result: AuditResult, judge_name: str) -> str:
+    md = render_markdown(result)
+    if judge_name == "jev":
+        return REAL_BANNER + md
+    tag = tag_of(judge_name)
+    return f"> ⚠️ **{tag}**\n\n" + md if tag else md
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("labels")
@@ -81,6 +147,9 @@ def main() -> None:
     ap.add_argument("--html", default=None)
     ap.add_argument("--rows", default=None,
                     help="<split.json>:<part> — judge only these row indices (held-out runs)")
+    ap.add_argument("--cluster-labels", default=None,
+                    help="labels file whose row texts are the interval's clusters (default: "
+                         "LABELS; a deliberation round passes the original dataset)")
     args = ap.parse_args()
 
     rows, dataset_meta = load_dataset(args.labels)
@@ -100,7 +169,7 @@ def main() -> None:
 
     if n_done >= len(wanted):
         # Complete checkpoint: recompute only. No key, no judge, no API call.
-        judge, tag = None, ("" if args.judge == "jev" else SIMULATED_TAG)
+        judge, tag = None, tag_of(args.judge)
         started = {"judge": {"name": args.judge, "model": "typesafe-ai/jev", "backend": "gateway"}
                    if args.judge == "jev" else {"name": args.judge},
                    "judge_audit_version": __version__,
@@ -114,7 +183,9 @@ def main() -> None:
     with open(ckpt, "a", encoding="utf-8") as f:
         if not done:
             # First line of a fresh checkpoint: how this run was produced.
-            f.write(json.dumps({"idx": -1, "run": started}) + "\n")
+            header = {"idx": -1, "run": started}
+            f.write(json.dumps(header) + "\n")
+            done[-1] = header  # the report reads the run time from here, as a rerun would
         for idx in wanted:
             row = rows[idx]
             if idx in done:
@@ -150,49 +221,16 @@ def main() -> None:
             if n_done % 10 == 0:
                 print(f"  {n_done}/{len(wanted)}", flush=True)
 
-    if -1 in done:
-        run = done[-1]["run"]
-    else:
-        # Checkpoint predates run headers: say so instead of inventing a timestamp.
-        run = {k: v for k, v in started.items() if k != "timestamp_utc"}
-        run["recomputed_utc"] = started["timestamp_utc"]
-        run["note"] = "original run time not recorded in this checkpoint"
-    run["checkpoint"] = display_path(ckpt)
-    # The tier is a property of the dataset, not of the run: read it from the labels
-    # file so a checkpoint that predates ground-truth headers still reports it.
-    run.setdefault("dataset", {})["ground_truth"] = parse_ground_truth(
-        dataset_meta.get("ground_truth")).to_dict()
-    if subset:
-        run["rows_subset"] = subset
-    records = []
-    for idx in wanted:
-        row = rows[idx]
-        labels = row.get("labels", {})
-        for j in done[idx]["judgments"]:
-            expected = labels.get(j["question"])
-            if expected is None:
-                continue
-            records.append({
-                "idx": idx, "question": j["question"], "expected": str(expected),
-                "decision": str(j["decision"]),
-                "correct": is_correct(j["decision"], expected),
-                "confidence": max(0.0, min(1.0, float(j["confidence"]))),
-                "latency_s": j.get("latency_s", 0.0), "cost_usd": j.get("cost_usd", 0.0),
-                "meta": row.get("_meta", {}), "raw": j.get("raw", {}),
-            })
-
-    result = summarize(args.judge, records, run)
-    md = render_markdown(result)
-    if args.judge == "jev":
-        md = REAL_BANNER + md
-    elif tag:
-        md = f"> ⚠️ **{tag}**\n\n" + md
+    cluster_rows = load_dataset(args.cluster_labels)[0] if args.cluster_labels else None
+    result = build_result(args.judge, rows, dataset_meta, wanted, done, ckpt, started, subset,
+                          cluster_rows)
+    md = report_markdown(result, args.judge)
     Path(args.out).write_text(md, encoding="utf-8")
     Path(args.json).write_text(json.dumps(result.to_dict(), indent=2), encoding="utf-8")
     if args.html:
         Path(args.html).write_text(render_html(result, tag=tag), encoding="utf-8")
     print(f"judge={result.judge} n={result.n} accuracy={result.accuracy:.1%} "
-          f"ece={result.ece:.4f} gt={run['dataset']['ground_truth']['tier']} "
+          f"ece={result.ece:.4f} gt={result.run['dataset']['ground_truth']['tier']} "
           f"cost=${result.total_cost_usd:.4f} -> {args.out}")
 
 

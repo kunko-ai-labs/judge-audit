@@ -48,6 +48,17 @@ def reliability_bins(confidences: list[float], correct: list[bool],
     return out
 
 
+def _require_finite(confidences: Sequence[float]) -> None:
+    """Refuse NaN and ±inf: a group walk cannot advance past a value unequal to itself.
+
+    Unknown confidence is reported, never imputed — so it is not silently dropped or
+    clamped here either; the caller decides what an unknown confidence means.
+    """
+    for i, c in enumerate(confidences):
+        if not math.isfinite(c):
+            raise ValueError(f"confidence must be a finite number, got {c!r} at row {i}")
+
+
 def accuracy_coverage(confidences: list[float], correct: list[bool],
                       steps: int = 20) -> list[dict]:
     """Selective prediction: sort by confidence desc, accuracy at each coverage level.
@@ -62,6 +73,7 @@ def accuracy_coverage(confidences: list[float], correct: list[bool],
     group collapse to that group's single point instead of repeating it. `min_confidence`
     is the covered group's own confidence, which is what makes it a valid threshold.
     """
+    _require_finite(confidences)
     n = len(confidences)
     if not n:
         return []
@@ -100,6 +112,7 @@ def zero_error_coverage(confidences: list[float], correct: list[bool]) -> dict:
     prefix is cut at whole groups and shuffling the input never changes the result.
     `threshold` is the lowest confidence in the covered prefix (None when it is empty).
     """
+    _require_finite(confidences)
     if not confidences:
         return {"coverage": 0.0, "n": 0, "threshold": None}
     order = sorted(range(len(confidences)), key=lambda j: confidences[j], reverse=True)

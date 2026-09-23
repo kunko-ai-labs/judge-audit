@@ -56,6 +56,36 @@ def test_html_escapes_provenance_strings():
     assert "&lt;script&gt;" in page and "&lt;b&gt;SIMULATED" in page
 
 
+JEV_CURVE = [{"coverage": 0.935, "accuracy": 1.0, "n": 187, "min_confidence": 1.0},
+             {"coverage": 0.955, "accuracy": 1.0, "n": 191, "min_confidence": 0.98},
+             {"coverage": 1.0, "accuracy": 1.0, "n": 200, "min_confidence": 0.89}]
+JEV_ROWS = ["| 93.5% | 100.0% | 1.00 | 187 |", "| 95.5% | 100.0% | 0.98 | 191 |",
+            "| 100.0% | 100.0% | 0.89 | 200 |"]
+
+
+def test_markdown_publishes_every_point_of_the_curve():
+    # The curve is already one point per real threshold: sampling it (the old `[::4]`,
+    # written for a 20-point curve) dropped two of these three. 93.5 % is not 94 %.
+    from judge_audit.report import render_markdown
+    r = result(curve=JEV_CURVE, zero_error={"coverage": 1.0, "n": 200, "threshold": 0.89})
+    md = render_markdown(r)
+    table = md.split("## Accuracy vs coverage")[1].split("##")[0]
+    assert [line for line in table.splitlines() if line.startswith("| ") and "%" in line] \
+        == JEV_ROWS
+
+
+def test_html_publishes_every_point_of_the_curve():
+    pytest.importorskip("matplotlib")
+    from judge_audit.report import render_html
+    r = result(curve=JEV_CURVE, zero_error={"coverage": 1.0, "n": 200, "threshold": 0.89})
+    page = render_html(r)
+    table = page.split("<h2>Accuracy vs coverage</h2>")[1].split("</table>")[0]
+    assert table.count("<tr><td>") == 3
+    for cov, conf, n in (("93.5%", "1.00", 187), ("95.5%", "0.98", 191),
+                         ("100.0%", "0.89", 200)):
+        assert f"<tr><td>{cov}</td><td>100.0%</td><td>{conf}</td><td>{n}</td></tr>" in table
+
+
 def test_same_run_against_itself_is_compatible_and_has_no_failures(tmp_path):
     assert check_drift(result(), baseline(tmp_path)) == []
 

@@ -51,6 +51,10 @@ jobs:
         run: |
           python scripts/arena_report.py
           git diff --exit-code -- docs/arena-2026-09.md docs/arena-2026-09.json
+      - name: Per-run reports recompute from their checkpoints (curves, zero-error, intervals)
+        run: |
+          python scripts/runs_report.py
+          git diff --exit-code -- docs/runs docs/audit-jev-real.json
       - name: Held-out report recomputes from the same checkpoints on the pre-registered split
         run: |
           python scripts/heldout_report.py

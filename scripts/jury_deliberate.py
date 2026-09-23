@@ -117,7 +117,8 @@ def main() -> None:
         return
     cmd = [sys.executable, str(ROOT / "scripts" / "audit_resumable.py"), str(inp),
            "--judge", a.judge, "--checkpoint", str(out / f"{a.slug}.r2.ckpt.jsonl"),
-           "--out", str(out / f"{a.slug}.r2.md"), "--json", str(out / f"{a.slug}.r2.json")]
+           "--out", str(out / f"{a.slug}.r2.md"), "--json", str(out / f"{a.slug}.r2.json"),
+           "--cluster-labels", str(ROOT / DATASETS[a.dataset][0])]
     sys.exit(subprocess.call(cmd, cwd=ROOT))
 
 

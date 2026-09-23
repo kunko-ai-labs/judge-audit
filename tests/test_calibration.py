@@ -113,6 +113,32 @@ def test_accuracy_coverage_empty():
     assert accuracy_coverage([], []) == []
 
 
+def test_accuracy_coverage_jev_clean_shape():
+    # The shape of docs/audit-jev-real.json, by hand: 10 distinct confidences (1.0 x187,
+    # 0.99 x2, 0.98 x2, 0.96 x2, 0.95, 0.94, 0.93, 0.92, 0.91, 0.89 x2), all correct.
+    # Real thresholds sit at n = 187, 189, 191, 193, 194, ..., 198, 200. The 20 targets
+    # (10, 20, ..., 200) snap to 187 (targets 10..180), 191 (target 190) and 200.
+    counts = [(1.0, 187), (0.99, 2), (0.98, 2), (0.96, 2), (0.95, 1), (0.94, 1),
+              (0.93, 1), (0.92, 1), (0.91, 1), (0.89, 2)]
+    conf = [c for c, k in counts for _ in range(k)]
+    curve = accuracy_coverage(conf, [True] * len(conf))
+    assert [(r["coverage"], r["n"], r["min_confidence"]) for r in curve] == [
+        (0.935, 187, 1.0), (0.955, 191, 0.98), (1.0, 200, 0.89)]
+    assert {r["accuracy"] for r in curve} == {1.0}
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
+def test_selective_coverage_refuses_non_finite_confidence(bad):
+    # NaN never equals itself, so the group walk could not advance past it: it looped
+    # forever. Unknown confidence is reported, never imputed — the metric refuses it.
+    conf = [0.9, bad, 0.7]
+    ok = [True, True, False]
+    with pytest.raises(ValueError, match="finite"):
+        accuracy_coverage(conf, ok)
+    with pytest.raises(ValueError, match="finite"):
+        zero_error_coverage(conf, ok)
+
+
 def test_zero_error_coverage_stops_at_first_error():
     conf = [0.9, 0.8, 0.7, 0.6]
     ok = [True, True, False, True]
