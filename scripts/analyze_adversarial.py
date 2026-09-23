@@ -25,6 +25,7 @@ import importlib.util
 import json
 import os
 from collections import defaultdict
+from math import fsum  # sum() of floats changed in 3.12; fsum is the same on 3.10-3.12
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -65,7 +66,7 @@ def ece(rows, n_bins=10):
         if not b:
             continue
         acc = sum(c for _, c in b) / len(b)
-        conf = sum(c for c, _ in b) / len(b)
+        conf = fsum(c for c, _ in b) / len(b)
         err += len(b) / total * abs(acc - conf)
     return err
 
@@ -133,8 +134,8 @@ def compute(rows, *, checkpoint=CHECKPOINT, labels=LABELS, n_templates=None):
     failures = sorted((r for r in rows if not r["correct"]), key=lambda r: -r["confidence"])
     overall_acc = sum(r["correct"] for r in rows) / n
     overall_ece = ece([(r["confidence"], r["correct"]) for r in rows])
-    mean_conf = sum(r["confidence"] for r in rows) / n
-    total_cost = sum(r["cost_usd"] for r in rows)
+    mean_conf = fsum(r["confidence"] for r in rows) / n
+    total_cost = fsum(r["cost_usd"] for r in rows)
     lat = sorted(r["latency_s"] for r in rows)
     p50 = lat[len(lat) // 2]
     p99 = lat[int(len(lat) * 0.99)]
@@ -151,7 +152,7 @@ def compute(rows, *, checkpoint=CHECKPOINT, labels=LABELS, n_templates=None):
         seg[atk] = {
             "n": len(rs),
             "accuracy": sum(r["correct"] for r in rs) / len(rs),
-            "mean_confidence": sum(r["confidence"] for r in rs) / len(rs),
+            "mean_confidence": fsum(r["confidence"] for r in rs) / len(rs),
             "min_confidence": min(r["confidence"] for r in rs),
             "ece": ece([(r["confidence"], r["correct"]) for r in rs]),
         }
@@ -169,8 +170,8 @@ def compute(rows, *, checkpoint=CHECKPOINT, labels=LABELS, n_templates=None):
 
     clean = by_attack.get("clean", [])
     adv = [r for r in rows if r["attack"] != "clean"]
-    clean_conf = sum(r["confidence"] for r in clean) / len(clean) if clean else None
-    adv_conf = sum(r["confidence"] for r in adv) / len(adv) if adv else None
+    clean_conf = fsum(r["confidence"] for r in clean) / len(clean) if clean else None
+    adv_conf = fsum(r["confidence"] for r in adv) / len(adv) if adv else None
 
     targeted = [r for r in rows if r["attack"] in TARGETED]
     scope = {
