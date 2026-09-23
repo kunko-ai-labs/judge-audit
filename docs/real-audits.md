@@ -46,9 +46,8 @@ Tune pacing with `JEV_MIN_INTERVAL_S` (default 3 s between calls).
 Then the audit-specific analysis reads the checkpoint — no API call:
 
 ```bash
-python scripts/analyze_adversarial.py examples/email-routing-adversarial/labels.jsonl \
-  --checkpoint docs/runs/audit-jev-adversarial.ckpt.jsonl \
-  --out docs/audit-jev-adversarial.md --json docs/audit-jev-adversarial.json
+python scripts/analyze_adversarial.py            # the whole .md + .json, from the checkpoint
+python scripts/analyze_adversarial.py --charts   # also redraws docs/assets/*-jev-adversarial.png
 
 python scripts/audit_router.py examples/task-routing/labels.jsonl \
   --checkpoint docs/runs/audit-jev-router.ckpt.jsonl \

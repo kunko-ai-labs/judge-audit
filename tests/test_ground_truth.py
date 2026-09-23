@@ -16,6 +16,7 @@ from judge_audit.ground_truth import (
     parse_ground_truth,
 )
 from judge_audit.judges.simulated import SimulatedJudge
+from judge_audit.metrics.calibration import expected_calibration_error
 from judge_audit.report import ground_truth_line, render_html, render_markdown
 from judge_audit.runner import (
     load_dataset,
@@ -221,3 +222,41 @@ def test_published_datasets_declare_gt1_with_caveats(labels):
     gt = parse_ground_truth(read_dataset_header(str(ROOT / labels)).get("ground_truth"))
     assert gt.tier == "GT-1" and gt.validation == "not_validated"
     assert gt.purpose and len(gt.caveats) >= 2
+
+
+# --- docs/ground-truth.md: what each tier lets you claim ------------------------
+
+def claim_table(root) -> list[list[str]]:
+    text = (root / "docs" / "ground-truth.md").read_text(encoding="utf-8")
+    section = text.split("## What each tier lets you claim", 1)[1].split("\n## ", 1)[0]
+    return [[c.strip() for c in line.strip().strip("|").split("|")]
+            for line in section.splitlines() if line.startswith("| GT-")]
+
+
+def test_claim_table_rows_are_exactly_the_tiers_in_code(root):
+    rows = claim_table(root)
+    assert [r[0] for r in rows] == [f"{tier} {label}" for tier, (label, _) in TIERS.items()]
+    assert all(len(r) == 4 for r in rows)
+
+
+def test_claim_table_verdicts(root):
+    table = {r[0].split()[0]: r[1:] for r in claim_table(root)}
+    assert table["GT-0"] == ["✗", "✗", "✗"]
+    # synthetic items say nothing about production, however good their labels
+    assert table["GT-1"][2] == "✗" and table["GT-2"][2] == "✗"
+    # one annotator: unmeasured label noise moves ECE and blurs comparisons
+    assert table["GT-3"][:2] == ["with caveats (label noise)"] * 2
+    assert table["GT-5"][2] == "with caveats (only if items are sampled from production)"
+    assert table["GT-6"] == ["✓", "✓", "✓"]
+    assert [t for t, r in table.items() if r[2] == "✓"] == ["GT-6"]
+
+
+def test_label_noise_example_in_the_doc_is_what_the_metric_computes(root):
+    # ten answers at 0.9, nine right: calibrated against reality ...
+    reality = [True] * 9 + [False]
+    assert expected_calibration_error([0.9] * 10, reality) == pytest.approx(0.0)
+    # ... one right row mislabelled: 8/10 right against the labels, ECE 0.100
+    labels = [True] * 8 + [False] * 2
+    assert expected_calibration_error([0.9] * 10, labels) == pytest.approx(0.1)
+    text = (root / "docs" / "ground-truth.md").read_text(encoding="utf-8")
+    assert "ECE 0.000 against reality" in text and "ECE against the labels is 0.100" in text

@@ -11,13 +11,18 @@ in `docs/audit-*.md` / `.json`, `docs/arena-2026-09.md`, `docs/consensus-2026-09
 - **The code that produced these files is Apache-2.0**, same as the rest of this
   repository (see [`LICENSE`](../../LICENSE)). Running the harness, reading a
   checkpoint, or building on `judge_audit` itself is covered by that licence.
-- **Each vendor's terms govern their model's outputs.** A row in a checkpoint is text a
-  hosted model returned to a prompt — a completion, a probability, a classification.
-  Judge-audit's Apache-2.0 licence does not, and cannot, relicense that output; whatever
-  terms of service or content policy the model's provider attaches to its outputs still
-  apply to that text after it is committed here. This repository names models, not
-  platforms (see `CLAUDE.md`), and makes no claim about what any provider's terms permit
-  a third party to do with the output.
+- **Each vendor's terms govern their model's outputs.** A row in a checkpoint records
+  what a model returned to a prompt — a completion, a probability, a classification.
+  Not every model here is hosted: some checkpoints come from models reached over an API,
+  others from models run on the auditor's own machine (the DeBERTa zero-shot classifier,
+  the DeBERTa classifiers fine-tuned in this repository, and small open-weight chat models
+  served locally); the header's `judge` block says which model produced the file.
+  Judge-audit's Apache-2.0 licence does not, and cannot, relicense that output: whatever
+  terms the model's vendor attaches to it — a hosted provider's terms of service, or the
+  licence of the open weights a local model was built from — still apply to that text
+  after it is committed here. Checkpoints name models, not platforms (see `CLAUDE.md`),
+  and this repository makes no claim about what any vendor's terms permit a third party
+  to do with the output.
 - **These outputs are committed as evidence, not as a dataset for redistribution.** Each
   checkpoint exists to make one claim auditable — "this model, asked this question, on
   this date, answered this, with this declared confidence" — so a reader can recompute a
@@ -29,6 +34,29 @@ in `docs/audit-*.md` / `.json`, `docs/arena-2026-09.md`, `docs/consensus-2026-09
   [ground-truth tier](../ground-truth.md); the tier says what kind of evidence an
   accuracy against them is, not who owns the text.
 
-Questions about a specific checkpoint's provenance (model, backend, timestamp, dataset
-hash) are answered by its own header row — every `*.ckpt.jsonl` here starts with a
-run-metadata line recording exactly that.
+## Provenance: the header line
+
+Every checkpoint except the three listed below starts with a run-metadata line,
+`{"idx": -1, "run": {...}}`, written by `scripts/audit_resumable.py` before the first row.
+`run` records `timestamp_utc`, `judge_audit_version`, `python`, `dataset` (`path`,
+`sha256`, `rows`; newer runs add `sha256_rows` and the `ground_truth` tier) and `judge`
+(`name`, `model`, and either `provider` or — for the Jev runs — `backend` and `bridge`,
+plus judge-specific settings such as prices, temperature or the fine-tuning config).
+There is no top-level `backend` field; where one exists it lives inside `run.judge`.
+Some headers also carry `rows_subset` (the run covered only one part of a pre-registered
+split; the split file and its sha256 are recorded) or `reparsed` (when, and with which
+judge-audit version, `scripts/reparse_checkpoints.py` re-derived decisions from the
+committed raw responses, and how many changed).
+
+**Checkpoints without a header.** These three predate the header and start directly with
+row 0; they record no run time, no dataset hash and no judge-audit version:
+
+- `audit-jev-real.ckpt.jsonl`
+- `audit-jev-adversarial.ckpt.jsonl`
+- `audit-jev-router.ckpt.jsonl`
+
+What is known about them (model `typesafe-ai/jev`, which dataset) lives in the `run`
+block of their report JSON (`docs/audit-jev-real.json`, `docs/audit-jev-adversarial.json`,
+`docs/audit-jev-router.json`), which says in so many words "original run time not
+recorded in this checkpoint". `tests/test_runs_provenance.py` fails if any other
+checkpoint lacks the header, or if this list stops matching the files.

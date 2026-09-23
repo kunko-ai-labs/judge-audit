@@ -55,6 +55,10 @@ jobs:
         run: |
           python scripts/runs_report.py
           git diff --exit-code -- docs/runs docs/audit-jev-real.json
+      - name: Adversarial audit page recomputes from its checkpoint (the whole document)
+        run: |
+          python scripts/analyze_adversarial.py
+          git diff --exit-code -- docs/audit-jev-adversarial.md docs/audit-jev-adversarial.json
       - name: Held-out report recomputes from the same checkpoints on the pre-registered split
         run: |
           python scripts/heldout_report.py

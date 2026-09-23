@@ -1,8 +1,15 @@
-# Release: on a v* tag, build sdist + wheel, attest their provenance (Sigstore),
-# smoke-test the built wheel in a clean runner, generate and attach an SBOM,
-# attach everything to the GitHub release and publish to PyPI via Trusted
-# Publishing (no API token stored anywhere; PyPI trusts this workflow's OIDC
-# identity). Publishing only runs if the smoke test passes.
+# Release: on a v* tag, in this order —
+#   build           sdist + wheel, tag must equal the version, Sigstore build-provenance
+#                   attestation; the files stay a workflow artifact, nothing is published
+#   smoke           installs the built wheel in a clean runner, checks `judge-audit
+#                   --version` against the tag, runs a simulated audit and
+#                   `judge-audit-mcp --help`, then generates the CycloneDX SBOM of that
+#                   install (root component kunko-judge-audit) and attests it
+#   github-release  only after smoke: creates the release if the tag has none and
+#                   attaches dist/* and the SBOM
+#   publish         only after smoke and github-release: PyPI via Trusted Publishing (no
+#                   API token stored anywhere; PyPI trusts this workflow's OIDC identity)
+# A failing smoke test therefore leaves both the GitHub release and PyPI untouched.
 name: Release
 
 on:
@@ -16,11 +23,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write        # attach artifacts to the release
+      contents: read
       id-token: write        # Sigstore
       attestations: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
@@ -32,13 +41,6 @@ jobs:
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: dist/*
-      - name: Create the GitHub release if the tag was pushed without one, then attach the files
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 \
-            || gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --generate-notes
-          gh release upload "${GITHUB_REF_NAME}" dist/* --clobber
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: dist
@@ -49,9 +51,13 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     permissions:
-      contents: write        # attach the SBOM to the release
+      contents: read
+      id-token: write        # Sigstore, for the SBOM attestation
+      attestations: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false   # only needed for examples/ and pyproject.toml
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
@@ -60,9 +66,11 @@ jobs:
           name: dist
           path: dist/
       - name: Install the built wheel in a clean virtual environment
+        # --without-pip: the venv holds the wheel, its mcp extra and their dependencies,
+        # nothing else, so the SBOM below describes exactly that.
         run: |
-          python -m venv smoke-venv
-          smoke-venv/bin/pip install -q "$(ls dist/*.whl)[mcp]"
+          python -m venv --without-pip smoke-venv
+          python -m pip --python smoke-venv/bin/python install -q "$(ls dist/*.whl)[mcp]"
       - name: judge-audit --version must equal the tag
         run: |
           got="$(smoke-venv/bin/judge-audit --version)"
@@ -73,20 +81,61 @@ jobs:
         run: smoke-venv/bin/judge-audit run examples/email-routing/labels.jsonl --judge simulated
       - name: MCP entry point starts from the wheel alone
         run: smoke-venv/bin/judge-audit-mcp --help
-      - name: Generate an SBOM from the built wheel (CycloneDX, pinned tool)
+      - name: Generate the SBOM of the installed wheel (CycloneDX 1.6, hash-pinned tool)
+        # The tool goes into the runner's Python, not smoke-venv, so it is not in the SBOM.
+        # --pyproject makes kunko-judge-audit the root component; the tag check in `build`
+        # guarantees its version is the wheel's.
         run: |
-          pip install -q "cyclonedx-bom==7.4.0"
-          cyclonedx-py environment --of JSON -o sbom.cdx.json --sv 1.6 smoke-venv
-      - name: Attach the SBOM to the release
+          python -m pip install -q --require-hashes --only-binary :all: -r .github/sbom-requirements.txt
+          SOURCE_DATE_EPOCH="$(git log -1 --format=%ct)" cyclonedx-py environment \
+            --pyproject pyproject.toml --mc-type library --output-reproducible \
+            --sv 1.6 --of JSON -o sbom.cdx.json smoke-venv
+      - name: The SBOM describes this release and nothing else
+        run: |
+          python - <<'PY'
+          import json, os, sys
+          bom = json.load(open("sbom.cdx.json"))
+          root = bom["metadata"]["component"]
+          names = {c["name"] for c in bom.get("components", [])}
+          print(root["name"], root["version"], f"{len(names)} components")
+          if root["name"] != "kunko-judge-audit" or root["version"] != os.environ["GITHUB_REF_NAME"][1:]:
+              sys.exit("SBOM root component is not this release")
+          if names & {"pip", "cyclonedx-bom", "kunko-judge-audit"}:
+              sys.exit(f"SBOM lists {sorted(names & {'pip', 'cyclonedx-bom', 'kunko-judge-audit'})}")
+          PY
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: sbom.cdx.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: sbom
+          path: sbom.cdx.json
+
+  github-release:
+    needs: [build, smoke]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # create the release, attach the files
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: dist
+          path: dist/
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: sbom
+          path: .
+      - name: Create the GitHub release if the tag was pushed without one, then attach the files
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 \
-            || gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --generate-notes
-          gh release upload "${GITHUB_REF_NAME}" sbom.cdx.json --clobber
+            || gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --generate-notes --verify-tag
+          gh release upload "${GITHUB_REF_NAME}" dist/* sbom.cdx.json --clobber
 
   publish:
-    needs: [build, smoke]
+    needs: [build, smoke, github-release]
     runs-on: ubuntu-latest
     environment: pypi        # create it in Settings > Environments; PyPI trusted publisher points here
     permissions:
