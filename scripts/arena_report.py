@@ -240,20 +240,27 @@ def _span(s: dict, key: str) -> tuple[float, float]:
 def reversals(judges: dict, dataset: str) -> tuple[int, int]:
     """(judge pairs that swap order between two of the three numbers, of which separated).
 
-    A pair is reversed when one number puts judge a strictly below b and another puts
-    b strictly below a (a tie is not a reversal). It is *separated* when, on at least one
-    of the three numbers, the two judges' 95 % intervals do not overlap — the only case in
-    which the data tells them apart."""
+    A pair swaps when one number x puts judge a strictly below b and another number y puts
+    b strictly below a (a tie is not a swap). The swap is *separated* only when the two
+    judges' 95 % intervals are disjoint on x **and** on y — only then does the data say both
+    orders at once. A pair counts as separated when any of its swaps is."""
     vals = {k: j["datasets"][dataset] for k, j in judges.items() if dataset in j["datasets"]}
+
+    def sign(sa: dict, sb: dict, k: str) -> int:
+        return (sa[k] > sb[k]) - (sa[k] < sb[k])
+
+    def disjoint(sa: dict, sb: dict, k: str) -> bool:
+        return _span(sa, k)[1] < _span(sb, k)[0] or _span(sb, k)[1] < _span(sa, k)[0]
+
     names, flipped, apart = sorted(vals), 0, 0
     for i, a in enumerate(names):
         for b in names[i + 1:]:
             sa, sb = vals[a], vals[b]
-            signs = {(sa[k] > sb[k]) - (sa[k] < sb[k]) for k in CALIBRATION_KEYS}
-            if {1, -1} <= signs:
+            swaps = [(x, y) for x in CALIBRATION_KEYS for y in CALIBRATION_KEYS
+                     if sign(sa, sb, x) == -1 and sign(sa, sb, y) == 1]
+            if swaps:
                 flipped += 1
-                apart += any(_span(sa, k)[1] < _span(sb, k)[0] or _span(sb, k)[1] < _span(sa, k)[0]
-                             for k in CALIBRATION_KEYS)
+                apart += any(disjoint(sa, sb, x) and disjoint(sa, sb, y) for x, y in swaps)
     return flipped, apart
 
 
@@ -282,12 +289,13 @@ def ranking_sentence(judges: dict) -> str:
     where = "any of the four datasets" if len(moved) == 4 else (
         f"{len(moved)} of the {len(datasets)} datasets ("
         + ", ".join(WHERE[d].removeprefix("on ") for d in moved) + ")")
-    within = flipped - apart
-    share = (f"most ({within}) of the {flipped}" if within * 2 > flipped
-             else f"{within} of the {flipped}")
+    separated = ("none of those swaps is" if apart == 0 else
+                 f"{apart} of those {flipped} pairs {'has a swap' if apart == 1 else 'have swaps'}"
+                 f" that {'is' if apart == 1 else 'are'}")
     return (f"**ECE, equal-mass ECE and Brier do not order the judges the same way** on "
-            f"{where}; {share} reversals (judge pairs that swap places) are within intervals "
-            f"that overlap on all three numbers, and the widest move "
+            f"{where}: {flipped} judge pair{'s' if flipped != 1 else ''} swap"
+            f"{'' if flipped != 1 else 's'} places, and {separated} separated by the "
+            f"intervals of both numbers involved. The widest move "
             f"is {judges[k]['label']} {WHERE[ds]}, {ordinal(r[0])} of {n} by ECE, "
             f"{ordinal(r[1])} by equal-mass ECE and {ordinal(r[2])} by Brier "
             f"({fmt(s['ece'])} / {s['ece_equal_mass']:.4f} / {s['brier']:.4f}) — read the "

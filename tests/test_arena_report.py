@@ -95,9 +95,10 @@ def test_a_calibration_ranking_that_flips_is_said_in_one_sentence():
     judges = {"b": judge("B", B), "c": judge("C", C)}
     assert calibration_ranks(judges, "email-clean") == {"b": (2, 2, 1), "c": (1, 1, 2)}
     sentence = ranking_sentence(judges)
-    assert sentence.count(". ") == 0 and sentence.endswith("one ranking.")
-    assert ("do not order the judges the same way** on 1 of the 1 datasets (clean emails)"
-            in sentence)
+    assert sentence.count(". ") == 1 and sentence.endswith("one ranking.")
+    assert ("do not order the judges the same way** on 1 of the 1 datasets (clean emails): "
+            "1 judge pair swaps places, and none of those swaps is separated by the "
+            "intervals of both numbers involved." in sentence)
     assert reversals(judges, "email-clean")[0] == 1
     assert ("B on clean emails, 2nd of 2 by ECE, 2nd by equal-mass ECE and 1st by Brier"
             in sentence)
@@ -118,6 +119,10 @@ def test_reversals_separate_only_where_an_interval_does():
                                                                   "brier")}}}}
              for k, j in wide.items()}                      # degenerate: the point itself
     assert reversals(tight, "d") == (1, 1)
+    # disjoint on ECE only: the Brier intervals of the swap still overlap -> not separated
+    half = {"a": {"datasets": {"d": {**tight["a"]["datasets"]["d"], "brier_ci": [0.1, 0.4]}}},
+            "b": {"datasets": {"d": {**tight["b"]["datasets"]["d"], "brier_ci": [0.1, 0.4]}}}}
+    assert reversals(half, "d") == (1, 0)
     same = {"a": wide["a"], "a2": wide["a"]}
     assert reversals(same, "d") == (0, 0)                   # identical judges never swap
 
