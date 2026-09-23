@@ -176,5 +176,12 @@
     "level": 0.95,
     "n_boot": 2000,
     "seed": 0
+  },
+  "regenerated": {
+    "utc": "2026-09-23T13:30:30+00:00",
+    "judge_audit_version": "0.4.0",
+    "script": "scripts/runs_report.py",
+    "checkpoint": "docs/runs/jury/router-described/deepseek-r1.r2.ckpt.jsonl",
+    "labels": "docs/runs/jury/router-described/deepseek-r1.r2.input.jsonl"
   }
 }

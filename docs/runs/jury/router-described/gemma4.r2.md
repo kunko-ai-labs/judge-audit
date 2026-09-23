@@ -5,6 +5,7 @@
 
 _judge `llm:gemma4:e4b` · model `gemma4:e4b` · run 2026-09-21T19:29:07+00:00 · judge-audit 0.3.2_
 _dataset `docs/runs/jury/router-described/gemma4.r2.input.jsonl` · 120 rows · sha256 `ab827da374f3…`_
+_regenerated 2026-09-23T13:30:30+00:00 from `docs/runs/jury/router-described/gemma4.r2.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome; downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified; 40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted**
 

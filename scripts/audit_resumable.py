@@ -124,6 +124,14 @@ def build_result(judge_name: str, rows: list[dict], dataset_meta: dict, wanted: 
                      groups=groups_of(records, cluster_rows or rows))
 
 
+def recorded_judge(done: dict[int, dict]) -> str | None:
+    """The adapter name the checkpoint's header recorded (`llm` for `llm:gemma4:e4b`)."""
+    if -1 not in done:
+        return None
+    name = (done[-1]["run"].get("judge") or {}).get("name")
+    return str(name).split(":")[0] if name else None
+
+
 def tag_of(judge_name: str) -> str:
     """The banner a report of this judge carries: only the simulated judge is fake."""
     return SIMULATED_TAG if judge_name == "simulated" else ""
@@ -167,14 +175,20 @@ def main() -> None:
     print(f"checkpoint: {n_done}/{len(wanted)} rows already done"
           + (f" (subset {subset['part']} of {subset['split']})" if subset else ""))
 
+    # Who answered is what the checkpoint recorded, not what this command line says: a
+    # simulated checkpoint recomputed with `--judge llm` is still a simulation.
+    name = recorded_judge(done) or args.judge
     if n_done >= len(wanted):
         # Complete checkpoint: recompute only. No key, no judge, no API call.
-        judge, tag = None, tag_of(args.judge)
-        started = {"judge": {"name": args.judge, "model": "typesafe-ai/jev", "backend": "gateway"}
-                   if args.judge == "jev" else {"name": args.judge},
+        judge, tag = None, tag_of(name)
+        started = {"judge": {"name": name, "model": "typesafe-ai/jev", "backend": "gateway"}
+                   if name == "jev" else {"name": name},
                    "judge_audit_version": __version__,
                    "timestamp_utc": datetime.now(timezone.utc).isoformat(timespec="seconds")}
     else:
+        if name != args.judge:
+            raise SystemExit(f"{ckpt} was started by judge {name!r}, not {args.judge!r}; "
+                             "use a new checkpoint")
         judge, tag = _judge(args.judge, rows)
         started = run_metadata(judge, args.labels, len(rows), dataset_meta)
     if subset:
@@ -222,9 +236,9 @@ def main() -> None:
                 print(f"  {n_done}/{len(wanted)}", flush=True)
 
     cluster_rows = load_dataset(args.cluster_labels)[0] if args.cluster_labels else None
-    result = build_result(args.judge, rows, dataset_meta, wanted, done, ckpt, started, subset,
+    result = build_result(name, rows, dataset_meta, wanted, done, ckpt, started, subset,
                           cluster_rows)
-    md = report_markdown(result, args.judge)
+    md = report_markdown(result, name)
     Path(args.out).write_text(md, encoding="utf-8")
     Path(args.json).write_text(json.dumps(result.to_dict(), indent=2), encoding="utf-8")
     if args.html:

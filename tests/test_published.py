@@ -2,10 +2,15 @@
 from __future__ import annotations
 
 import copy
+import json
 import re
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
+
+from judge_audit import __version__
 
 
 def test_published_audits_match_their_checkpoints(root):
@@ -114,6 +119,63 @@ def test_runs_report_covers_every_per_run_report(root):
                if p.name != "panel.json" and p.parent.name != "finetuned"}
     assert len(on_disk) == 54 and on_disk <= covered, sorted(on_disk - covered)
     assert "docs/audit-jev-real.json" in covered
+
+
+def _target(root, monkeypatch, json_path):
+    sys.path.insert(0, str(root / "scripts"))
+    import runs_report
+    monkeypatch.chdir(root)
+    t = next(t for t in runs_report.targets() if t["json"] == json_path)
+    result, judge_name = runs_report.regenerate(t)
+    on_disk = {p: (root / p).read_text(encoding="utf-8") for p in (t["json"], t["md"]) if p}
+    return runs_report, t, result, judge_name, on_disk
+
+
+@pytest.mark.parametrize("json_path", ["docs/runs/arena/gemma4/email-clean.json",
+                                       "docs/audit-jev-real.json"])
+def test_runs_report_never_rewrites_an_existing_run_block(root, monkeypatch, json_path):
+    """Provenance is what the run said. A regeneration whose run block would differ from
+    the committed one stops instead of overwriting it (#64 review)."""
+    rr, t, result, judge_name, on_disk = _target(root, monkeypatch, json_path)
+    assert rr.plan(t, result, judge_name, on_disk, now="2099-01-01T00:00:00+00:00") == {}
+    tampered = json.loads(on_disk[t["json"]])
+    tampered["run"]["judge_audit_version"] = "9.9.9"
+    with pytest.raises(SystemExit, match="run block"):
+        rr.plan(t, result, judge_name, {**on_disk, t["json"]: json.dumps(tampered)},
+                now="2099-01-01T00:00:00+00:00")
+
+
+def test_a_regeneration_is_stamped_with_its_own_time_next_to_the_run(root, monkeypatch):
+    """When the numbers change, the file records when, by which version and script it was
+    regenerated — in its own block; the run block is left exactly as it was."""
+    rr, t, result, judge_name, on_disk = _target(root, monkeypatch,
+                                                  "docs/runs/arena/gemma4/email-clean.json")
+    stale = json.loads(on_disk[t["json"]])
+    stale["accuracy_coverage"] = stale["accuracy_coverage"][:1]
+    files = rr.plan(t, result, judge_name, {**on_disk, t["json"]: json.dumps(stale)},
+                    now="2099-01-01T00:00:00+00:00")
+    new = json.loads(files[t["json"]])
+    assert new["run"] == stale["run"]
+    assert new["regenerated"]["utc"] == "2099-01-01T00:00:00+00:00"
+    assert new["regenerated"]["script"] == "scripts/runs_report.py"
+    assert new["regenerated"]["judge_audit_version"] == __version__
+    assert "_regenerated 2099-01-01T00:00:00+00:00" in files[t["md"]]
+
+
+def test_jev_clean_keeps_the_provenance_it_was_first_published_with(root):
+    """docs/audit-jev-real.json predates run headers: its run block is the v0.2.0 one,
+    verbatim, and the regeneration is recorded beside it, never back-dated into it."""
+    d = json.loads((root / "docs/audit-jev-real.json").read_text(encoding="utf-8"))
+    assert d["run"] == {"judge": {"name": "jev", "model": "typesafe-ai/jev",
+                                  "backend": "gateway"},
+                        "judge_audit_version": "0.2.0",
+                        "recomputed_utc": "2026-09-19T09:09:12+00:00",
+                        "note": "original run time not recorded in this checkpoint",
+                        "checkpoint": "docs/runs/audit-jev-real.ckpt.jsonl"}
+    reg = d["regenerated"]
+    assert reg["script"] == "scripts/runs_report.py" and reg["utc"] > "2026-09-23"
+    page = (root / "docs/audit-jev-real.html").read_text(encoding="utf-8")
+    assert "2026-09-22T00:00:00" not in page and f"regenerated {reg['utc']}" in page
 
 
 def test_only_the_simulated_judge_carries_the_simulated_banner(root):

@@ -46,6 +46,9 @@ class AuditResult:
     p50_latency_s: float = 0.0
     p99_latency_s: float = 0.0
     run: dict = field(default_factory=dict)
+    # When a committed report was rebuilt from its checkpoint by a later version: its own
+    # time, version and script. Kept apart from `run`, which is what the run itself said.
+    regenerated: dict = field(default_factory=dict)
     # 95 % intervals (lo, hi) of the three headline numbers; None when skipped. Each
     # knows its method (bootstrap, or exact at the boundary) and publishes it alongside.
     accuracy_ci: Interval | None = None
@@ -69,6 +72,8 @@ class AuditResult:
                      **ci_fields("ece", self.ece_ci),
                      **ci_fields("zero_error_coverage", self.zero_error_coverage_ci),
                      bootstrap=dict(BOOTSTRAP))
+        if self.regenerated:
+            d["regenerated"] = self.regenerated
         return d
 
 

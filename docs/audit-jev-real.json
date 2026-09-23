@@ -100,26 +100,9 @@
       "backend": "gateway"
     },
     "judge_audit_version": "0.2.0",
-    "recomputed_utc": "2026-09-22T00:00:00+00:00",
+    "recomputed_utc": "2026-09-19T09:09:12+00:00",
     "note": "original run time not recorded in this checkpoint",
-    "checkpoint": "docs/runs/audit-jev-real.ckpt.jsonl",
-    "dataset": {
-      "ground_truth": {
-        "tier": "GT-1",
-        "label": "constructed",
-        "meaning": "labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy",
-        "validation": "not_validated",
-        "purpose": [
-          "calibration stress test",
-          "CI drift baseline"
-        ],
-        "caveats": [
-          "email categories are synthetic: seeded templates with item and number fills, not real mail",
-          "the label is the template's category by design; no human checked it",
-          "100 % here is the floor a judge must clear, not evidence of production routing accuracy"
-        ]
-      }
-    }
+    "checkpoint": "docs/runs/audit-jev-real.ckpt.jsonl"
   },
   "accuracy_ci": [
     0.9817,
@@ -141,5 +124,27 @@
     "level": 0.95,
     "n_boot": 2000,
     "seed": 0
+  },
+  "regenerated": {
+    "utc": "2026-09-23T13:30:11+00:00",
+    "judge_audit_version": "0.4.0",
+    "script": "scripts/runs_report.py",
+    "checkpoint": "docs/runs/audit-jev-real.ckpt.jsonl",
+    "labels": "examples/email-routing/labels.jsonl",
+    "ground_truth": {
+      "tier": "GT-1",
+      "label": "constructed",
+      "meaning": "labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy",
+      "validation": "not_validated",
+      "purpose": [
+        "calibration stress test",
+        "CI drift baseline"
+      ],
+      "caveats": [
+        "email categories are synthetic: seeded templates with item and number fills, not real mail",
+        "the label is the template's category by design; no human checked it",
+        "100 % here is the floor a judge must clear, not evidence of production routing accuracy"
+      ]
+    }
   }
 }

@@ -17,9 +17,14 @@ no judge, no API call — and CI diffs them like every other report:
                                               # PNG bytes vary by version, so CI skips it)
   python scripts/runs_report.py --moved REF   # what moved against the reports at git REF
 
-A checkpoint written before run headers existed (only docs/runs/audit-jev-real.ckpt.jsonl)
-keeps the provenance block its report was first published with: the run time and version
-are not in the checkpoint, and a regeneration must not invent them.
+Provenance is never rewritten. A report's `run` block is what the run said: the checkpoint
+header, or — for the one checkpoint written before headers existed,
+docs/runs/audit-jev-real.ckpt.jsonl — the block its report was first published with in
+v0.2.0, pinned below (not read back from the file it is checked against). When a
+committed report's `run` block differs from that evidence this script stops instead of
+overwriting it. A regeneration is recorded beside the run, in a `regenerated` block with
+the real UTC time, version and script, written only when the file's content changes, so
+rerunning on an unchanged tree rewrites nothing and CI stays byte-identical.
 """
 from __future__ import annotations
 
@@ -29,6 +34,7 @@ import os
 import subprocess
 import sys
 from collections import defaultdict
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -38,34 +44,50 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from audit_resumable import (  # noqa: E402
     build_result,
     load_checkpoint,
+    recorded_judge,
     report_markdown,
     rows_subset,
 )
 from verify_published import ARENA_DATASETS  # noqa: E402
 
+from judge_audit import __version__  # noqa: E402
+from judge_audit.ground_truth import parse_ground_truth  # noqa: E402
 from judge_audit.report import render_html  # noqa: E402
 from judge_audit.runner import load_dataset  # noqa: E402
 
+SCRIPT = "scripts/runs_report.py"
 JEV_REAL = {"labels": "examples/email-routing/labels.jsonl",
             "ckpt": "docs/runs/audit-jev-real.ckpt.jsonl", "json": "docs/audit-jev-real.json",
             "md": None, "html": "docs/audit-jev-real.html",
             "png": "docs/assets/accuracy-coverage-jev-real.png"}
+# The run block docs/audit-jev-real.json was published with in v0.2.0 (704534b), verbatim.
+# Its checkpoint has no header, so this is the only record of the run; it is pinned here
+# rather than copied from the file it would then be checked against.
+JEV_REAL_RUN = {"judge": {"name": "jev", "model": "typesafe-ai/jev", "backend": "gateway"},
+                "judge_audit_version": "0.2.0",
+                "recomputed_utc": "2026-09-19T09:09:12+00:00",
+                "note": "original run time not recorded in this checkpoint",
+                "checkpoint": "docs/runs/audit-jev-real.ckpt.jsonl"}
 
 
 def targets() -> list[dict]:
     """Every generated per-run report, with the labels and checkpoint it comes from."""
+    # Found from the checkpoints, not from the reports: evidence decides what is published.
     out = []
-    for js in sorted((ROOT / "docs" / "runs" / "arena").glob("*/*.json")):
+    for ck in sorted((ROOT / "docs" / "runs" / "arena").glob("*/*.ckpt.jsonl")):
+        js = ck.with_name(ck.name.removesuffix(".ckpt.jsonl") + ".json")
         out.append({"labels": ARENA_DATASETS[js.stem], "cluster_labels": None,
                     "family": "arena", **_siblings(js, js.stem)})
-    for js in sorted((ROOT / "docs" / "runs" / "jury").glob("*/*.r2.json")):
+    for ck in sorted((ROOT / "docs" / "runs" / "jury").glob("*/*.r2.ckpt.jsonl")):
+        js = ck.with_name(ck.name.removesuffix(".ckpt.jsonl") + ".json")
         stem = js.name.removesuffix(".json")
         # Round 2 clusters on the original texts, not on the deliberation prompt around
         # them (jury_deliberate.py passes the same --cluster-labels; so does jury_report).
         out.append({"labels": str(js.with_name(stem + ".input.jsonl").relative_to(ROOT)),
                     "cluster_labels": ARENA_DATASETS[js.parent.name],
                     "family": "jury", **_siblings(js, stem)})
-    out.append({**JEV_REAL, "cluster_labels": None, "family": "audit-jev-real"})
+    out.append({**JEV_REAL, "cluster_labels": None, "family": "audit-jev-real",
+                "pinned_run": JEV_REAL_RUN})
     return out
 
 
@@ -79,12 +101,14 @@ def regenerate(t: dict):
     """(AuditResult, judge name) for one target, exactly as audit_resumable.py builds it."""
     rows, dataset_meta = load_dataset(t["labels"])
     done = load_checkpoint(Path(t["ckpt"]))
+    pinned = t.get("pinned_run")
     if -1 not in done:
-        published = json.loads(Path(t["json"]).read_text(encoding="utf-8"))["run"]
-        done[-1] = {"idx": -1, "run": {k: v for k, v in published.items()
-                                       if k not in ("checkpoint", "dataset")}}
+        if not pinned:
+            raise SystemExit(f"{t['ckpt']}: no run header and no pinned provenance; "
+                             "a regeneration will not invent one")
+        done[-1] = {"idx": -1, "run": dict(pinned)}
     header = done[-1]["run"]
-    judge_name = str(header["judge"]["name"]).split(":")[0]
+    judge_name = recorded_judge(done)
     subset = header.get("rows_subset")
     if subset:
         wanted, now = rows_subset(f"{subset['split']}:{subset['part']}", len(rows))
@@ -98,6 +122,8 @@ def regenerate(t: dict):
     cluster_rows = load_dataset(t["cluster_labels"])[0] if t["cluster_labels"] else None
     result = build_result(judge_name, rows, dataset_meta, wanted, done, Path(t["ckpt"]),
                           header, subset, cluster_rows)
+    if pinned:
+        result.run = dict(pinned)  # verbatim: nothing added to what the run said
     return result, judge_name
 
 
@@ -106,6 +132,41 @@ def outputs(t: dict, result, judge_name: str) -> dict[str, str]:
     if t["md"]:
         files[t["md"]] = report_markdown(result, judge_name)
     return files
+
+
+def stamp(t: dict, result, now: str) -> dict:
+    """The regeneration's own provenance: when, by which version and script, from what."""
+    g = {"utc": now, "judge_audit_version": __version__, "script": SCRIPT,
+         "checkpoint": t["ckpt"], "labels": t["labels"]}
+    if not (result.run.get("dataset") or {}).get("ground_truth"):
+        # A run older than tier headers: the tier is the labels file's, read today.
+        meta = load_dataset(t["labels"])[1]
+        g["ground_truth"] = parse_ground_truth(meta.get("ground_truth")).to_dict()
+    return g
+
+
+def plan(t: dict, result, judge_name: str, on_disk: dict[str, str | None],
+         now: str) -> dict[str, str]:
+    """The files to write for one target ({} when the committed ones are current).
+
+    Never rewrites provenance: a committed `run` block that differs from the evidence
+    stops the script. The `regenerated` block is kept while nothing else changes and
+    replaced by one stamped `now` when something does.
+    """
+    committed = on_disk.get(t["json"])
+    result.regenerated = {}
+    if committed is not None:
+        old = json.loads(committed)
+        if old.get("run") != result.run:
+            raise SystemExit(f"{t['json']}: its run block differs from the one its checkpoint "
+                             "(or pinned provenance) records; runs_report.py never rewrites "
+                             "provenance — fix the evidence or the file by hand, with review")
+        result.regenerated = old.get("regenerated") or {}
+    files = outputs(t, result, judge_name)
+    if all(on_disk.get(path) == text for path, text in files.items()):
+        return {}
+    result.regenerated = stamp(t, result, now)
+    return outputs(t, result, judge_name)
 
 
 def moved(ref: str, t: dict, result) -> dict:
@@ -144,15 +205,15 @@ def main() -> int:
     a = ap.parse_args()
     os.chdir(ROOT)  # provenance names paths relative to the repository, on every machine
     stale, totals = [], defaultdict(lambda: defaultdict(int))
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     for t in targets():
         result, judge_name = regenerate(t)
-        for path, text in outputs(t, result, judge_name).items():
-            p = Path(path)
-            if p.exists() and p.read_text(encoding="utf-8") == text:
-                continue
+        on_disk = {p: (Path(p).read_text(encoding="utf-8") if Path(p).exists() else None)
+                   for p in (t["json"], t["md"]) if p}
+        for path, text in plan(t, result, judge_name, on_disk, now).items():
             stale.append(path)
             if not a.check:
-                p.write_text(text, encoding="utf-8")
+                Path(path).write_text(text, encoding="utf-8")
         if a.charts and t["html"]:
             from judge_audit.charts import accuracy_coverage_png
             Path(t["html"]).write_text(render_html(result, tag=""), encoding="utf-8")

@@ -57,6 +57,21 @@ def test_a_rerun_of_a_complete_checkpoint_writes_the_same_report(tmp_path):
     assert [(tmp_path / f).read_text() for f in ("r.md", "r.json")] == first
 
 
+def test_a_recompute_names_the_judge_the_checkpoint_recorded(tmp_path):
+    """The banner and judge name of a recompute come from the checkpoint header, not the
+    --judge argument: a simulated checkpoint stays SIMULATED whatever the CLI says."""
+    ckpt = tmp_path / "c.ckpt.jsonl"
+    out = ["--checkpoint", str(ckpt), "--out", str(tmp_path / "r.md"),
+           "--json", str(tmp_path / "r.json")]
+    assert run([str(LABELS), "--judge", "simulated", *out], tmp_path).returncode == 0
+    for other in ("llm", "jev"):
+        p = run([str(LABELS), "--judge", other, *out], tmp_path)
+        assert p.returncode == 0 and "already done" in p.stdout, p.stderr
+        md = (tmp_path / "r.md").read_text()
+        assert md.startswith("> ⚠️ **SIMULATED") and "REAL VENDOR AUDIT" not in md
+        assert json.loads((tmp_path / "r.json").read_text())["judge"] == "simulated"
+
+
 def test_heldout_run_judges_only_the_subset_and_resumes(tmp_path):
     ckpt = tmp_path / "email-clean.ckpt.jsonl"
     args = [str(LABELS), "--judge", "simulated", "--checkpoint", str(ckpt),

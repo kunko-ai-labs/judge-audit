@@ -86,6 +86,25 @@ def test_html_publishes_every_point_of_the_curve():
         assert f"<tr><td>{cov}</td><td>100.0%</td><td>{conf}</td><td>{n}</td></tr>" in table
 
 
+def test_a_regeneration_is_reported_next_to_the_run_not_in_place_of_it():
+    # The run block keeps what the original run said (version, time); the regeneration
+    # has its own line, and a tier the old block lacks is read from the regeneration.
+    from judge_audit.report import render_markdown
+    r = result(curve=JEV_CURVE, zero_error={"coverage": 1.0, "n": 200, "threshold": 0.89})
+    r.run = {"judge": {"name": "jev"}, "judge_audit_version": "0.2.0",
+             "recomputed_utc": "2026-09-19T09:09:12+00:00"}
+    r.regenerated = {"utc": "2026-09-24T10:11:12+00:00", "judge_audit_version": "0.4.0",
+                     "script": "scripts/runs_report.py", "checkpoint": "c.ckpt.jsonl",
+                     "labels": "l.jsonl", "ground_truth": {"tier": "GT-1"}}
+    md = render_markdown(r)
+    assert "recomputed 2026-09-19T09:09:12+00:00" in md and "judge-audit 0.2.0" in md
+    assert ("_regenerated 2026-09-24T10:11:12+00:00 from `c.ckpt.jsonl` by "
+            "`scripts/runs_report.py` · judge-audit 0.4.0_") in md
+    assert "Ground truth: GT-1" in md
+    assert r.to_dict()["regenerated"] == r.regenerated
+    assert "regenerated" not in result().to_dict()
+
+
 def test_same_run_against_itself_is_compatible_and_has_no_failures(tmp_path):
     assert check_drift(result(), baseline(tmp_path)) == []
 
