@@ -93,6 +93,12 @@ def targets() -> list[dict]:
 
 
 def _siblings(js: Path, stem: str) -> dict:
+    # A checkpoint is evidence of a published run: its report must be there too. A missing
+    # sibling is a publishing error, not a file to create silently.
+    for f in (js, js.with_name(stem + ".md")):
+        if not f.exists():
+            raise SystemExit(f"{f.parent.name}/{f.name}: missing; every checkpoint under "
+                             "docs/runs has its .json and .md report beside it")
     rel = js.relative_to(ROOT)
     return {"ckpt": str(rel.with_name(stem + ".ckpt.jsonl")), "json": str(rel),
             "md": str(rel.with_name(stem + ".md")), "html": None, "png": None}

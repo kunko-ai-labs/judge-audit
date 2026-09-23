@@ -3,6 +3,8 @@
   "n": 200,
   "accuracy": 0.965,
   "ece": 0.0159,
+  "ece_equal_mass": 0.0439,
+  "brier": 0.0307,
   "reliability_bins": [
     {
       "bin": "0.0-0.1",
@@ -157,6 +159,16 @@
     0.0397
   ],
   "ece_ci_method": "bootstrap",
+  "ece_equal_mass_ci": [
+    0.0264,
+    0.0702
+  ],
+  "ece_equal_mass_ci_method": "bootstrap",
+  "brier_ci": [
+    0.0116,
+    0.0528
+  ],
+  "brier_ci_method": "bootstrap",
   "zero_error_coverage_ci": [
     0.0,
     0.9086
@@ -169,7 +181,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T13:30:30+00:00",
+    "utc": "2026-09-23T13:41:20+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/claude-sonnet-4.5/email-adversarial.ckpt.jsonl",

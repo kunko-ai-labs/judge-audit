@@ -14,10 +14,13 @@ from .ground_truth import parse_ground_truth
 from .judges.base import Judge, Question, QuestionType
 from .metrics.calibration import (
     CI_LEVEL,
+    EQUAL_MASS,
     N_BOOT,
     Interval,
     accuracy_ci,
     accuracy_coverage,
+    brier_ci,
+    brier_score,
     ci_fields,
     ece_ci,
     expected_calibration_error,
@@ -49,18 +52,25 @@ class AuditResult:
     # When a committed report was rebuilt from its checkpoint by a later version: its own
     # time, version and script. Kept apart from `run`, which is what the run itself said.
     regenerated: dict = field(default_factory=dict)
-    # 95 % intervals (lo, hi) of the three headline numbers; None when skipped. Each
+    # 95 % intervals (lo, hi) of the headline numbers; None when skipped. Each
     # knows its method (bootstrap, or exact at the boundary) and publishes it alongside.
     accuracy_ci: Interval | None = None
     ece_ci: Interval | None = None
     zero_error_coverage_ci: Interval | None = None
     # One record per judged (row, question): the raw evidence behind the numbers.
     records: list[dict] = field(default_factory=list)
+    # The two calibration numbers that need no fixed bins (docs/judges.md § Three
+    # calibration numbers); None when there are no rows, never an imputed 0.
+    ece_equal_mass: float | None = None
+    brier: float | None = None
+    ece_equal_mass_ci: Interval | None = None
+    brier_ci: Interval | None = None
 
     def to_dict(self) -> dict:
         d = {
             "judge": self.judge, "n": self.n, "accuracy": self.accuracy,
-            "ece": self.ece, "reliability_bins": self.reliability,
+            "ece": self.ece, "ece_equal_mass": self.ece_equal_mass, "brier": self.brier,
+            "reliability_bins": self.reliability,
             "accuracy_coverage": self.curve, "zero_error_coverage": self.zero_error,
             "total_cost_usd": round(self.total_cost_usd, 6),
             "p50_latency_s": round(self.p50_latency_s, 3),
@@ -68,9 +78,12 @@ class AuditResult:
             "run": self.run,
         }
         if self.accuracy_ci is not None:
-            d.update(**ci_fields("accuracy", self.accuracy_ci),
-                     **ci_fields("ece", self.ece_ci),
-                     **ci_fields("zero_error_coverage", self.zero_error_coverage_ci),
+            d.update(**ci_fields("accuracy", self.accuracy_ci, self.accuracy),
+                     **ci_fields("ece", self.ece_ci, self.ece),
+                     **ci_fields("ece_equal_mass", self.ece_equal_mass_ci, self.ece_equal_mass),
+                     **ci_fields("brier", self.brier_ci, self.brier),
+                     **ci_fields("zero_error_coverage", self.zero_error_coverage_ci,
+                                 self.zero_error.get("coverage")),
                      bootstrap=dict(BOOTSTRAP))
         if self.regenerated:
             d["regenerated"] = self.regenerated
@@ -91,6 +104,18 @@ def questions_of(row: dict) -> list[Question]:
                      options=q.get("options", []),
                      descriptions=q.get("descriptions", {}))
             for q in row["questions"]]
+
+
+def clamp_confidence(value) -> float:
+    """A declared confidence as a number in [0, 1]; a NaN or an infinity is refused.
+
+    Clamping is fine for 1.02 from a chat model; it is imputation for NaN, which
+    `max(0.0, min(1.0, nan))` silently turns into 1.0."""
+    x = float(value)
+    if not math.isfinite(x):
+        raise ValueError(f"confidence {value!r} is not finite; an unknown confidence is "
+                         "reported, never imputed")
+    return max(0.0, min(1.0, x))
 
 
 def is_correct(decision: str, expected: str) -> bool:
@@ -210,6 +235,13 @@ def summarize(judge_name: str, records: list[dict], run: dict | None = None,
         zero_error_coverage_ci=(zero_error_coverage_ci(confidences, correct, groups=groups)
                                 if ci and total else None),
         records=records,
+        ece_equal_mass=(round(expected_calibration_error(confidences, correct,
+                                                         binning=EQUAL_MASS), 4)
+                        if total else None),
+        brier=round(brier_score(confidences, correct), 4) if total else None,
+        ece_equal_mass_ci=(ece_ci(confidences, correct, groups=groups, binning=EQUAL_MASS)
+                           if ci and total else None),
+        brier_ci=brier_ci(confidences, correct, groups=groups) if ci and total else None,
     )
 
 
@@ -220,7 +252,7 @@ def record_of(idx: int, row: dict, judgment, expected: str) -> dict:
         "expected": str(expected),
         "decision": str(judgment.decision),
         "correct": is_correct(judgment.decision, expected),
-        "confidence": max(0.0, min(1.0, float(judgment.confidence))),
+        "confidence": clamp_confidence(judgment.confidence),
         "latency_s": judgment.latency_s,
         "cost_usd": judgment.cost_usd,
         "meta": row.get("_meta", {}),

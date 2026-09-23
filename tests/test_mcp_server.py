@@ -88,3 +88,12 @@ def test_main_help_exits_zero_without_starting_the_server(capsys):
 async def test_tools_are_registered():
     tools = await mcp_server.server.list_tools()
     assert {t.name for t in tools} == {"run_audit", "check_drift", "list_judges"}
+
+
+@pytest.mark.anyio
+async def test_run_audit_returns_brier_and_equal_mass_ece(labels_path):
+    out = mcp_server.run_audit(str(labels_path), judge="simulated")
+    assert 0.0 <= out["brier"] <= 1.0 and 0.0 <= out["ece_equal_mass"] <= 1.0
+    assert "brier_ci" in out and "ece_equal_mass_ci" in out
+    tool = next(t for t in await mcp_server.server.list_tools() if t.name == "run_audit")
+    assert "Brier" in tool.description and "equal-mass" in tool.description

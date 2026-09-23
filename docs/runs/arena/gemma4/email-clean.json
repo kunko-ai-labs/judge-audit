@@ -3,6 +3,8 @@
   "n": 200,
   "accuracy": 1.0,
   "ece": 0.0258,
+  "ece_equal_mass": 0.0258,
+  "brier": 0.0013,
   "reliability_bins": [
     {
       "bin": "0.0-0.1",
@@ -136,6 +138,16 @@
     0.0307
   ],
   "ece_ci_method": "bootstrap",
+  "ece_equal_mass_ci": [
+    0.0204,
+    0.0307
+  ],
+  "ece_equal_mass_ci_method": "bootstrap",
+  "brier_ci": [
+    0.001,
+    0.0016
+  ],
+  "brier_ci_method": "bootstrap",
   "zero_error_coverage_ci": [
     0.9817,
     1.0
@@ -148,7 +160,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T13:30:30+00:00",
+    "utc": "2026-09-23T13:41:20+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/gemma4/email-clean.ckpt.jsonl",

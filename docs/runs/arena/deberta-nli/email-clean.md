@@ -1,11 +1,11 @@
 # Audit report — nli
 
-**n=200** · accuracy **86.5%** [80.8, 91.6] · ECE **0.1765** [0.1244, 0.2416]
+**n=200** · accuracy **86.5%** [80.8, 91.6] · ECE **0.1765** [0.1244, 0.2416] · ECE (equal-mass) **0.1630** [0.1174, 0.2348] · Brier **0.1288** [0.0970, 0.1696]
 · cost **$0.0000** · p50 **0.321s** · p99 **0.768s**
 
 _judge `nli:deberta-v3-base-zeroshot-v2.0` · model `deberta-v3-base-zeroshot-v2.0` · run 2026-09-20T18:50:38+00:00 · judge-audit 0.3.1_
 _dataset `examples/email-routing/labels.jsonl` · 200 rows · sha256 `c5b4c111290a…`_
-_regenerated 2026-09-23T13:30:30+00:00 from `docs/runs/arena/deberta-nli/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-09-23T13:41:20+00:00 from `docs/runs/arena/deberta-nli/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic: seeded templates with item and number fills, not real mail; the label is the template's category by design; no human checked it; 100 % here is the floor a judge must clear, not evidence of production routing accuracy**
 
@@ -55,3 +55,5 @@ Retrospective on this dataset — not a production guarantee.
 | 0.9-1.0 | 0.954 | 100.0% | 49 |
 
 _A perfectly honest judge sits on the diagonal: avg confidence == accuracy in every bin._
+
+_ECE uses ten equal-width bins; the equal-mass ECE cuts the rows into ten groups of about equal size (tied confidences never split), so it does not hinge on one crowded bin; Brier is the mean squared gap between confidence and outcome, needs no bins, and also rewards accuracy. Three separate numbers, never combined. No log-loss: one wrong answer at a declared confidence of 1.0 makes it infinite, and clipping the confidence would impute one._

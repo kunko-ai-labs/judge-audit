@@ -3,6 +3,8 @@
   "n": 200,
   "accuracy": 0.595,
   "ece": 0.1247,
+  "ece_equal_mass": 0.1106,
+  "brier": 0.2049,
   "reliability_bins": [
     {
       "bin": "0.0-0.1",
@@ -240,6 +242,16 @@
     0.2007
   ],
   "ece_ci_method": "bootstrap",
+  "ece_equal_mass_ci": [
+    0.0911,
+    0.2002
+  ],
+  "ece_equal_mass_ci_method": "bootstrap",
+  "brier_ci": [
+    0.1696,
+    0.242
+  ],
+  "brier_ci_method": "bootstrap",
   "zero_error_coverage_ci": [
     0.0391,
     0.16
@@ -252,7 +264,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T13:30:30+00:00",
+    "utc": "2026-09-23T13:41:20+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/deberta-nli/email-adversarial.ckpt.jsonl",

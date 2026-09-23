@@ -1,0 +1,508 @@
+{
+ "docs/arena-2026-09.json": {
+  "/claude-sonnet-4.5/datasets/email-adversarial/ece": 0.0159,
+  "/claude-sonnet-4.5/datasets/email-clean/ece": 0.029,
+  "/claude-sonnet-4.5/datasets/router-bare/ece": 0.2353,
+  "/claude-sonnet-4.5/datasets/router-described/ece": 0.0322,
+  "/deberta-nli/datasets/email-adversarial/ece": 0.1247,
+  "/deberta-nli/datasets/email-clean/ece": 0.1765,
+  "/deberta-nli/datasets/router-bare/ece": 0.4027,
+  "/deberta-nli/datasets/router-described/ece": 0.1952,
+  "/deepseek-r1/datasets/email-adversarial/ece": 0.1265,
+  "/deepseek-r1/datasets/email-clean/ece": 0.0519,
+  "/deepseek-r1/datasets/router-bare/ece": 0.3734,
+  "/deepseek-r1/datasets/router-described/ece": 0.1478,
+  "/finetuned-deberta-run2-ts/datasets/email-adversarial/ece": 0.017,
+  "/finetuned-deberta-run2/datasets/email-adversarial/ece": 0.048,
+  "/finetuned-deberta/datasets/email-adversarial/ece": 0.4961,
+  "/gemini-3-flash/datasets/email-adversarial/ece": 0.0151,
+  "/gemini-3-flash/datasets/email-clean/ece": 0.0047,
+  "/gemini-3-flash/datasets/router-bare/ece": 0.3154,
+  "/gemini-3-flash/datasets/router-described/ece": 0.0121,
+  "/gemma4/datasets/email-adversarial/ece": 0.1534,
+  "/gemma4/datasets/email-clean/ece": 0.0258,
+  "/gemma4/datasets/router-bare/ece": 0.3446,
+  "/gemma4/datasets/router-described/ece": 0.18,
+  "/jev/datasets/email-adversarial/ece": 0.0389,
+  "/jev/datasets/email-clean/ece": 0.0036,
+  "/jev/datasets/router-bare/ece": 0.3181,
+  "/jev/datasets/router-described/ece": 0.053,
+  "/llama-3.3-70b/datasets/email-adversarial/ece": 0.0155,
+  "/llama-3.3-70b/datasets/email-clean/ece": 0.0909,
+  "/llama-3.3-70b/datasets/router-bare/ece": 0.2333,
+  "/llama-3.3-70b/datasets/router-described/ece": 0.0433,
+  "/llama32/datasets/email-adversarial/ece": 0.154,
+  "/llama32/datasets/email-clean/ece": 0.034,
+  "/llama32/datasets/router-bare/ece": 0.3958,
+  "/llama32/datasets/router-described/ece": 0.4292
+ },
+ "docs/audit-jev-adversarial.json": {
+  "/by_attack/ambiguous/ece": 0.06600000000000004,
+  "/by_attack/clean/ece": 0.004166666666666652,
+  "/by_attack/homoglyph_cyrillic/ece": 0.0,
+  "/by_attack/homoglyph_fullwidth/ece": 0.0,
+  "/by_attack/homoglyph_zerowidth/ece": 0.0039999999999998925,
+  "/by_attack/pii/ece": 0.030000000000000082,
+  "/by_attack/prompt_injection/ece": 0.14675000000000002,
+  "/by_attack/social_engineering/ece": 0.12999999999999998,
+  "/ece": 0.038900000000000025
+ },
+ "docs/audit-jev-real.json": {
+  "/ece": 0.0036
+ },
+ "docs/audit-jev-router-described.json": {
+  "/by_segment/adversarial/ece": 0.0132,
+  "/by_segment/clean_easy/ece": 0.0,
+  "/by_segment/clean_hard/ece": 0.1457,
+  "/overall/ece": 0.053
+ },
+ "docs/audit-jev-router.json": {
+  "/by_segment/adversarial/ece": 0.0485,
+  "/by_segment/clean_easy/ece": 0.0,
+  "/by_segment/clean_hard/ece": 0.9263,
+  "/overall/ece": 0.3181
+ },
+ "docs/consensus-2026-09.json": {
+  "/email-adversarial/declared_confidence/claude-sonnet-4.5/ece": 0.0159,
+  "/email-adversarial/declared_confidence/deberta-nli/ece": 0.1247,
+  "/email-adversarial/declared_confidence/deepseek-r1/ece": 0.1265,
+  "/email-adversarial/declared_confidence/finetuned-deberta-run2-ts/ece": 0.017,
+  "/email-adversarial/declared_confidence/finetuned-deberta-run2/ece": 0.048,
+  "/email-adversarial/declared_confidence/finetuned-deberta/ece": 0.4961,
+  "/email-adversarial/declared_confidence/gemini-3-flash/ece": 0.0151,
+  "/email-adversarial/declared_confidence/gemma4/ece": 0.1534,
+  "/email-adversarial/declared_confidence/jev/ece": 0.0389,
+  "/email-adversarial/declared_confidence/llama-3.3-70b/ece": 0.0155,
+  "/email-adversarial/declared_confidence/llama32/ece": 0.154,
+  "/email-adversarial/panel/vote_share_ece": 0.095,
+  "/email-adversarial/subsets/ambiguous/vote_share_ece": 0.1273,
+  "/email-adversarial/subsets/clean/vote_share_ece": 0.0303,
+  "/email-adversarial/subsets/homoglyph_cyrillic/vote_share_ece": 0.0584,
+  "/email-adversarial/subsets/homoglyph_fullwidth/vote_share_ece": 0.0303,
+  "/email-adversarial/subsets/homoglyph_zerowidth/vote_share_ece": 0.0727,
+  "/email-adversarial/subsets/pii/vote_share_ece": 0.0273,
+  "/email-adversarial/subsets/prompt_injection/vote_share_ece": 0.1841,
+  "/email-adversarial/subsets/social_engineering/vote_share_ece": 0.2455,
+  "/email-clean/declared_confidence/claude-sonnet-4.5/ece": 0.029,
+  "/email-clean/declared_confidence/deberta-nli/ece": 0.1765,
+  "/email-clean/declared_confidence/deepseek-r1/ece": 0.0519,
+  "/email-clean/declared_confidence/gemini-3-flash/ece": 0.0047,
+  "/email-clean/declared_confidence/gemma4/ece": 0.0258,
+  "/email-clean/declared_confidence/jev/ece": 0.0036,
+  "/email-clean/declared_confidence/llama-3.3-70b/ece": 0.0909,
+  "/email-clean/declared_confidence/llama32/ece": 0.034,
+  "/email-clean/panel/vote_share_ece": 0.0294,
+  "/email-clean/subsets/clean/vote_share_ece": 0.0294,
+  "/router-bare/declared_confidence/claude-sonnet-4.5/ece": 0.2353,
+  "/router-bare/declared_confidence/deberta-nli/ece": 0.4027,
+  "/router-bare/declared_confidence/deepseek-r1/ece": 0.3734,
+  "/router-bare/declared_confidence/gemini-3-flash/ece": 0.3154,
+  "/router-bare/declared_confidence/gemma4/ece": 0.3446,
+  "/router-bare/declared_confidence/jev/ece": 0.3181,
+  "/router-bare/declared_confidence/llama-3.3-70b/ece": 0.2333,
+  "/router-bare/declared_confidence/llama32/ece": 0.3958,
+  "/router-bare/panel/vote_share_ece": 0.1745,
+  "/router-bare/subsets/adversarial/vote_share_ece": 0.0883,
+  "/router-bare/subsets/easy/vote_share_ece": 0.0719,
+  "/router-bare/subsets/hard/jury_composition/juries/0/vote_share_ece": 0.0917,
+  "/router-bare/subsets/hard/jury_composition/juries/1/vote_share_ece": 0.075,
+  "/router-bare/subsets/hard/jury_composition/juries/10/vote_share_ece": 0.0333,
+  "/router-bare/subsets/hard/jury_composition/juries/11/vote_share_ece": 0.0333,
+  "/router-bare/subsets/hard/jury_composition/juries/12/vote_share_ece": 0.1667,
+  "/router-bare/subsets/hard/jury_composition/juries/13/vote_share_ece": 0.1417,
+  "/router-bare/subsets/hard/jury_composition/juries/14/vote_share_ece": 0.1167,
+  "/router-bare/subsets/hard/jury_composition/juries/15/vote_share_ece": 0.1167,
+  "/router-bare/subsets/hard/jury_composition/juries/16/vote_share_ece": 0.2417,
+  "/router-bare/subsets/hard/jury_composition/juries/17/vote_share_ece": 0.2167,
+  "/router-bare/subsets/hard/jury_composition/juries/18/vote_share_ece": 0.1917,
+  "/router-bare/subsets/hard/jury_composition/juries/19/vote_share_ece": 0.1917,
+  "/router-bare/subsets/hard/jury_composition/juries/2/vote_share_ece": 0.05,
+  "/router-bare/subsets/hard/jury_composition/juries/20/vote_share_ece": 0.3167,
+  "/router-bare/subsets/hard/jury_composition/juries/21/vote_share_ece": 0.2917,
+  "/router-bare/subsets/hard/jury_composition/juries/22/vote_share_ece": 0.2667,
+  "/router-bare/subsets/hard/jury_composition/juries/23/vote_share_ece": 0.2667,
+  "/router-bare/subsets/hard/jury_composition/juries/24/vote_share_ece": 0.3583,
+  "/router-bare/subsets/hard/jury_composition/juries/25/vote_share_ece": 0.3333,
+  "/router-bare/subsets/hard/jury_composition/juries/26/vote_share_ece": 0.3083,
+  "/router-bare/subsets/hard/jury_composition/juries/27/vote_share_ece": 0.3083,
+  "/router-bare/subsets/hard/jury_composition/juries/28/vote_share_ece": 0.5417,
+  "/router-bare/subsets/hard/jury_composition/juries/29/vote_share_ece": 0.5167,
+  "/router-bare/subsets/hard/jury_composition/juries/3/vote_share_ece": 0.0083,
+  "/router-bare/subsets/hard/jury_composition/juries/30/vote_share_ece": 0.6917,
+  "/router-bare/subsets/hard/jury_composition/juries/31/vote_share_ece": 0.6667,
+  "/router-bare/subsets/hard/jury_composition/juries/32/vote_share_ece": 0.6417,
+  "/router-bare/subsets/hard/jury_composition/juries/33/vote_share_ece": 0.6333,
+  "/router-bare/subsets/hard/jury_composition/juries/34/vote_share_ece": 0.6167,
+  "/router-bare/subsets/hard/jury_composition/juries/35/vote_share_ece": 0.6083,
+  "/router-bare/subsets/hard/jury_composition/juries/36/vote_share_ece": 0.5167,
+  "/router-bare/subsets/hard/jury_composition/juries/37/vote_share_ece": 0.6667,
+  "/router-bare/subsets/hard/jury_composition/juries/38/vote_share_ece": 0.6167,
+  "/router-bare/subsets/hard/jury_composition/juries/39/vote_share_ece": 0.6083,
+  "/router-bare/subsets/hard/jury_composition/juries/4/vote_share_ece": 0.0333,
+  "/router-bare/subsets/hard/jury_composition/juries/40/vote_share_ece": 0.875,
+  "/router-bare/subsets/hard/jury_composition/juries/41/vote_share_ece": 0.5917,
+  "/router-bare/subsets/hard/jury_composition/juries/42/vote_share_ece": 0.7417,
+  "/router-bare/subsets/hard/jury_composition/juries/43/vote_share_ece": 0.6917,
+  "/router-bare/subsets/hard/jury_composition/juries/44/vote_share_ece": 0.6833,
+  "/router-bare/subsets/hard/jury_composition/juries/45/vote_share_ece": 0.875,
+  "/router-bare/subsets/hard/jury_composition/juries/46/vote_share_ece": 0.5917,
+  "/router-bare/subsets/hard/jury_composition/juries/47/vote_share_ece": 0.7417,
+  "/router-bare/subsets/hard/jury_composition/juries/48/vote_share_ece": 0.6917,
+  "/router-bare/subsets/hard/jury_composition/juries/49/vote_share_ece": 0.6833,
+  "/router-bare/subsets/hard/jury_composition/juries/5/vote_share_ece": 0.0583,
+  "/router-bare/subsets/hard/jury_composition/juries/50/vote_share_ece": 0.95,
+  "/router-bare/subsets/hard/jury_composition/juries/51/vote_share_ece": 0.6667,
+  "/router-bare/subsets/hard/jury_composition/juries/52/vote_share_ece": 0.8167,
+  "/router-bare/subsets/hard/jury_composition/juries/53/vote_share_ece": 0.975,
+  "/router-bare/subsets/hard/jury_composition/juries/54/vote_share_ece": 0.7667,
+  "/router-bare/subsets/hard/jury_composition/juries/55/vote_share_ece": 0.7583,
+  "/router-bare/subsets/hard/jury_composition/juries/6/vote_share_ece": 0.075,
+  "/router-bare/subsets/hard/jury_composition/juries/7/vote_share_ece": 0.0583,
+  "/router-bare/subsets/hard/jury_composition/juries/8/vote_share_ece": 0.0167,
+  "/router-bare/subsets/hard/jury_composition/juries/9/vote_share_ece": 0.0083,
+  "/router-bare/subsets/hard/vote_share_ece": 0.5076,
+  "/router-described/declared_confidence/claude-sonnet-4.5/ece": 0.0322,
+  "/router-described/declared_confidence/deberta-nli/ece": 0.1952,
+  "/router-described/declared_confidence/deepseek-r1/ece": 0.1478,
+  "/router-described/declared_confidence/gemini-3-flash/ece": 0.0121,
+  "/router-described/declared_confidence/gemma4/ece": 0.18,
+  "/router-described/declared_confidence/jev/ece": 0.053,
+  "/router-described/declared_confidence/llama-3.3-70b/ece": 0.0433,
+  "/router-described/declared_confidence/llama32/ece": 0.4292,
+  "/router-described/panel/vote_share_ece": 0.1101,
+  "/router-described/subsets/adversarial/vote_share_ece": 0.1356,
+  "/router-described/subsets/easy/vote_share_ece": 0.0688,
+  "/router-described/subsets/hard/jury_composition/juries/0/vote_share_ece": 0.0,
+  "/router-described/subsets/hard/jury_composition/juries/1/vote_share_ece": 0.0,
+  "/router-described/subsets/hard/jury_composition/juries/10/vote_share_ece": 0.0,
+  "/router-described/subsets/hard/jury_composition/juries/11/vote_share_ece": 0.3333,
+  "/router-described/subsets/hard/jury_composition/juries/12/vote_share_ece": 0.0,
+  "/router-described/subsets/hard/jury_composition/juries/13/vote_share_ece": 0.3333,
+  "/router-described/subsets/hard/jury_composition/juries/14/vote_share_ece": 0.3333,
+  "/router-described/subsets/hard/jury_composition/juries/15/vote_share_ece": 0.0,
+  "/router-described/subsets/hard/jury_composition/juries/16/vote_share_ece": 0.0,
+  "/router-described/subsets/hard/jury_composition/juries/17/vote_share_ece": 0.0,
+  "/router-described/subsets/hard/jury_composition/juries/18/vote_share_ece": 0.3333,
+  "/router-described/subsets/hard/jury_composition/juries/19/vote_share_ece": 0.0,
+  "/router-described/subsets/hard/jury_composition/juries/2/vote_share_ece": 0.0,
+  "/router-described/subsets/hard/jury_composition/juries/20/vote_share_ece": 0.0,
+  "/router-described/subsets/hard/jury_composition/juries/21/vote_share_ece": 0.3333,
+  "/router-described/subsets/hard/jury_composition/juries/22/vote_share_ece": 0.0,
+  "/router-described/subsets/hard/jury_composition/juries/23/vote_share_ece": 0.3333,
+  "/router-described/subsets/hard/jury_composition/juries/24/vote_share_ece": 0.3333,
+  "/router-described/subsets/hard/jury_composition/juries/25/vote_share_ece": 0.0,
+  "/router-described/subsets/hard/jury_composition/juries/26/vote_share_ece": 0.0,
+  "/router-described/subsets/hard/jury_composition/juries/27/vote_share_ece": 0.3333,
+  "/router-described/subsets/hard/jury_composition/juries/28/vote_share_ece": 0.0,
+  "/router-described/subsets/hard/jury_composition/juries/29/vote_share_ece": 0.3333,
+  "/router-described/subsets/hard/jury_composition/juries/3/vote_share_ece": 0.0,
+  "/router-described/subsets/hard/jury_composition/juries/30/vote_share_ece": 0.3333,
+  "/router-described/subsets/hard/jury_composition/juries/31/vote_share_ece": 0.0,
+  "/router-described/subsets/hard/jury_composition/juries/32/vote_share_ece": 0.3333,
+  "/router-described/subsets/hard/jury_composition/juries/33/vote_share_ece": 0.3333,
+  "/router-described/subsets/hard/jury_composition/juries/34/vote_share_ece": 0.3333,
+  "/router-described/subsets/hard/jury_composition/juries/35/vote_share_ece": 0.025,
+  "/router-described/subsets/hard/jury_composition/juries/36/vote_share_ece": 0.025,
+  "/router-described/subsets/hard/jury_composition/juries/37/vote_share_ece": 0.025,
+  "/router-described/subsets/hard/jury_composition/juries/38/vote_share_ece": 0.025,
+  "/router-described/subsets/hard/jury_composition/juries/39/vote_share_ece": 0.025,
+  "/router-described/subsets/hard/jury_composition/juries/4/vote_share_ece": 0.3333,
+  "/router-described/subsets/hard/jury_composition/juries/40/vote_share_ece": 0.025,
+  "/router-described/subsets/hard/jury_composition/juries/41/vote_share_ece": 0.025,
+  "/router-described/subsets/hard/jury_composition/juries/42/vote_share_ece": 0.025,
+  "/router-described/subsets/hard/jury_composition/juries/43/vote_share_ece": 0.025,
+  "/router-described/subsets/hard/jury_composition/juries/44/vote_share_ece": 0.025,
+  "/router-described/subsets/hard/jury_composition/juries/45/vote_share_ece": 0.025,
+  "/router-described/subsets/hard/jury_composition/juries/46/vote_share_ece": 0.025,
+  "/router-described/subsets/hard/jury_composition/juries/47/vote_share_ece": 0.025,
+  "/router-described/subsets/hard/jury_composition/juries/48/vote_share_ece": 0.025,
+  "/router-described/subsets/hard/jury_composition/juries/49/vote_share_ece": 0.025,
+  "/router-described/subsets/hard/jury_composition/juries/5/vote_share_ece": 0.0,
+  "/router-described/subsets/hard/jury_composition/juries/50/vote_share_ece": 0.2583,
+  "/router-described/subsets/hard/jury_composition/juries/51/vote_share_ece": 0.2583,
+  "/router-described/subsets/hard/jury_composition/juries/52/vote_share_ece": 0.2583,
+  "/router-described/subsets/hard/jury_composition/juries/53/vote_share_ece": 0.2583,
+  "/router-described/subsets/hard/jury_composition/juries/54/vote_share_ece": 0.2583,
+  "/router-described/subsets/hard/jury_composition/juries/55/vote_share_ece": 0.2583,
+  "/router-described/subsets/hard/jury_composition/juries/6/vote_share_ece": 0.0,
+  "/router-described/subsets/hard/jury_composition/juries/7/vote_share_ece": 0.0,
+  "/router-described/subsets/hard/jury_composition/juries/8/vote_share_ece": 0.3333,
+  "/router-described/subsets/hard/jury_composition/juries/9/vote_share_ece": 0.0,
+  "/router-described/subsets/hard/vote_share_ece": 0.1344
+ },
+ "docs/finetuned-baseline-2026-09.json": {
+  "/judges/claude-sonnet-4.5/datasets/email-adversarial/ece": 0.0159,
+  "/judges/claude-sonnet-4.5/datasets/email-clean/ece": 0.027,
+  "/judges/claude-sonnet-4.5/datasets/router-bare/ece": 0.2277,
+  "/judges/claude-sonnet-4.5/datasets/router-described/ece": 0.0228,
+  "/judges/deberta-nli/datasets/email-adversarial/ece": 0.1247,
+  "/judges/deberta-nli/datasets/email-clean/ece": 0.1729,
+  "/judges/deberta-nli/datasets/router-bare/ece": 0.4188,
+  "/judges/deberta-nli/datasets/router-described/ece": 0.1787,
+  "/judges/deepseek-r1/datasets/email-adversarial/ece": 0.1265,
+  "/judges/deepseek-r1/datasets/email-clean/ece": 0.0501,
+  "/judges/deepseek-r1/datasets/router-bare/ece": 0.3327,
+  "/judges/deepseek-r1/datasets/router-described/ece": 0.0577,
+  "/judges/finetuned-deberta-run2-ts/datasets/email-adversarial/ece": 0.017,
+  "/judges/finetuned-deberta-run2-ts/datasets/email-clean/ece": 0.0,
+  "/judges/finetuned-deberta-run2-ts/datasets/router-bare/ece": 0.0,
+  "/judges/finetuned-deberta-run2-ts/datasets/router-described/ece": 0.0,
+  "/judges/finetuned-deberta-run2/datasets/email-adversarial/ece": 0.048,
+  "/judges/finetuned-deberta-run2/datasets/email-clean/ece": 0.0169,
+  "/judges/finetuned-deberta-run2/datasets/router-bare/ece": 0.0054,
+  "/judges/finetuned-deberta-run2/datasets/router-described/ece": 0.0054,
+  "/judges/finetuned-deberta/datasets/email-adversarial/ece": 0.4961,
+  "/judges/finetuned-deberta/datasets/email-clean/ece": 0.4581,
+  "/judges/finetuned-deberta/datasets/router-bare/ece": 0.1329,
+  "/judges/finetuned-deberta/datasets/router-described/ece": 0.1329,
+  "/judges/gemini-3-flash/datasets/email-adversarial/ece": 0.0151,
+  "/judges/gemini-3-flash/datasets/email-clean/ece": 0.0035,
+  "/judges/gemini-3-flash/datasets/router-bare/ece": 0.3167,
+  "/judges/gemini-3-flash/datasets/router-described/ece": 0.015,
+  "/judges/gemma4/datasets/email-adversarial/ece": 0.1534,
+  "/judges/gemma4/datasets/email-clean/ece": 0.024,
+  "/judges/gemma4/datasets/router-bare/ece": 0.285,
+  "/judges/gemma4/datasets/router-described/ece": 0.1492,
+  "/judges/jev/datasets/email-adversarial/ece": 0.0389,
+  "/judges/jev/datasets/email-clean/ece": 0.002,
+  "/judges/jev/datasets/router-bare/ece": 0.315,
+  "/judges/jev/datasets/router-described/ece": 0.0555,
+  "/judges/llama-3.3-70b/datasets/email-adversarial/ece": 0.0155,
+  "/judges/llama-3.3-70b/datasets/email-clean/ece": 0.0898,
+  "/judges/llama-3.3-70b/datasets/router-bare/ece": 0.25,
+  "/judges/llama-3.3-70b/datasets/router-described/ece": 0.0217,
+  "/judges/llama32/datasets/email-adversarial/ece": 0.154,
+  "/judges/llama32/datasets/email-clean/ece": 0.044,
+  "/judges/llama32/datasets/router-bare/ece": 0.3917,
+  "/judges/llama32/datasets/router-described/ece": 0.3917,
+  "/prediction/results/P2/ece": 0.4581
+ },
+ "docs/jury-consensus.json": {
+  "/router-bare/hard_round1/vote_share_ece": 0.5076,
+  "/router-bare/hard_round2/vote_share_ece": 0.7244,
+  "/router-bare/judges/claude-sonnet-4.5/hard_round1/ece": 0.6583,
+  "/router-bare/judges/claude-sonnet-4.5/hard_round2/ece": 0.6433,
+  "/router-bare/judges/claude-sonnet-4.5/round1/ece": 0.2353,
+  "/router-bare/judges/claude-sonnet-4.5/round2/ece": 0.2311,
+  "/router-bare/judges/deepseek-r1/hard_round1/ece": 0.3925,
+  "/router-bare/judges/deepseek-r1/hard_round2/ece": 0.794,
+  "/router-bare/judges/deepseek-r1/round1/ece": 0.3734,
+  "/router-bare/judges/deepseek-r1/round2/ece": 0.3787,
+  "/router-bare/judges/gemini-3-flash/hard_round1/ece": 0.8862,
+  "/router-bare/judges/gemini-3-flash/hard_round2/ece": 0.7562,
+  "/router-bare/judges/gemini-3-flash/round1/ece": 0.3154,
+  "/router-bare/judges/gemini-3-flash/round2/ece": 0.3047,
+  "/router-bare/judges/gemma4/hard_round1/ece": 0.1775,
+  "/router-bare/judges/gemma4/hard_round2/ece": 0.7283,
+  "/router-bare/judges/gemma4/round1/ece": 0.3446,
+  "/router-bare/judges/gemma4/round2/ece": 0.3098,
+  "/router-bare/judges/jev/hard_round1/ece": 0.9263,
+  "/router-bare/judges/jev/hard_round2/ece": 0.6605,
+  "/router-bare/judges/jev/round1/ece": 0.3181,
+  "/router-bare/judges/jev/round2/ece": 0.2083,
+  "/router-bare/judges/llama-3.3-70b/hard_round1/ece": 0.135,
+  "/router-bare/judges/llama-3.3-70b/hard_round2/ece": 0.857,
+  "/router-bare/judges/llama-3.3-70b/round1/ece": 0.2333,
+  "/router-bare/judges/llama-3.3-70b/round2/ece": 0.3903,
+  "/router-bare/judges/llama32/hard_round1/ece": 1.0,
+  "/router-bare/judges/llama32/hard_round2/ece": 0.8287,
+  "/router-bare/judges/llama32/round1/ece": 0.3958,
+  "/router-bare/judges/llama32/round2/ece": 0.2816,
+  "/router-bare/panel_round1/vote_share_ece": 0.1745,
+  "/router-bare/panel_round2/vote_share_ece": 0.1969,
+  "/router-described/hard_round1/vote_share_ece": 0.1344,
+  "/router-described/hard_round2/vote_share_ece": 0.0187,
+  "/router-described/judges/claude-sonnet-4.5/hard_round1/ece": 0.07,
+  "/router-described/judges/claude-sonnet-4.5/hard_round2/ece": 0.085,
+  "/router-described/judges/claude-sonnet-4.5/round1/ece": 0.0322,
+  "/router-described/judges/claude-sonnet-4.5/round2/ece": 0.0484,
+  "/router-described/judges/deepseek-r1/hard_round1/ece": 0.0925,
+  "/router-described/judges/deepseek-r1/hard_round2/ece": 0.0535,
+  "/router-described/judges/deepseek-r1/round1/ece": 0.1478,
+  "/router-described/judges/deepseek-r1/round2/ece": 0.0507,
+  "/router-described/judges/gemini-3-flash/hard_round1/ece": 0.0312,
+  "/router-described/judges/gemini-3-flash/hard_round2/ece": 0.065,
+  "/router-described/judges/gemini-3-flash/round1/ece": 0.0121,
+  "/router-described/judges/gemini-3-flash/round2/ece": 0.0236,
+  "/router-described/judges/gemma4/hard_round1/ece": 0.05,
+  "/router-described/judges/gemma4/hard_round2/ece": 0.0437,
+  "/router-described/judges/gemma4/round1/ece": 0.18,
+  "/router-described/judges/gemma4/round2/ece": 0.0266,
+  "/router-described/judges/jev/hard_round1/ece": 0.1457,
+  "/router-described/judges/jev/hard_round2/ece": 0.1238,
+  "/router-described/judges/jev/round1/ece": 0.053,
+  "/router-described/judges/jev/round2/ece": 0.0436,
+  "/router-described/judges/llama-3.3-70b/hard_round1/ece": 0.0925,
+  "/router-described/judges/llama-3.3-70b/hard_round2/ece": 0.0262,
+  "/router-described/judges/llama-3.3-70b/round1/ece": 0.0433,
+  "/router-described/judges/llama-3.3-70b/round2/ece": 0.0133,
+  "/router-described/judges/llama32/hard_round1/ece": 1.0,
+  "/router-described/judges/llama32/hard_round2/ece": 0.1405,
+  "/router-described/judges/llama32/round1/ece": 0.4292,
+  "/router-described/judges/llama32/round2/ece": 0.1349,
+  "/router-described/panel_round1/vote_share_ece": 0.1101,
+  "/router-described/panel_round2/vote_share_ece": 0.0728
+ },
+ "docs/runs/arena/claude-sonnet-4.5/email-adversarial.json": {
+  "/ece": 0.0159
+ },
+ "docs/runs/arena/claude-sonnet-4.5/email-clean.json": {
+  "/ece": 0.029
+ },
+ "docs/runs/arena/claude-sonnet-4.5/router-bare.json": {
+  "/ece": 0.2353
+ },
+ "docs/runs/arena/claude-sonnet-4.5/router-described.json": {
+  "/ece": 0.0322
+ },
+ "docs/runs/arena/deberta-nli/email-adversarial.json": {
+  "/ece": 0.1247
+ },
+ "docs/runs/arena/deberta-nli/email-clean.json": {
+  "/ece": 0.1765
+ },
+ "docs/runs/arena/deberta-nli/router-bare.json": {
+  "/ece": 0.4027
+ },
+ "docs/runs/arena/deberta-nli/router-described.json": {
+  "/ece": 0.1952
+ },
+ "docs/runs/arena/deepseek-r1/email-adversarial.json": {
+  "/ece": 0.1265
+ },
+ "docs/runs/arena/deepseek-r1/email-clean.json": {
+  "/ece": 0.0519
+ },
+ "docs/runs/arena/deepseek-r1/router-bare.json": {
+  "/ece": 0.3734
+ },
+ "docs/runs/arena/deepseek-r1/router-described.json": {
+  "/ece": 0.1478
+ },
+ "docs/runs/arena/finetuned-deberta-run2-ts/email-adversarial.json": {
+  "/ece": 0.017
+ },
+ "docs/runs/arena/finetuned-deberta-run2-ts/email-clean.json": {
+  "/ece": 0.0
+ },
+ "docs/runs/arena/finetuned-deberta-run2-ts/router-bare.json": {
+  "/ece": 0.0
+ },
+ "docs/runs/arena/finetuned-deberta-run2-ts/router-described.json": {
+  "/ece": 0.0
+ },
+ "docs/runs/arena/finetuned-deberta-run2/email-adversarial.json": {
+  "/ece": 0.048
+ },
+ "docs/runs/arena/finetuned-deberta-run2/email-clean.json": {
+  "/ece": 0.0169
+ },
+ "docs/runs/arena/finetuned-deberta-run2/router-bare.json": {
+  "/ece": 0.0054
+ },
+ "docs/runs/arena/finetuned-deberta-run2/router-described.json": {
+  "/ece": 0.0054
+ },
+ "docs/runs/arena/finetuned-deberta/email-adversarial.json": {
+  "/ece": 0.4961
+ },
+ "docs/runs/arena/finetuned-deberta/email-clean.json": {
+  "/ece": 0.4581
+ },
+ "docs/runs/arena/finetuned-deberta/router-bare.json": {
+  "/ece": 0.1329
+ },
+ "docs/runs/arena/finetuned-deberta/router-described.json": {
+  "/ece": 0.1329
+ },
+ "docs/runs/arena/gemini-3-flash/email-adversarial.json": {
+  "/ece": 0.0151
+ },
+ "docs/runs/arena/gemini-3-flash/email-clean.json": {
+  "/ece": 0.0047
+ },
+ "docs/runs/arena/gemini-3-flash/router-bare.json": {
+  "/ece": 0.3154
+ },
+ "docs/runs/arena/gemini-3-flash/router-described.json": {
+  "/ece": 0.0121
+ },
+ "docs/runs/arena/gemma4/email-adversarial.json": {
+  "/ece": 0.1534
+ },
+ "docs/runs/arena/gemma4/email-clean.json": {
+  "/ece": 0.0258
+ },
+ "docs/runs/arena/gemma4/router-bare.json": {
+  "/ece": 0.3446
+ },
+ "docs/runs/arena/gemma4/router-described.json": {
+  "/ece": 0.18
+ },
+ "docs/runs/arena/llama-3.3-70b/email-adversarial.json": {
+  "/ece": 0.0155
+ },
+ "docs/runs/arena/llama-3.3-70b/email-clean.json": {
+  "/ece": 0.0909
+ },
+ "docs/runs/arena/llama-3.3-70b/router-bare.json": {
+  "/ece": 0.2333
+ },
+ "docs/runs/arena/llama-3.3-70b/router-described.json": {
+  "/ece": 0.0433
+ },
+ "docs/runs/arena/llama32/email-adversarial.json": {
+  "/ece": 0.154
+ },
+ "docs/runs/arena/llama32/email-clean.json": {
+  "/ece": 0.034
+ },
+ "docs/runs/arena/llama32/router-bare.json": {
+  "/ece": 0.3958
+ },
+ "docs/runs/arena/llama32/router-described.json": {
+  "/ece": 0.4292
+ },
+ "docs/runs/jury/router-bare/claude-sonnet-4.5.r2.json": {
+  "/ece": 0.2311
+ },
+ "docs/runs/jury/router-bare/deepseek-r1.r2.json": {
+  "/ece": 0.3787
+ },
+ "docs/runs/jury/router-bare/gemini-3-flash.r2.json": {
+  "/ece": 0.3047
+ },
+ "docs/runs/jury/router-bare/gemma4.r2.json": {
+  "/ece": 0.3098
+ },
+ "docs/runs/jury/router-bare/jev.r2.json": {
+  "/ece": 0.2083
+ },
+ "docs/runs/jury/router-bare/llama-3.3-70b.r2.json": {
+  "/ece": 0.3903
+ },
+ "docs/runs/jury/router-bare/llama32.r2.json": {
+  "/ece": 0.2816
+ },
+ "docs/runs/jury/router-described/claude-sonnet-4.5.r2.json": {
+  "/ece": 0.0484
+ },
+ "docs/runs/jury/router-described/deepseek-r1.r2.json": {
+  "/ece": 0.0507
+ },
+ "docs/runs/jury/router-described/gemini-3-flash.r2.json": {
+  "/ece": 0.0236
+ },
+ "docs/runs/jury/router-described/gemma4.r2.json": {
+  "/ece": 0.0266
+ },
+ "docs/runs/jury/router-described/jev.r2.json": {
+  "/ece": 0.0436
+ },
+ "docs/runs/jury/router-described/llama-3.3-70b.r2.json": {
+  "/ece": 0.0133
+ },
+ "docs/runs/jury/router-described/llama32.r2.json": {
+  "/ece": 0.1349
+ }
+}

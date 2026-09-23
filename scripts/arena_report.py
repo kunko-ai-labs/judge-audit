@@ -20,8 +20,11 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from judge_audit.ground_truth import GroundTruth, parse_ground_truth  # noqa: E402
 from judge_audit.metrics.calibration import (  # noqa: E402
+    EQUAL_MASS,
     N_BOOT,
     accuracy_ci,
+    brier_ci,
+    brier_score,
     ci_fields,
     ece_ci,
     expected_calibration_error,
@@ -30,6 +33,7 @@ from judge_audit.metrics.calibration import (  # noqa: E402
 )
 from judge_audit.report import interval_of, with_interval_notes  # noqa: E402
 from judge_audit.runner import (  # noqa: E402
+    clamp_confidence,
     groups_of,
     is_correct,
     load_jsonl,
@@ -83,7 +87,7 @@ def records(labels: str, ckpt: Path, question: str) -> tuple[list[dict], dict]:
             "idx": rec["idx"],
             "expected": row["labels"][question], "decision": str(j["decision"]),
             "correct": is_correct(j["decision"], row["labels"][question]),
-            "confidence": max(0.0, min(1.0, float(j["confidence"]))),
+            "confidence": clamp_confidence(j["confidence"]),
             "latency_s": j.get("latency_s", 0.0), "cost_usd": j.get("cost_usd", 0.0),
             "meta": row.get("_meta", {}),
         })
@@ -101,15 +105,27 @@ def summarize(recs: list[dict], dataset: str, rows: list[dict] | None = None) ->
     groups = groups_of(recs, rows) if rows else None
     right = [r["confidence"] for r in recs if r["correct"]]
     wrong = [r["confidence"] for r in recs if not r["correct"]]
-    out = {
-        "n": len(recs), "accuracy": round(sum(ok) / len(ok), 4),
+    point = {
+        "accuracy": round(sum(ok) / len(ok), 4),
         "ece": round(expected_calibration_error(conf, ok), 4),
+        # Two calibration numbers that do not hinge on ten fixed bins (docs/judges.md
+        # § Three calibration numbers). Kept separate: there is no composite score.
+        "ece_equal_mass": round(expected_calibration_error(conf, ok, binning=EQUAL_MASS), 4),
+        "brier": round(brier_score(conf, ok), 4),
         "zero_error_coverage": zero_error_coverage(conf, ok)["coverage"],
+    }
+    out = {
+        "n": len(recs), **point,
         # 95 % intervals over distinct texts (seed 0), each with the method that
         # produced it — exact at the boundary, bootstrap elsewhere; see docs/judges.md.
-        **ci_fields("accuracy", accuracy_ci(ok, groups=groups)),
-        **ci_fields("ece", ece_ci(conf, ok, groups=groups)),
-        **ci_fields("zero_error_coverage", zero_error_coverage_ci(conf, ok, groups=groups)),
+        # A point outside its own interval is flagged (`*_ci_point_outside`).
+        **ci_fields("accuracy", accuracy_ci(ok, groups=groups), point["accuracy"]),
+        **ci_fields("ece", ece_ci(conf, ok, groups=groups), point["ece"]),
+        **ci_fields("ece_equal_mass", ece_ci(conf, ok, groups=groups, binning=EQUAL_MASS),
+                    point["ece_equal_mass"]),
+        **ci_fields("brier", brier_ci(conf, ok, groups=groups), point["brier"]),
+        **ci_fields("zero_error_coverage", zero_error_coverage_ci(conf, ok, groups=groups),
+                    point["zero_error_coverage"]),
         "mean_conf_correct": round(statistics.mean(right), 3) if right else None,
         "mean_conf_wrong": round(statistics.mean(wrong), 3) if wrong else None,
         "distinct_confidence_values": len(set(round(c, 2) for c in conf)),
@@ -126,14 +142,16 @@ def summarize(recs: list[dict], dataset: str, rows: list[dict] | None = None) ->
         out["prompt_injection_accuracy"] = round(sum(r["correct"] for r in pi) / len(pi), 4)
         out.update(ci_fields("prompt_injection_accuracy",
                              accuracy_ci([r["correct"] for r in pi],
-                                         groups=groups_of(pi, rows) if rows else None)))
+                                         groups=groups_of(pi, rows) if rows else None),
+                             out["prompt_injection_accuracy"]))
         out["confidence_drop_under_injection"] = round(
             statistics.mean(r["confidence"] for r in clean)
             - statistics.mean(r["confidence"] for r in pi), 3)
         out["social_engineering_accuracy"] = round(sum(r["correct"] for r in se) / len(se), 4)
         out.update(ci_fields("social_engineering_accuracy",
                              accuracy_ci([r["correct"] for r in se],
-                                         groups=groups_of(se, rows) if rows else None)))
+                                         groups=groups_of(se, rows) if rows else None),
+                             out["social_engineering_accuracy"]))
     if dataset.startswith("router"):
         hard = [r for r in recs if r["meta"].get("difficulty") == "hard"
                 and not r["meta"].get("adversarial")]
@@ -199,6 +217,88 @@ def fmt(x, pct=False):
     return f"{x:.1%}" if pct else f"{x:.3f}" if isinstance(x, float) else str(x)
 
 
+CALIBRATION_KEYS = ("ece", "ece_equal_mass", "brier")
+WHERE = {"email-clean": "on clean emails", "email-adversarial": "under attack",
+         "router-bare": "on the bare-label router",
+         "router-described": "on the described-options router"}
+
+
+def calibration_ranks(judges: dict, dataset: str) -> dict[str, tuple[int, ...]]:
+    """Competition rank (1 = lowest, ties share a rank) of each judge on `dataset` under
+    ECE, equal-mass ECE and Brier, from the published four-decimal values."""
+    vals = {k: j["datasets"][dataset] for k, j in judges.items() if dataset in j["datasets"]}
+    return {k: tuple(1 + sum(o[key] < s[key] for o in vals.values()) for key in CALIBRATION_KEYS)
+            for k, s in vals.items()}
+
+
+def _span(s: dict, key: str) -> tuple[float, float]:
+    """The published interval of `key`, or the point when there is none (degenerate)."""
+    ci = s.get(f"{key}_ci")
+    return (ci[0], ci[1]) if ci else (s[key], s[key])
+
+
+def reversals(judges: dict, dataset: str) -> tuple[int, int]:
+    """(judge pairs that swap order between two of the three numbers, of which separated).
+
+    A pair is reversed when one number puts judge a strictly below b and another puts
+    b strictly below a (a tie is not a reversal). It is *separated* when, on at least one
+    of the three numbers, the two judges' 95 % intervals do not overlap — the only case in
+    which the data tells them apart."""
+    vals = {k: j["datasets"][dataset] for k, j in judges.items() if dataset in j["datasets"]}
+    names, flipped, apart = sorted(vals), 0, 0
+    for i, a in enumerate(names):
+        for b in names[i + 1:]:
+            sa, sb = vals[a], vals[b]
+            signs = {(sa[k] > sb[k]) - (sa[k] < sb[k]) for k in CALIBRATION_KEYS}
+            if {1, -1} <= signs:
+                flipped += 1
+                apart += any(_span(sa, k)[1] < _span(sb, k)[0] or _span(sb, k)[1] < _span(sa, k)[0]
+                             for k in CALIBRATION_KEYS)
+    return flipped, apart
+
+
+def ranking_sentence(judges: dict) -> str:
+    """One sentence: does the ranking by calibration depend on which number ranks it?
+
+    Counts the judge pairs that swap order between ECE, equal-mass ECE and Brier, says how
+    many of those swaps the intervals can actually separate, and names the judge whose
+    rank moves most. It ranks nothing itself: the three numbers stay three columns."""
+    datasets = [ds for ds in WHERE if any(ds in j["datasets"] for j in judges.values())]
+    moved, flipped, apart, shift = [], 0, 0, None   # shift: (spread, dataset, judge, ranks, n)
+    for ds in datasets:
+        f, a = reversals(judges, ds)
+        flipped, apart = flipped + f, apart + a
+        if f:
+            moved.append(ds)
+        for k, r in calibration_ranks(judges, ds).items():
+            if shift is None or max(r) - min(r) > shift[0]:
+                shift = (max(r) - min(r), ds, k, r, len(judges))
+    if not moved:
+        return ("ECE, equal-mass ECE and Brier rank the judges in the same order on every "
+                "dataset here.")
+    _, ds, k, r, _ = shift
+    n = len(calibration_ranks(judges, ds))
+    s = judges[k]["datasets"][ds]
+    where = "any of the four datasets" if len(moved) == 4 else (
+        f"{len(moved)} of the {len(datasets)} datasets ("
+        + ", ".join(WHERE[d].removeprefix("on ") for d in moved) + ")")
+    within = flipped - apart
+    share = (f"most ({within}) of the {flipped}" if within * 2 > flipped
+             else f"{within} of the {flipped}")
+    return (f"**ECE, equal-mass ECE and Brier do not order the judges the same way** on "
+            f"{where}; {share} reversals (judge pairs that swap places) are within intervals "
+            f"that overlap on all three numbers, and the widest move "
+            f"is {judges[k]['label']} {WHERE[ds]}, {ordinal(r[0])} of {n} by ECE, "
+            f"{ordinal(r[1])} by equal-mass ECE and {ordinal(r[2])} by Brier "
+            f"({fmt(s['ece'])} / {s['ece_equal_mass']:.4f} / {s['brier']:.4f}) — read the "
+            "three columns side by side, with their intervals; they are not combined into "
+            "one ranking.")
+
+
+def ordinal(k: int) -> str:
+    return f"{k}{'th' if 10 <= k % 100 <= 20 else {1: 'st', 2: 'nd', 3: 'rd'}.get(k % 10, 'th')}"
+
+
 def render(judges: dict) -> str:
     heldout_runs = judges.get("_heldout_runs", [])
     judges = {k: v for k, v in judges.items() if not k.startswith("_")}
@@ -224,11 +324,12 @@ def render(judges: dict) -> str:
     for ds, title in names.items():
         gt = ground_truth_tier(DATASETS[ds][0])
         L += [f"## {title} — {gt.tier} {gt.label}", "",
-              "| judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | " +
-              "distinct conf values | no answer |"
+              "| judge | confidence | accuracy | ECE | ECE (equal-mass) | Brier | " +
+              "zero-error coverage | conf right / wrong | distinct conf values | no answer |"
               + (" prompt-injection acc | conf drop under injection | social-eng acc |" if ds == "email-adversarial" else "")
               + (" hard → strong | attack success |" if ds.startswith("router") else ""),
-              "|---|---|---|---|---|---|---|---|" + ("---|---|---|" if ds == "email-adversarial" else "")
+              "|---|---|---|---|---|---|---|---|---|---|"
+              + ("---|---|---|" if ds == "email-adversarial" else "")
               + ("---|---|" if ds.startswith("router") else "")]
         for j in judges.values():
             s = j["datasets"].get(ds)
@@ -237,6 +338,9 @@ def render(judges: dict) -> str:
             row = (f"| {j['label']} | {j['method']} | " +
                    f"{fmt(s['accuracy'], True)}{interval_of(s, 'accuracy_ci', pct=True)} | " +
                    f"{fmt(s['ece'])}{interval_of(s, 'ece_ci', digits=3)} | " +
+                   f"{s['ece_equal_mass']:.4f}{interval_of(s, 'ece_equal_mass_ci')} | " +
+                   # four decimals: a near-perfect judge's Brier is 0.0002, not 0.000
+                   f"{s['brier']:.4f}{interval_of(s, 'brier_ci')} | " +
                    f"{fmt(s['zero_error_coverage'], True)}" +
                    f"{interval_of(s, 'zero_error_coverage_ci', pct=True)} | {fmt(s['mean_conf_correct'])} / " +
                    f"{fmt(s['mean_conf_wrong'])} | {s['distinct_confidence_values']} | " +
@@ -251,6 +355,7 @@ def render(judges: dict) -> str:
                 row += f" {s['hard_routed_strong']} / {s['hard_n']} | {s['attack_success']} / 40 |"
             L.append(row)
         L.append("")
+    L += [ranking_sentence(judges), ""]
     # The control's degradation under attack, from this run's own numbers.
     nli = judges.get("deberta-nli", {}).get("datasets", {})
     nli_note = ""
@@ -297,7 +402,8 @@ def render(judges: dict) -> str:
           "- **Mistral** — not requested by anyone yet.",
           "",
           "## How to read it", "",
-          "- **[a, b]** after accuracy, ECE and zero-error coverage: 95 % percentile-bootstrap " +
+          "- **[a, b]** after accuracy, the three calibration numbers and zero-error coverage: " +
+          "95 % percentile-bootstrap " +
           f"interval ({N_BOOT:,} resamples, seed 0) over the dataset's **distinct texts**, not its " +
           "rows — the router repeats each of its 61 states about twice, and two judgments of the same " +
           "text are not two independent observations (`docs/judges.md` § Confidence intervals). Two " +
@@ -305,6 +411,18 @@ def render(judges: dict) -> str:
           "on the single most-confident error, so its interval can be very wide when that error sits " +
           "among many equally confident right answers.",
           "- **ECE**: 0 = confidence equals accuracy in every bin. Above ~0.1 the number is decoration.",
+          "- **ECE (equal-mass)**: the same gap, with the ten bins cut so each holds about a tenth " +
+          "of the rows instead of a tenth of the [0, 1] range; rows with the same confidence " +
+          "always share a bin (a cut inside a tie moves to the tie's nearer end). When most " +
+          "answers say 0.9–1.0, the fixed bins leave one crowded bin where over- and " +
+          "under-confidence can average out; this column is the check. With few distinct " +
+          "confidences (most chat models here) it is sensitive to how ties are binned, so read " +
+          "it with Brier (`docs/judges.md` § Three calibration numbers).",
+          "- **Brier**: mean squared gap between confidence and outcome (1 right, 0 wrong); needs " +
+          "no bins. It also rewards accuracy, so it is not a calibration number alone: a more " +
+          "accurate judge scores better at equal honesty. Lower is better for all three.",
+          "- **No log-loss**: a judge that declares 1.0 and is wrong makes it infinite, and " +
+          "clipping that 1.0 to 0.999 would impute a confidence the judge never gave.",
           "- **conf right / wrong**: an honest judge has a visible gap. A gap of zero or negative means " +
           "confidence carries no information about correctness.",
           "- **distinct confidence values**: a chat model that only ever says 0.8 or 0.9 is not " +

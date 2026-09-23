@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
 from judge_audit.runner import (  # noqa: E402
+    clamp_confidence,
     is_correct,
     load_jsonl,
     sha256_of,
@@ -66,7 +67,7 @@ def recompute(labels_path: Path, ckpt_path: Path, question: str):
         row = rows[rec["idx"]]
         expected = row["labels"][question]
         j = next(x for x in rec["judgments"] if x["question"] == question)
-        records.append({"confidence": max(0.0, min(1.0, float(j["confidence"]))),
+        records.append({"confidence": clamp_confidence(j["confidence"]),
                         "correct": is_correct(j["decision"], expected),
                         "latency_s": j.get("latency_s", 0.0),
                         "cost_usd": j.get("cost_usd", 0.0)})

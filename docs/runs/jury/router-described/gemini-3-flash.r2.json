@@ -3,6 +3,8 @@
   "n": 120,
   "accuracy": 0.9917,
   "ece": 0.0236,
+  "ece_equal_mass": 0.0236,
+  "brier": 0.009,
   "reliability_bins": [
     {
       "bin": "0.0-0.1",
@@ -150,6 +152,16 @@
     0.0391
   ],
   "ece_ci_method": "bootstrap",
+  "ece_equal_mass_ci": [
+    0.0179,
+    0.0418
+  ],
+  "ece_equal_mass_ci_method": "bootstrap",
+  "brier_ci": [
+    0.0015,
+    0.025
+  ],
+  "brier_ci_method": "bootstrap",
   "zero_error_coverage_ci": [
     0.8167,
     1.0
@@ -162,7 +174,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T13:30:30+00:00",
+    "utc": "2026-09-23T13:41:20+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/jury/router-described/gemini-3-flash.r2.ckpt.jsonl",

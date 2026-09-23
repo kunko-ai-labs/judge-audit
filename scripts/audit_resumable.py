@@ -30,9 +30,10 @@ from judge_audit import __version__  # noqa: E402
 from judge_audit.cli import _judge  # noqa: E402
 from judge_audit.ground_truth import parse_ground_truth  # noqa: E402
 from judge_audit.judges.simulated import SIMULATED_TAG  # noqa: E402
-from judge_audit.report import render_html, render_markdown  # noqa: E402
+from judge_audit.report import fmt4, render_html, render_markdown  # noqa: E402
 from judge_audit.runner import (  # noqa: E402
     AuditResult,
+    clamp_confidence,
     display_path,
     groups_of,
     is_correct,
@@ -114,7 +115,7 @@ def build_result(judge_name: str, rows: list[dict], dataset_meta: dict, wanted: 
                 "idx": idx, "question": j["question"], "expected": str(expected),
                 "decision": str(j["decision"]),
                 "correct": is_correct(j["decision"], expected),
-                "confidence": max(0.0, min(1.0, float(j["confidence"]))),
+                "confidence": clamp_confidence(j["confidence"]),
                 "latency_s": j.get("latency_s", 0.0), "cost_usd": j.get("cost_usd", 0.0),
                 "meta": row.get("_meta", {}), "raw": j.get("raw", {}),
             })
@@ -244,7 +245,8 @@ def main() -> None:
     if args.html:
         Path(args.html).write_text(render_html(result, tag=tag), encoding="utf-8")
     print(f"judge={result.judge} n={result.n} accuracy={result.accuracy:.1%} "
-          f"ece={result.ece:.4f} gt={result.run['dataset']['ground_truth']['tier']} "
+          f"ece={result.ece:.4f} ece_equal_mass={fmt4(result.ece_equal_mass)} "
+          f"brier={fmt4(result.brier)} gt={result.run['dataset']['ground_truth']['tier']} "
           f"cost=${result.total_cost_usd:.4f} -> {args.out}")
 
 

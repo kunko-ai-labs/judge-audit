@@ -3,6 +3,8 @@
   "n": 120,
   "accuracy": 0.8667,
   "ece": 0.0433,
+  "ece_equal_mass": 0.1933,
+  "brier": 0.1347,
   "reliability_bins": [
     {
       "bin": "0.0-0.1",
@@ -140,6 +142,16 @@
     0.1308
   ],
   "ece_ci_method": "bootstrap",
+  "ece_equal_mass_ci": [
+    0.1384,
+    0.2664
+  ],
+  "ece_equal_mass_ci_method": "bootstrap",
+  "brier_ci": [
+    0.0728,
+    0.2109
+  ],
+  "brier_ci_method": "bootstrap",
   "zero_error_coverage_ci": [
     0.0,
     0.0303
@@ -152,7 +164,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T13:30:30+00:00",
+    "utc": "2026-09-23T13:41:20+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/llama-3.3-70b/router-described.ckpt.jsonl",

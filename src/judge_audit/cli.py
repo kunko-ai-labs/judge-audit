@@ -22,6 +22,7 @@ from .judges.simulated import SIMULATED_TAG, SimulatedJudge
 from .report import (
     IncompatibleBaseline,
     check_drift,
+    fmt4,
     interval,
     render_html,
     render_markdown,
@@ -150,6 +151,9 @@ def main(argv: list[str] | None = None) -> None:
         print(f"judge={result.judge} n={result.n} "
               f"accuracy={result.accuracy:.1%}{interval(result.accuracy_ci, pct=True)} "
               f"ece={result.ece:.4f}{interval(result.ece_ci)} "
+              f"ece_equal_mass={fmt4(result.ece_equal_mass)}"
+              f"{interval(result.ece_equal_mass_ci)} "
+              f"brier={fmt4(result.brier)}{interval(result.brier_ci)} "
               f"gt={ground_truth_of(result.run).tier} "
               f"cost=${result.total_cost_usd:.4f} -> {out}")
     else:

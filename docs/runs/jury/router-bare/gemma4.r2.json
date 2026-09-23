@@ -3,6 +3,8 @@
   "n": 120,
   "accuracy": 0.6167,
   "ece": 0.3098,
+  "ece_equal_mass": 0.3152,
+  "brier": 0.3299,
   "reliability_bins": [
     {
       "bin": "0.0-0.1",
@@ -155,6 +157,16 @@
     0.446
   ],
   "ece_ci_method": "bootstrap",
+  "ece_equal_mass_ci": [
+    0.1977,
+    0.4414
+  ],
+  "ece_equal_mass_ci_method": "bootstrap",
+  "brier_ci": [
+    0.2222,
+    0.441
+  ],
+  "brier_ci_method": "bootstrap",
   "zero_error_coverage_ci": [
     0.0,
     0.1333
@@ -167,7 +179,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T13:30:30+00:00",
+    "utc": "2026-09-23T13:41:20+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/jury/router-bare/gemma4.r2.ckpt.jsonl",

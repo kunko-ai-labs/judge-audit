@@ -9,9 +9,25 @@ from typing import TypeVar
 T = TypeVar("T")
 
 
+EQUAL_WIDTH = "equal_width"
+EQUAL_MASS = "equal_mass"
+
+
 def expected_calibration_error(confidences: list[float], correct: list[bool],
-                               n_bins: int = 10) -> float:
-    """ECE with equal-width bins. 0.0 = perfectly honest."""
+                               n_bins: int = 10, binning: str = EQUAL_WIDTH) -> float:
+    """ECE: the row-weighted gap between confidence and accuracy per bin. 0.0 = honest.
+
+    `binning="equal_width"` (the default, and every ECE the repo publishes as "ECE") cuts
+    [0, 1] into `n_bins` intervals of equal width. `binning="equal_mass"` cuts the rows,
+    sorted by confidence, into `n_bins` groups of about equal size (`_equal_mass_bins`)
+    — the robustness check for a judge whose confidences pile up in one or two bins.
+    No rows: 0.0 under either binning (the published convention for an empty audit).
+    """
+    _require_finite(confidences)
+    if binning == EQUAL_MASS:
+        return _equal_mass_ece(confidences, correct, n_bins)
+    if binning != EQUAL_WIDTH:
+        raise ValueError(f"unknown binning {binning!r}: use {EQUAL_WIDTH!r} or {EQUAL_MASS!r}")
     bins: list[list[bool]] = [[] for _ in range(n_bins)]
     conf_bins: list[list[float]] = [[] for _ in range(n_bins)]
     for c, ok in zip(confidences, correct, strict=True):
@@ -27,6 +43,55 @@ def expected_calibration_error(confidences: list[float], correct: list[bool],
         avg_conf = math.fsum(cb) / len(cb)  # exact: identical on every Python version
         ece += len(b) / n * abs(acc - avg_conf)
     return ece
+
+
+def _equal_mass_bins(sorted_conf: list[float], n_bins: int) -> list[int]:
+    """Cut positions (0 … n) of equal-mass bins over confidences sorted ascending.
+
+    The ideal cuts sit after rows i·n/n_bins. A cut may only fall between two different
+    confidences — records with the same confidence always share a bin — so each ideal
+    cut moves to the nearest edge of a group of tied confidences (the lower edge when
+    both are equally near), and cuts that land on the same edge merge. Bins may
+    therefore be unequal, and fewer than `n_bins`: a judge that says 1.0 on 125 of 200
+    rows gets one bin of 125. The result depends only on the multiset of confidences,
+    never on row order. Integer arithmetic (k·n_bins vs i·n) keeps it exact.
+    """
+    n = len(sorted_conf)
+    edges = [0] + [k for k in range(1, n) if sorted_conf[k] != sorted_conf[k - 1]] + [n]
+    cuts = {0, n}
+    for i in range(1, n_bins):
+        cuts.add(min(edges, key=lambda k: (abs(k * n_bins - i * n), k)))
+    return sorted(cuts)
+
+
+def _equal_mass_ece(confidences: list[float], correct: list[bool], n_bins: int) -> float:
+    rows = sorted(zip(confidences, correct, strict=True), key=lambda r: r[0])
+    n = len(rows)
+    if n == 0:
+        return 0.0
+    cuts = _equal_mass_bins([c for c, _ in rows], n_bins)
+    ece = 0.0
+    for lo, hi in zip(cuts, cuts[1:], strict=False):
+        b = rows[lo:hi]
+        acc = sum(ok for _, ok in b) / len(b)
+        avg_conf = math.fsum(c for c, _ in b) / len(b)   # exact: order-free, bit for bit
+        ece += len(b) / n * abs(acc - avg_conf)
+    return ece
+
+
+def brier_score(confidences: list[float], correct: list[bool]) -> float:
+    """Top-label Brier score: mean of (confidence − correct)², 0 = certain and right.
+
+    The proper scoring rule that needs no bins: it rewards being right and being honest
+    about it at once, so it is not a calibration number alone — a more accurate judge
+    scores better at equal honesty. A mean of no rows is undefined and raises."""
+    if len(confidences) != len(correct):
+        raise ValueError(f"{len(confidences)} confidences for {len(correct)} outcomes")
+    if not confidences:
+        raise ValueError("brier_score of no rows is undefined")
+    _require_finite(confidences)
+    return math.fsum((c - float(ok)) ** 2 for c, ok in zip(confidences, correct, strict=True)
+                     ) / len(confidences)
 
 
 def reliability_bins(confidences: list[float], correct: list[bool],
@@ -317,11 +382,15 @@ def proportion_ci(successes: int, values: Sequence[T], statistic: Callable[[list
     return Interval(ci[0], ci[1], BOOTSTRAP)
 
 
-def ci_fields(name: str, ci: Interval | None) -> dict:
+def ci_fields(name: str, ci: Interval | None, point: float | None = None) -> dict:
     """The two published keys of an interval: `<name>_ci` and `<name>_ci_method`.
 
     Reports are rendered from JSON, so the method has to travel next to the pair —
-    a table cannot mark an exact interval it cannot recognise.
+    a table cannot mark an exact interval it cannot recognise. Given the `point`
+    estimate, a third key `<name>_ci_point_outside: true` is added when the point lies
+    outside its own percentile interval (a statistic whose resamples are biased away
+    from it on this sample), so the report can say so instead of printing a range that
+    silently excludes the number next to it.
     """
     if ci is None:
         return {f"{name}_ci": None, f"{name}_ci_method": None}
@@ -329,7 +398,10 @@ def ci_fields(name: str, ci: Interval | None) -> dict:
         # A zero-width 95 % interval is not a narrow interval, it is no interval:
         # every resample returned the same value. Say that instead of publishing [x, x].
         return {f"{name}_ci": None, f"{name}_ci_method": "degenerate-" + ci.method}
-    return {f"{name}_ci": [ci[0], ci[1]], f"{name}_ci_method": ci.method}
+    out = {f"{name}_ci": [ci[0], ci[1]], f"{name}_ci_method": ci.method}
+    if point is not None and not ci[0] <= round(point, 4) <= ci[1]:
+        out[f"{name}_ci_point_outside"] = True
+    return out
 
 
 def accuracy_ci(correct: Sequence[bool], n_boot: int = N_BOOT, seed: int = 0,
@@ -342,15 +414,30 @@ def accuracy_ci(correct: Sequence[bool], n_boot: int = N_BOOT, seed: int = 0,
 
 def ece_ci(confidences: Sequence[float], correct: Sequence[bool], n_bins: int = 10,
            n_boot: int = N_BOOT, seed: int = 0,
-           groups: Sequence[Hashable] | None = None) -> Interval | None:
+           groups: Sequence[Hashable] | None = None,
+           binning: str = EQUAL_WIDTH) -> Interval | None:
     """95 % interval of `expected_calibration_error`, bins recomputed on every resample.
 
     ECE is not a proportion, so it keeps the clustered bootstrap even when the interval
-    comes back with zero width; `.degenerate` marks that case for the reports.
+    comes back with zero width; `.degenerate` marks that case for the reports. With
+    `binning="equal_mass"` the equal-mass bins are rebuilt on each resample too.
     """
     rows = list(zip(confidences, correct, strict=True))
     ci = bootstrap_ci(rows, lambda rs: expected_calibration_error(
-        [c for c, _ in rs], [ok for _, ok in rs], n_bins), n_boot, seed, groups=groups)
+        [c for c, _ in rs], [ok for _, ok in rs], n_bins, binning), n_boot, seed,
+        groups=groups)
+    return None if ci is None else Interval(ci[0], ci[1], BOOTSTRAP)
+
+
+def brier_ci(confidences: Sequence[float], correct: Sequence[bool],
+             n_boot: int = N_BOOT, seed: int = 0,
+             groups: Sequence[Hashable] | None = None) -> Interval | None:
+    """95 % interval of `brier_score`: the same clustered bootstrap as the ECE interval
+    (same resampling unit, same seed, same number of resamples). Not a proportion, so a
+    zero-width result stays a bootstrap and is flagged `.degenerate`."""
+    rows = list(zip(confidences, correct, strict=True))
+    ci = bootstrap_ci(rows, lambda rs: brier_score([c for c, _ in rs], [ok for _, ok in rs]),
+                      n_boot, seed, groups=groups)
     return None if ci is None else Interval(ci[0], ci[1], BOOTSTRAP)
 
 

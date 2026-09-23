@@ -3,6 +3,8 @@
   "n": 120,
   "accuracy": 0.475,
   "ece": 0.4027,
+  "ece_equal_mass": 0.435,
+  "brier": 0.4462,
   "reliability_bins": [
     {
       "bin": "0.0-0.1",
@@ -240,6 +242,16 @@
     0.5539
   ],
   "ece_ci_method": "bootstrap",
+  "ece_equal_mass_ci": [
+    0.3685,
+    0.59
+  ],
+  "ece_equal_mass_ci_method": "bootstrap",
+  "brier_ci": [
+    0.3697,
+    0.5365
+  ],
+  "brier_ci_method": "bootstrap",
   "zero_error_coverage_ci": [
     0.0,
     0.0303
@@ -252,7 +264,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T13:30:30+00:00",
+    "utc": "2026-09-23T13:41:20+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/deberta-nli/router-bare.ckpt.jsonl",

@@ -115,9 +115,11 @@ def _make_judge(name: str, rows: list[dict]) -> tuple[object | None, str, dict |
 
 @server.tool(description=(
     "Audit a judge in shadow mode against a labeled JSONL file "
-    "({state, questions, labels} per line). Returns n, accuracy, ECE, reliability bins, "
-    "accuracy-coverage curve, zero-error coverage (each with a 95 % bootstrap interval "
-    "accuracy_ci / ece_ci / zero_error_coverage_ci), total cost, p50/p99 latency, the run "
+    "({state, questions, labels} per line). Returns n, accuracy, ECE (equal-width bins), "
+    "ece_equal_mass (equal-mass bins, ties never split), brier (Brier score, no bins), "
+    "reliability bins, accuracy-coverage curve, zero-error coverage (each headline number "
+    "with a 95 % bootstrap interval: accuracy_ci / ece_ci / ece_equal_mass_ci / brier_ci / "
+    "zero_error_coverage_ci), total cost, p50/p99 latency, the run "
     "provenance (judge, model, backend, dataset sha256) and ground_truth: the dataset's "
     "provenance tier (GT-0 unknown … GT-6 production outcome; docs/ground-truth.md) that says "
     "what the accuracy is evidence of. judge: jev | llm | simulated "

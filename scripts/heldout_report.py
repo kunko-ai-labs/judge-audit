@@ -37,6 +37,7 @@ from judge_audit.metrics.calibration import (  # noqa: E402
 )
 from judge_audit.report import interval_of, with_interval_notes  # noqa: E402
 from judge_audit.runner import (  # noqa: E402
+    clamp_confidence,
     is_correct,
     load_jsonl,
     read_dataset_header,
@@ -188,7 +189,7 @@ def records(labels: str, ckpt: Path, question: str, keep: set[int] | None,
             "correct": is_correct(decision, row["labels"][question]),
             "text_equal_train": equal, "text_contains_train": contains,
             "no_answer": decision.strip().lower() not in [o.lower() for o in options],
-            "confidence": max(0.0, min(1.0, float(j["confidence"]))),
+            "confidence": clamp_confidence(j["confidence"]),
             "latency_s": j.get("latency_s", 0.0), "cost_usd": j.get("cost_usd", 0.0),
             "meta": row.get("_meta", {}),
         })

@@ -3,6 +3,8 @@
   "n": 120,
   "accuracy": 0.95,
   "ece": 0.0484,
+  "ece_equal_mass": 0.0467,
+  "brier": 0.0371,
   "reliability_bins": [
     {
       "bin": "0.0-0.1",
@@ -160,6 +162,16 @@
     0.0893
   ],
   "ece_ci_method": "bootstrap",
+  "ece_equal_mass_ci": [
+    0.0308,
+    0.0914
+  ],
+  "ece_equal_mass_ci_method": "bootstrap",
+  "brier_ci": [
+    0.014,
+    0.0672
+  ],
+  "brier_ci_method": "bootstrap",
   "zero_error_coverage_ci": [
     0.7521,
     0.9583
@@ -172,7 +184,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T13:30:30+00:00",
+    "utc": "2026-09-23T13:41:20+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/jury/router-described/claude-sonnet-4.5.r2.ckpt.jsonl",

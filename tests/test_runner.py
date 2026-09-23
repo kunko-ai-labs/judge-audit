@@ -6,8 +6,15 @@ import pytest
 
 from judge_audit.judges.base import Judge, Judgment, Question
 from judge_audit.judges.simulated import SimulatedJudge
-from judge_audit.metrics.calibration import accuracy_ci, clopper_pearson
-from judge_audit.runner import groups_of, load_jsonl, run_audit, summarize, write_judgments
+from judge_audit.metrics.calibration import accuracy_ci, brier_ci, clopper_pearson, ece_ci
+from judge_audit.runner import (
+    clamp_confidence,
+    groups_of,
+    load_jsonl,
+    run_audit,
+    summarize,
+    write_judgments,
+)
 
 
 class ConstantJudge(Judge):
@@ -123,3 +130,54 @@ def test_intervals_resample_distinct_texts_not_rows():
     # Treating the eight rows as independent would claim a narrower interval.
     naive = accuracy_ci(correct)
     assert res.accuracy_ci[1] - res.accuracy_ci[0] > naive[1] - naive[0]
+
+
+def test_summary_carries_brier_and_equal_mass_ece_with_their_intervals(labels_path):
+    rows = load_jsonl(str(labels_path))
+    res = run_audit(ConstantJudge("quote_request", 0.9), rows, ci=True)
+    # 12 rows all right at 0.9: one bin whatever the binning, Brier (1 - 0.9)^2
+    assert res.ece == 0.1 and res.ece_equal_mass == 0.1 and res.brier == 0.01
+    assert res.ece_equal_mass_ci.degenerate and res.brier_ci.degenerate
+    d = res.to_dict()
+    assert d["ece_equal_mass"] == 0.1 and d["brier"] == 0.01
+    assert d["ece_equal_mass_ci"] is None
+    assert d["ece_equal_mass_ci_method"] == "degenerate-bootstrap"
+    assert d["brier_ci"] is None and d["brier_ci_method"] == "degenerate-bootstrap"
+    # the new keys sit next to the ECE they qualify
+    keys = list(d)
+    assert keys.index("ece") + 1 == keys.index("ece_equal_mass")
+    assert keys.index("ece_equal_mass") + 1 == keys.index("brier")
+
+
+def test_intervals_of_the_new_numbers_resample_distinct_texts(labels_path):
+    rows = []
+    for i in range(4):
+        rows += [{"state": f"state {i}",
+                  "questions": [{"name": "category", "type": "choice",
+                                 "options": ["quote_request", "spam"]}],
+                  "labels": {"category": "quote_request" if i else "spam"}}] * 2
+    res = run_audit(ConstantJudge("quote_request", 0.9), rows, ci=True)
+    conf = [r["confidence"] for r in res.records]
+    ok = [r["correct"] for r in res.records]
+    texts = [r["state"] for r in rows]
+    assert res.brier_ci == brier_ci(conf, ok, groups=texts)
+    assert res.ece_equal_mass_ci == ece_ci(conf, ok, groups=texts, binning="equal_mass")
+
+
+def test_brier_and_equal_mass_ece_of_no_rows_are_unknown_not_zero(tmp_path):
+    p = tmp_path / "l.jsonl"
+    p.write_text(json.dumps({"state": "s", "questions": [{"name": "q", "options": ["a", "b"]}],
+                             "labels": {}}) + "\n")
+    res = run_audit(ConstantJudge("a", 0.5), load_jsonl(str(p)))
+    assert res.brier is None and res.ece_equal_mass is None
+    assert res.to_dict()["brier"] is None
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
+def test_a_non_finite_confidence_stops_the_audit_instead_of_being_clamped(labels_path, bad):
+    # max(0, min(1, nan)) is 1.0: clamping would impute full confidence to an unknown one
+    rows = load_jsonl(str(labels_path))
+    with pytest.raises(ValueError, match="not finite"):
+        run_audit(ConstantJudge("quote_request", bad), rows, ci=False)
+    assert clamp_confidence(1.2) == 1.0 and clamp_confidence(-0.1) == 0.0
+    assert clamp_confidence("0.5") == 0.5

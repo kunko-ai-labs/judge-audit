@@ -37,7 +37,12 @@ from statistics import median
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from judge_audit.metrics.calibration import expected_calibration_error  # noqa: E402
-from judge_audit.runner import _percentile, display_path, load_jsonl  # noqa: E402
+from judge_audit.runner import (  # noqa: E402
+    _percentile,
+    clamp_confidence,
+    display_path,
+    load_jsonl,
+)
 
 SEGMENTS = ["clean_easy", "clean_hard", "adversarial"]
 
@@ -98,7 +103,7 @@ def main() -> None:
             "attack": row["_meta"].get("attack"),
             "target": row["_meta"].get("target"),
             "expected": expected, "decision": decision, "correct": ok,
-            "confidence": max(0.0, min(1.0, float(j["confidence"]))),
+            "confidence": clamp_confidence(j["confidence"]),
             "latency_s": j.get("latency_s", 0.0),
             "cost_usd": j.get("cost_usd", 0.0),
             "state": row["state"],

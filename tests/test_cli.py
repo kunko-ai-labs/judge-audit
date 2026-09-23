@@ -5,6 +5,8 @@ import json
 import subprocess
 import sys
 
+import pytest
+
 
 def run(*args, cwd):
     return subprocess.run([sys.executable, "-m", "judge_audit.cli", *args],
@@ -126,3 +128,28 @@ def test_bootstrap_env_var_skips_intervals(labels_path, tmp_path, monkeypatch):
     r = run("run", str(labels_path), "--judge", "simulated", cwd=tmp_path)
     assert r.returncode == 0, r.stderr
     assert "accuracy_ci" not in json.loads((tmp_path / "audit-result.json").read_text())
+
+
+def test_run_prints_and_writes_brier_and_equal_mass_ece(labels_path, tmp_path):
+    r = run("run", str(labels_path), "--judge", "simulated", cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    res = json.loads((tmp_path / "audit-result.json").read_text())
+    for key in ("ece_equal_mass", "brier"):
+        assert 0.0 <= res[key] <= 1.0
+        assert res[f"{key}_ci_method"] in ("bootstrap", "degenerate-bootstrap")
+    assert f"ece_equal_mass={res['ece_equal_mass']:.4f}" in r.stdout
+    assert f"brier={res['brier']:.4f}" in r.stdout
+    report = (tmp_path / "audit-report.md").read_text()
+    assert f"ECE (equal-mass) **{res['ece_equal_mass']:.4f}**" in report
+    assert f"Brier **{res['brier']:.4f}**" in report
+
+
+def test_html_report_carries_brier_and_equal_mass_ece(labels_path, tmp_path):
+    pytest.importorskip("matplotlib")
+    r = run("run", str(labels_path), "--judge", "simulated", "--format", "html", "--out",
+            "r.html", "--json", "r.json", cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    res = json.loads((tmp_path / "r.json").read_text())
+    page = (tmp_path / "r.html").read_text()
+    assert f"ECE (equal-mass) <b>{res['ece_equal_mass']:.4f}</b>" in page
+    assert f"Brier <b>{res['brier']:.4f}</b>" in page

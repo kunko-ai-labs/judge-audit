@@ -12,6 +12,8 @@
         "n": 200,
         "accuracy": 1.0,
         "ece": 0.0036,
+        "ece_equal_mass": 0.0036,
+        "brier": 0.0003,
         "zero_error_coverage": 1.0,
         "accuracy_ci": [
           0.9817,
@@ -23,6 +25,16 @@
           0.006
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.0014,
+          0.006
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.0001,
+          0.0005
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.9817,
           1.0
@@ -39,6 +51,8 @@
         "n": 200,
         "accuracy": 0.955,
         "ece": 0.0389,
+        "ece_equal_mass": 0.0374,
+        "brier": 0.0355,
         "zero_error_coverage": 0.73,
         "accuracy_ci": [
           0.925,
@@ -50,6 +64,16 @@
           0.0659
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.0227,
+          0.0628
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.0232,
+          0.0498
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.6701,
           0.94
@@ -79,6 +103,8 @@
         "n": 120,
         "accuracy": 0.6667,
         "ece": 0.3181,
+        "ece_equal_mass": 0.2926,
+        "brier": 0.2932,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.5246,
@@ -90,6 +116,16 @@
           0.4485
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.1688,
+          0.4261
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.1744,
+          0.4179
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
           0.448
@@ -112,6 +148,8 @@
         "n": 120,
         "accuracy": 0.975,
         "ece": 0.053,
+        "ece_equal_mass": 0.053,
+        "brier": 0.0268,
         "zero_error_coverage": 0.9417,
         "accuracy_ci": [
           0.9189,
@@ -123,6 +161,16 @@
           0.0999
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.0252,
+          0.102
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.0095,
+          0.0507
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.8594,
           1.0
@@ -179,6 +227,8 @@
         "n": 200,
         "accuracy": 1.0,
         "ece": 0.029,
+        "ece_equal_mass": 0.029,
+        "brier": 0.0015,
         "zero_error_coverage": 1.0,
         "accuracy_ci": [
           0.9817,
@@ -190,6 +240,16 @@
           0.0333
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.0243,
+          0.0333
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.0012,
+          0.0018
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.9817,
           1.0
@@ -206,6 +266,8 @@
         "n": 200,
         "accuracy": 0.965,
         "ece": 0.0159,
+        "ece_equal_mass": 0.0439,
+        "brier": 0.0307,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.9391,
@@ -217,6 +279,16 @@
           0.0397
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.0264,
+          0.0702
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.0116,
+          0.0528
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
           0.9086
@@ -246,6 +318,8 @@
         "n": 120,
         "accuracy": 0.6583,
         "ece": 0.2353,
+        "ece_equal_mass": 0.2363,
+        "brier": 0.2462,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.5191,
@@ -257,6 +331,16 @@
           0.3629
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.1402,
+          0.3686
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.1578,
+          0.3426
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
           0.1032
@@ -280,6 +364,8 @@
         "n": 120,
         "accuracy": 0.95,
         "ece": 0.0322,
+        "ece_equal_mass": 0.0719,
+        "brier": 0.053,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.9035,
@@ -291,6 +377,16 @@
           0.0821
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.0384,
+          0.1148
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.0186,
+          0.098
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
           0.0303
@@ -339,6 +435,8 @@
         "n": 200,
         "accuracy": 0.865,
         "ece": 0.1765,
+        "ece_equal_mass": 0.163,
+        "brier": 0.1288,
         "zero_error_coverage": 0.515,
         "accuracy_ci": [
           0.8083,
@@ -350,6 +448,16 @@
           0.2416
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.1174,
+          0.2348
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.097,
+          0.1696
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.4145,
           0.641
@@ -366,6 +474,8 @@
         "n": 200,
         "accuracy": 0.595,
         "ece": 0.1247,
+        "ece_equal_mass": 0.1106,
+        "brier": 0.2049,
         "zero_error_coverage": 0.08,
         "accuracy_ci": [
           0.517,
@@ -377,6 +487,16 @@
           0.2007
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.0911,
+          0.2002
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.1696,
+          0.242
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0391,
           0.16
@@ -406,6 +526,8 @@
         "n": 120,
         "accuracy": 0.475,
         "ece": 0.4027,
+        "ece_equal_mass": 0.435,
+        "brier": 0.4462,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.3364,
@@ -417,6 +539,16 @@
           0.5539
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.3685,
+          0.59
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.3697,
+          0.5365
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
           0.0303
@@ -440,6 +572,8 @@
         "n": 120,
         "accuracy": 0.4917,
         "ece": 0.1952,
+        "ece_equal_mass": 0.2131,
+        "brier": 0.3238,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.3492,
@@ -451,6 +585,17 @@
           0.3548
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.2425,
+          0.4501
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "ece_equal_mass_ci_point_outside": true,
+        "brier_ci": [
+          0.2755,
+          0.3803
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
           0.0303
@@ -501,6 +646,8 @@
         "n": 200,
         "accuracy": 1.0,
         "ece": 0.0519,
+        "ece_equal_mass": 0.0519,
+        "brier": 0.0031,
         "zero_error_coverage": 1.0,
         "accuracy_ci": [
           0.9817,
@@ -512,6 +659,16 @@
           0.0548
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.0488,
+          0.0548
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.0027,
+          0.0035
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.9817,
           1.0
@@ -528,6 +685,8 @@
         "n": 200,
         "accuracy": 0.805,
         "ece": 0.1265,
+        "ece_equal_mass": 0.134,
+        "brier": 0.1693,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.7476,
@@ -539,6 +698,16 @@
           0.1839
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.0847,
+          0.1929
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.1219,
+          0.2189
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
           0.0183
@@ -568,6 +737,8 @@
         "n": 120,
         "accuracy": 0.5583,
         "ece": 0.3734,
+        "ece_equal_mass": 0.3482,
+        "brier": 0.3798,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.4248,
@@ -579,6 +750,16 @@
           0.4956
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.2473,
+          0.4841
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.2723,
+          0.4924
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
           0.0303
@@ -603,6 +784,8 @@
         "n": 120,
         "accuracy": 0.7917,
         "ece": 0.1478,
+        "ece_equal_mass": 0.1438,
+        "brier": 0.182,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.6992,
@@ -614,6 +797,16 @@
           0.2369
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.0802,
+          0.2375
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.1134,
+          0.2592
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
           0.0303
@@ -704,6 +897,8 @@
         "n": 200,
         "accuracy": 0.97,
         "ece": 0.4961,
+        "ece_equal_mass": 0.4961,
+        "brier": 0.2798,
         "zero_error_coverage": 0.97,
         "accuracy_ci": [
           0.9444,
@@ -715,6 +910,16 @@
           0.522
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.4693,
+          0.522
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.2568,
+          0.3033
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.9444,
           0.9902
@@ -823,6 +1028,8 @@
         "n": 200,
         "accuracy": 0.99,
         "ece": 0.048,
+        "ece_equal_mass": 0.0403,
+        "brier": 0.0163,
         "zero_error_coverage": 0.96,
         "accuracy_ci": [
           0.9746,
@@ -834,6 +1041,16 @@
           0.0659
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.0242,
+          0.0571
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.0074,
+          0.0268
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.931,
           1.0
@@ -942,6 +1159,8 @@
         "n": 200,
         "accuracy": 0.99,
         "ece": 0.017,
+        "ece_equal_mass": 0.0004,
+        "brier": 0.0116,
         "zero_error_coverage": 0.96,
         "accuracy_ci": [
           0.9746,
@@ -953,6 +1172,16 @@
           0.0331
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.0003,
+          0.0169
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.0017,
+          0.0255
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.932,
           1.0
@@ -1005,6 +1234,8 @@
         "n": 200,
         "accuracy": 1.0,
         "ece": 0.0047,
+        "ece_equal_mass": 0.0047,
+        "brier": 0.0002,
         "zero_error_coverage": 1.0,
         "accuracy_ci": [
           0.9817,
@@ -1016,6 +1247,16 @@
           0.0075
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.0025,
+          0.0075
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.0001,
+          0.0004
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.9817,
           1.0
@@ -1032,6 +1273,8 @@
         "n": 200,
         "accuracy": 0.97,
         "ece": 0.0151,
+        "ece_equal_mass": 0.0439,
+        "brier": 0.0301,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.9447,
@@ -1043,6 +1286,16 @@
           0.04
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.0246,
+          0.069
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.0102,
+          0.0543
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
           0.0183
@@ -1072,6 +1325,8 @@
         "n": 120,
         "accuracy": 0.6667,
         "ece": 0.3154,
+        "ece_equal_mass": 0.3154,
+        "brier": 0.3116,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.5351,
@@ -1083,6 +1338,16 @@
           0.4413
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.1894,
+          0.4413
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.1888,
+          0.4332
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
           0.0303
@@ -1106,6 +1371,8 @@
         "n": 120,
         "accuracy": 0.9833,
         "ece": 0.0121,
+        "ece_equal_mass": 0.0071,
+        "brier": 0.0124,
         "zero_error_coverage": 0.725,
         "accuracy_ci": [
           0.9554,
@@ -1117,6 +1384,16 @@
           0.0335
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.0019,
+          0.0298
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.0006,
+          0.033
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.6063,
           1.0
@@ -1163,6 +1440,8 @@
         "n": 200,
         "accuracy": 1.0,
         "ece": 0.0258,
+        "ece_equal_mass": 0.0258,
+        "brier": 0.0013,
         "zero_error_coverage": 1.0,
         "accuracy_ci": [
           0.9817,
@@ -1174,6 +1453,16 @@
           0.0307
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.0204,
+          0.0307
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.001,
+          0.0016
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.9817,
           1.0
@@ -1190,6 +1479,8 @@
         "n": 200,
         "accuracy": 0.81,
         "ece": 0.1534,
+        "ece_equal_mass": 0.1796,
+        "brier": 0.1829,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.755,
@@ -1201,6 +1492,16 @@
           0.2111
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.128,
+          0.2369
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.1325,
+          0.2368
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
           0.0183
@@ -1230,6 +1531,8 @@
         "n": 120,
         "accuracy": 0.5917,
         "ece": 0.3446,
+        "ece_equal_mass": 0.3446,
+        "brier": 0.3778,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.4615,
@@ -1241,6 +1544,16 @@
           0.4761
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.2388,
+          0.4816
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.2686,
+          0.494
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
           0.0303
@@ -1264,6 +1577,8 @@
         "n": 120,
         "accuracy": 0.775,
         "ece": 0.18,
+        "ece_equal_mass": 0.18,
+        "brier": 0.2194,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.6721,
@@ -1275,6 +1590,16 @@
           0.289
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.0968,
+          0.2912
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.1274,
+          0.3215
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
           0.0303
@@ -1324,6 +1649,8 @@
         "n": 200,
         "accuracy": 1.0,
         "ece": 0.0909,
+        "ece_equal_mass": 0.0909,
+        "brier": 0.0094,
         "zero_error_coverage": 1.0,
         "accuracy_ci": [
           0.9817,
@@ -1335,6 +1662,16 @@
           0.096
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.0858,
+          0.096
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.0086,
+          0.0103
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.9817,
           1.0
@@ -1351,6 +1688,8 @@
         "n": 200,
         "accuracy": 0.905,
         "ece": 0.0155,
+        "ece_equal_mass": 0.1325,
+        "brier": 0.085,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.8614,
@@ -1362,6 +1701,16 @@
           0.0598
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.1028,
+          0.1741
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.051,
+          0.1213
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
           0.0183
@@ -1391,6 +1740,8 @@
         "n": 120,
         "accuracy": 0.65,
         "ece": 0.2333,
+        "ece_equal_mass": 0.2367,
+        "brier": 0.3173,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.5167,
@@ -1402,6 +1753,16 @@
           0.3741
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.1554,
+          0.3877
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.2221,
+          0.4291
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
           0.0303
@@ -1425,6 +1786,8 @@
         "n": 120,
         "accuracy": 0.8667,
         "ece": 0.0433,
+        "ece_equal_mass": 0.1933,
+        "brier": 0.1347,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.7845,
@@ -1436,6 +1799,16 @@
           0.1308
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.1384,
+          0.2664
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.0728,
+          0.2109
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
           0.0303
@@ -1482,6 +1855,8 @@
         "n": 200,
         "accuracy": 0.9,
         "ece": 0.034,
+        "ece_equal_mass": 0.034,
+        "brier": 0.0892,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.7783,
@@ -1493,6 +1868,16 @@
           0.1431
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.0245,
+          0.1431
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.0182,
+          0.1743
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
           1.0
@@ -1509,6 +1894,8 @@
         "n": 200,
         "accuracy": 0.725,
         "ece": 0.154,
+        "ece_equal_mass": 0.154,
+        "brier": 0.2411,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.6517,
@@ -1520,6 +1907,16 @@
           0.2307
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.09,
+          0.2307
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.1822,
+          0.2993
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
           0.0183
@@ -1549,6 +1946,8 @@
         "n": 120,
         "accuracy": 0.6583,
         "ece": 0.3958,
+        "ece_equal_mass": 0.3958,
+        "brier": 0.3688,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.5159,
@@ -1560,6 +1959,16 @@
           0.5287
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.2614,
+          0.5287
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.238,
+          0.5044
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
           0.0303
@@ -1583,6 +1992,8 @@
         "n": 120,
         "accuracy": 0.5917,
         "ece": 0.4292,
+        "ece_equal_mass": 0.4292,
+        "brier": 0.4188,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.4553,
@@ -1594,6 +2005,16 @@
           0.5691
         ],
         "ece_ci_method": "bootstrap",
+        "ece_equal_mass_ci": [
+          0.2939,
+          0.5691
+        ],
+        "ece_equal_mass_ci_method": "bootstrap",
+        "brier_ci": [
+          0.2817,
+          0.5553
+        ],
+        "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
           0.0303

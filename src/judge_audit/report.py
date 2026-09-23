@@ -18,6 +18,18 @@ EXACT_NOTE = ("**†** exact 95 % Clopper–Pearson (binomial) interval, publish
               "on the width the clustered interval would have had.")
 DEGENERATE_NOTE = ("**‡** degenerate: every clustered-bootstrap resample returned the same "
                    "value, so no interval width is published for that number.")
+OUTSIDE_MARK = "◊"
+OUTSIDE_NOTE = ("**◊** the point estimate lies outside its own percentile-bootstrap interval: "
+                "on this sample the resampled statistic is biased away from it (a binned "
+                "calibration error tends to rise when texts are resampled), so read the "
+                "interval as the spread of the number, not as a range around it.")
+THREE_NUMBERS_NOTE = (
+    "ECE uses ten equal-width bins; the equal-mass ECE cuts the rows into ten groups of "
+    "about equal size (tied confidences never split), so it does not hinge on one crowded "
+    "bin; Brier is the mean squared gap between confidence and outcome, needs no bins, and "
+    "also rewards accuracy. Three separate numbers, never combined. No log-loss: one wrong "
+    "answer at a declared confidence of 1.0 makes it infinite, and clipping the confidence "
+    "would impute one.")
 
 
 def interval(ci, pct: bool = False, digits: int = 4, method: str | None = None) -> str:
@@ -42,15 +54,18 @@ def interval(ci, pct: bool = False, digits: int = 4, method: str | None = None) 
 
 
 def interval_of(d: dict, key: str, pct: bool = False, digits: int = 4) -> str:
-    """`interval(d[key])` with the method stored next to it (`<key>_method`)."""
-    return interval(d.get(key), pct=pct, digits=digits, method=d.get(f"{key}_method"))
+    """`interval(d[key])` with the method stored next to it (`<key>_method`), and `◊`
+    when the point estimate lies outside it (`<key>_point_outside`)."""
+    out = interval(d.get(key), pct=pct, digits=digits, method=d.get(f"{key}_method"))
+    return out + OUTSIDE_MARK if d.get(f"{key}_point_outside") else out
 
 
 def interval_notes(*texts: str) -> list[str]:
     """The legend lines for the interval marks that actually appear in `texts`."""
     blob = "\n".join(texts)
     return [note for mark, note in ((EXACT_MARK, EXACT_NOTE),
-                                    (DEGENERATE_MARK, DEGENERATE_NOTE)) if mark in blob]
+                                    (DEGENERATE_MARK, DEGENERATE_NOTE),
+                                    (OUTSIDE_MARK, OUTSIDE_NOTE)) if mark in blob]
 
 
 def with_interval_notes(lines: list[str]) -> list[str]:
@@ -122,6 +137,20 @@ def ground_truth_line(run: dict) -> str:
     return ground_truth_of(run).report_line()
 
 
+def fmt4(value: float | None) -> str:
+    """A calibration number to four decimals; '—' when it is unknown (no rows)."""
+    return "—" if value is None else f"{value:.4f}"
+
+
+def calibration_numbers(d: dict, bold: tuple[str, str] = ("**", "**")) -> str:
+    """`ECE (equal-mass) **y** [ci] · Brier **z** [ci]` — the two numbers that need no
+    fixed bins, printed right after the equal-width ECE they qualify."""
+    b0, b1 = bold
+    return (f" · ECE (equal-mass) {b0}{fmt4(d.get('ece_equal_mass'))}{b1}"
+            f"{interval_of(d, 'ece_equal_mass_ci')}"
+            f" · Brier {b0}{fmt4(d.get('brier'))}{b1}{interval_of(d, 'brier_ci')}")
+
+
 def render_markdown(result: AuditResult) -> str:
     d = result.to_dict()
     acc_ci = interval_of(d, "accuracy_ci", pct=True)
@@ -130,7 +159,8 @@ def render_markdown(result: AuditResult) -> str:
     lines = [
         f"# Audit report — {d['judge']}",
         "",
-        f"**n={d['n']}** · accuracy **{d['accuracy']:.1%}**{acc_ci} · ECE **{d['ece']:.4f}**{ece_ci}",
+        f"**n={d['n']}** · accuracy **{d['accuracy']:.1%}**{acc_ci} · ECE **{d['ece']:.4f}**{ece_ci}"
+        + calibration_numbers(d),
         f"· cost **${d['total_cost_usd']:.4f}** · p50 **{d['p50_latency_s']}s** · p99 **{d['p99_latency_s']}s**",
         "",
         *provenance_lines(d.get("run", {})),
@@ -164,7 +194,8 @@ def render_markdown(result: AuditResult) -> str:
             lines.append(f"| {b['bin']} | {b['avg_confidence']:.3f} | "
                          f"{b['accuracy']:.1%} | {b['n']} |")
     lines += ["", "_A perfectly honest judge sits on the diagonal: "
-                  "avg confidence == accuracy in every bin._"]
+                  "avg confidence == accuracy in every bin._",
+              "", f"_{THREE_NUMBERS_NOTE}_"]
     return "\n".join(lines) + "\n"
 
 
@@ -173,8 +204,8 @@ def ci_lines(d: dict) -> list[str]:
     b = d.get("bootstrap")
     if not b:
         return []
-    marks = "".join(interval_of(d, k) for k in ("accuracy_ci", "ece_ci",
-                                                "zero_error_coverage_ci"))
+    marks = "".join(interval_of(d, k) for k in ("accuracy_ci", "ece_ci", "ece_equal_mass_ci",
+                                                "brier_ci", "zero_error_coverage_ci"))
     return ["", f"_Brackets are {b['level']:.0%} percentile-bootstrap intervals over the dataset's "
                 f"distinct texts ({b['n_boot']:,} resamples, seed {b['seed']}): how far the number "
                 f"would move on another sample of n={d['n']} drawn the same way._",
@@ -218,7 +249,7 @@ th{{background:#f5f5f5}}img{{max-width:100%;border:1px solid #eee;border-radius:
 h2{{margin-top:2.5rem}}.prov{{color:#666;font-size:.9rem}}</style></head><body>
 {banner}
 <h1>Audit report — {judge}</h1>
-<p class="metric"><b>{d['n']}</b> decisions · accuracy <b>{d['accuracy']:.1%}</b>{acc_ci} · ECE <b>{d['ece']:.4f}</b>{ece_ci}<br>
+<p class="metric"><b>{d['n']}</b> decisions · accuracy <b>{d['accuracy']:.1%}</b>{acc_ci} · ECE <b>{d['ece']:.4f}</b>{ece_ci}{calibration_numbers(d, ("<b>", "</b>"))}<br>
 cost <b>${d['total_cost_usd']:.4f}</b> · p50 <b>{d['p50_latency_s']}s</b> · p99 <b>{d['p99_latency_s']}s</b></p>
 <p class="prov">{prov}</p>
 <p class="gt"><b>{gt}</b></p>
@@ -235,6 +266,7 @@ cost <b>${d['total_cost_usd']:.4f}</b> · p50 <b>{d['p50_latency_s']}s</b> · p9
 <h2>Calibration bins</h2>
 <table><tr><th>bin</th><th>avg confidence</th><th>accuracy</th><th>n</th></tr>{bin_rows}</table>
 <p><em>A perfectly honest judge sits on the diagonal: avg confidence == accuracy in every bin.</em></p>
+<p class="prov">{html.escape(THREE_NUMBERS_NOTE)}</p>
 </body></html>
 """
 

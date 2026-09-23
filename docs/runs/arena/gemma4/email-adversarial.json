@@ -3,6 +3,8 @@
   "n": 200,
   "accuracy": 0.81,
   "ece": 0.1534,
+  "ece_equal_mass": 0.1796,
+  "brier": 0.1829,
   "reliability_bins": [
     {
       "bin": "0.0-0.1",
@@ -142,6 +144,16 @@
     0.2111
   ],
   "ece_ci_method": "bootstrap",
+  "ece_equal_mass_ci": [
+    0.128,
+    0.2369
+  ],
+  "ece_equal_mass_ci_method": "bootstrap",
+  "brier_ci": [
+    0.1325,
+    0.2368
+  ],
+  "brier_ci_method": "bootstrap",
   "zero_error_coverage_ci": [
     0.0,
     0.0183
@@ -154,7 +166,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T13:30:30+00:00",
+    "utc": "2026-09-23T13:41:20+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/gemma4/email-adversarial.ckpt.jsonl",
