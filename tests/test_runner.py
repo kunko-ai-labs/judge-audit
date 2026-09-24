@@ -267,7 +267,7 @@ def test_served_versions_count_decisions_per_reported_version_and_skip_old_recor
     assert served_versions([{"raw": {"text": "old checkpoint"}}]) is None
 
 
-def _served_judge(version):
+def _served_judge(version, fingerprint=None):
     from judge_audit.judges.base import Judge, Judgment
 
     class J(Judge):
@@ -275,7 +275,8 @@ def _served_judge(version):
 
         def decide(self, state, questions):
             return [Judgment(question=q.name, decision=q.options[0], confidence=0.9,
-                             raw={"served": {"model": version, "system_fingerprint": None}})
+                             raw={"served": {"model": version,
+                                             "system_fingerprint": fingerprint}})
                     for q in questions]
     return J()
 
@@ -317,6 +318,7 @@ def test_the_report_names_each_served_version_with_its_decisions():
     ("m-1", "m-1", False),
     (None, "m-1", False),     # a side without versions cannot be compared
     ("m-1", None, False),
+    (("m-1", "fp_a"), ("m-1", "fp_b"), True),   # same model, another backend fingerprint
 ])
 def test_the_drift_gate_warns_when_the_served_version_changed(base, now, warns, tmp_path):
     import json
@@ -326,8 +328,11 @@ def test_the_drift_gate_warns_when_the_served_version_changed(base, now, warns, 
     from judge_audit.runner import run_audit
 
     path = tmp_path / "baseline.json"
-    path.write_text(json.dumps(run_audit(_served_judge(base), _rows(), ci=False).to_dict()))
-    current = run_audit(_served_judge(now), _rows(), ci=False)
+    def judge(v):
+        return _served_judge(*v) if isinstance(v, tuple) else _served_judge(v)
+
+    path.write_text(json.dumps(run_audit(judge(base), _rows(), ci=False).to_dict()))
+    current = run_audit(judge(now), _rows(), ci=False)
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
         check_drift(current, str(path))
