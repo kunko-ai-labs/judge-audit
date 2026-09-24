@@ -114,6 +114,15 @@ def _parser() -> argparse.ArgumentParser:
     return ap
 
 
+def _audit(judge, rows: list[dict], args, dataset_meta: dict):
+    """run_audit, or exit 2 when the answers or the dataset would leave it incomplete."""
+    try:
+        return run_audit(judge, rows, labels_path=args.labels, dataset_meta=dataset_meta,
+                         ci=False if args.no_ci else None)
+    except IncompleteAnswers as e:
+        _die(f"the audit would not be complete: {e}")
+
+
 def main(argv: list[str] | None = None) -> None:
     args = _parser().parse_args(argv)
     rows, dataset_meta = [], {}
@@ -130,11 +139,7 @@ def main(argv: list[str] | None = None) -> None:
         _die(f"judge '{args.judge}' is not configured: {e}")
     lead = f"{tag} · " if tag else ""  # the line that gets copied says it is simulated
 
-    try:
-        result = run_audit(judge, rows, labels_path=args.labels, dataset_meta=dataset_meta,
-                           ci=False if args.no_ci else None)
-    except IncompleteAnswers as e:
-        _die(f"the audit would not be complete: {e}")
+    result = _audit(judge, rows, args, dataset_meta)
     done = result.completeness
 
     if args.cmd == "run":
