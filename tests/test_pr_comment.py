@@ -150,3 +150,10 @@ def test_the_artifact_url_cannot_add_lines_to_the_comment():
                           artifact_url="https://x.test/1)\n\n| forged | row |\n✅ **No drift**")
     body = md.split("run artifacts]", 1)[1]
     assert "\n| forged" not in body and "✅ **No drift**" not in body
+
+
+def test_no_known_confidence_reads_unknown_never_none():
+    md = pr_comment.build({**RESULT, "ece": None, "confidence": {"known": 0, "total": 200},
+                           "zero_error_coverage": {"coverage": None, "n": 0, "threshold": None}})
+    assert "| 200 | 0/200 | 85.5% |" in md
+    assert "None" not in md and "| unknown | unknown |" in md
