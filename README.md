@@ -12,9 +12,11 @@ Teams are shipping judgment models — TypeSafe's Jev, LLM-as-judge, guardrails,
 | Question | Metric | Why a buyer cares |
 |---|---|---|
 | When it says 80 % confident, is it right 80 % of the time? | ECE, reliability diagram | A confident-and-wrong judge automates its own mistakes |
-| What share of the work can I automate at zero observed errors? | accuracy-coverage curve, zero-error coverage | It is the automation number — read it with its interval and the tier of the labels behind it |
+| What share of the work can I automate at zero observed errors? | accuracy-coverage curve, zero-error coverage | The ROI number — with its error bar attached, and the tier of the labels behind it |
 | What does it really cost, and how bad is the latency tail? | $ per decision, p50 / p99 | The demo is cheap; the tail is what pages you |
 | Has it drifted since last week? | `judge-audit check` CI gate | Vendors update models without telling you |
+
+**Gemini 3 Flash is 97.0 % accurate on 200 emails under attack and says 0.98 whether it is right or wrong. Share of its decisions you could automate with zero observed errors: 0 % (exact upper bound 1.8 %). Jev: 73 %.**
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-arena-dark.png">
@@ -35,9 +37,9 @@ judge-audit check examples/email-routing/labels.jsonl --judge simulated --baseli
 
 `simulated` is a seeded simulator so you can see the whole pipeline in ten seconds; every report it touches is stamped **SIMULATED**. To audit a real vendor, see [docs/real-audits.md](docs/real-audits.md).
 
-## Independent audits of Jev
+## Jev, audited from the outside
 
-Same judge (TypeSafe Jev, via an AI Gateway evaluate API), three jobs, every raw response committed under [`docs/runs/`](docs/runs/) so anyone can recompute every number (`python scripts/verify_published.py` does, in CI).
+Same judge (TypeSafe Jev, via an AI Gateway evaluate API), three jobs, every raw response committed under [`docs/runs/`](docs/runs/) so anyone can recompute every number (`python scripts/verify_published.py` does, in CI). Others have audited Jev too; this audit commits every raw response, so its numbers can be recomputed rather than trusted.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-arc-dark.png">
@@ -48,8 +50,8 @@ Same judge (TypeSafe Jev, via an AI Gateway evaluate API), three jobs, every raw
 |---|---|---|---|---|---|
 | Business emails, 10 categories, clean | 200 | 100 % | 0.004 | Honest when the task is easy. Synthetic templates with the category keyword in the text — a floor, not a benchmark. | [audit-jev-real.md](docs/audit-jev-real.md) |
 | Same emails under attack: prompt injection, homoglyphs, ambiguity, PII, social engineering | 200 | 95.5 % | 0.039 | Prompt injection flips 7/40 decisions, **but confidence drops from 0.996 to 0.71 under attack** — the judge signals its own doubt. Homoglyphs and social engineering: 0 successes. Ambiguous emails: confidence does *not* drop (0.95), which it should. | [audit-jev-adversarial.md](docs/audit-jev-adversarial.md) |
-| Task router: cheap model vs frontier model, 40 easy / 40 hard / 40 easy + cost-inflation injection | 120 | 66.7 % | 0.318 | With options sent as bare labels the judge **never** chose the strong model: 0/40 on hard tasks at median confidence 0.96. That is exactly the constant-classifier baseline. | [audit-jev-router.md](docs/audit-jev-router.md) |
-| The same 120 rows with a one-line description per option | 120 | 97.5 % | 0.053 | **37/40 hard tasks now go to the strong model**, and the three misses sit at confidence 0.56–0.60 (vs 0.93 when right). Same model, same tasks: the failure was the prompt — and a calibration audit surfaced it. | [audit-jev-router-ablation.md](docs/audit-jev-router-ablation.md) |
+| Task router: cheap model vs frontier model, 40 easy / 40 hard / 40 easy + cost-inflation injection | 120 | 66.7 % | 0.318 | With options sent as bare labels the judge **never** chose the strong model: 0/40 on hard tasks at median confidence 0.96. That is exactly the constant-classifier baseline. Accuracy looked acceptable, confidence looked great, the router was broken — and the calibration audit caught it. | [audit-jev-router.md](docs/audit-jev-router.md) |
+| The same 120 rows with a one-line description per option | 120 | 97.5 % | 0.053 | **37/40 hard tasks now go to the strong model**, and the three misses sit at confidence 0.56–0.60 (vs 0.93 when right). Same model, same tasks: the failure was the prompt. | [audit-jev-router-ablation.md](docs/audit-jev-router-ablation.md) |
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-router-dark.png">
@@ -110,7 +112,7 @@ Exit codes: `0` ok · `1` drift detected · `2` usage or configuration error (th
 **In CI:** the [GitHub Action](docs/integrations.md#github-action) runs the audit on every push or pull request and fails the build on drift:
 
 ```yaml
-- uses: kunko-ai-labs/judge-audit@v0.4      # resolves once v0.4.0 is tagged; or pin a release's commit SHA
+- uses: kunko-ai-labs/judge-audit@v0.4      # or pin the release's commit SHA
   with: { labels: audits/labels.jsonl, judge: jev, baseline: audits/baseline.json }
   env: { AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }} }
 ```
@@ -152,7 +154,7 @@ Accuracy tells you who wins a benchmark. Calibration tells you what you can auto
 
 ## Roadmap
 
-Score questions + MCE (maximum calibration error: the worst bin, not the average) → Judge Arena as a living leaderboard with a submission spec (the first table is above) → AI Act evidence dossier. Details and reasons in [docs/ROADMAP.md](docs/ROADMAP.md); the live backlog is the issues.
+Score questions + MCE (maximum calibration error: the worst case, not the average — our proposal for AI Act evidence, not a legal requirement) → Judge Arena as a living leaderboard with a submission spec (the first table is above) → AI Act evidence dossier. Details and reasons in [docs/ROADMAP.md](docs/ROADMAP.md); the live backlog is the issues.
 
 ## FAQ
 
