@@ -44,6 +44,8 @@ The independent review happens outside GitHub's approval button:
 2. the `release-qa` agent — a clean-room install from the branch, CLI / MCP / Action smoke, report-regeneration diff, tests on every supported Python;
 3. a human read of the PR by the maintainer before the squash-merge.
 
+The maintainer then squash-merges, as the repository admin (`gh pr merge --squash --admin` when a merge-queue or ruleset detail would otherwise block it), and only on a head whose required checks are green: the admin bypass can skip failing checks, so "green before merge" is a rule the maintainer keeps, not one GitHub enforces on them.
+
 Before merge, the team lead who ran the agents for the story posts the `story-reviewer` and `release-qa` verdicts on the PR as a comment, so the review is on the record next to the diff. The agents themselves do not post, and nothing posts automatically. This starts with #63; earlier PRs carry no such comment.
 
 That is not the same as a second person's approval, and we do not claim it is. An external reviewer is sought; when one joins, `required_approving_review_count` in `scripts/protect_main.sh` goes to 1.
