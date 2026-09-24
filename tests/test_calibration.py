@@ -446,4 +446,8 @@ def test_nll_interval_resamples_the_known_rows_with_their_own_groups():
             [(0.9, True), (None, False), (0.6, False), (0.8, True), (0.7, True), (0.95, True)]]
     # unknown row in the middle: groups must stay aligned with the known rows
     r = summarize("x", recs, ci=True, groups=["a", "b", "c", "c", "d", "e"])
-    assert r.nll_ci is not None and r.nll_ci[0] <= r.nll <= r.nll_ci[1]
+    from judge_audit.metrics.calibration import nll_ci
+
+    # the known rows keep their own groups: a, c, c, d, e (the unknown row's "b" drops out)
+    assert r.nll_ci == nll_ci([0.9, 0.6, 0.8, 0.7, 0.95], [True, False, True, True, True],
+                              groups=["a", "c", "c", "d", "e"])
