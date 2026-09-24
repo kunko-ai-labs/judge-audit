@@ -38,7 +38,8 @@ FONT = ["Helvetica Neue", "Arial", "DejaVu Sans"]
 DPI = 160
 
 ARENA_LABELS = {"jev": "Jev", "claude-sonnet-4.5": "Claude Sonnet 4.5", "llama-3.3-70b": "Llama 3.3 70B",
-                "deepseek-r1": "DeepSeek R1", "gemma4": "gemma4 (local)", "llama32": "llama3.2 3B (local)",
+                "deepseek-r1": "DeepSeek R1", "gemini-3-flash": "Gemini 3 Flash",
+                "gemma4": "gemma4 (local)", "llama32": "llama3.2 3B (local)",
                 "deberta-nli": "DeBERTa NLI (local)",
                 "finetuned-deberta": "DeBERTa fine-tuned r1 (local)",
                 "finetuned-deberta-run2": "DeBERTa fine-tuned r2 (local)",
@@ -130,32 +131,37 @@ def hero_arena(theme: str) -> Path | None:
             kind = ("prob" if j["method"].startswith("option")
                     else "nli" if "NLI" in j["method"] or "softmax" in j["method"] else "verb")
             rows.append((ARENA_LABELS.get(slug, j["label"]), s["zero_error_coverage"],
-                         s["accuracy"], s["mean_conf_wrong"], kind))
+                         s["accuracy"], s["mean_conf_wrong"], kind,
+                         s["zero_error_coverage_ci"]))
     rows.sort(key=lambda r: r[1], reverse=True)
 
     fig = plt.figure(figsize=(10.4, 5.6))
-    ax = fig.add_axes((0.25, 0.13, 0.46, 0.62))
+    ax = fig.add_axes((0.25, 0.13, 0.43, 0.62))
     _axes(ax, t, grid="x")
     ax.spines["bottom"].set_visible(False)
     n = len(rows)
     ys = list(range(n))[::-1]
     h = 0.58
-    for y, (_label, cov, acc, cw, kind) in zip(ys, rows, strict=True):
+    for y, (_label, cov, acc, cw, kind, (lo, hi)) in zip(ys, rows, strict=True):
         color = t[kind]
         if cov > 0:
             _rounded_bar(ax, 0, y - h / 2, cov, h, color, True, 0.06)
         else:
             _hairline(ax, 0, 0.004, y, y, color)
-        ax.text(cov + 0.012, y, f"{cov:.0%}", va="center", ha="left", fontsize=11,
+        # the 95 % interval: how far this judge's number would move on another 200 emails
+        ax.plot([lo, hi], [y, y], color=t["ink"], lw=1.1, solid_capstyle="butt", zorder=4)
+        for end in (lo, hi):
+            ax.plot([end, end], [y - h / 4, y + h / 4], color=t["ink"], lw=1.1, zorder=4)
+        ax.text(hi + 0.014, y, f"{cov:.0%}", va="center", ha="left", fontsize=11,
                 fontweight="bold", color=t["ink"])
-        ax.text(1.17, y, f"{acc:.0%}", va="center", ha="right", fontsize=10, color=t["ink"],
+        ax.text(1.25, y, f"{acc:.0%}", va="center", ha="right", fontsize=10, color=t["ink"],
                 transform=ax.get_yaxis_transform(), clip_on=False)
-        ax.text(1.44, y, f"{cw:.2f}", va="center", ha="right", fontsize=10,
+        ax.text(1.52, y, f"{cw:.2f}", va="center", ha="right", fontsize=10,
                 color=t["wrong"] if cw >= 0.8 else t["ink"],
                 transform=ax.get_yaxis_transform(), clip_on=False)
-    ax.text(1.17, n - 0.3, "accuracy", va="bottom", ha="right", fontsize=8.5, color=t["muted"],
+    ax.text(1.25, n - 0.3, "accuracy", va="bottom", ha="right", fontsize=8.5, color=t["muted"],
             transform=ax.get_yaxis_transform(), clip_on=False)
-    ax.text(1.44, n - 0.3, "conf. when wrong", va="bottom", ha="right", fontsize=8.5,
+    ax.text(1.52, n - 0.3, "conf. when wrong", va="bottom", ha="right", fontsize=8.5,
             color=t["muted"], transform=ax.get_yaxis_transform(), clip_on=False)
     ax.set_yticks(ys)
     ax.set_yticklabels([r[0] for r in rows], fontsize=10.5)
@@ -169,10 +175,11 @@ def hero_arena(theme: str) -> Path | None:
               frameon=False, loc="lower left", bbox_to_anchor=(-0.02, 1.07), ncol=3, fontsize=9,
               handlelength=1.2, columnspacing=1.4)
     _titles(fig, t, "The automation budget each judge earns",
-            "200 emails under attack · share of decisions automatable with zero observed errors, "
-            "most confident first",
+            "200 emails under attack · share of decisions automatable with zero observed errors "
+            "· whiskers: 95 % interval",
             "examples/email-routing-adversarial · n=200 per judge · raw responses in docs/runs/ · "
-            "fine-tuned rows trained on the clean emails' train half, same generator · judge-audit")
+            "synthetic data, one run per judge · judge-audit\n"
+            "fine-tuned rows trained on the clean emails' train half, same generator")
     return _save(fig, "hero-arena", theme)
 
 
