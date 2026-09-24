@@ -128,6 +128,7 @@ def main(argv: list[str] | None = None) -> None:
         judge, tag = _judge(args.judge, rows)
     except (RuntimeError, ValueError) as e:
         _die(f"judge '{args.judge}' is not configured: {e}")
+    lead = f"{tag} · " if tag else ""  # the line that gets copied says it is simulated
 
     result = run_audit(judge, rows, labels_path=args.labels, dataset_meta=dataset_meta,
                        ci=False if args.no_ci else None)
@@ -151,7 +152,7 @@ def main(argv: list[str] | None = None) -> None:
         confidence = result.confidence
         cost = (f"${result.total_cost_usd:.4f}" if result.total_cost_usd is not None
                 else "unknown")
-        print(f"judge={result.judge} n={result.n} "
+        print(f"{lead}judge={result.judge} n={result.n} "
               f"accuracy={result.accuracy:.1%}{interval(result.accuracy_ci, pct=True)} "
               f"confidence_known={confidence['known']}/{confidence['total']} "
               f"ece={fmt4(result.ece)}{interval(result.ece_ci)} "
@@ -185,12 +186,12 @@ def main(argv: list[str] | None = None) -> None:
                          "max_ece_drift": args.max_ece_drift,
                          "max_acc_drop": args.max_acc_drop})
         if failures:
-            print("DRIFT DETECTED:", file=sys.stderr)
+            print(f"{lead}DRIFT DETECTED:", file=sys.stderr)
             for fl in failures:
                 print(f"  - {fl}", file=sys.stderr)
             sys.exit(1)
         ece = fmt4(result.ece)
-        print(f"OK: no drift (ece={ece}, accuracy={result.accuracy:.1%}, "
+        print(f"{lead}OK: no drift (ece={ece}, accuracy={result.accuracy:.1%}, "
               f"gt={ground_truth_of(result.run).tier})")
 
 

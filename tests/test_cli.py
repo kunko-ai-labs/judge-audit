@@ -21,6 +21,8 @@ def test_run_simulated_writes_report_json_and_judgments(labels_path, tmp_path):
     assert res["n"] == 12 and res["run"]["judge"]["name"] == "simulated"
     assert res["confidence"] == {"known": 12, "total": 12}
     assert "confidence_known=12/12" in r.stdout
+    # the summary line is what gets copied: a simulated result must say so on it
+    assert r.stdout.startswith("SIMULATED — not a real vendor audit · judge=simulated")
     assert (tmp_path / "audit-judgments.jsonl").read_text().count("\n") == 12
 
 
@@ -28,14 +30,16 @@ def test_check_no_drift_against_own_baseline(labels_path, tmp_path):
     run("run", str(labels_path), "--judge", "simulated", "--json", "base.json", cwd=tmp_path)
     r = run("check", str(labels_path), "--judge", "simulated", "--baseline", "base.json",
             cwd=tmp_path)
-    assert r.returncode == 0 and "OK: no drift" in r.stdout
+    assert r.returncode == 0
+    assert r.stdout.startswith("SIMULATED — not a real vendor audit · OK: no drift")
 
 
 def test_check_detects_drift(labels_path, tmp_path):
     (tmp_path / "strict.json").write_text(json.dumps({"ece": 0.0, "accuracy": 1.0}))
     r = run("check", str(labels_path), "--judge", "simulated", "--baseline", "strict.json",
             cwd=tmp_path)
-    assert r.returncode == 1 and "DRIFT DETECTED" in r.stderr
+    assert r.returncode == 1
+    assert r.stderr.startswith("SIMULATED — not a real vendor audit · DRIFT DETECTED")
 
 
 def test_missing_labels_file_is_exit_2(tmp_path):
