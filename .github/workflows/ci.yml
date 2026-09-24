@@ -47,6 +47,9 @@ jobs:
       - name: Published audits recompute from their raw checkpoints
         run: |
           python scripts/verify_published.py
+      - name: README tables are the committed JSON, rounded
+        run: |
+          python scripts/verify_readme.py
       - name: Arena table recomputes from its checkpoints
         run: |
           python scripts/arena_report.py
