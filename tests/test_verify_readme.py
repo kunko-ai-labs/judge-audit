@@ -81,3 +81,53 @@ def test_the_hero_caption_is_checked_too(old, new):
 
 def test_a_caption_that_drops_a_figure_fails():
     assert check(edit("interval up to 90.9 %", "a wide interval")).failures
+
+
+def drop_line(start: str) -> str:
+    lines = README.split("\n")
+    hit = [i for i, line in enumerate(lines) if line.startswith(start)]
+    assert len(hit) == 1, start
+    return "\n".join(lines[:hit[0]] + lines[hit[0] + 1:])
+
+
+def dup_line(start: str) -> str:
+    lines = README.split("\n")
+    (i,) = [i for i, line in enumerate(lines) if line.startswith(start)]
+    return "\n".join(lines[:i + 1] + [lines[i]] + lines[i + 1:])
+
+
+@pytest.mark.parametrize("start", ["| Claude Sonnet 4.5 | verbalized", "| DeepSeek R1 | verbalized",
+                                   "| Router, bare labels |", "| Business emails, 10 categories"])
+def test_a_deleted_row_is_caught(start):
+    assert any("appears 0 times" in f for f in check(drop_line(start)).failures)
+
+
+def test_a_duplicated_row_is_caught():
+    assert any("appears 2 times" in f for f in check(dup_line("| Gemini 3 Flash |")).failures)
+
+
+@pytest.mark.parametrize(
+    "old,new",
+    [
+        # Sonnet's interval overlaps Jev's: calling it separated is stronger than the data
+        ("it is **not** separated from Claude Sonnet 4.5 (0 %, interval up to 90.9 %), ",
+         "and from Claude Sonnet 4.5 (0 %, interval up to 90.9 %); it is **not** separated from "),
+        # a separated judge left out of the caption
+        ("Gemini 3 Flash, Llama 3.3 70B, DeepSeek R1, gemma4 and llama3.2 (0 %",
+         "Gemini 3 Flash, DeepSeek R1, gemma4 and llama3.2 (0 %"),
+        # run 1 is above Jev, not below
+        ("run 1 (97 % [94.4, 99.0]) above it", "run 1 (97 % [94.4, 99.0]) below it"),
+        ("social engineering: 0 successes", "social engineering: 3 successes"),
+        # coarser rounding hides a change
+        ("| 95.5% [92.5, 98.0] | 0.039 [", "| 96% [92.5, 98.0] | 0.039 ["),
+        ("| 95.5% [92.5, 98.0] | 0.039 [", "| 95.5% [92.5, 98.0] | 0.04 ["),
+    ],
+)
+def test_the_prose_claims_are_read_not_assumed(old, new):
+    assert check(edit(old, new)).failures
+
+
+def test_a_reworded_cell_is_a_named_mismatch_not_a_crash():
+    ck = check(edit("Prompt injection flips 7/40 decisions", "Prompt injection changes 7 of 40"))
+    assert any("audit-jev-adversarial" in f or "Same emails under attack" in f
+               for f in ck.failures)
