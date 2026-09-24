@@ -26,6 +26,9 @@ from .metrics.calibration import (
     ece_ci,
     expected_calibration_error,
     interpolated_quantile,
+    negative_log_likelihood,
+    nll_ci,
+    nll_infinite,
     reliability_bins,
     zero_error_coverage,
     zero_error_coverage_ci,
@@ -68,12 +71,18 @@ class AuditResult:
     ece_equal_mass_ci: Interval | None = None
     brier_ci: Interval | None = None
     confidence: dict = field(default_factory=dict)
+    # Log loss (top-label, never clipped; docs/judges.md): None when infinite, and
+    # `nll_infinite` counts the answers declared certain and wrong that make it so.
+    nll: float | None = None
+    nll_ci: Interval | None = None
+    nll_infinite: int = 0
 
     def to_dict(self) -> dict:
         d = {
             "judge": self.judge, "n": self.n, "accuracy": self.accuracy,
             "confidence": self.confidence,
             "ece": self.ece, "ece_equal_mass": self.ece_equal_mass, "brier": self.brier,
+            "nll": self.nll, "nll_infinite": self.nll_infinite,
             "reliability_bins": self.reliability,
             "accuracy_coverage": self.curve, "zero_error_coverage": self.zero_error,
             "total_cost_usd": (round(self.total_cost_usd, 6)
@@ -87,6 +96,7 @@ class AuditResult:
                      **ci_fields("ece", self.ece_ci, self.ece),
                      **ci_fields("ece_equal_mass", self.ece_equal_mass_ci, self.ece_equal_mass),
                      **ci_fields("brier", self.brier_ci, self.brier),
+                     **ci_fields("nll", self.nll_ci, self.nll),
                      **ci_fields("zero_error_coverage", self.zero_error_coverage_ci,
                                  self.zero_error.get("coverage")),
                      bootstrap=dict(BOOTSTRAP))
@@ -341,6 +351,10 @@ def summarize(judge_name: str, records: list[dict], run: dict | None = None,
         ece_equal_mass_ci=(ece_ci(confidences, correct, groups=known_groups,
                                   binning=EQUAL_MASS) if ci and known else None),
         brier_ci=brier_ci(confidences, correct, groups=known_groups) if ci and known else None,
+        nll=(round(negative_log_likelihood(confidences, correct), 4)
+             if known and not nll_infinite(confidences, correct) else None),
+        nll_ci=nll_ci(confidences, correct, groups=known_groups) if ci and known else None,
+        nll_infinite=nll_infinite(confidences, correct),
     )
 
 

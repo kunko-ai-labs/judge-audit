@@ -166,12 +166,19 @@ def zero_error_sentence(d: dict, zec_ci: str = "") -> str:
 
 
 def calibration_numbers(d: dict, bold: tuple[str, str] = ("**", "**")) -> str:
-    """`ECE (equal-mass) **y** [ci] · Brier **z** [ci]` — the two numbers that need no
-    fixed bins, printed right after the equal-width ECE they qualify."""
+    """`ECE (equal-mass) **y** [ci] · Brier **z** [ci] · NLL **w** [ci]` — the numbers
+    that need no fixed bins, printed right after the equal-width ECE they qualify. NLL
+    appears only in results that carry it (reports rebuilt from older JSON do not)."""
     b0, b1 = bold
-    return (f" · ECE (equal-mass) {b0}{fmt4(d.get('ece_equal_mass'))}{b1}"
-            f"{interval_of(d, 'ece_equal_mass_ci')}"
-            f" · Brier {b0}{fmt4(d.get('brier'))}{b1}{interval_of(d, 'brier_ci')}")
+    out = (f" · ECE (equal-mass) {b0}{fmt4(d.get('ece_equal_mass'))}{b1}"
+           f"{interval_of(d, 'ece_equal_mass_ci')}"
+           f" · Brier {b0}{fmt4(d.get('brier'))}{b1}{interval_of(d, 'brier_ci')}")
+    if "nll" in d:
+        inf = d.get("nll_infinite") or 0
+        out += (f" · NLL {b0}∞{b1} ({inf} answer{'s' if inf != 1 else ''} declared certain "
+                "and wrong)" if inf else
+                f" · NLL {b0}{fmt4(d.get('nll'))}{b1}{interval_of(d, 'nll_ci')}")
+    return out
 
 
 def render_markdown(result: AuditResult) -> str:
@@ -229,7 +236,8 @@ def ci_lines(d: dict) -> list[str]:
     if not b:
         return []
     marks = "".join(interval_of(d, k) for k in ("accuracy_ci", "ece_ci", "ece_equal_mass_ci",
-                                                "brier_ci", "zero_error_coverage_ci"))
+                                                "brier_ci", "nll_ci",
+                                                "zero_error_coverage_ci"))
     return ["", f"_Brackets are {b['level']:.0%} percentile-bootstrap intervals over the dataset's "
                 f"distinct texts ({b['n_boot']:,} resamples, seed {b['seed']}): how far the number "
                 f"would move on another sample of n={d['n']} drawn the same way._",

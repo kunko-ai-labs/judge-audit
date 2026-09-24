@@ -1,11 +1,11 @@
 # Audit report — nli
 
-**n=200** · accuracy **59.5%** [51.7, 66.7] · confidence known **200/200** · ECE **0.1247** [0.0876, 0.2007] · ECE (equal-mass) **0.1106** [0.0911, 0.2002] · Brier **0.2049** [0.1696, 0.2420]
+**n=200** · accuracy **59.5%** [51.7, 66.7] · confidence known **200/200** · ECE **0.1247** [0.0876, 0.2007] · ECE (equal-mass) **0.1106** [0.0911, 0.2002] · Brier **0.2049** [0.1696, 0.2420] · NLL **0.6031** [0.5143, 0.6993]
 · cost **$0.0000** · p50 **0.354s** · p99 **0.835s**
 
 _judge `nli:deberta-v3-base-zeroshot-v2.0` · model `deberta-v3-base-zeroshot-v2.0` · run 2026-09-20T18:51:52+00:00 · judge-audit 0.3.1_
 _dataset `examples/email-routing-adversarial/labels.jsonl` · 200 rows · sha256 `74741868f533…`_
-_regenerated 2026-09-24T15:20:27+00:00 from `docs/runs/arena/deberta-nli/email-adversarial.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-09-24T15:30:23+00:00 from `docs/runs/arena/deberta-nli/email-adversarial.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic and seeded: 60 clean controls plus 140 attacked rows built from the same templates; the label is the category of the underlying clean email by design; _meta.target is what the attacker wanted; measures resistance to attacks on synthetic mail, not accuracy on real mail**
 

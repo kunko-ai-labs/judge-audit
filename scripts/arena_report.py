@@ -28,6 +28,9 @@ from judge_audit.metrics.calibration import (  # noqa: E402
     ci_fields,
     ece_ci,
     expected_calibration_error,
+    negative_log_likelihood,
+    nll_ci,
+    nll_infinite,
     zero_error_coverage,
     zero_error_coverage_ci,
 )
@@ -111,6 +114,8 @@ def summarize(recs: list[dict], dataset: str, rows: list[dict] | None = None) ->
         "ece_equal_mass": (round(expected_calibration_error(conf, ok, binning=EQUAL_MASS), 4)
                            if known else None),
         "brier": round(brier_score(conf, ok), 4) if known else None,
+        "nll": (round(negative_log_likelihood(conf, ok), 4)
+                if known and not nll_infinite(conf, ok) else None),
         "zero_error_coverage": zero_error_coverage(conf, ok)["coverage"] if known else None,
     }
     costs = [r["cost_usd"] for r in recs]
@@ -125,6 +130,8 @@ def summarize(recs: list[dict], dataset: str, rows: list[dict] | None = None) ->
                                        if known else None), point["ece_equal_mass"]),
         **ci_fields("brier", brier_ci(conf, ok, groups=groups) if known else None,
                     point["brier"]),
+        **ci_fields("nll", nll_ci(conf, ok, groups=groups) if known else None, point["nll"]),
+        "nll_infinite": nll_infinite(conf, ok),
         **ci_fields("zero_error_coverage", (zero_error_coverage_ci(conf, ok, groups=groups)
                                             if known else None),
                     point["zero_error_coverage"]),
@@ -217,6 +224,13 @@ def fmt(x, pct=False):
     if x is None:
         return "—"
     return f"{x:.1%}" if pct else f"{x:.3f}" if isinstance(x, float) else str(x)
+
+
+def nll_text(s: dict) -> str:
+    """NLL with its interval, or ∞ with the count of certain-and-wrong answers behind it."""
+    if s.get("nll_infinite"):
+        return f"∞ ({s['nll_infinite']} certain and wrong)"
+    return f"{fmt4(s.get('nll'))}{interval_of(s, 'nll_ci')}"
 
 
 def fmt4(x):
@@ -346,11 +360,11 @@ def render(judges: dict) -> str:
     for ds, title in names.items():
         gt = ground_truth_tier(DATASETS[ds][0])
         L += [f"## {title} — {gt.tier} {gt.label}", "",
-              "| judge | confidence | accuracy | ECE | ECE (equal-mass) | Brier | " +
+              "| judge | confidence | accuracy | ECE | ECE (equal-mass) | Brier | NLL | " +
               "zero-error coverage | conf right / wrong | distinct conf values | no answer |"
               + (" prompt-injection acc | conf drop under injection | social-eng acc |" if ds == "email-adversarial" else "")
               + (" hard → strong | attack success |" if ds.startswith("router") else ""),
-              "|---|---|---|---|---|---|---|---|---|---|"
+              "|---|---|---|---|---|---|---|---|---|---|---|"
               + ("---|---|---|" if ds == "email-adversarial" else "")
               + ("---|---|" if ds.startswith("router") else "")]
         for j in judges.values():
@@ -364,6 +378,7 @@ def render(judges: dict) -> str:
                    f"{fmt4(s['ece_equal_mass'])}{interval_of(s, 'ece_equal_mass_ci')} | " +
                    # four decimals: a near-perfect judge's Brier is 0.0002, not 0.000
                    f"{fmt4(s['brier'])}{interval_of(s, 'brier_ci')} | " +
+                   f"{nll_text(s)} | " +
                    f"{fmt(s['zero_error_coverage'], True)}" +
                    f"{interval_of(s, 'zero_error_coverage_ci', pct=True)} | {fmt(s['mean_conf_correct'])} / " +
                    f"{fmt(s['mean_conf_wrong'])} | {s['distinct_confidence_values']} | " +

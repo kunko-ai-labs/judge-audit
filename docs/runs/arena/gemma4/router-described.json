@@ -9,6 +9,8 @@
   "ece": 0.18,
   "ece_equal_mass": 0.18,
   "brier": 0.2194,
+  "nll": null,
+  "nll_infinite": 19,
   "reliability_bins": [
     {
       "bin": "0.0-0.1",
@@ -153,6 +155,8 @@
     0.3215
   ],
   "brier_ci_method": "bootstrap",
+  "nll_ci": null,
+  "nll_ci_method": null,
   "zero_error_coverage_ci": [
     0.0,
     0.0303
@@ -165,7 +169,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-24T15:20:27+00:00",
+    "utc": "2026-09-24T15:30:23+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/gemma4/router-described.ckpt.jsonl",

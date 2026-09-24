@@ -160,6 +160,8 @@ def main(argv: list[str] | None = None) -> None:
               f"ece_equal_mass={fmt4(result.ece_equal_mass)}"
               f"{interval(result.ece_equal_mass_ci)} "
               f"brier={fmt4(result.brier)}{interval(result.brier_ci)} "
+              f"nll={'inf' if result.nll_infinite else fmt4(result.nll)}"
+              f"{interval(result.nll_ci)} "
               f"gt={ground_truth_of(result.run).tier} "
               f"cost={cost} -> {out}")
     else:

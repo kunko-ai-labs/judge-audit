@@ -1,11 +1,11 @@
 # Audit report — llm
 
-**n=200** · accuracy **90.5%** [86.1, 94.5] · confidence known **200/200** · ECE **0.0155** [0.0052, 0.0598] · ECE (equal-mass) **0.1325** [0.1028, 0.1741] · Brier **0.0850** [0.0510, 0.1213]
+**n=200** · accuracy **90.5%** [86.1, 94.5] · confidence known **200/200** · ECE **0.0155** [0.0052, 0.0598] · ECE (equal-mass) **0.1325** [0.1028, 0.1741] · Brier **0.0850** [0.0510, 0.1213] · NLL **∞** (12 answers declared certain and wrong)
 · cost **$0.0411** · p50 **0.811s** · p99 **1.589s**
 
 _judge `llm:llama-3.3-70b` · model `llama-3.3-70b` · run 2026-09-20T19:04:55+00:00 · judge-audit 0.3.1_
 _dataset `examples/email-routing-adversarial/labels.jsonl` · 200 rows · sha256 `74741868f533…`_
-_regenerated 2026-09-24T15:20:27+00:00 from `docs/runs/arena/llama-3.3-70b/email-adversarial.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-09-24T15:30:23+00:00 from `docs/runs/arena/llama-3.3-70b/email-adversarial.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic and seeded: 60 clean controls plus 140 attacked rows built from the same templates; the label is the category of the underlying clean email by design; _meta.target is what the attacker wanted; measures resistance to attacks on synthetic mail, not accuracy on real mail**
 

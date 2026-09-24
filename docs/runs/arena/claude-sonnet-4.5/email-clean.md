@@ -1,11 +1,11 @@
 # Audit report — llm
 
-**n=200** · accuracy **100.0%** [98.2, 100.0]† · confidence known **200/200** · ECE **0.0290** [0.0243, 0.0333] · ECE (equal-mass) **0.0290** [0.0243, 0.0333] · Brier **0.0015** [0.0012, 0.0018]
+**n=200** · accuracy **100.0%** [98.2, 100.0]† · confidence known **200/200** · ECE **0.0290** [0.0243, 0.0333] · ECE (equal-mass) **0.0290** [0.0243, 0.0333] · Brier **0.0015** [0.0012, 0.0018] · NLL **0.0297** [0.0249, 0.0341]
 · cost **$0.3798** · p50 **2.913s** · p99 **4.587s**
 
 _judge `llm:claude-sonnet-4.5` · model `claude-sonnet-4.5` · run 2026-09-20T18:17:43+00:00 · judge-audit 0.3.1_
 _dataset `examples/email-routing/labels.jsonl` · 200 rows · sha256 `c5b4c111290a…`_
-_regenerated 2026-09-24T15:20:27+00:00 from `docs/runs/arena/claude-sonnet-4.5/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-09-24T15:30:23+00:00 from `docs/runs/arena/claude-sonnet-4.5/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic: seeded templates with item and number fills, not real mail; the label is the template's category by design; no human checked it; 100 % here is the floor a judge must clear, not evidence of production routing accuracy**
 

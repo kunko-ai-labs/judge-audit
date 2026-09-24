@@ -1,11 +1,11 @@
 # Audit report — llm
 
-**n=200** · accuracy **100.0%** [98.2, 100.0]† · confidence known **200/200** · ECE **0.0258** [0.0204, 0.0307] · ECE (equal-mass) **0.0258** [0.0204, 0.0307] · Brier **0.0013** [0.0010, 0.0016]
+**n=200** · accuracy **100.0%** [98.2, 100.0]† · confidence known **200/200** · ECE **0.0258** [0.0204, 0.0307] · ECE (equal-mass) **0.0258** [0.0204, 0.0307] · Brier **0.0013** [0.0010, 0.0016] · NLL **0.0264** [0.0210, 0.0315]
 · cost **$0.0000** · p50 **9.452s** · p99 **16.952s**
 
 _judge `llm:gemma4:e4b` · model `gemma4:e4b` · run 2026-09-20T17:08:07+00:00 · judge-audit 0.3.0_
 _dataset `examples/email-routing/labels.jsonl` · 200 rows · sha256 `c5b4c111290a…`_
-_regenerated 2026-09-24T15:20:27+00:00 from `docs/runs/arena/gemma4/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-09-24T15:30:23+00:00 from `docs/runs/arena/gemma4/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic: seeded templates with item and number fills, not real mail; the label is the template's category by design; no human checked it; 100 % here is the floor a judge must clear, not evidence of production routing accuracy**
 

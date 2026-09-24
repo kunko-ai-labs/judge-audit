@@ -1,11 +1,11 @@
 # Audit report — llm
 
-**n=120** · accuracy **55.0%** [41.1, 69.0] · confidence known **120/120** · ECE **0.3903** [0.2646, 0.5292] · ECE (equal-mass) **0.3994** [0.2783, 0.5367] · Brier **0.4032** [0.2800, 0.5247]
+**n=120** · accuracy **55.0%** [41.1, 69.0] · confidence known **120/120** · ECE **0.3903** [0.2646, 0.5292] · ECE (equal-mass) **0.3994** [0.2783, 0.5367] · Brier **0.4032** [0.2800, 0.5247] · NLL **∞** (2 answers declared certain and wrong)
 · cost **$0.0366** · p50 **0.913s** · p99 **2.713s**
 
 _judge `llm:llama-3.3-70b` · model `llama-3.3-70b` · run 2026-09-21T19:08:47+00:00 · judge-audit 0.3.2_
 _dataset `docs/runs/jury/router-bare/llama-3.3-70b.r2.input.jsonl` · 120 rows · sha256 `c786038b2a7d…`_
-_regenerated 2026-09-24T15:20:27+00:00 from `docs/runs/jury/router-bare/llama-3.3-70b.r2.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-09-24T15:30:23+00:00 from `docs/runs/jury/router-bare/llama-3.3-70b.r2.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome; downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified; 40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted**
 

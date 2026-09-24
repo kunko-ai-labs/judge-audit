@@ -9,6 +9,8 @@
   "ece": 0.1361,
   "ece_equal_mass": 0.1361,
   "brier": 0.0782,
+  "nll": 0.2746,
+  "nll_infinite": 0,
   "reliability_bins": [
     {
       "bin": "0.0-0.1",
@@ -160,6 +162,11 @@
     0.1182
   ],
   "brier_ci_method": "bootstrap",
+  "nll_ci": [
+    0.1931,
+    0.3712
+  ],
+  "nll_ci_method": "bootstrap",
   "zero_error_coverage_ci": [
     0.3983,
     1.0
@@ -172,7 +179,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-24T15:20:27+00:00",
+    "utc": "2026-09-24T15:30:23+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/jury/router-described/llama32.r2.ckpt.jsonl",

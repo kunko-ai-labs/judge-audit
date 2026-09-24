@@ -9,6 +9,8 @@
   "ece": 0.0436,
   "ece_equal_mass": 0.0436,
   "brier": 0.0076,
+  "nll": 0.0481,
+  "nll_infinite": 0,
   "reliability_bins": [
     {
       "bin": "0.0-0.1",
@@ -197,6 +199,11 @@
     0.0145
   ],
   "brier_ci_method": "bootstrap",
+  "nll_ci": [
+    0.0253,
+    0.0775
+  ],
+  "nll_ci_method": "bootstrap",
   "zero_error_coverage_ci": [
     0.9697,
     1.0
@@ -209,7 +216,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-24T15:20:27+00:00",
+    "utc": "2026-09-24T15:30:23+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/jury/router-described/jev.r2.ckpt.jsonl",

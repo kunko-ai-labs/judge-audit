@@ -242,7 +242,7 @@ def main() -> None:
     print(f"judge={result.judge} n={result.n} accuracy={result.accuracy:.1%} "
           f"confidence_known={confidence['known']}/{confidence['total']} "
           f"ece={fmt4(result.ece)} ece_equal_mass={fmt4(result.ece_equal_mass)} "
-          f"brier={fmt4(result.brier)} gt={result.run['dataset']['ground_truth']['tier']} "
+          f"brier={fmt4(result.brier)} nll={'inf' if result.nll_infinite else fmt4(result.nll)} gt={result.run['dataset']['ground_truth']['tier']} "
           f"cost={cost} -> {args.out}")
 
 

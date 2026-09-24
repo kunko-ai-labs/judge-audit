@@ -94,6 +94,31 @@ def brier_score(confidences: list[float], correct: list[bool]) -> float:
                      ) / len(confidences)
 
 
+def negative_log_likelihood(confidences: list[float], correct: list[bool]) -> float:
+    """Top-label negative log-likelihood (log loss): mean of −ln p(outcome), where p is the
+    stated confidence when right and 1 − confidence when wrong. Nothing is clipped: a judge
+    that states 1.0 and is wrong (or 0.0 and is right) has an infinite loss, and this
+    returns `math.inf` rather than a number built on a confidence it never gave.
+
+    The other proper scoring rule next to Brier; it punishes confident mistakes far harder
+    (a wrong 0.99 costs 4.6, a wrong 0.6 costs 0.92). A mean of no rows raises."""
+    if len(confidences) != len(correct):
+        raise ValueError(f"{len(confidences)} confidences for {len(correct)} outcomes")
+    if not confidences:
+        raise ValueError("negative_log_likelihood of no rows is undefined")
+    _require_finite(confidences)
+    if nll_infinite(confidences, correct):
+        return math.inf
+    return math.fsum(-math.log(c if ok else 1.0 - c)
+                     for c, ok in zip(confidences, correct, strict=True)) / len(confidences)
+
+
+def nll_infinite(confidences: Sequence[float], correct: Sequence[bool]) -> int:
+    """Rows whose declared confidence gives the outcome probability 0: stated certain, wrong."""
+    return sum(1 for c, ok in zip(confidences, correct, strict=True)
+               if (c if ok else 1.0 - c) <= 0.0)
+
+
 def reliability_bins(confidences: list[float], correct: list[bool],
                      n_bins: int = 10) -> list[dict]:
     """Per-bin (avg confidence, accuracy, count) for the reliability diagram."""
@@ -440,6 +465,20 @@ def brier_ci(confidences: Sequence[float], correct: Sequence[bool],
     zero-width result stays a bootstrap and is flagged `.degenerate`."""
     rows = list(zip(confidences, correct, strict=True))
     ci = bootstrap_ci(rows, lambda rs: brier_score([c for c, _ in rs], [ok for _, ok in rs]),
+                      n_boot, seed, groups=groups)
+    return None if ci is None else Interval(ci[0], ci[1], BOOTSTRAP)
+
+
+def nll_ci(confidences: Sequence[float], correct: Sequence[bool],
+           n_boot: int = N_BOOT, seed: int = 0,
+           groups: Sequence[Hashable] | None = None) -> Interval | None:
+    """95 % interval of `negative_log_likelihood`, by the same clustered bootstrap as Brier;
+    None when a row makes it infinite (every resample that keeps the row is infinite)."""
+    if nll_infinite(confidences, correct):
+        return None
+    rows = list(zip(confidences, correct, strict=True))
+    ci = bootstrap_ci(rows, lambda rs: negative_log_likelihood([c for c, _ in rs],
+                                                               [ok for _, ok in rs]),
                       n_boot, seed, groups=groups)
     return None if ci is None else Interval(ci[0], ci[1], BOOTSTRAP)
 

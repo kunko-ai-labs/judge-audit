@@ -380,3 +380,29 @@ def test_latency_percentiles_are_type_7_and_agree_with_numpy_default():
     assert _percentile([], 99) == 0.0
     np = pytest.importorskip("numpy")
     assert _percentile(xs, 99) == pytest.approx(float(np.percentile(xs, 99)))
+
+
+def test_nll_is_the_mean_log_loss_and_never_clips_a_declared_certainty():
+    import math
+
+    from judge_audit.metrics.calibration import negative_log_likelihood, nll_ci, nll_infinite
+
+    assert negative_log_likelihood([0.9, 0.6], [True, False]) == pytest.approx(
+        (-math.log(0.9) - math.log(0.4)) / 2)
+    # a stated 1.0 that is wrong: infinite, and counted — not clipped to 0.9999
+    assert negative_log_likelihood([1.0, 0.9], [False, True]) == math.inf
+    assert nll_infinite([1.0, 1.0, 0.0, 0.9], [False, True, True, False]) == 2
+    assert nll_ci([1.0, 0.9, 0.8], [False, True, True]) is None
+    lo, hi = nll_ci([0.9, 0.8, 0.7, 0.6] * 5, [True, False, True, True] * 5)
+    assert lo <= hi
+    with pytest.raises(ValueError):
+        negative_log_likelihood([], [])
+
+
+def test_the_report_prints_infinity_with_its_count_not_a_number():
+    from judge_audit.report import calibration_numbers
+
+    assert "NLL **∞** (3 answers declared certain and wrong)" in calibration_numbers(
+        {"ece_equal_mass": 0.1, "brier": 0.1, "nll": None, "nll_infinite": 3})
+    assert "NLL **0.1234**" in calibration_numbers(
+        {"ece_equal_mass": 0.1, "brier": 0.1, "nll": 0.1234, "nll_infinite": 0})
