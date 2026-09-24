@@ -131,3 +131,18 @@ def test_a_reworded_cell_is_a_named_mismatch_not_a_crash():
     ck = check(edit("Prompt injection flips 7/40 decisions", "Prompt injection changes 7 of 40"))
     assert any("audit-jev-adversarial" in f or "Same emails under attack" in f
                for f in ck.failures)
+
+
+def test_a_judge_new_to_the_arena_json_must_appear_in_the_readme(monkeypatch):
+    import verify_readme
+
+    real = verify_readme.load
+
+    def with_extra(name):
+        d = real(name)
+        if name == "arena-2026-09.json":
+            d = {**d, "new-judge": d["jev"]}
+        return d
+
+    monkeypatch.setattr(verify_readme, "load", with_extra)
+    assert any("'new-judge' appears 0 times" in f for f in check(README).failures)

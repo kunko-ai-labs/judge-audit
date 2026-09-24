@@ -2,9 +2,12 @@
 
 The README is written by hand; the JSON under docs/ is regenerated from the raw checkpoints
 in CI. This check ties the two together: it reads the three results tables in README.md
-(the Jev audits, the Arena and the consensus panel), finds the JSON field behind every
-figure, and fails if a figure is anything but that field rounded to the digits shown.
-A figure may be rounded; it may never be changed.
+(the Jev audits, with the figures in their "What it shows" cells; the Arena; the consensus
+panel) and the hero chart's caption and alt text, finds the JSON field behind every figure,
+and fails if a figure is anything but that field rounded to the digits shown, or printed
+coarser than its column. Every expected row must appear exactly once. In the caption, the
+judges named as separated from Jev (below or above it) or not are recomputed from the 95 %
+intervals. A figure may be rounded; it may never be changed. Other README prose is not read.
 
   python scripts/verify_readme.py            # exit 1 on any mismatch, listing them
 """
@@ -231,7 +234,8 @@ def check_arena(ck: Checker, all_tables) -> None:
     seen = []
     for row in rows:
         guarded(ck, f"Arena / {row[0]}", check_arena_row, ck, row, col, arena, held, seen)
-    row_set(ck, "Arena", seen, ARENA_ROWS.values())
+    # every judge the Arena JSON has, not just the ones this script knows by name
+    row_set(ck, "Arena", seen, set(ARENA_ROWS.values()) | set(arena))
 
 
 def check_arena_row(ck: Checker, row, col, arena, held, seen) -> None:
