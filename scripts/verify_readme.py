@@ -89,6 +89,9 @@ class Checker:
     def num(self, where: str, shown: str, value, pct: bool = False, signed: bool = False):
         """`shown` (as printed in the README) must be `value` rounded."""
         self.checked += 1
+        if not shown:
+            self.failures.append(f"{where}: the README text no longer states this figure")
+            return
         if value is None:
             self.failures.append(f"{where}: README says {shown}, the JSON has no value")
             return
@@ -258,8 +261,55 @@ def check_consensus(ck: Checker, all_tables) -> None:
         ck.eq(where + " / best declared-confidence judge", SHORT_NAMES.get(m2.group(2)), lowest)
 
 
+HERO_SEPARATED = ("gemini-3-flash", "llama-3.3-70b", "deepseek-r1", "gemma4", "llama32")
+HERO_OVERLAPS = "claude-sonnet-4.5"
+
+
+def check_hero(ck: Checker, md: str) -> None:
+    """The hero chart's caption: its figures, and which gaps the intervals separate."""
+    m = re.search(r"\*\*Read this chart with its limits\.\*\*(.+)", md)
+    alt = re.search(r'<img alt="(200 emails under attack[^"]+)" src="docs/assets/hero-arena', md)
+    if not m or not alt:
+        ck.failures.append("hero chart: caption or alt text not found")
+        return
+    text, alt_text = m.group(1), alt.group(1)
+    arena = load("arena-2026-09.json")
+    attack = {k: v["datasets"]["email-adversarial"] for k, v in arena.items()}
+    jev = attack["jev"]
+    rows = (ROOT / "examples/email-routing-adversarial/labels.jsonl").read_text().splitlines()
+    states = [json.loads(r)["state"] for r in rows if r.strip() and '"state"' in r]
+    n = re.search(r"\((\d+) emails, (\d+) distinct texts", text)
+    ck.eq("hero caption / n", n and n.group(1), jev["n"])
+    ck.eq("hero caption / distinct texts", n and n.group(2), len(set(states)))
+    j = re.search(rf"Jev ({NUM}) % \[({NUM}), ({NUM})\]", alt_text)
+    if not j:
+        ck.failures.append("hero alt text: cannot read Jev's point and interval")
+        return
+    ck.num("hero alt / Jev", j.group(1), jev["zero_error_coverage"], pct=True)
+    ck.num("hero alt / Jev low", j.group(2), jev["zero_error_coverage_ci"][0], pct=True)
+    ck.num("hero alt / Jev high", j.group(3), jev["zero_error_coverage_ci"][1], pct=True)
+    lo = jev["zero_error_coverage_ci"][0]
+    for where in (text, alt_text):
+        bound = re.search(rf"exact upper bound (?:is )?({NUM}) %", where)
+        for slug in HERO_SEPARATED:
+            d = attack[slug]
+            ck.eq(f"hero / {slug} at 0 %", d["zero_error_coverage"], 0.0)
+            ck.eq(f"hero / {slug} exact interval", d["zero_error_coverage_ci_method"],
+                  "clopper-pearson")
+            ck.num(f"hero / {slug} upper bound", bound and bound.group(1),
+                   d["zero_error_coverage_ci"][1], pct=True)
+            ck.eq(f"hero / Jev separated from {slug}", lo > d["zero_error_coverage_ci"][1], True)
+        up = re.search(rf"interval up to ({NUM}) %", where)
+        other = attack[HERO_OVERLAPS]
+        ck.num(f"hero / {HERO_OVERLAPS} upper bound", up and up.group(1),
+               other["zero_error_coverage_ci"][1], pct=True)
+        ck.eq(f"hero / Jev not separated from {HERO_OVERLAPS}",
+              lo <= other["zero_error_coverage_ci"][1], True)
+
+
 def check(md: str) -> Checker:
     ck, all_tables = Checker(), tables(md)
+    check_hero(ck, md)
     check_jev_audits(ck, all_tables)
     check_arena(ck, all_tables)
     check_consensus(ck, all_tables)

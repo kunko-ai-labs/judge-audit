@@ -7,19 +7,21 @@
 
 **Independent calibration audits for AI judges. When a judge says 90 %, is it right 90 % of the time?**
 
-Everyone is shipping judgment models — TypeSafe's Jev, LLM-as-judge, guardrails, routers — and every one of them returns a confidence. The literature studies calibration (Guo et al. 2017; Shao 2026; Huang et al. 2026) — almost nobody measures it on *their own* decisions before automating them. judge-audit runs any judge in **shadow mode** against decisions your humans already made and answers the four questions that matter before you automate:
+Everyone is shipping judgment models — TypeSafe's Jev, LLM-as-judge, guardrails, routers — and every one of them returns a confidence. The literature studies calibration (Guo et al. 2017; Shao 2026; Huang et al. 2026); what a team needs before automating is the same measurement on *its own* decisions. judge-audit runs any judge in **shadow mode** against decisions your humans already made and answers the four questions that matter before you automate:
 
 | Question | Metric | Why a buyer cares |
 |---|---|---|
 | When it says 80 % confident, is it right 80 % of the time? | ECE, reliability diagram | A confident-and-wrong judge automates its own mistakes |
-| What share of the work can I automate at zero observed errors? | accuracy-coverage curve, zero-error coverage | This is the ROI number |
+| What share of the work can I automate at zero observed errors? | accuracy-coverage curve, zero-error coverage | It is the automation number — read it with its interval and the tier of the labels behind it |
 | What does it really cost, and how bad is the latency tail? | $ per decision, p50 / p99 | The demo is cheap; the tail is what pages you |
 | Has it drifted since last week? | `judge-audit check` CI gate | Vendors update models without telling you |
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-arena-dark.png">
-  <img alt="200 emails under attack: the share of decisions each judge lets you automate with zero observed errors" src="docs/assets/hero-arena.png">
+  <img alt="200 emails under attack: the share of decisions each judge lets you automate with zero observed errors, with 95 % intervals. Jev 73 % [67.0, 94.0] is separated from the five judges at 0 % whose exact upper bound is 1.8 %, but not from Claude Sonnet 4.5, whose 0 % carries an interval up to 90.9 %." src="docs/assets/hero-arena.png">
 </picture>
+
+**Read this chart with its limits.** Every dataset here is synthetic ground truth by construction ([GT-1](docs/ground-truth.md)), n is small (200 emails, 189 distinct texts: the generator repeats some), and each judge ran once. The whiskers are 95 % intervals: Jev's 73 % is separated from Gemini 3 Flash, Llama 3.3 70B, DeepSeek R1, gemma4 and llama3.2 (0 %, exact upper bound 1.8 %), **not** from Claude Sonnet 4.5 (0 %, interval up to 90.9 %). Evidence of how a judge calibrates under stress, not of how it behaves on your traffic.
 
 ![judge-audit run on a labeled dataset, then the CI gate](docs/demo.gif)
 
@@ -33,7 +35,7 @@ judge-audit check examples/email-routing/labels.jsonl --judge simulated --baseli
 
 `simulated` is a seeded simulator so you can see the whole pipeline in ten seconds; every report it touches is stamped **SIMULATED**. To audit a real vendor, see [docs/real-audits.md](docs/real-audits.md).
 
-## The first independent audits of Jev
+## Independent audits of Jev
 
 Same judge (TypeSafe Jev, via its AI Gateway evaluate API), three jobs, every raw response committed under [`docs/runs/`](docs/runs/) so anyone can recompute every number (`python scripts/verify_published.py` does, in CI).
 
@@ -47,14 +49,14 @@ Same judge (TypeSafe Jev, via its AI Gateway evaluate API), three jobs, every ra
 | Business emails, 10 categories, clean | 200 | 100 % | 0.004 | Honest when the task is easy. Synthetic templates with the category keyword in the text — a floor, not a benchmark. | [audit-jev-real.md](docs/audit-jev-real.md) |
 | Same emails under attack: prompt injection, homoglyphs, ambiguity, PII, social engineering | 200 | 95.5 % | 0.039 | Prompt injection flips 7/40 decisions, **but confidence drops from 0.996 to 0.71 under attack** — the judge signals its own doubt. Homoglyphs and social engineering: 0 successes. Ambiguous emails: confidence does *not* drop (0.95), which it should. | [audit-jev-adversarial.md](docs/audit-jev-adversarial.md) |
 | Task router: cheap model vs frontier model, 40 easy / 40 hard / 40 easy + cost-inflation injection | 120 | 66.7 % | 0.318 | With options sent as bare labels the judge **never** chose the strong model: 0/40 on hard tasks at median confidence 0.96. That is exactly the constant-classifier baseline. | [audit-jev-router.md](docs/audit-jev-router.md) |
-| The same 120 rows with a one-line description per option | 120 | 97.5 % | 0.053 | **37/40 hard tasks now go to the strong model**, and the three misses sit at confidence 0.56–0.60 (vs 0.93 when right). Same model, same tasks: the failure was the prompt — and nothing but a calibration audit reveals it. | [audit-jev-router-ablation.md](docs/audit-jev-router-ablation.md) |
+| The same 120 rows with a one-line description per option | 120 | 97.5 % | 0.053 | **37/40 hard tasks now go to the strong model**, and the three misses sit at confidence 0.56–0.60 (vs 0.93 when right). Same model, same tasks: the failure was the prompt — and a calibration audit surfaced it. | [audit-jev-router-ablation.md](docs/audit-jev-router-ablation.md) |
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-router-dark.png">
   <img alt="Jev as a task router: bare labels vs described options" src="docs/assets/hero-router.png">
 </picture>
 
-**What we would tell a client.** The email numbers are the vendor's story and they hold up, including under attack. The router numbers are the buyer's story: the first prompt anyone would write routed every hard task to the cheap model at 96 % median confidence, and its 66.7 % accuracy is exactly what a coin glued to "easy" scores; two descriptive sentences took the same judge to 97.5 % with confidence that finally means something. None of that is visible from a benchmark leaderboard; all of it is visible from a calibration audit on your own decisions.
+**What we would tell a client.** The email numbers are the vendor's story and they hold up, including under attack. The router numbers are the buyer's story: the first prompt anyone would write routed every hard task to the cheap model at 96 % median confidence, and its 66.7 % accuracy is exactly what a coin glued to "easy" scores; two descriptive sentences took the same judge to 97.5 % with confidence that finally means something. A benchmark leaderboard ranks accuracy on someone else's data; this audit measured confidence on these decisions, which is where both stories showed up.
 
 Honest limits: every dataset is synthetic and seeded (generators in `examples/`); n is small; ground truth for routing is by construction, not by running the cheap model. Read the *Caveats* section of each report before quoting it.
 
@@ -108,7 +110,7 @@ Exit codes: `0` ok · `1` drift detected · `2` usage or configuration error (th
 **In CI:** the [GitHub Action](docs/integrations.md#github-action) runs the audit on every push or pull request and fails the build on drift:
 
 ```yaml
-- uses: kunko-ai-labs/judge-audit@v0.4      # or pin the release's commit SHA
+- uses: kunko-ai-labs/judge-audit@v0.4      # resolves once v0.4.0 is tagged; or pin a release's commit SHA
   with: { labels: audits/labels.jsonl, judge: jev, baseline: audits/baseline.json }
   env: { AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }} }
 ```
@@ -150,13 +152,13 @@ Accuracy tells you who wins a benchmark. Calibration tells you what you can auto
 
 ## Roadmap
 
-Score questions + MCE (the number we propose for regulators) → Judge Arena as a living leaderboard with a submission spec (the first table is above) → AI Act evidence dossier. Details and reasons in [docs/ROADMAP.md](docs/ROADMAP.md); the live backlog is the issues.
+Score questions + MCE (maximum calibration error: the worst bin, not the average) → Judge Arena as a living leaderboard with a submission spec (the first table is above) → AI Act evidence dossier. Details and reasons in [docs/ROADMAP.md](docs/ROADMAP.md); the live backlog is the issues.
 
 ## FAQ
 
 **Is this a benchmark?** No. A benchmark ranks judges on a fixed test. An audit checks one judge on *your* decisions and tells you what you can automate. The datasets here are worked examples, not a leaderboard — yet.
 
-**Why is Jev the first judge?** It is the first judgment model sold on calibrated confidence as the headline feature. A claim that specific deserves an independent check.
+**Why was Jev audited first?** Its vendor sells calibrated confidence as the headline feature. A claim that specific deserves an independent check.
 
 **Can I trust a 100 % result?** Only as far as the dataset. The clean-email audit says the judge handles templated business email; it says nothing about your inbox. That is why the adversarial and routing audits exist.
 

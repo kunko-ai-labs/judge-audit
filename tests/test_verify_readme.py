@@ -64,3 +64,20 @@ def test_an_unknown_row_is_an_error_not_a_skip():
 def test_rounding_accepts_only_the_printed_precision(value, shown, pct, ok):
     text = shown.rstrip("%")
     assert (text in rounded(value, text, pct)) is ok
+
+
+@pytest.mark.parametrize(
+    "old,new",
+    [
+        ("(0 %, interval up to 90.9 %)", "(0 %, interval up to 80.9 %)"),
+        ("(200 emails, 189 distinct texts", "(200 emails, 200 distinct texts"),
+        ("Jev 73 % [67.0, 94.0]", "Jev 73 % [69.0, 94.0]"),
+        ("(0 %, exact upper bound 1.8 %)", "(0 %, exact upper bound 1.2 %)"),
+    ],
+)
+def test_the_hero_caption_is_checked_too(old, new):
+    assert check(edit(old, new)).failures
+
+
+def test_a_caption_that_drops_a_figure_fails():
+    assert check(edit("interval up to 90.9 %", "a wide interval")).failures
