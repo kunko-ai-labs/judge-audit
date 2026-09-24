@@ -2,7 +2,7 @@
 
 > **REAL VENDOR AUDIT** — TypeSafe Jev via the AI Gateway evaluate API (not simulated).
 
-**n=120** · routing accuracy **97.5%** · ECE **0.053**
+**n=120** · routing accuracy **97.5%** · confidence known **120/120** · ECE **0.053**
 
 _model `typesafe-ai/jev` · backend `gateway` · run 2026-09-19T08:58:09+00:00 · options sent as labels with descriptions · raw responses `docs/runs/audit-jev-router-described.ckpt.jsonl`_
 

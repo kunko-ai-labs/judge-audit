@@ -64,6 +64,11 @@ jobs:
         run: |
           python scripts/analyze_adversarial.py
           git diff --exit-code -- docs/audit-jev-adversarial.md docs/audit-jev-adversarial.json
+      - name: Router audits recompute from their checkpoints
+        run: |
+          python scripts/audit_router.py examples/task-routing/labels.jsonl --checkpoint docs/runs/audit-jev-router.ckpt.jsonl --out docs/audit-jev-router.md --json docs/audit-jev-router.json
+          python scripts/audit_router.py examples/task-routing/labels-described.jsonl --checkpoint docs/runs/audit-jev-router-described.ckpt.jsonl --out docs/audit-jev-router-described.md --json docs/audit-jev-router-described.json
+          git diff --exit-code -- docs/audit-jev-router.md docs/audit-jev-router.json docs/audit-jev-router-described.md docs/audit-jev-router-described.json
       - name: Held-out report recomputes from the same checkpoints on the pre-registered split
         run: |
           python scripts/heldout_report.py

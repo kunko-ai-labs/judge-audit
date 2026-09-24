@@ -203,6 +203,7 @@
   "total_cost_usd": 0.0,
   "p50_latency_s": 0.354,
   "p99_latency_s": 0.835,
+  "max_latency_s": 1.074,
   "run": {
     "timestamp_utc": "2026-09-20T18:51:52+00:00",
     "judge_audit_version": "0.3.1",
@@ -275,7 +276,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-24T15:30:23+00:00",
+    "utc": "2026-09-24T15:48:07+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/deberta-nli/email-adversarial.ckpt.jsonl",

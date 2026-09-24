@@ -121,7 +121,7 @@ def main() -> None:
                 "accuracy": round(sum(r["correct"] for r in rs) / n, 4),
                 "ece": ece,
                 "mean_confidence": round(sum(conf) / len(conf), 4) if conf else None,
-                "p50_latency_s": _percentile([r["latency_s"] for r in rs], 50),
+                "p50_latency_s": round(_percentile([r["latency_s"] for r in rs], 50), 3),
                 "judge_cost_usd": (round(sum(costs), 6)
                                    if all(cost is not None for cost in costs) else None)}
 

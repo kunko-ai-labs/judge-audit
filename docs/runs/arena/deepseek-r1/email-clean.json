@@ -101,6 +101,7 @@
   "total_cost_usd": 0.384754,
   "p50_latency_s": 2.902,
   "p99_latency_s": 9.12,
+  "max_latency_s": 11.607,
   "run": {
     "timestamp_utc": "2026-09-21T14:44:52+00:00",
     "judge_audit_version": "0.3.2",
@@ -175,7 +176,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-24T15:30:23+00:00",
+    "utc": "2026-09-24T15:48:07+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/deepseek-r1/email-clean.ckpt.jsonl",

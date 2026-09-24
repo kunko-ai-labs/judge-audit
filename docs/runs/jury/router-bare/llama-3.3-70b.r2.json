@@ -131,6 +131,7 @@
   "total_cost_usd": 0.03664,
   "p50_latency_s": 0.913,
   "p99_latency_s": 2.713,
+  "max_latency_s": 6.049,
   "run": {
     "timestamp_utc": "2026-09-21T19:08:47+00:00",
     "judge_audit_version": "0.3.2",
@@ -203,7 +204,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-24T15:30:23+00:00",
+    "utc": "2026-09-24T15:48:07+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/jury/router-bare/llama-3.3-70b.r2.ckpt.jsonl",

@@ -101,6 +101,7 @@
   "total_cost_usd": 0.0,
   "p50_latency_s": 13.293,
   "p99_latency_s": 30.525,
+  "max_latency_s": 37.282,
   "run": {
     "timestamp_utc": "2026-09-20T18:54:55+00:00",
     "judge_audit_version": "0.3.1",
@@ -169,7 +170,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-24T15:30:23+00:00",
+    "utc": "2026-09-24T15:48:07+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/gemma4/router-described.ckpt.jsonl",

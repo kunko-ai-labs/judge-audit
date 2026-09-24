@@ -1,11 +1,11 @@
 # Audit report — llm
 
 **n=120** · accuracy **79.2%** [69.9, 86.9] · confidence known **119/120** · ECE **0.1491** [0.0738, 0.2498] · ECE (equal-mass) **0.1425** [0.0794, 0.2471] · Brier **0.1836** [0.1142, 0.2708] · NLL **∞** (10 answers declared certain and wrong)
-· cost **$0.4660** · p50 **4.077s** · p99 **27.449s**
+· cost **$0.4660** · p50 **4.077s** · p99 **27.449s** · slowest **29.312s**
 
 _judge `llm:deepseek-r1` · model `deepseek-r1` · run 2026-09-21T15:21:30+00:00 · judge-audit 0.3.2_
 _dataset `examples/task-routing/labels-described.jsonl` · 120 rows · sha256 `4571c9661a0c…`_
-_regenerated 2026-09-24T15:30:23+00:00 from `docs/runs/arena/deepseek-r1/router-described.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-09-24T15:48:07+00:00 from `docs/runs/arena/deepseek-r1/router-described.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome; downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified; 40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted**
 

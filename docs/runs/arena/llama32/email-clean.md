@@ -1,11 +1,11 @@
 # Audit report — llm
 
 **n=200** · accuracy **90.0%** [77.8, 100.0] · confidence known **200/200** · ECE **0.0340** [0.0245, 0.1431] · ECE (equal-mass) **0.0340** [0.0245, 0.1431] · Brier **0.0892** [0.0182, 0.1743] · NLL **0.3205** [0.1377, 0.5408]
-· cost **$0.0000** · p50 **0.703s** · p99 **0.931s**
+· cost **$0.0000** · p50 **0.703s** · p99 **0.931s** · slowest **0.975s**
 
 _judge `llm:llama3.2:3b` · model `llama3.2:3b` · run 2026-09-20T17:00:06+00:00 · judge-audit 0.3.0_
 _dataset `examples/email-routing/labels.jsonl` · 200 rows · sha256 `c5b4c111290a…`_
-_regenerated 2026-09-24T15:30:23+00:00 from `docs/runs/arena/llama32/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-09-24T15:48:07+00:00 from `docs/runs/arena/llama32/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic: seeded templates with item and number fills, not real mail; the label is the template's category by design; no human checked it; 100 % here is the floor a judge must clear, not evidence of production routing accuracy**
 

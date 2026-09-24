@@ -406,3 +406,34 @@ def test_the_report_prints_infinity_with_its_count_not_a_number():
         {"ece_equal_mass": 0.1, "brier": 0.1, "nll": None, "nll_infinite": 3})
     assert "NLL **0.1234**" in calibration_numbers(
         {"ece_equal_mass": 0.1, "brier": 0.1, "nll": 0.1234, "nll_infinite": 0})
+
+
+def test_nll_in_a_run_uses_only_the_rows_with_known_confidence():
+    import math
+
+    from judge_audit.runner import summarize
+
+    recs = [{"confidence": 0.9, "correct": True}, {"confidence": None, "correct": False},
+            {"confidence": 0.6, "correct": False}, {"confidence": "abc", "correct": True},
+            {"confidence": 0.8, "correct": True}]
+    r = summarize("x", recs, ci=False)
+    want = (-math.log(0.9) - math.log(0.4) - math.log(0.8)) / 3
+    assert r.nll == pytest.approx(round(want, 4)) and r.nll_infinite == 0
+    assert r.confidence == {"known": 3, "total": 5}
+
+
+def test_nll_infinite_refuses_a_nan_like_every_other_metric():
+    from judge_audit.metrics.calibration import nll_infinite
+
+    with pytest.raises(ValueError):
+        nll_infinite([float("nan")], [True])
+
+
+def test_the_slowest_call_is_reported_next_to_the_p99():
+    from judge_audit.report import render_markdown
+    from judge_audit.runner import summarize
+
+    recs = [{"confidence": 0.9, "correct": True, "latency_s": x} for x in [1.0] * 199 + [60.0]]
+    r = summarize("x", recs, ci=False)
+    assert r.max_latency_s == 60.0 and r.p99_latency_s < 60.0
+    assert "slowest **60.0s**" in render_markdown(r)

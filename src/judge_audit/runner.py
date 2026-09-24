@@ -53,6 +53,8 @@ class AuditResult:
     total_cost_usd: float | None = 0.0
     p50_latency_s: float = 0.0
     p99_latency_s: float = 0.0
+    # The slowest call, printed next to the p99: with n=200 a p99 hides one or two stalls.
+    max_latency_s: float = 0.0
     run: dict = field(default_factory=dict)
     # When a committed report was rebuilt from its checkpoint by a later version: its own
     # time, version and script. Kept apart from `run`, which is what the run itself said.
@@ -89,6 +91,7 @@ class AuditResult:
                                if self.total_cost_usd is not None else None),
             "p50_latency_s": round(self.p50_latency_s, 3),
             "p99_latency_s": round(self.p99_latency_s, 3),
+            "max_latency_s": round(self.max_latency_s, 3),
             "run": self.run,
         }
         if self.accuracy_ci is not None:
@@ -337,6 +340,7 @@ def summarize(judge_name: str, records: list[dict], run: dict | None = None,
         total_cost_usd=total_cost,
         p50_latency_s=_percentile(latencies, 50),
         p99_latency_s=_percentile(latencies, 99),
+        max_latency_s=max(latencies, default=0.0),
         run=run or {},
         accuracy_ci=accuracy_ci([bool(r["correct"]) for r in records], groups=groups)
         if ci and total else None,

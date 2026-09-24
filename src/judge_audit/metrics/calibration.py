@@ -115,6 +115,7 @@ def negative_log_likelihood(confidences: list[float], correct: list[bool]) -> fl
 
 def nll_infinite(confidences: Sequence[float], correct: Sequence[bool]) -> int:
     """Rows whose declared confidence gives the outcome probability 0: stated certain, wrong."""
+    _require_finite(confidences)
     return sum(1 for c, ok in zip(confidences, correct, strict=True)
                if (c if ok else 1.0 - c) <= 0.0)
 

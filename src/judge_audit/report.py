@@ -148,6 +148,13 @@ def fmt_cost(value: float | None, bold: tuple[str, str] = ("**", "**")) -> str:
     return f"{b0}${value:.4f}{b1}" if value is not None else f"{b0}unknown{b1}"
 
 
+def slowest(d: dict, bold=("**", "**")) -> str:
+    """` · slowest **x s**` when the result carries it (older JSON does not)."""
+    if d.get("max_latency_s") is None:
+        return ""
+    return f" · slowest {bold[0]}{d['max_latency_s']}s{bold[1]}"
+
+
 def confidence_coverage(d: dict) -> dict:
     """Normalise the JSON coverage field, including reports written before it existed."""
     value = d.get("confidence")
@@ -194,7 +201,7 @@ def render_markdown(result: AuditResult) -> str:
         f"confidence known **{confidence['known']}/{confidence['total']}** · "
         f"ECE **{fmt4(d.get('ece'))}**{ece_ci}" + calibration_numbers(d),
         f"· cost {fmt_cost(d.get('total_cost_usd'))} · p50 **{d['p50_latency_s']}s** · "
-        f"p99 **{d['p99_latency_s']}s**",
+        f"p99 **{d['p99_latency_s']}s**{slowest(d)}",
         "",
         *provenance_lines(d.get("run", {})),
         *regeneration_lines(d),
@@ -288,7 +295,7 @@ h2{{margin-top:2.5rem}}.prov{{color:#666;font-size:.9rem}}</style></head><body>
 {banner}
 <h1>Audit report — {judge}</h1>
 <p class="metric"><b>{d['n']}</b> decisions · accuracy <b>{d['accuracy']:.1%}</b>{acc_ci} · confidence known <b>{confidence['known']}/{confidence['total']}</b> · ECE <b>{fmt4(d.get('ece'))}</b>{ece_ci}{calibration_numbers(d, ("<b>", "</b>"))}<br>
-cost {fmt_cost(d.get('total_cost_usd'), ("<b>", "</b>"))} · p50 <b>{d['p50_latency_s']}s</b> · p99 <b>{d['p99_latency_s']}s</b></p>
+cost {fmt_cost(d.get('total_cost_usd'), ("<b>", "</b>"))} · p50 <b>{d['p50_latency_s']}s</b> · p99 <b>{d['p99_latency_s']}s</b>{slowest(d, ("<b>", "</b>"))}</p>
 <p class="prov">{prov}</p>
 <p class="gt"><b>{gt}</b></p>
 {ci_note}

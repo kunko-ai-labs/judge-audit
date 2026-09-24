@@ -119,6 +119,7 @@
   "total_cost_usd": 0.722355,
   "p50_latency_s": 7.706,
   "p99_latency_s": 10.196,
+  "max_latency_s": 10.713,
   "run": {
     "timestamp_utc": "2026-09-21T19:21:35+00:00",
     "judge_audit_version": "0.3.2",
@@ -195,7 +196,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-24T15:30:23+00:00",
+    "utc": "2026-09-24T15:48:07+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/jury/router-described/claude-sonnet-4.5.r2.ckpt.jsonl",

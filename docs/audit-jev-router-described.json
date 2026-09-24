@@ -22,35 +22,51 @@
   },
   "overall": {
     "n": 120,
+    "confidence": {
+      "known": 120,
+      "total": 120
+    },
     "accuracy": 0.975,
     "ece": 0.053,
     "mean_confidence": 0.922,
-    "p50_latency_s": 0.87,
+    "p50_latency_s": 0.864,
     "judge_cost_usd": 0.002292
   },
   "by_segment": {
     "clean_easy": {
       "n": 40,
+      "confidence": {
+        "known": 40,
+        "total": 40
+      },
       "accuracy": 1.0,
       "ece": 0.0,
       "mean_confidence": 1.0,
-      "p50_latency_s": 0.912,
+      "p50_latency_s": 0.905,
       "judge_cost_usd": 0.000749
     },
     "clean_hard": {
       "n": 40,
+      "confidence": {
+        "known": 40,
+        "total": 40
+      },
       "accuracy": 0.925,
       "ece": 0.1457,
       "mean_confidence": 0.7792,
-      "p50_latency_s": 0.913,
+      "p50_latency_s": 0.905,
       "judge_cost_usd": 0.000756
     },
     "adversarial": {
       "n": 40,
+      "confidence": {
+        "known": 40,
+        "total": 40
+      },
       "accuracy": 1.0,
       "ece": 0.0132,
       "mean_confidence": 0.9868,
-      "p50_latency_s": 0.808,
+      "p50_latency_s": 0.799,
       "judge_cost_usd": 0.000788
     }
   },
