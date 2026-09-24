@@ -654,7 +654,9 @@ def render(data: dict) -> str:
           "If the two numbers are close, agreement carries no information about correctness.",
           "- **conf of the wrong majority**: mean declared confidence of the judges who voted with a wrong majority.",
           "- **confidence known** is the calibration denominator. Declared-confidence ECE and " +
-          "zero-error coverage exclude unknown confidences; accuracy still counts all rows.",
+          "zero-error coverage exclude unknown confidences; accuracy still counts all rows. " +
+          "For the panel vote share it counts the rows the majority decided: a tie decides " +
+          "nothing, so its share is the confidence of no answer.",
           "- **vote share as confidence**: ECE and zero-error coverage computed with the share as the confidence " +
           "of the majority decision — the number an agent jury would act on.",
           "- **error correlation** (per judge pair, over the rows where both answered; n stated per " +

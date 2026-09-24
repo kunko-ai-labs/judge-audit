@@ -181,13 +181,11 @@ def records(labels: str, ckpt: Path, question: str, keep: set[int] | None,
             continue
         row = rows[rec["idx"]]
         j = next(x for x in rec["judgments"] if x["question"] == question)
-        options = [str(o) for o in row["questions"][0].get("options", [])]
         base = checkpoint_record(rec["idx"], row, j, row["labels"][question], run)
-        decision = base["decision"]
         equal, contains = text_overlap(row["state"], train) if train else (False, False)
         recs.append({**base, "state": str(row["state"]),
                      "text_equal_train": equal, "text_contains_train": contains,
-                     "no_answer": decision.strip().lower() not in [o.lower() for o in options]})
+                     "no_answer": base["parse_status"] == "no_answer"})
     return recs, run, seen
 
 

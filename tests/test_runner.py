@@ -10,6 +10,7 @@ from judge_audit.metrics.calibration import accuracy_ci, brier_ci, clopper_pears
 from judge_audit.runner import (
     checkpoint_confidence,
     checkpoint_cost,
+    checkpoint_parse_status,
     clamp_confidence,
     groups_of,
     load_jsonl,
@@ -203,13 +204,24 @@ def test_no_known_confidence_publishes_null_calibration_metrics():
     assert res.ece_ci is None and res.zero_error_coverage_ci is None
 
 
-def test_legacy_checkpoint_only_unimputes_explicit_null_parsed_answer():
-    missing = {"confidence": 0.0, "raw": {"parsed": None}}
-    malformed_with_zero = {"confidence": 0.0, "raw": {"parsed": {"confidence": 0.0}}}
-    non_llm = {"confidence": 0.7, "raw": {}}
-    assert checkpoint_confidence(missing) is None
-    assert checkpoint_confidence(malformed_with_zero) == 0.0
-    assert checkpoint_confidence(non_llm) == 0.7
+def test_legacy_checkpoint_confidence_is_unknown_without_a_decision():
+    # the old parser stored 0.0 for these; only a chat row's explicit parse says so
+    missing = {"decision": "", "confidence": 0.0, "raw": {"parsed": None}}
+    blank = {"decision": "", "confidence": 0.0, "raw": {"parsed": {"decision": ""}}}
+    empty = {"decision": "", "confidence": 0.0, "raw": {"parsed": {}}}
+    no_decision_declared = {"decision": "", "confidence": 0.0,
+                            "raw": {"parsed": {"confidence": 0.0}}}
+    for j in (missing, blank, empty, no_decision_declared):
+        assert checkpoint_confidence(j) is None
+        assert checkpoint_parse_status(j) == "no_answer"
+    no_number = {"decision": "spam", "confidence": 0.0, "raw": {"parsed": {"decision": "spam"}}}
+    assert checkpoint_confidence(no_number) is None
+    assert checkpoint_parse_status(no_number) == "no_confidence"
+    outside = {"decision": "invoice", "confidence": 0.8,
+               "raw": {"parsed": {"decision": "invoice", "confidence": 0.8}}}
+    assert checkpoint_confidence(outside) == 0.8 and checkpoint_parse_status(outside) == "parsed"
+    non_llm = {"decision": "spam", "confidence": 0.7, "raw": {}}
+    assert checkpoint_confidence(non_llm) == 0.7 and checkpoint_parse_status(non_llm) == "parsed"
 
 
 def test_legacy_checkpoint_cost_distinguishes_local_free_from_unknown_hosted():
@@ -232,3 +244,11 @@ def test_record_preserves_parse_status_and_unknown_confidence():
 def test_invalid_confidence_is_unknown_not_clamped(bad):
     assert clamp_confidence(bad) is None
     assert clamp_confidence("0.5") == 0.5
+
+
+def test_record_of_marks_an_invalid_confidence_from_any_adapter_as_no_confidence():
+    judgment = Judgment("category", "spam", 1.0000001)  # a non-chat adapter, parse_status default
+    record = record_of(0, {}, judgment, "spam")
+    assert record["confidence"] is None and record["parse_status"] == "no_confidence"
+    blank = Judgment("category", "", 0.0, parse_status="no_answer")
+    assert record_of(0, {}, blank, "spam")["confidence"] is None

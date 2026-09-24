@@ -44,7 +44,7 @@ Re-voted after seeing the panel: jev, claude-sonnet-4.5, deepseek-r1, gemini-3-f
 | gemini-3-flash | 98.3% [95.5, 100.0] → 99.2% [97.2, 100.0] | 120/120 → 120/120 | 100.0% [91.2, 100.0]† → 100.0% [91.2, 100.0]† | 0.012 → 0.024 | 0.825 → 0.900 | 0 / 0 | 1 | 1 / 0 | 1 / 1 |
 | gemma4 | 77.5% [67.2, 87.1] → 93.3% [87.4, 97.6] | 120/120 → 120/120 | 100.0% [91.2, 100.0]† → 100.0% [91.2, 100.0]† | 0.180 → 0.027 | 0.981 → 0.912 | 0 / 0 | 21 | 20 / 1 | 21 / 21 |
 | llama-3.3-70b | 86.7% [78.5, 93.4] → 96.7% [93.0, 99.2] | 120/120 → 120/120 | 100.0% [91.2, 100.0]† → 100.0% [91.2, 100.0]† | 0.043 → 0.013 | 0.969 → 0.925 | 0 / 0 | 14 | 13 / 1 | 13 / 14 |
-| llama32 | 59.2% [45.5, 73.0] → 94.2% [86.4, 100.0] | 120/120 → 120/120 | 0.0% [0.0, 8.8]† → 82.5% [61.0, 100.0] | 0.429 → 0.135 | 1.000 → 0.600 | 0 / 1 | 42 | 42 / 0 | 39 / 42 |
+| llama32 | 59.2% [45.5, 73.0] → 94.2% [86.4, 100.0] | 120/120 → 119/120 | 0.0% [0.0, 8.8]† → 82.5% [61.0, 100.0] | 0.429 → 0.136 | 1.000 → 0.700 | 0 / 1 | 42 | 42 / 0 | 39 / 42 |
 
 ## Results vs the pre-registered predictions
 
@@ -53,7 +53,7 @@ Scored mechanically from the tables above with the thresholds fixed in the plan'
 1. **Agreement and unanimity rise on both datasets** — held. router-bare: agreement 61.1% → 72.4%, unanimous 17 → 17; router-described: agreement 70.4% → 82.8%, unanimous 18 → 52.
 2. **Bare labels: hard-task majority accuracy does not rise materially (< 10 points) and the 3B model follows the panel** — partly held. Hard-task majority accuracy 15.0% → 17.5%; llama3.2 switched 1 vote (too few to tell either way), 0 of them onto the panel majority.
 3. **Described options: judges that were right keep their vote (switches to wrong ≤ 5 % of votes) and majority accuracy does not fall** — held. Switches to wrong: 2 of 840 re-votes; majority accuracy 85.8% → 95.0%.
-4. **Chat models are more confident when wrong after deliberation** — not held (4 of 12 judge×dataset cells went up). claude-sonnet-4.5/bare 0.832→0.877; deepseek-r1/bare 0.905→0.934; gemini-3-flash/bare 0.965→0.930; gemma4/bare 0.954→0.920; llama-3.3-70b/bare 0.926→0.936; llama32/bare 1.000→0.829; claude-sonnet-4.5/described 0.983→0.800; deepseek-r1/described 0.931→0.846; gemini-3-flash/described 0.825→0.900; gemma4/described 0.981→0.912; llama-3.3-70b/described 0.969→0.925; llama32/described 1.000→0.600.
+4. **Chat models are more confident when wrong after deliberation** — not held (4 of 12 judge×dataset cells went up). claude-sonnet-4.5/bare 0.832→0.877; deepseek-r1/bare 0.905→0.934; gemini-3-flash/bare 0.965→0.930; gemma4/bare 0.954→0.920; llama-3.3-70b/bare 0.926→0.936; llama32/bare 1.000→0.829; claude-sonnet-4.5/described 0.983→0.800; deepseek-r1/described 0.931→0.846; gemini-3-flash/described 0.825→0.900; gemma4/described 0.981→0.912; llama-3.3-70b/described 0.969→0.925; llama32/described 1.000→0.700.
 
 ## How to read it
 

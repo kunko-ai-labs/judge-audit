@@ -1145,11 +1145,11 @@
           ],
           "accuracy_ci_method": "bootstrap",
           "confidence": {
-            "known": 120,
+            "known": 119,
             "total": 120
           },
-          "ece": 0.1349,
-          "mean_conf_wrong": 0.6
+          "ece": 0.1361,
+          "mean_conf_wrong": 0.7
         },
         "hard_round1": {
           "accuracy": 0,
@@ -1173,11 +1173,11 @@
           ],
           "accuracy_ci_method": "bootstrap",
           "confidence": {
-            "known": 40,
+            "known": 39,
             "total": 40
           },
-          "ece": 0.1405,
-          "mean_conf_wrong": 0.6
+          "ece": 0.1441,
+          "mean_conf_wrong": 0.7
         },
         "no_answer_round1": 0,
         "no_answer_round2": 1,

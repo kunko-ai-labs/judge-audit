@@ -77,11 +77,19 @@ def test_unparseable_reply_is_wrong_with_unknown_confidence(monkeypatch):
     assert out.parse_status == "no_answer"
 
 
-def test_answer_without_decision_keeps_declared_confidence_but_is_no_answer(monkeypatch):
+def test_answer_without_decision_has_unknown_confidence(monkeypatch):
+    # llama3.2 wrote this in jury round 2: a confidence that belongs to no decision
     reply = '{"answers": {"category": {"spam": "order", "confidence": 0.0}}}'
     (out,) = make(monkeypatch, reply).decide("x", [Q])
-    assert out.decision == "" and out.confidence == 0.0
+    assert out.decision == "" and out.confidence is None
     assert out.parse_status == "no_answer"
+
+
+def test_decision_outside_the_options_is_a_wrong_answer_with_its_confidence(monkeypatch):
+    reply = '{"answers": {"category": {"decision": "invoice", "confidence": 0.8}}}'
+    (out,) = make(monkeypatch, reply).decide("x", [Q])
+    assert out.decision == "invoice" and out.confidence == 0.8
+    assert out.parse_status == "parsed"
 
 
 def test_valid_answer_is_parsed(monkeypatch):

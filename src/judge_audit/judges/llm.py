@@ -335,22 +335,27 @@ class LLMJudge(Judge):
 
     @staticmethod
     def _normalize(q: Question, ans: dict | None) -> tuple[str, float | None, str]:
+        """(decision, confidence, parse status) for one answer object.
+
+        No answer is a blank or unparseable one: its confidence belongs to no decision, so it
+        is unknown even when a number was written. A decision outside the options is an
+        answer, wrong, and keeps the confidence the judge declared for it."""
         if not isinstance(ans, dict):
             return "", None, "no_answer"
         decision = str(ans.get("decision", "")).strip()
+        if not decision:
+            return "", None, "no_answer"
         options = ["true", "false"] if q.type is QuestionType.NOUL else q.options
-        matched = False
         for opt in options:
             if decision.lower() == opt.lower():
                 decision = opt
-                matched = True
                 break
         try:
             if isinstance(ans["confidence"], bool):  # JSON true/false is not a number
                 raise TypeError
             confidence = float(ans["confidence"])
         except (KeyError, TypeError, ValueError):
-            return decision, None, "no_confidence" if matched else "no_answer"
+            return decision, None, "no_confidence"
         if not math.isfinite(confidence) or not 0.0 <= confidence <= 1.0:
-            return decision, None, "no_confidence" if matched else "no_answer"
-        return decision, confidence, "parsed" if matched else "no_answer"
+            return decision, None, "no_confidence"
+        return decision, confidence, "parsed"

@@ -148,3 +148,19 @@ def test_a_stable_ranking_and_identical_judges_are_not_a_flip():
 def test_ordinal():
     assert [ordinal(k) for k in (1, 2, 3, 4, 11, 12, 13, 21, 22, 101, 111)] == [
         "1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd", "101st", "111th"]
+
+
+def test_a_judge_with_no_known_confidence_renders_and_is_left_out_of_the_ranks():
+    known = [rec("b", .9), rec("a", .6), rec("b", .8)]
+    blank = [rec("", None), rec("", None), rec("", None)]
+    other = [rec("b", .7), rec("b", .95), rec("a", .9)]
+    judges = {k: {"label": k.upper(), "method": "verbalized",
+                  "datasets": {"router-bare": summarize(recs, "router-bare")}}
+              for k, recs in (("a", known), ("b", other), ("z", blank))}
+    z = judges["z"]["datasets"]["router-bare"]
+    assert z["confidence"] == {"known": 0, "total": 3} and z["ece"] is None
+    assert set(calibration_ranks(judges, "router-bare")) == {"a", "b"}
+    reversals(judges, "router-bare")
+    ranking_sentence(judges)
+    md = render(judges)
+    assert "known 0/3" in md

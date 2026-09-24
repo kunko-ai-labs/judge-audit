@@ -229,10 +229,18 @@ WHERE = {"email-clean": "on clean emails", "email-adversarial": "under attack",
          "router-described": "on the described-options router"}
 
 
+def _rankable(judges: dict, dataset: str) -> dict[str, dict]:
+    """Judges on `dataset` with all three calibration numbers: an unknown one (no known
+    confidence) cannot be ordered, so it is left out of the ranks, never ranked as 0."""
+    return {k: j["datasets"][dataset] for k, j in judges.items()
+            if dataset in j["datasets"]
+            and all(j["datasets"][dataset].get(key) is not None for key in CALIBRATION_KEYS)}
+
+
 def calibration_ranks(judges: dict, dataset: str) -> dict[str, tuple[int, ...]]:
     """Competition rank (1 = lowest, ties share a rank) of each judge on `dataset` under
     ECE, equal-mass ECE and Brier, from the published four-decimal values."""
-    vals = {k: j["datasets"][dataset] for k, j in judges.items() if dataset in j["datasets"]}
+    vals = _rankable(judges, dataset)
     return {k: tuple(1 + sum(o[key] < s[key] for o in vals.values()) for key in CALIBRATION_KEYS)
             for k, s in vals.items()}
 
@@ -250,7 +258,7 @@ def reversals(judges: dict, dataset: str) -> tuple[int, int]:
     b strictly below a (a tie is not a swap). The swap is *separated* only when the two
     judges' 95 % intervals are disjoint on x **and** on y — only then does the data say both
     orders at once. A pair counts as separated when any of its swaps is."""
-    vals = {k: j["datasets"][dataset] for k, j in judges.items() if dataset in j["datasets"]}
+    vals = _rankable(judges, dataset)
 
     def sign(sa: dict, sb: dict, k: str) -> int:
         return (sa[k] > sb[k]) - (sa[k] < sb[k])

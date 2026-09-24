@@ -155,12 +155,11 @@ def checkpoint_parse_status(judgment: dict) -> str:
 
 
 def checkpoint_confidence(judgment: dict) -> float | None:
-    """Declared confidence in a current or legacy checkpoint judgment."""
-    status = checkpoint_parse_status(judgment)
-    raw = judgment.get("raw")
-    if status == "no_answer" and isinstance(raw, dict) and raw.get("parsed") is None:
-        return None
-    if status == "no_confidence":
+    """Declared confidence in a current or legacy checkpoint judgment.
+
+    Unknown for a no-answer (a blank decision: any number there, including the 0.0 the old
+    parser imputed, belongs to no decision) and for a missing or invalid declaration."""
+    if checkpoint_parse_status(judgment) in {"no_answer", "no_confidence"}:
         return None
     return clamp_confidence(judgment.get("confidence"))
 
@@ -342,14 +341,20 @@ def summarize(judge_name: str, records: list[dict], run: dict | None = None,
 
 
 def record_of(idx: int, row: dict, judgment, expected: str) -> dict:
+    confidence = clamp_confidence(judgment.confidence)
+    status = judgment.parse_status
+    if status == "no_answer":
+        confidence = None
+    elif confidence is None:  # any adapter: an absent or invalid number is not a confidence
+        status = "no_confidence"
     return {
         "idx": idx,
         "question": judgment.question,
         "expected": str(expected),
         "decision": str(judgment.decision),
         "correct": is_correct(judgment.decision, expected),
-        "confidence": clamp_confidence(judgment.confidence),
-        "parse_status": judgment.parse_status,
+        "confidence": confidence,
+        "parse_status": status,
         "latency_s": judgment.latency_s,
         "cost_usd": judgment.cost_usd,
         "meta": row.get("_meta", {}),

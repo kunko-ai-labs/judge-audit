@@ -337,9 +337,9 @@
   "/router-described/judges/llama-3.3-70b/round1/ece": 0.0433,
   "/router-described/judges/llama-3.3-70b/round2/ece": 0.0133,
   "/router-described/judges/llama32/hard_round1/ece": 1.0,
-  "/router-described/judges/llama32/hard_round2/ece": 0.1405,
+  "/router-described/judges/llama32/hard_round2/ece": 0.1441,
   "/router-described/judges/llama32/round1/ece": 0.4292,
-  "/router-described/judges/llama32/round2/ece": 0.1349,
+  "/router-described/judges/llama32/round2/ece": 0.1361,
   "/router-described/panel_round1/vote_share_ece": 0.1101,
   "/router-described/panel_round2/vote_share_ece": 0.0728
  },
@@ -503,6 +503,6 @@
   "/ece": 0.0133
  },
  "docs/runs/jury/router-described/llama32.r2.json": {
-  "/ece": 0.1349
+  "/ece": 0.1361
  }
 }
