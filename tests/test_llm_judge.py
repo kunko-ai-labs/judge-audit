@@ -256,6 +256,61 @@ def test_the_served_model_version_is_recorded_as_the_provider_reports_it(monkeyp
 
 
 def test_no_reported_version_is_unknown_not_the_requested_name(monkeypatch):
-    (out,) = make(monkeypatch, '{"answers": {"category": {"decision": "spam", "confidence": 0.8}}}'
-                  ).decide("x", [Q])
+    import io
+    import urllib.request
+
+    monkeypatch.setenv("LLM_PROVIDER", "openai-compatible")
+    monkeypatch.setenv("LLM_BASE_URL", "http://unit.test/v1")
+    monkeypatch.setenv("LLM_MODEL", "gpt-5-mini")
+    reply = {"choices": [{"message": {"content":
+             '{"answers": {"category": {"decision": "spam", "confidence": 0.8}}}'}}]}
+
+    class Resp(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    monkeypatch.setattr(urllib.request, "urlopen",
+                        lambda req, timeout=0: Resp(json.dumps(reply).encode()))
+    (out,) = LLMJudge().decide("x", [Q])  # the real HTTP path, no "model" in the reply
     assert out.raw["served"] == {"model": None, "system_fingerprint": None}
+
+
+def test_anthropic_path_records_the_model_the_api_says_it_served(monkeypatch):
+    from types import SimpleNamespace
+
+    j = make(monkeypatch, "{}")
+    j.provider = "anthropic"
+    resp = SimpleNamespace(stop_reason="end_turn", model="claude-sonnet-4-5-20250929",
+                           content=[SimpleNamespace(type="text", text=json.dumps(
+                               {"answers": {"category": {"decision": "spam",
+                                                         "confidence": 0.8}}}))],
+                           usage=SimpleNamespace(input_tokens=1, output_tokens=1))
+    j._client = SimpleNamespace(messages=SimpleNamespace(create=lambda **kw: resp))
+    j._anthropic = SimpleNamespace(RateLimitError=RuntimeError, APIStatusError=RuntimeError)
+    del j._call  # the real dispatcher, not make()'s stub
+    (out,) = j.decide("x", [Q])
+    assert out.raw["served"] == {"model": "claude-sonnet-4-5-20250929",
+                                 "system_fingerprint": None}
+
+
+@pytest.mark.parametrize(
+    "returned,served",
+    [
+        (("{}", 1, 1), {"model": None, "system_fingerprint": None}),
+        (("{}", 1, 1, {"model": "m-2026-09"}), {"model": "m-2026-09", "system_fingerprint": None}),
+        (("{}", 1, 1, "not a dict"), {"model": None, "system_fingerprint": None}),
+    ],
+)
+def test_custom_provider_reports_a_version_only_through_its_optional_4th_element(
+        monkeypatch, returned, served):
+    from types import SimpleNamespace
+
+    j = make(monkeypatch, "{}")
+    j.provider = "custom"
+    j._custom = SimpleNamespace(call=lambda model, system, user: returned)
+    del j._call
+    (out,) = j.decide("x", [Q])
+    assert out.raw["served"] == served

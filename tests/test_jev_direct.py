@@ -73,3 +73,37 @@ def test_official_endpoint_requires_key(monkeypatch):
     monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
     with pytest.raises(RuntimeError, match="TYPESAFE_API_KEY"):
         JevJudge()
+
+
+def test_direct_backend_records_the_model_the_server_returned(server, monkeypatch):
+    monkeypatch.setenv("JEV_BACKEND", "typesafe")
+    monkeypatch.setenv("JEV_ENDPOINT", server)
+    monkeypatch.delenv("JEV_MODEL", raising=False)
+    q = Question(name="route", type=QuestionType.CHOICE, instructions="route it",
+                 options=["route_easy", "route_strong"])
+    (out,) = JevJudge().decide("task", [q])
+    assert out.raw["served"] == {"model": "openjev-test", "system_fingerprint": None}
+
+
+def test_gateway_backend_never_records_the_requested_name_as_served(monkeypatch, tmp_path):
+    import subprocess
+
+    from judge_audit.judges import jev as jev_mod
+
+    monkeypatch.setenv("AI_GATEWAY_API_KEY", "test-key")
+    monkeypatch.setattr(jev_mod, "_BRIDGE", tmp_path / "bridge.mjs")
+    (tmp_path / "bridge.mjs").write_text("")
+    (tmp_path / "node_modules").mkdir()
+    monkeypatch.setattr(jev_mod, "_throttle", lambda: None)
+    reply = [{"ok": True, "answers": {"route": {"type": "choice", "choice": "route_easy",
+                                                "probabilities": {"route_easy": 0.9,
+                                                                  "route_strong": 0.1}}},
+              "providerMetadata": {}, "usage": {"inputTokens": 5},
+              "response": {"modelId": "typesafe-ai/jev"}, "latencyMs": 10}]
+    monkeypatch.setattr(subprocess, "run", lambda *a, **k: subprocess.CompletedProcess(
+        a, 0, json.dumps(reply).encode(), b""))
+    j = JevJudge(backend="gateway")
+    q = Question(name="route", type=QuestionType.CHOICE, instructions="route it",
+                 options=["route_easy", "route_strong"])
+    (out,) = j.decide("task", [q])
+    assert out.raw["served"]["model"] is None  # the SDK echoes our own id: not a version

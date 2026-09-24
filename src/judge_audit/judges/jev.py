@@ -176,7 +176,9 @@ class JevJudge(Judge):
                 raw={"answer": ans,
                      "typesafe_confidence": ts_meta.get(q.name),
                      "usage": usage,
-                     "served": served_of({"model": (res.get("response") or {}).get("modelId")})},
+                     # The SDK's response.modelId echoes the id we sent, not what was
+                     # served; the gateway reports no version, so it is recorded unknown.
+                     "served": served_of(None)},
             ))
         return out
 

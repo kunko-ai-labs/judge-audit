@@ -109,7 +109,7 @@ def provenance_lines(run: dict) -> list[str]:
         versions = ", ".join(
             f"`{v.get('model') or '?'}`"
             + (f" (fingerprint `{v['system_fingerprint']}`)" if v.get("system_fingerprint") else "")
-            + f" × {v['decisions']}" for v in served.get("versions", []))
+            + f" × {v['decisions']} decisions" for v in served.get("versions", []))
         lines.append(f"_served as reported by the provider: {versions or 'no version reported'}"
                      + (f" · {served['decisions_without_version']} decisions without a version"
                         if served.get("decisions_without_version") else "") + "_")
@@ -377,16 +377,18 @@ def check_drift(current: AuditResult, baseline_path: str,
             f"{base_prompt[:12]}… → {cur_prompt[:12]}…): the numbers below compare two "
             "different questions.", UserWarning, stacklevel=2)
 
-    cur_served = [(v.get("model"), v.get("system_fingerprint"))
-                  for v in ((current.run or {}).get("served") or {}).get("versions", [])]
-    base_served = [(v.get("model"), v.get("system_fingerprint"))
-                   for v in ((base.get("run") or {}).get("served") or {}).get("versions", [])]
-    if cur_served and base_served and set(cur_served) != set(base_served):
+    def versions(run: dict | None) -> set[str]:
+        return {f"{v.get('model') or '?'}"
+                + (f" (fp {v['system_fingerprint']})" if v.get("system_fingerprint") else "")
+                for v in ((run or {}).get("served") or {}).get("versions", [])}
+
+    cur_served, base_served = versions(current.run), versions(base.get("run"))
+    if cur_served and base_served and cur_served != base_served:
         warnings.warn(
-            f"the provider served a different model version than in the baseline "
-            f"({sorted(map(str, base_served))} → {sorted(map(str, cur_served))}): a drift "
-            "below may be the provider's, not the judge configuration's.",
-            UserWarning, stacklevel=2)
+            f"the provider served a different model version or backend fingerprint than "
+            f"in the baseline ({', '.join(sorted(base_served))} → "
+            f"{', '.join(sorted(cur_served))}): a drift below may be the provider's, not "
+            "the judge configuration's.", UserWarning, stacklevel=2)
 
     base = {**base, "ece": base_ece, "accuracy": base_acc}
     failures = []

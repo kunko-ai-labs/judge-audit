@@ -265,3 +265,94 @@ def test_served_versions_count_decisions_per_reported_version_and_skip_old_recor
                               {"model": "m-2", "system_fingerprint": "fp", "decisions": 1}],
                  "decisions_without_version": 2}
     assert served_versions([{"raw": {"text": "old checkpoint"}}]) is None
+
+
+def _served_judge(version):
+    from judge_audit.judges.base import Judge, Judgment
+
+    class J(Judge):
+        name = "versioned"
+
+        def decide(self, state, questions):
+            return [Judgment(question=q.name, decision=q.options[0], confidence=0.9,
+                             raw={"served": {"model": version, "system_fingerprint": None}})
+                    for q in questions]
+    return J()
+
+
+def _rows(n=3):
+    return [{"state": f"s{i}", "questions": [{"name": "c", "options": ["x", "y"]}],
+             "labels": {"c": "x"}} for i in range(n)]
+
+
+def test_run_audit_publishes_the_served_versions_in_the_run():
+    from judge_audit.runner import run_audit
+
+    r = run_audit(_served_judge("m-1"), _rows(), ci=False)
+    assert r.run["served"] == {"versions": [{"model": "m-1", "system_fingerprint": None,
+                                             "decisions": 3}],
+                               "decisions_without_version": 0}
+
+
+def test_rows_without_the_key_count_as_without_version_once_a_run_records_versions():
+    from judge_audit.runner import served_versions
+
+    recs = [{"raw": {"served": {"model": "m-1", "system_fingerprint": None}}},
+            {"raw": {"text": "resumed row from before the upgrade"}}]
+    assert served_versions(recs)["decisions_without_version"] == 1
+
+
+def test_the_report_names_each_served_version_with_its_decisions():
+    from judge_audit.report import provenance_lines
+
+    lines = provenance_lines({"judge": {"name": "x"}, "served": {
+        "versions": [{"model": "m-1", "system_fingerprint": "fp_a", "decisions": 200}],
+        "decisions_without_version": 3}})
+    assert any("`m-1` (fingerprint `fp_a`) × 200 decisions" in ln
+               and "3 decisions without a version" in ln for ln in lines)
+
+
+@pytest.mark.parametrize("base,now,warns", [
+    ("m-1", "m-2", True),     # the provider changed what it served
+    ("m-1", "m-1", False),
+    (None, "m-1", False),     # a side without versions cannot be compared
+    ("m-1", None, False),
+])
+def test_the_drift_gate_warns_when_the_served_version_changed(base, now, warns, tmp_path):
+    import json
+    import warnings
+
+    from judge_audit.report import check_drift
+    from judge_audit.runner import run_audit
+
+    path = tmp_path / "baseline.json"
+    path.write_text(json.dumps(run_audit(_served_judge(base), _rows(), ci=False).to_dict()))
+    current = run_audit(_served_judge(now), _rows(), ci=False)
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        check_drift(current, str(path))
+    assert any("model version or backend fingerprint" in str(w.message)
+               for w in caught) is warns
+
+
+def test_a_checkpoint_rebuild_publishes_served_versions_only_when_rows_carry_them(tmp_path):
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+    from audit_resumable import build_result
+
+    rows = _rows(2)
+    started = {"judge": {"name": "x"}, "timestamp_utc": "2026-09-24T00:00:00+00:00"}
+
+    def done(raw):
+        return {i: {"idx": i, "judgments": [{"question": "c", "decision": "x",
+                                             "confidence": 0.9, "latency_s": 1.0,
+                                             "cost_usd": 0.0, "raw": raw}]} for i in range(2)}
+
+    new = build_result("x", rows, {}, [0, 1], done({"served": {"model": "m-1"}}),
+                       tmp_path / "a.ckpt.jsonl", dict(started), None)
+    assert new.run["served"]["versions"][0]["model"] == "m-1"
+    old = build_result("x", rows, {}, [0, 1], done({"text": "before the upgrade"}),
+                       tmp_path / "b.ckpt.jsonl", dict(started), None)
+    assert "served" not in old.run  # older checkpoints: their reports do not change

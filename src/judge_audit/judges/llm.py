@@ -14,6 +14,10 @@ Providers:
   custom             your own transport: LLM_PROVIDER_MODULE=/path/to/module.py exposing
                      `call(model, system, user) -> (text, input_tokens, output_tokens)` and,
                      optionally, `describe(model) -> dict` and `price(model) -> (in, out)`.
+                     `call` may return a 4th element, `{"model": ..., "system_fingerprint":
+                     ...}`: the model version the provider says it served. Model version
+                     only — never a platform-, region- or account-prefixed id, which would
+                     be committed verbatim in every checkpoint row.
                      For hosted platforms without an OpenAI-compatible endpoint.
 
 Environment: LLM_PROVIDER, LLM_MODEL, LLM_MODEL_LABEL (what reports show; defaults to LLM_MODEL),

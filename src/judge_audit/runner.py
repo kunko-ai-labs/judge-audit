@@ -345,12 +345,14 @@ def served_versions(records: list[dict]) -> dict | None:
     distinct {model, system_fingerprint} and how many decisions it answered, plus how many
     came back without one. None when the adapter records nothing (older checkpoints,
     local judges), so a report rebuilt from them is unchanged."""
+    raws = [r.get("raw") if isinstance(r.get("raw"), dict) else {} for r in records]
+    if not any("served" in raw for raw in raws):
+        return None
     seen: dict[str, int] = {}
     without = 0
-    for r in records:
-        raw = r.get("raw")
-        if not isinstance(raw, dict) or "served" not in raw:
-            continue
+    for raw in raws:
+        # once a run records versions, a row without the key (a checkpoint resumed across
+        # the upgrade) is a decision without a version, not a decision that vanishes
         s = raw.get("served") or {}
         if not any(s.values()):
             without += 1
