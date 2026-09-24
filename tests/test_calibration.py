@@ -6,13 +6,13 @@ import random
 import pytest
 
 from judge_audit.metrics.calibration import (
-    interpolated_quantile,
     accuracy_ci,
     accuracy_coverage,
     bootstrap_ci,
     clopper_pearson,
     ece_ci,
     expected_calibration_error,
+    interpolated_quantile,
     reliability_bins,
     zero_error_coverage,
     zero_error_coverage_ci,

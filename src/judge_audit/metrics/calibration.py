@@ -357,7 +357,8 @@ def bootstrap_ci(values: Sequence[T], statistic: Callable[[list[T]], float],
     stats = sorted(statistic([v for i in rng.choices(idx, k=len(units)) for v in units[i]])
                    for _ in range(n_boot))
     tail = (1 - level) / 2
-    return round(interpolated_quantile(stats, tail), 4), round(interpolated_quantile(stats, 1 - tail), 4)
+    return (round(interpolated_quantile(stats, tail), 4),
+            round(interpolated_quantile(stats, 1 - tail), 4))
 
 
 def proportion_ci(successes: int, values: Sequence[T], statistic: Callable[[list[T]], float],
