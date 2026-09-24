@@ -212,3 +212,17 @@ def test_the_mcp_tool_returns_an_error_instead_of_crashing(tmp_path):
 
     out = mcp_server.run_audit(str(_orphan_dataset(tmp_path)), judge="simulated")
     assert "IncompleteAnswers" in out["error"] and "name no question" in out["error"]
+
+
+def test_a_dataset_error_is_found_before_the_first_call():
+    calls = []
+
+    def answer(state):
+        calls.append(state)
+        return [right("a"), right("b")]
+
+    bad = rows(3)
+    bad[2]["labels"]["b"] = ""
+    with pytest.raises(IncompleteAnswers, match="blank or null"):
+        run_audit(Scripted(answer), bad, ci=False)
+    assert calls == []

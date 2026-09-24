@@ -454,6 +454,8 @@ def run_audit(judge: Judge, rows: list[dict], labels_path: str | None = None,
     ci: bootstrap intervals (None: unless `JUDGE_AUDIT_BOOTSTRAP=0`)."""
     records: list[dict] = []
     counts = {"expected": 0, "answered": 0, "missing": 0, "unexpected": 0}
+    for idx, row in enumerate(rows):  # every row, before the first (paid) call
+        dataset_gaps(idx, row)
     for idx, row in enumerate(rows):
         records += reconcile(idx, row, judge.decide(row["state"], questions_of(row)), counts)
     result = summarize(judge.name, records,
