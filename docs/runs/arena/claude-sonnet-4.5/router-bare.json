@@ -127,8 +127,8 @@
     "threshold": null
   },
   "total_cost_usd": 0.50037,
-  "p50_latency_s": 6.166,
-  "p99_latency_s": 10.21,
+  "p50_latency_s": 6.158,
+  "p99_latency_s": 10.156,
   "run": {
     "timestamp_utc": "2026-09-20T18:40:35+00:00",
     "judge_audit_version": "0.3.1",
@@ -204,7 +204,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T18:32:04+00:00",
+    "utc": "2026-09-24T15:20:27+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/claude-sonnet-4.5/router-bare.ckpt.jsonl",

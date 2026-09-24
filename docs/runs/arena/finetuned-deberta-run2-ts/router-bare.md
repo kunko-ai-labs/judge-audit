@@ -1,11 +1,11 @@
 # Audit report — finetuned
 
 **n=60** · accuracy **100.0%** [94.0, 100.0]† · confidence known **60/60** · ECE **0.0000** ‡ · ECE (equal-mass) **0.0000** ‡ · Brier **0.0000** ‡
-· cost **$0.0000** · p50 **0.026s** · p99 **0.187s**
+· cost **$0.0000** · p50 **0.025s** · p99 **0.103s**
 
 _judge `finetuned:deberta-v3-base-ft-task-routing-run2` · model `deberta-v3-base-ft-task-routing-run2` · seed 2026 · run 2026-09-22T08:17:35+00:00 · judge-audit 0.3.2_
 _dataset `examples/task-routing/labels.jsonl` · 120 rows · sha256 `e2efb9e1baec…`_
-_regenerated 2026-09-23T18:32:04+00:00 from `docs/runs/arena/finetuned-deberta-run2-ts/router-bare.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-09-24T15:20:27+00:00 from `docs/runs/arena/finetuned-deberta-run2-ts/router-bare.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome; downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified; 40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted**
 

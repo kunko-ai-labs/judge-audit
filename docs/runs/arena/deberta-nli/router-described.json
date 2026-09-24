@@ -200,7 +200,7 @@
   },
   "total_cost_usd": 0.0,
   "p50_latency_s": 0.105,
-  "p99_latency_s": 1.024,
+  "p99_latency_s": 0.897,
   "run": {
     "timestamp_utc": "2026-09-20T18:53:38+00:00",
     "judge_audit_version": "0.3.1",
@@ -270,7 +270,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T18:32:04+00:00",
+    "utc": "2026-09-24T15:20:27+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/deberta-nli/router-described.ckpt.jsonl",

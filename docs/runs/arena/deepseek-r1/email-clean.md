@@ -1,11 +1,11 @@
 # Audit report — llm
 
 **n=200** · accuracy **100.0%** [98.2, 100.0]† · confidence known **200/200** · ECE **0.0519** [0.0488, 0.0548] · ECE (equal-mass) **0.0519** [0.0488, 0.0548] · Brier **0.0031** [0.0027, 0.0035]
-· cost **$0.3848** · p50 **2.906s** · p99 **10.363s**
+· cost **$0.3848** · p50 **2.902s** · p99 **9.12s**
 
 _judge `llm:deepseek-r1` · model `deepseek-r1` · run 2026-09-21T14:44:52+00:00 · judge-audit 0.3.2_
 _dataset `examples/email-routing/labels.jsonl` · 200 rows · sha256 `c5b4c111290a…`_
-_regenerated 2026-09-23T18:32:04+00:00 from `docs/runs/arena/deepseek-r1/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-09-24T15:20:27+00:00 from `docs/runs/arena/deepseek-r1/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic: seeded templates with item and number fills, not real mail; the label is the template's category by design; no human checked it; 100 % here is the floor a judge must clear, not evidence of production routing accuracy**
 

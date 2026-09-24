@@ -21,8 +21,8 @@
   "ece": 0.038900000000000025,
   "mean_confidence": 0.9176000000000001,
   "total_cost_usd": 0.003792516,
-  "latency_p50_s": 0.741,
-  "latency_p99_s": 3.202,
+  "latency_p50_s": 0.738,
+  "latency_p99_s": 3.012,
   "mean_confidence_clean": 0.9958333333333333,
   "mean_confidence_adversarial": 0.8840714285714285,
   "by_attack": {

@@ -1,11 +1,11 @@
 # Audit report — finetuned
 
 **n=100** · accuracy **100.0%** [96.4, 100.0]† · confidence known **100/100** · ECE **0.0000** ‡ · ECE (equal-mass) **0.0000** ‡ · Brier **0.0000** ‡
-· cost **$0.0000** · p50 **0.018s** · p99 **0.173s**
+· cost **$0.0000** · p50 **0.017s** · p99 **0.057s**
 
 _judge `finetuned:deberta-v3-base-ft-email-routing-run2` · model `deberta-v3-base-ft-email-routing-run2` · seed 2026 · run 2026-09-22T08:17:21+00:00 · judge-audit 0.3.2_
 _dataset `examples/email-routing/labels.jsonl` · 200 rows · sha256 `2b2ff2f88b3a…`_
-_regenerated 2026-09-23T18:32:04+00:00 from `docs/runs/arena/finetuned-deberta-run2-ts/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-09-24T15:20:27+00:00 from `docs/runs/arena/finetuned-deberta-run2-ts/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic: seeded templates with item and number fills, not real mail; the label is the template's category by design; no human checked it; 100 % here is the floor a judge must clear, not evidence of production routing accuracy**
 

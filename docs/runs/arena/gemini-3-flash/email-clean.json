@@ -97,8 +97,8 @@
     "threshold": 0.95
   },
   "total_cost_usd": 0.024558,
-  "p50_latency_s": 2.074,
-  "p99_latency_s": 61.984,
+  "p50_latency_s": 2.072,
+  "p99_latency_s": 61.789,
   "run": {
     "timestamp_utc": "2026-09-20T18:11:22+00:00",
     "judge_audit_version": "0.3.1",
@@ -164,7 +164,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T18:32:04+00:00",
+    "utc": "2026-09-24T15:20:27+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/gemini-3-flash/email-clean.ckpt.jsonl",

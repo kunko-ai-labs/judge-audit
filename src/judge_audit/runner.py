@@ -25,6 +25,7 @@ from .metrics.calibration import (
     ci_fields,
     ece_ci,
     expected_calibration_error,
+    interpolated_quantile,
     reliability_bins,
     zero_error_coverage,
     zero_error_coverage_ci,
@@ -95,10 +96,12 @@ class AuditResult:
 
 
 def _percentile(xs: list[float], p: float) -> float:
+    """p-th percentile (0..100) of the latencies: linear interpolation between order
+    statistics (Hyndman–Fan type 7 — numpy's default, `statistics.quantiles` inclusive),
+    the same rule as the bootstrap's interval cut. 0.0 for no rows."""
     if not xs:
         return 0.0
-    s = sorted(xs)
-    return s[min(int(p / 100 * len(s)), len(s) - 1)]
+    return interpolated_quantile(sorted(xs), p / 100)
 
 
 def questions_of(row: dict) -> list[Question]:

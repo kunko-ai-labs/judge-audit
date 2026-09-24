@@ -109,8 +109,8 @@
     "threshold": null
   },
   "total_cost_usd": 0.0,
-  "p50_latency_s": 20.327,
-  "p99_latency_s": 53.809,
+  "p50_latency_s": 20.298,
+  "p99_latency_s": 53.378,
   "run": {
     "timestamp_utc": "2026-09-21T19:29:07+00:00",
     "judge_audit_version": "0.3.2",
@@ -178,7 +178,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T18:32:04+00:00",
+    "utc": "2026-09-24T15:20:27+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/jury/router-described/gemma4.r2.ckpt.jsonl",

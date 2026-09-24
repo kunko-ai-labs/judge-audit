@@ -9,8 +9,8 @@ h2{margin-top:2.5rem}.prov{color:#666;font-size:.9rem}</style></head><body>
 
 <h1>Audit report — jev</h1>
 <p class="metric"><b>200</b> decisions · accuracy <b>100.0%</b> [98.2, 100.0]† · confidence known <b>200/200</b> · ECE <b>0.0036</b> [0.0014, 0.0060] · ECE (equal-mass) <b>0.0036</b> [0.0014, 0.0060] · Brier <b>0.0003</b> [0.0001, 0.0005]<br>
-cost <b>$0.0037</b> · p50 <b>0.863s</b> · p99 <b>7.494s</b></p>
-<p class="prov">judge `jev` · model `typesafe-ai/jev` · backend `gateway` · recomputed 2026-09-19T09:09:12+00:00 (original run time not recorded) · judge-audit 0.2.0<br>regenerated 2026-09-23T18:32:04+00:00 from `docs/runs/audit-jev-real.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0</p>
+cost <b>$0.0037</b> · p50 <b>0.863s</b> · p99 <b>1.608s</b></p>
+<p class="prov">judge `jev` · model `typesafe-ai/jev` · backend `gateway` · recomputed 2026-09-19T09:09:12+00:00 (original run time not recorded) · judge-audit 0.2.0<br>regenerated 2026-09-24T15:20:27+00:00 from `docs/runs/audit-jev-real.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0</p>
 <p class="gt"><b>Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic: seeded templates with item and number fills, not real mail; the label is the template&#x27;s category by design; no human checked it; 100 % here is the floor a judge must clear, not evidence of production routing accuracy</b></p>
 <p class="prov">Brackets are 95% percentile-bootstrap intervals over the dataset&#x27;s distinct texts (2,000 resamples, seed 0): how far the number would move on another sample of n=200 drawn the same way.</p><p class="prov">**†** exact 95 % Clopper–Pearson (binomial) interval, published where the estimate is 0 % or 100 % and the bootstrap collapses to a point. It assumes independent rows, so where the dataset repeats texts it is a *lower bound* on the width the clustered interval would have had.</p>
 <h2>Can I automate this?</h2>

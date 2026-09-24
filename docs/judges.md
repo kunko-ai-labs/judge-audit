@@ -110,6 +110,10 @@ Every report prints three numbers for "is the confidence honest?". They answer s
 
 Each number carries the same 95 % interval as the others (§ Confidence intervals below): the clustered bootstrap over distinct texts, bins rebuilt on every resample. In the Arena the three numbers do not order the judges the same way, and most of those reversals are within overlapping intervals; the Arena report counts them under its tables and leaves the rankings separate. A point estimate that lies outside its own percentile-bootstrap interval is marked **◊**. This happens when a binned ECE's resamples are biased away from it on that sample: DeBERTa NLI's equal-mass ECE on the described-options router is 0.2131, and its interval is [0.2425, 0.4501].
 
+## Latency percentiles
+
+p50 and p99 are interpolated between order statistics (Hyndman–Fan type 7: numpy's default, `statistics.quantiles(method="inclusive")`), the same rule the bootstrap uses to cut its interval. With 200 rows a p99 sits between the second- and third-slowest rows, so a report with one or two stalled calls says so in words rather than letting the p99 carry it.
+
 ## Confidence intervals
 
 Every headline number — accuracy, ECE, zero-error coverage, and the majority accuracy of a jury — is a statistic of a few hundred rows at most, so each one is published with a 95 % interval in the compact form `66.7% [52.5, 80.3]` (Jev on the bare-label router): how far the number would move on another sample of the same size, drawn the same way. Two methods produce those intervals — a clustered bootstrap by default, and the exact binomial interval at the boundary where the bootstrap degenerates — and every table says which one it printed.

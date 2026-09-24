@@ -318,9 +318,9 @@ def clopper_pearson(successes: int, n: int, alpha: float = 0.05) -> Interval:
     return Interval(lo, hi, EXACT)
 
 
-def _percentile(sorted_values: list[float], q: float) -> float:
-    """q-th quantile (0..1) by linear interpolation between order statistics — the
-    same cut as `statistics.quantiles(method="inclusive")`."""
+def interpolated_quantile(sorted_values: list[float], q: float) -> float:
+    """q-th quantile (0..1) by linear interpolation between order statistics —
+    Hyndman–Fan type 7, numpy's default and `statistics.quantiles(method="inclusive")`."""
     pos = q * (len(sorted_values) - 1)
     i = int(pos)
     if i + 1 >= len(sorted_values):
@@ -357,7 +357,7 @@ def bootstrap_ci(values: Sequence[T], statistic: Callable[[list[T]], float],
     stats = sorted(statistic([v for i in rng.choices(idx, k=len(units)) for v in units[i]])
                    for _ in range(n_boot))
     tail = (1 - level) / 2
-    return round(_percentile(stats, tail), 4), round(_percentile(stats, 1 - tail), 4)
+    return round(interpolated_quantile(stats, tail), 4), round(interpolated_quantile(stats, 1 - tail), 4)
 
 
 def proportion_ci(successes: int, values: Sequence[T], statistic: Callable[[list[T]], float],

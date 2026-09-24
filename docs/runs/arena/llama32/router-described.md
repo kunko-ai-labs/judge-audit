@@ -1,11 +1,11 @@
 # Audit report — llm
 
 **n=120** · accuracy **59.2%** [45.5, 73.0] · confidence known **120/120** · ECE **0.4292** [0.2939, 0.5691] · ECE (equal-mass) **0.4292** [0.2939, 0.5691] · Brier **0.4188** [0.2817, 0.5553]
-· cost **$0.0000** · p50 **0.878s** · p99 **1.038s**
+· cost **$0.0000** · p50 **0.877s** · p99 **1.031s**
 
 _judge `llm:llama3.2:3b` · model `llama3.2:3b` · run 2026-09-20T17:06:30+00:00 · judge-audit 0.3.0_
 _dataset `examples/task-routing/labels-described.jsonl` · 120 rows · sha256 `4571c9661a0c…`_
-_regenerated 2026-09-23T18:32:04+00:00 from `docs/runs/arena/llama32/router-described.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-09-24T15:20:27+00:00 from `docs/runs/arena/llama32/router-described.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome; downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified; 40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted**
 

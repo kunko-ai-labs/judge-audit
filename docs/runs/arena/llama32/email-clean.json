@@ -91,8 +91,8 @@
     "threshold": null
   },
   "total_cost_usd": 0.0,
-  "p50_latency_s": 0.704,
-  "p99_latency_s": 0.96,
+  "p50_latency_s": 0.703,
+  "p99_latency_s": 0.931,
   "run": {
     "timestamp_utc": "2026-09-20T17:00:06+00:00",
     "judge_audit_version": "0.3.0",
@@ -158,7 +158,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T18:32:04+00:00",
+    "utc": "2026-09-24T15:20:27+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/llama32/email-clean.ckpt.jsonl",

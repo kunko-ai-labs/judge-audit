@@ -32,7 +32,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from judge_audit.runner import checkpoint_record  # noqa: E402
+from judge_audit.runner import _percentile, checkpoint_record  # noqa: E402
 
 LABELS = "examples/email-routing-adversarial/labels.jsonl"
 CHECKPOINT = "docs/runs/audit-jev-adversarial.ckpt.jsonl"
@@ -150,9 +150,8 @@ def compute(rows, *, checkpoint=CHECKPOINT, labels=LABELS, n_templates=None):
     mean_conf = fsum(r["confidence"] for r in known) / len(known) if known else None
     costs = [r["cost_usd"] for r in rows]
     total_cost = fsum(costs) if all(cost is not None for cost in costs) else None
-    lat = sorted(r["latency_s"] for r in rows)
-    p50 = lat[len(lat) // 2]
-    p99 = lat[int(len(lat) * 0.99)]
+    lat = [r["latency_s"] for r in rows]
+    p50, p99 = round(_percentile(lat, 50), 3), round(_percentile(lat, 99), 3)  # type 7
 
     by_attack = defaultdict(list)
     for r in rows:

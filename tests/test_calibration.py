@@ -6,7 +6,7 @@ import random
 import pytest
 
 from judge_audit.metrics.calibration import (
-    _percentile,
+    interpolated_quantile,
     accuracy_ci,
     accuracy_coverage,
     bootstrap_ci,
@@ -265,12 +265,12 @@ def test_percentile_matches_statistics_quantiles_inclusive():
     import random
     import statistics
 
-    assert _percentile([1, 2, 3, 4], 0.025) == pytest.approx(1.075)
-    assert _percentile([1, 2, 3, 4], 0.975) == pytest.approx(3.925)
+    assert interpolated_quantile([1, 2, 3, 4], 0.025) == pytest.approx(1.075)
+    assert interpolated_quantile([1, 2, 3, 4], 0.975) == pytest.approx(3.925)
     xs = sorted(random.Random(3).random() for _ in range(2000))
     cuts = statistics.quantiles(xs, n=40, method="inclusive")   # 2.5 %, 5 %, …, 97.5 %
-    assert _percentile(xs, 0.025) == pytest.approx(cuts[0])
-    assert _percentile(xs, 0.975) == pytest.approx(cuts[-1])
+    assert interpolated_quantile(xs, 0.025) == pytest.approx(cuts[0])
+    assert interpolated_quantile(xs, 0.975) == pytest.approx(cuts[-1])
 
 
 def test_cluster_bootstrap_resamples_groups_not_rows():
@@ -367,3 +367,16 @@ def test_a_proportion_that_can_still_move_keeps_its_clustered_bootstrap():
     ok = [False] + [True] * 5
     ci = zero_error_coverage_ci(conf, ok, groups=[f"t{i}" for i in range(6)])
     assert ci[0] == 0.0 < ci[1] and ci.method == "bootstrap"
+
+
+def test_latency_percentiles_are_type_7_and_agree_with_numpy_default():
+    from judge_audit.runner import _percentile
+
+    xs = [0.2, 0.9, 0.4, 7.5, 0.3, 8.2, 0.5, 0.6, 0.7, 0.8]
+    s = sorted(xs)
+    # type 7: position p * (n - 1) between order statistics
+    assert _percentile(xs, 50) == pytest.approx((s[4] + s[5]) / 2)
+    assert _percentile(xs, 99) == pytest.approx(s[8] + 0.91 * (s[9] - s[8]))
+    assert _percentile([], 99) == 0.0
+    np = pytest.importorskip("numpy")
+    assert _percentile(xs, 99) == pytest.approx(float(np.percentile(xs, 99)))
