@@ -36,6 +36,29 @@ def test_a_complete_run_reports_every_decision_answered():
     assert r.to_dict()["completeness"]["answered"] == 8
 
 
+def test_a_skipped_question_has_unknown_latency_so_silence_does_not_look_fast():
+    slow = [Judgment(question="a", decision="x", confidence=0.9, latency_s=2.0)]
+    r = run_audit(Scripted(lambda s: slow), rows(4), ci=False)
+    assert r.p50_latency_s == 2.0 and r.p99_latency_s == 2.0
+    assert all(x["latency_s"] is None for x in r.records if x["question"] == "b")
+
+
+def test_a_skipped_question_costs_nothing_extra_unless_the_row_cost_is_unknown():
+    priced = [Judgment(question="a", decision="x", confidence=0.9, cost_usd=0.002)]
+    assert run_audit(Scripted(lambda s: priced), rows(2), ci=False).total_cost_usd == \
+        pytest.approx(0.004)
+    # nothing came back at a known cost: the skipped question's cost is unknown, not $0
+    assert run_audit(Scripted(lambda s: []), rows(2), ci=False).total_cost_usd is None
+
+
+@pytest.mark.parametrize("blank", ["", "  ", None])
+def test_a_blank_or_null_label_is_a_dataset_error(blank):
+    bad = rows(1)
+    bad[0]["labels"]["b"] = blank
+    with pytest.raises(IncompleteAnswers, match="blank or null"):
+        run_audit(Scripted(lambda s: [right("a")]), bad, ci=False)
+
+
 def test_a_skipped_question_stays_in_n_as_a_wrong_answer_with_unknown_confidence():
     # it answers only the question it is sure of: the old runner scored this 100 % on n=4
     r = run_audit(Scripted(lambda s: [right("a")]), rows(), ci=False)
@@ -115,3 +138,77 @@ def test_every_committed_checkpoint_is_complete():
     ckpts = sorted((check_complete.ROOT / "docs" / "runs").rglob("*.ckpt.jsonl"))
     assert len(ckpts) >= 58
     assert [g for c in ckpts for g in check_complete.gaps(c)] == []
+
+
+def _scripts():
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+
+
+def test_the_resumable_driver_writes_a_skipped_question_as_a_no_answer():
+    _scripts()
+    from audit_resumable import checkpoint_row
+
+    rec = checkpoint_row(3, rows(1)[0], [right("a")])
+    assert [j["question"] for j in rec["judgments"]] == ["a", "b"]
+    b = rec["judgments"][1]
+    assert (b["decision"], b["confidence"], b["latency_s"], b["parse_status"]) == \
+        ("", None, None, "no_answer")
+
+
+def test_the_resumable_driver_stops_on_a_doubled_answer():
+    _scripts()
+    from audit_resumable import checkpoint_row
+
+    with pytest.raises(SystemExit, match="twice"):
+        checkpoint_row(0, rows(1)[0], [right("a"), right("a"), right("b")])
+
+
+def test_a_row_written_twice_in_a_checkpoint_is_a_gap(tmp_path, monkeypatch):
+    import json
+    from pathlib import Path
+
+    _scripts()
+    import check_complete
+
+    labels = tmp_path / "labels.jsonl"
+    labels.write_text("\n".join(json.dumps(r) for r in rows(2)) + "\n")
+    ans = [{"question": "a", "decision": "x"}, {"question": "b", "decision": "y"}]
+    lines = [{"idx": -1, "run": {"dataset": {"path": str(labels)}}},
+             {"idx": 0, "judgments": ans}, {"idx": 0, "judgments": ans},
+             {"idx": 1, "judgments": ans}]
+    ckpt = tmp_path / "x.ckpt.jsonl"
+    ckpt.write_text("\n".join(json.dumps(x) for x in lines) + "\n")
+    monkeypatch.setattr(check_complete, "ROOT", Path("/"))
+    assert check_complete.gaps(ckpt) == [f"{ckpt}: row 0 written 2 times"]
+
+
+def _orphan_dataset(tmp_path):
+    import json
+
+    row = {"state": "hello", "questions": [{"name": "category", "type": "choice",
+                                            "options": ["order", "spam"]}],
+           "labels": {"category": "order", "urgency": "high"}}
+    path = tmp_path / "orphan.jsonl"
+    path.write_text(json.dumps(row) + "\n")
+    return path
+
+
+def test_the_cli_exits_2_when_the_audit_would_not_be_complete(tmp_path):
+    import subprocess
+    import sys
+
+    r = subprocess.run([sys.executable, "-m", "judge_audit.cli", "run",
+                        str(_orphan_dataset(tmp_path)), "--judge", "simulated"],
+                       cwd=tmp_path, capture_output=True, text=True)
+    assert r.returncode == 2 and "would not be complete" in r.stderr
+
+
+def test_the_mcp_tool_returns_an_error_instead_of_crashing(tmp_path):
+    pytest.importorskip("mcp")
+    from judge_audit import mcp_server
+
+    out = mcp_server.run_audit(str(_orphan_dataset(tmp_path)), judge="simulated")
+    assert "IncompleteAnswers" in out["error"] and "name no question" in out["error"]

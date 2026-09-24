@@ -159,6 +159,7 @@ def main(argv: list[str] | None = None) -> None:
         print(f"{lead}judge={result.judge} n={result.n} "
               f"accuracy={result.accuracy:.1%}{interval(result.accuracy_ci, pct=True)} "
               f"answered={done['answered']}/{done['expected']} "
+              f"{'unexpected=' + str(done['unexpected']) + ' ' if done['unexpected'] else ''}"
               f"confidence_known={confidence['known']}/{confidence['total']} "
               f"ece={fmt4(result.ece)}{interval(result.ece_ci)} "
               f"ece_equal_mass={fmt4(result.ece_equal_mass)}"

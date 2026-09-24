@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .ground_truth import parse_ground_truth
-from .judges.base import Judge, Judgment, Question, QuestionType
+from .judges.base import Judge, Question, QuestionType
 from .metrics.calibration import (
     CI_LEVEL,
     EQUAL_MASS,
@@ -310,7 +310,8 @@ def summarize(judge_name: str, records: list[dict], run: dict | None = None,
     confidences = [clamp_confidence(records[i]["confidence"]) for i in known_idx]
     correct = [bool(records[i]["correct"]) for i in known_idx]
     known_groups = [groups[i] for i in known_idx] if groups is not None else None
-    latencies = [r.get("latency_s", 0.0) for r in records]
+    # a skipped question has no latency (None): it is left out, not counted as instant
+    latencies = [lat for lat in (r.get("latency_s", 0.0) for r in records) if lat is not None]
     costs = [r.get("cost_usd") for r in records]
     total_cost = None if any(cost is None for cost in costs) else math.fsum(costs)
     known = len(confidences)
@@ -379,10 +380,38 @@ def answer_gaps(row: dict, answered: list[str]) -> dict:
     labels = set(row.get("labels", {}))
     asked = {q["name"] for q in row["questions"]}
     seen = [q for q in answered if q in asked]
+    blank = sorted(q for q, v in row.get("labels", {}).items()
+                   if v is None or not str(v).strip())
     return {"missing": sorted(labels - set(seen)),
             "duplicate": sorted({q for q in seen if seen.count(q) > 1}),
             "unexpected": sorted(q for q in answered if q not in asked),
-            "orphan_labels": sorted(labels - asked)}
+            "orphan_labels": sorted(labels - asked),
+            "blank_labels": blank}
+
+
+def dataset_gaps(idx: int, row: dict) -> None:
+    """A label naming no question, or a blank / null label, is a dataset error: raise before
+    anyone pays for a call. (A blank label would score a skipped question as correct.)"""
+    g = answer_gaps(row, [])
+    if g["orphan_labels"]:
+        raise IncompleteAnswers(
+            f"row {idx}: label(s) {g['orphan_labels']} name no question in the row")
+    if g["blank_labels"]:
+        raise IncompleteAnswers(f"row {idx}: label(s) {g['blank_labels']} are blank or null")
+
+
+def missing_answer(question: str, returned: list) -> dict:
+    """The checkpoint judgment written for a labelled question the judge did not answer.
+
+    Latency unknown (None, left out of the percentiles: a silent judge must not look fast).
+    Cost 0.0 — the row's call is already paid by the answers it returned — unless nothing
+    came back with a known cost, in which case it is unknown too."""
+    costs = [getattr(j, "cost_usd", None) if not isinstance(j, dict) else j.get("cost_usd")
+             for j in returned]
+    known = bool(costs) and all(c is not None for c in costs)
+    return {"question": question, "decision": "", "confidence": None, "latency_s": None,
+            "cost_usd": 0.0 if known else None, "raw": {"missing": True},
+            "parse_status": "no_answer"}
 
 
 def reconcile(idx: int, row: dict, judgments, counts: dict) -> list[dict]:
@@ -394,9 +423,8 @@ def reconcile(idx: int, row: dict, judgments, counts: dict) -> list[dict]:
     question, or a label with no question, raises `IncompleteAnswers`."""
     labels: dict = row.get("labels", {})
     asked = {q["name"] for q in row["questions"]}
-    orphan = sorted(set(labels) - asked)
-    if orphan:
-        raise IncompleteAnswers(f"row {idx}: label(s) {orphan} name no question in the row")
+    dataset_gaps(idx, row)
+    judgments = list(judgments)
     answered: dict = {}
     for judgment in judgments:
         if judgment.question not in asked:
@@ -412,11 +440,10 @@ def reconcile(idx: int, row: dict, judgments, counts: dict) -> list[dict]:
         judgment = answered.get(name)
         if judgment is None:
             counts["missing"] += 1
-            judgment = Judgment(question=name, decision="", confidence=None, latency_s=0.0,
-                                cost_usd=0.0, raw={"missing": True}, parse_status="no_answer")
+            records.append(checkpoint_record(idx, row, missing_answer(name, judgments), expected))
         else:
             counts["answered"] += 1
-        records.append(record_of(idx, row, judgment, expected))
+            records.append(record_of(idx, row, judgment, expected))
     return records
 
 

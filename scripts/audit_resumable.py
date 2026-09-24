@@ -33,11 +33,14 @@ from judge_audit.judges.simulated import SIMULATED_TAG  # noqa: E402
 from judge_audit.report import fmt4, render_html, render_markdown  # noqa: E402
 from judge_audit.runner import (  # noqa: E402
     AuditResult,
+    IncompleteAnswers,
     answer_gaps,
     checkpoint_record,
+    dataset_gaps,
     display_path,
     groups_of,
     load_dataset,
+    missing_answer,
     questions_of,
     run_metadata,
     sha256_of,
@@ -116,6 +119,23 @@ def build_result(judge_name: str, rows: list[dict], dataset_meta: dict, wanted: 
     # says so); without `groups` they would silently be row-i.i.d. and too narrow.
     return summarize(judge_name, records, run,
                      groups=groups_of(records, cluster_rows or rows))
+
+
+def checkpoint_row(idx: int, row: dict, judgments: list) -> dict:
+    """The checkpoint line for one judged row, under the live runner's contract: a skipped
+    labelled question is written down as a no-answer (wrong, confidence and latency
+    unknown); a doubled answer stops the run. A judge that doubles the same answer every
+    time therefore stops a resumed run on the same row: fix the adapter, not the data."""
+    gap = answer_gaps(row, [j.question for j in judgments])
+    if gap["duplicate"]:
+        raise SystemExit(f"row {idx}: the judge answered {gap['duplicate']} twice — "
+                         "the checkpoint would not be complete")
+    return {"idx": idx,
+            "judgments": [{"question": j.question, "decision": j.decision,
+                           "confidence": j.confidence, "latency_s": j.latency_s,
+                           "cost_usd": j.cost_usd, "raw": j.raw,
+                           "parse_status": j.parse_status} for j in judgments]
+            + [missing_answer(q, judgments) for q in gap["missing"]]}
 
 
 def recorded_judge(done: dict[int, dict]) -> str | None:
@@ -198,12 +218,16 @@ def main() -> None:
             row = rows[idx]
             if idx in done:
                 continue
+            try:
+                dataset_gaps(idx, row)  # a dataset error stops the run before the paid call
+            except IncompleteAnswers as e:
+                raise SystemExit(str(e)) from e
             # If the gateway's rate-limit window outlasts the adapter's backoff,
             # or a call stalls (timeout), sleep it off and retry instead of
             # losing the whole run.
             for attempt in range(4):
                 try:
-                    judgments = judge.decide(row["state"], questions_of(row))
+                    judgments = list(judge.decide(row["state"], questions_of(row)))
                     break
                 except Exception as e:
                     transient = ("rate-limited" in str(e).lower()
@@ -217,20 +241,7 @@ def main() -> None:
                         time.sleep(wait)
                     else:
                         raise
-            rec = {"idx": idx,
-                   "judgments": [{"question": j.question, "decision": j.decision,
-                                  "confidence": j.confidence, "latency_s": j.latency_s,
-                                  "cost_usd": j.cost_usd, "raw": j.raw,
-                                  "parse_status": j.parse_status}
-                                 for j in judgments]}
-            # The same contract as the live runner: a skipped question is written down as a
-            # no-answer (wrong, confidence unknown), a doubled one stops the run.
-            gap = answer_gaps(row, [j.question for j in judgments])
-            if gap["duplicate"] or gap["orphan_labels"]:
-                raise SystemExit(f"row {idx}: {gap} — the checkpoint would not be complete")
-            rec["judgments"] += [{"question": q, "decision": "", "confidence": None,
-                                  "latency_s": 0.0, "cost_usd": 0.0, "raw": {"missing": True},
-                                  "parse_status": "no_answer"} for q in gap["missing"]]
+            rec = checkpoint_row(idx, row, judgments)
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
             f.flush()
             done[idx] = rec
