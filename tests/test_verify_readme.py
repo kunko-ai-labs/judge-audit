@@ -152,11 +152,48 @@ def test_a_judge_new_to_the_arena_json_must_appear_in_the_readme(monkeypatch):
     "old,new",
     [
         ("Gemini 3 Flash is 97.0 % accurate", "Gemini 3 Flash is 97.5 % accurate"),
-        ("says 0.98 whether it is right or wrong", "says 0.99 whether it is right or wrong"),
-        ("(exact upper bound 1.8 %). Jev: 73 %.", "(exact upper bound 1.2 %). Jev: 73 %."),
-        ("(exact upper bound 1.8 %). Jev: 73 %.", "(exact upper bound 1.8 %). Jev: 83 %."),
-        ("**Gemini 3 Flash is 97.0 % accurate", "**Gemini 3 Flash, 97.0 % accurate"),
+        ("averages 0.98 confidence", "averages 0.99 confidence"),
+        ("(95 % upper bound 1.8 %)", "(95 % upper bound 1.2 %)"),
+        ("Jev: 73 % [67.0, 94.0].**", "Jev: 83 % [67.0, 94.0].**"),
+        ("Jev: 73 % [67.0, 94.0].**", "Jev: 73 % [60.0, 94.0].**"),
+        ("On 200 synthetic emails", "On 200 emails"),                  # the caveat dropped
+        ("Jev: 73 % [67.0, 94.0].**", "Jev: 73 %.**"),                  # the interval dropped
+        # a claim slipped in between the figures
+        ("whether it is right or wrong. Share",
+         "whether it is right or wrong. No other tool measures this. Share"),
     ],
 )
 def test_the_first_screen_headline_is_checked(old, new):
     assert check(edit(old, new)).failures
+
+
+def test_a_second_copy_of_the_headline_fails():
+    head = next(line for line in README.split("\n") if line.startswith("**On 200 synthetic"))
+    assert any("appears 2 times" in f for f in check(README + "\n" + head + "\n").failures)
+
+
+@pytest.mark.parametrize(
+    "judge,field,value,expect",
+    [
+        ("jev", "zero_error_coverage_ci", [0.01, 0.94], "intervals overlap"),
+        ("gemini-3-flash", "mean_conf_wrong", 0.90, "mean confidence when wrong"),
+        ("gemini-3-flash", "zero_error_coverage_ci_method", "bootstrap", "exact interval"),
+    ],
+)
+def test_the_headline_fails_when_the_data_stop_supporting_it(monkeypatch, judge, field, value,
+                                                              expect):
+    import copy
+
+    import verify_readme
+
+    real = verify_readme.load
+
+    def patched(name):
+        d = real(name)
+        if name == "arena-2026-09.json":
+            d = copy.deepcopy(d)
+            d[judge]["datasets"]["email-adversarial"][field] = value
+        return d
+
+    monkeypatch.setattr(verify_readme, "load", patched)
+    assert any(expect in f for f in check(README).failures if f.startswith("headline"))

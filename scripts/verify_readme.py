@@ -404,25 +404,38 @@ def check_hero(ck: Checker, md: str) -> None:
 
 
 def check_headline(ck: Checker, md: str, attack: dict) -> None:
-    """The first-screen headline: a gap the intervals separate, every figure in it checked."""
-    h = re.search(rf"\*\*Gemini 3 Flash is ({NUM}) % accurate on (\d+) emails under attack and "
-                  rf"says ({NUM}) whether it is right or wrong\. .*?zero observed errors: ({NUM}) % "
-                  rf"\(exact upper bound ({NUM}) %\)\. Jev: ({NUM}) %\.\*\*", md)
-    if not h:
-        ck.failures.append("headline: the Gemini 3 Flash sentence is missing or reworded")
+    """The first-screen headline, read word for word (nothing may be slipped in between its
+    figures) and exactly once: a gap the intervals separate, every figure in it checked."""
+    pattern = (rf"\*\*On (\d+) synthetic emails under attack, Gemini 3 Flash is ({NUM}) % "
+               rf"accurate and averages ({NUM}) confidence whether it is right or wrong\. "
+               rf"Share of its decisions you could automate with zero observed errors: "
+               rf"({NUM}) % \(95 % upper bound ({NUM}) %\)\. Jev: ({NUM}) % "
+               rf"\[({NUM}), ({NUM})\]\.\*\*")
+    found = re.findall(pattern, md)
+    ck.checked += 1
+    if len(found) != 1:
+        ck.failures.append(f"headline: the Gemini 3 Flash sentence appears {len(found)} times "
+                           "word for word (expected once; reworded or duplicated)")
         return
+    h = re.search(pattern, md)
+    assert h is not None
     g, jev = attack["gemini-3-flash"], attack["jev"]
     where = "headline / Gemini 3 Flash"
-    ck.num(where + " accuracy", h.group(1), g["accuracy"], pct=True)
-    ck.eq(where + " n", h.group(2), g["n"])
-    ck.num(where + " confidence when right", h.group(3), g["mean_conf_correct"])
-    ck.num(where + " confidence when wrong", h.group(3), g["mean_conf_wrong"])
+    ck.eq(where + " n", h.group(1), g["n"])
+    ck.num(where + " accuracy", h.group(2), g["accuracy"], pct=True)
+    ck.num(where + " mean confidence when right", h.group(3), g["mean_conf_correct"])
+    ck.num(where + " mean confidence when wrong", h.group(3), g["mean_conf_wrong"])
     ck.num(where + " zero-error coverage", h.group(4), g["zero_error_coverage"], pct=True)
     ck.eq(where + " exact interval", g["zero_error_coverage_ci_method"], "clopper-pearson")
     ck.num(where + " upper bound", h.group(5), g["zero_error_coverage_ci"][1], pct=True)
     ck.num("headline / Jev zero-error coverage", h.group(6), jev["zero_error_coverage"], pct=True)
-    ck.eq("headline / the gap is separated", g["zero_error_coverage_ci"][1]
-          < jev["zero_error_coverage_ci"][0], True)
+    ck.num("headline / Jev low", h.group(7), jev["zero_error_coverage_ci"][0], pct=True)
+    ck.num("headline / Jev high", h.group(8), jev["zero_error_coverage_ci"][1], pct=True)
+    g_hi, j_lo = g["zero_error_coverage_ci"][1], jev["zero_error_coverage_ci"][0]
+    ck.checked += 1
+    if not g_hi < j_lo:
+        ck.failures.append(f"headline: the intervals overlap — Gemini's upper bound {g_hi} is "
+                           f"not below Jev's lower bound {j_lo}, so the gap is not separated")
 
 
 def check(md: str) -> Checker:
