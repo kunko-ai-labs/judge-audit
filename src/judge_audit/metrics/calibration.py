@@ -97,7 +97,7 @@ def brier_score(confidences: list[float], correct: list[bool]) -> float:
 def reliability_bins(confidences: list[float], correct: list[bool],
                      n_bins: int = 10) -> list[dict]:
     """Per-bin (avg confidence, accuracy, count) for the reliability diagram."""
-    out = []
+    out: list[dict] = []
     for i in range(n_bins):
         lo, hi = i / n_bins, (i + 1) / n_bins
         idx = [j for j, c in enumerate(confidences) if lo <= c < hi or (hi == 1.0 and c == 1.0)]
@@ -181,7 +181,7 @@ def zero_error_coverage(confidences: list[float], correct: list[bool]) -> dict:
     if not confidences:
         return {"coverage": 0.0, "n": 0, "threshold": None}
     order = sorted(range(len(confidences)), key=lambda j: confidences[j], reverse=True)
-    k, threshold = 0, None
+    k, threshold = 0, None  # type: tuple[int, float | None]
     i, n = 0, len(order)
     while i < n:
         c = confidences[order[i]]
@@ -193,7 +193,7 @@ def zero_error_coverage(confidences: list[float], correct: list[bool]) -> dict:
             break
         k, threshold, i = end, c, end
     return {"coverage": round(k / n, 4), "n": k,
-            "threshold": round(threshold, 4) if k else None}
+            "threshold": round(threshold, 4) if k and threshold is not None else None}
 
 
 # --- uncertainty: percentile bootstrap over rows or over groups of rows ----------------
@@ -224,6 +224,8 @@ class Interval(tuple):
     extra `.method` (and the derived `.degenerate`) only lets a table mark the
     interval whose meaning differs from the bootstrap default.
     """
+
+    method: str
 
     def __new__(cls, lo: float, hi: float, method: str) -> Interval:
         obj = super().__new__(cls, (round(lo, 4), round(hi, 4)))
@@ -398,7 +400,7 @@ def ci_fields(name: str, ci: Interval | None, point: float | None = None) -> dic
         # A zero-width 95 % interval is not a narrow interval, it is no interval:
         # every resample returned the same value. Say that instead of publishing [x, x].
         return {f"{name}_ci": None, f"{name}_ci_method": "degenerate-" + ci.method}
-    out = {f"{name}_ci": [ci[0], ci[1]], f"{name}_ci_method": ci.method}
+    out: dict = {f"{name}_ci": [ci[0], ci[1]], f"{name}_ci_method": ci.method}
     if point is not None and not ci[0] <= round(point, 4) <= ci[1]:
         out[f"{name}_ci_point_outside"] = True
     return out

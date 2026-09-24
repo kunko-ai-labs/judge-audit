@@ -25,6 +25,8 @@ jobs:
         run: pip install -e ".[dev]"
       - name: Lint (ruff)
         run: ruff check src/ tests/ scripts/ examples/
+      - name: Types (mypy, the package)
+        run: mypy
       - name: Test (pytest)
         run: pytest -q
       - name: Smoke — audit with the simulated judge, no key needed

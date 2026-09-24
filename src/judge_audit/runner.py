@@ -300,14 +300,15 @@ def summarize(judge_name: str, records: list[dict], run: dict | None = None,
     cluster, which overstates precision on a dataset with repeated texts."""
     total = len(records)
     hits = sum(bool(r["correct"]) for r in records)
-    known_idx = [i for i, r in enumerate(records)
-                 if clamp_confidence(r.get("confidence")) is not None]
-    confidences = [clamp_confidence(records[i]["confidence"]) for i in known_idx]
+    declared = [clamp_confidence(r.get("confidence")) for r in records]
+    known_idx = [i for i, c in enumerate(declared) if c is not None]
+    confidences: list[float] = [c for c in declared if c is not None]
     correct = [bool(records[i]["correct"]) for i in known_idx]
     known_groups = [groups[i] for i in known_idx] if groups is not None else None
     latencies = [r.get("latency_s", 0.0) for r in records]
     costs = [r.get("cost_usd") for r in records]
-    total_cost = None if any(cost is None for cost in costs) else math.fsum(costs)
+    total_cost = (None if any(cost is None for cost in costs)
+                  else math.fsum(cost for cost in costs if cost is not None))
     known = len(confidences)
     if ci is None:
         ci = bootstrap_enabled()
@@ -420,7 +421,7 @@ def read_dataset_header(path: str) -> dict:
         obj = json.loads(first) if first.strip() else None
     except ValueError:
         return {}
-    return _validate_header(obj, path) if _is_header(obj) else {}
+    return _validate_header(obj, path) if isinstance(obj, dict) and _is_header(obj) else {}
 
 
 def load_dataset(path: str) -> tuple[list[dict], dict]:

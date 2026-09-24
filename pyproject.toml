@@ -46,7 +46,7 @@ charts = ["matplotlib>=3.7"]
 anthropic = ["anthropic>=1.0"]
 mcp = ["mcp>=2.0"]
 nli = ["transformers>=4.40", "torch>=2.2"]
-dev = ["pytest>=8.0", "ruff>=0.5", "matplotlib>=3.7", "mcp>=2.0", "PyYAML>=6.0"]
+dev = ["pytest>=8.0", "ruff>=0.5", "mypy>=1.10", "matplotlib>=3.7", "mcp>=2.0", "PyYAML>=6.0"]
 
 [build-system]
 requires = ["hatchling"]
@@ -64,6 +64,12 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "W", "UP", "B"]
+
+[tool.mypy]
+# Static types on the package itself (US-004-017); scripts/ stay lint-only.
+files = ["src/judge_audit"]
+ignore_missing_imports = true   # torch, transformers, anthropic, mcp ship partial or no stubs
+warn_unused_ignores = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

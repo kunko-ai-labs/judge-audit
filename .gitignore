@@ -14,3 +14,4 @@ docs/.frames/
 # Local review notes, not part of the project
 *.local.md
 auditoria*.md
+.mypy_cache/

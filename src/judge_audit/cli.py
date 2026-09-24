@@ -116,7 +116,8 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> None:
     args = _parser().parse_args(argv)
-    rows, dataset_meta = [], {}
+    rows: list[dict] = []
+    dataset_meta: dict = {}
     try:
         rows, dataset_meta = load_dataset(args.labels)
     except (OSError, ValueError) as e:

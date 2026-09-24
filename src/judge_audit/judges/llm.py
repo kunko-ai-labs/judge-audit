@@ -204,6 +204,8 @@ class LLMJudge(Judge):
             if not self.model:
                 raise RuntimeError("LLM_MODEL is not set")
             spec = importlib.util.spec_from_file_location("judge_audit_custom_provider", path)
+            if spec is None or spec.loader is None:
+                raise RuntimeError(f"{path} cannot be imported as a Python module")
             self._custom = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(self._custom)
             if not callable(getattr(self._custom, "call", None)):
