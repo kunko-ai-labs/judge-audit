@@ -1,5 +1,5 @@
 /**
- * Bridge: Vercel AI SDK `experimental_evaluate` -> JSON over stdio.
+ * Bridge: AI SDK `experimental_evaluate` -> JSON over stdio.
  *
  * Jev is an *evaluation* model, not a chat model: it cannot be called via
  * /v1/chat/completions. The only supported path through AI Gateway is the

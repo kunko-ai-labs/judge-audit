@@ -252,7 +252,7 @@ def _sanity_lines(s: dict) -> list[str]:
 
 def render(r: dict) -> str:
     jname = r.get("run", {}).get("judge", {}).get("name", "jev")
-    banner = ("> **REAL VENDOR AUDIT** — TypeSafe Jev via Vercel AI Gateway (not simulated)."
+    banner = ("> **REAL VENDOR AUDIT** — TypeSafe Jev via the AI Gateway evaluate API (not simulated)."
               if jname == "jev" else
               f"> ⚠️ **SIMULATED — not a real vendor audit** (judge `{jname}`).")
     L = [f"# Router audit — {jname} as a task router (route_easy vs route_strong)",

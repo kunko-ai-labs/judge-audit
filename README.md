@@ -35,7 +35,7 @@ judge-audit check examples/email-routing/labels.jsonl --judge simulated --baseli
 
 ## The first independent audits of Jev
 
-Same judge (TypeSafe Jev, via Vercel AI Gateway), three jobs, every raw response committed under [`docs/runs/`](docs/runs/) so anyone can recompute every number (`python scripts/verify_published.py` does, in CI).
+Same judge (TypeSafe Jev, via its AI Gateway evaluate API), three jobs, every raw response committed under [`docs/runs/`](docs/runs/) so anyone can recompute every number (`python scripts/verify_published.py` does, in CI).
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-arc-dark.png">

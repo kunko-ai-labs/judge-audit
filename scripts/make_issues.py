@@ -215,7 +215,7 @@ epic("EP-002", "First real audit: Jev on the live API",
      guardrail="No vendor claim repeated without measurement; waitlist key stored only in env",
      out_of_scope="Beating vendor benchmarks; hosting the arena",
      description=("The scaffold's `JevJudge` is written against the documented API but has never touched it. "
-                  "This epic unblocks on TypeSafe waitlist access (or Vercel AI gateway) and produces the first "
+                  "This epic unblocks on TypeSafe waitlist access (or AI Gateway access) and produces the first "
                   "real artifact: an independent Jev audit. Until then it stays open and blocked."),
      goals="- [ ] `JevJudge` validated against the live `POST /v1/systemone` endpoint\n- [ ] First independent audit published (the nikhilmudholkar-style post, but automated)",
      stories=[("US-002-001", "Validate JevJudge against live TypeSafe API"),
@@ -226,7 +226,7 @@ story("US-002-001", "EP-002 — First real audit", "Validate JevJudge against li
       as_a="a developer with a TypeSafe API key", want="`JevJudge` to score the synthetic dataset against the live API",
       so_that="the adapter is proven against reality, not just docs.",
       criteria=("- [ ] **Given** `TYPESAFE_API_KEY` in env **when** I run the audit on the synthetic dataset **then** every question returns a decision + confidence with no parse errors\n- [ ] **Given** the live run **when** I compare measured latency/cost **then** they are recorded per judgment (no hardcoded prices except the published input rate)"),
-      notes="- Entry point: `src/judge_audit/judges/jev.py`\n- Blocked on: TypeSafe waitlist or Vercel AI gateway access"),
+      notes="- Entry point: `src/judge_audit/judges/jev.py`\n- Blocked on: TypeSafe waitlist or AI Gateway access"),
 
 story("US-002-002", "EP-002 — First real audit", "Publish first independent Jev audit",
       "high", "docs", "Developer", "2 days", "v0.2.0",

@@ -43,7 +43,7 @@ from judge_audit.runner import (  # noqa: E402
     summarize,
 )
 
-REAL_BANNER = ("> **REAL VENDOR AUDIT** — TypeSafe Jev via Vercel AI Gateway (not simulated). "
+REAL_BANNER = ("> **REAL VENDOR AUDIT** — TypeSafe Jev via the AI Gateway evaluate API (not simulated). "
                "Raw per-row responses: see the checkpoint file named in the provenance line.\n\n")
 
 

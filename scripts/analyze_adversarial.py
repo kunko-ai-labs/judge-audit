@@ -386,7 +386,7 @@ def render(m: dict, states: dict) -> str:
     ece_text = "—" if m["ece"] is None else f"{m['ece']:.4f}"
     cost_text = "unknown" if m["total_cost_usd"] is None else f"${m['total_cost_usd']:.4f}"
     L = ["# Audit — Jev on adversarial business emails", "",
-         f"> **REAL VENDOR AUDIT** — TypeSafe Jev (`typesafe-ai/jev`) via Vercel AI Gateway, "
+         f"> **REAL VENDOR AUDIT** — TypeSafe Jev (`typesafe-ai/jev`) via the AI Gateway evaluate API, "
          f"committed {COMMITTED}; run time not recorded.",
          f"> Raw per-row responses: [`runs/audit-jev-adversarial.ckpt.jsonl`]"
          f"(runs/audit-jev-adversarial.ckpt.jsonl) · metrics: [`audit-jev-adversarial.json`]"

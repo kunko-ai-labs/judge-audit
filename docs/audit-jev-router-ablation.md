@@ -1,6 +1,6 @@
 # Audit — Jev as a task router: the same judge, two ways of asking
 
-> **REAL VENDOR AUDIT** — TypeSafe Jev (`typesafe-ai/jev`) via Vercel AI Gateway, 2026-09-19.
+> **REAL VENDOR AUDIT** — TypeSafe Jev (`typesafe-ai/jev`) via the AI Gateway evaluate API, 2026-09-19.
 > Two runs over the **same 120 tasks** (seed 11): [`labels.jsonl`](../examples/task-routing/labels.jsonl) sends the options as bare labels, [`labels-described.jsonl`](../examples/task-routing/labels-described.jsonl) adds a one-line description per option. Raw responses: [`runs/audit-jev-router.ckpt.jsonl`](runs/audit-jev-router.ckpt.jsonl) · [`runs/audit-jev-router-described.ckpt.jsonl`](runs/audit-jev-router-described.ckpt.jsonl). Generated reports: [bare](audit-jev-router.md) · [described](audit-jev-router-described.md). Recompute: `python scripts/verify_published.py`.
 
 ## The question

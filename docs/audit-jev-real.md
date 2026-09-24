@@ -1,6 +1,6 @@
 # Audit — Jev on clean business emails
 
-> **REAL VENDOR AUDIT** — TypeSafe Jev (`typesafe-ai/jev`) via Vercel AI Gateway, 2026-09-18.
+> **REAL VENDOR AUDIT** — TypeSafe Jev (`typesafe-ai/jev`) via the AI Gateway evaluate API, 2026-09-18.
 > Raw per-row responses: [`runs/audit-jev-real.ckpt.jsonl`](runs/audit-jev-real.ckpt.jsonl) · metrics: [`audit-jev-real.json`](audit-jev-real.json) · dataset: [`examples/email-routing/labels.jsonl`](../examples/email-routing/labels.jsonl) (seed 42).
 > Recompute: `python scripts/verify_published.py`.
 

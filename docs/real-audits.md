@@ -1,13 +1,13 @@
 # Running a real audit against Jev
 
 The published audits in this repo were produced against TypeSafe's Jev through the
-Vercel AI Gateway. This page is everything you need to reproduce one, or run your own.
+AI Gateway evaluate API. This page is everything you need to reproduce one, or run your own.
 
 ## What you need
 
 | | |
 |---|---|
-| A Vercel AI Gateway API key | Vercel dashboard → AI Gateway → API Keys. Export it as `AI_GATEWAY_API_KEY`. |
+| An AI Gateway API key | From the gateway that serves `typesafe-ai/jev` (its dashboard → API Keys). Export it as `AI_GATEWAY_API_KEY`. |
 | Node ≥ 20 | Jev is an *evaluation* model: it is not reachable through `/v1/chat/completions`. The only supported path is the AI SDK `experimental_evaluate` API, so a 50-line Node bridge (`src/judge_audit/judges/bridge/jev_bridge.mjs`) speaks that API and hands JSON back to Python. |
 | Python ≥ 3.10 | `pip install -e ".[dev]"` |
 

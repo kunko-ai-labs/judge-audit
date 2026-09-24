@@ -1,6 +1,6 @@
 # Router audit — jev as a task router (route_easy vs route_strong)
 
-> **REAL VENDOR AUDIT** — TypeSafe Jev via Vercel AI Gateway (not simulated).
+> **REAL VENDOR AUDIT** — TypeSafe Jev via the AI Gateway evaluate API (not simulated).
 
 **n=120** · routing accuracy **66.7%** · ECE **0.3181**
 
