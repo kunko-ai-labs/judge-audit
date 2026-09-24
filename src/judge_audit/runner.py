@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .ground_truth import parse_ground_truth
-from .judges.base import Judge, Question, QuestionType
+from .judges.base import Judge, Judgment, Question, QuestionType
 from .metrics.calibration import (
     CI_LEVEL,
     EQUAL_MASS,
@@ -67,6 +67,9 @@ class AuditResult:
     ece_equal_mass_ci: Interval | None = None
     brier_ci: Interval | None = None
     confidence: dict = field(default_factory=dict)
+    # Expected (row, question) pairs vs what the judge answered; empty for a report rebuilt
+    # from a checkpoint, where `scripts/audit_resumable.py` enforces the same rule.
+    completeness: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         d = {
@@ -89,6 +92,8 @@ class AuditResult:
                      **ci_fields("zero_error_coverage", self.zero_error_coverage_ci,
                                  self.zero_error.get("coverage")),
                      bootstrap=dict(BOOTSTRAP))
+        if self.completeness:
+            d["completeness"] = self.completeness
         if self.regenerated:
             d["regenerated"] = self.regenerated
         return d
@@ -362,22 +367,73 @@ def record_of(idx: int, row: dict, judgment, expected: str) -> dict:
     }
 
 
+class IncompleteAnswers(ValueError):
+    """The judge broke the answer contract (two answers to one question), or the dataset
+    labels a question it never asks. Either way the audit would not mean what it says."""
+
+
+def answer_gaps(row: dict, answered: list[str]) -> dict:
+    """What a row's answers lack or add against its labels: {missing, duplicate, unexpected,
+    orphan_labels}, each a sorted list of question names. Shared by the live runner and the
+    checkpoint check, so a report built either way counts the same decisions."""
+    labels = set(row.get("labels", {}))
+    asked = {q["name"] for q in row["questions"]}
+    seen = [q for q in answered if q in asked]
+    return {"missing": sorted(labels - set(seen)),
+            "duplicate": sorted({q for q in seen if seen.count(q) > 1}),
+            "unexpected": sorted(q for q in answered if q not in asked),
+            "orphan_labels": sorted(labels - asked)}
+
+
+def reconcile(idx: int, row: dict, judgments, counts: dict) -> list[dict]:
+    """One record per labelled question, answered or not.
+
+    A labelled question the judge skipped is a no-answer record — wrong, confidence unknown —
+    so it stays in `n`: a judge cannot raise its score by staying silent. An answer to a
+    question the row does not ask is counted and dropped; a second answer to the same
+    question, or a label with no question, raises `IncompleteAnswers`."""
+    labels: dict = row.get("labels", {})
+    asked = {q["name"] for q in row["questions"]}
+    orphan = sorted(set(labels) - asked)
+    if orphan:
+        raise IncompleteAnswers(f"row {idx}: label(s) {orphan} name no question in the row")
+    answered: dict = {}
+    for judgment in judgments:
+        if judgment.question not in asked:
+            counts["unexpected"] += 1
+            continue
+        if judgment.question in answered:
+            raise IncompleteAnswers(
+                f"row {idx}: the judge answered {judgment.question!r} twice")
+        answered[judgment.question] = judgment
+    records = []
+    for name, expected in labels.items():
+        counts["expected"] += 1
+        judgment = answered.get(name)
+        if judgment is None:
+            counts["missing"] += 1
+            judgment = Judgment(question=name, decision="", confidence=None, latency_s=0.0,
+                                cost_usd=0.0, raw={"missing": True}, parse_status="no_answer")
+        else:
+            counts["answered"] += 1
+        records.append(record_of(idx, row, judgment, expected))
+    return records
+
+
 def run_audit(judge: Judge, rows: list[dict], labels_path: str | None = None,
               dataset_meta: dict | None = None, ci: bool | None = None) -> AuditResult:
     """rows: [{state, questions: [{name, type, instructions, options?, descriptions?}],
               labels: {name: expected}}]; dataset_meta: the header from `load_dataset`;
     ci: bootstrap intervals (None: unless `JUDGE_AUDIT_BOOTSTRAP=0`)."""
     records: list[dict] = []
+    counts = {"expected": 0, "answered": 0, "missing": 0, "unexpected": 0}
     for idx, row in enumerate(rows):
-        labels: dict = row.get("labels", {})
-        for judgment in judge.decide(row["state"], questions_of(row)):
-            expected = labels.get(judgment.question)
-            if expected is None:
-                continue
-            records.append(record_of(idx, row, judgment, expected))
-    return summarize(judge.name, records,
-                     run_metadata(judge, labels_path, len(rows), dataset_meta), ci=ci,
-                     groups=groups_of(records, rows))
+        records += reconcile(idx, row, judge.decide(row["state"], questions_of(row)), counts)
+    result = summarize(judge.name, records,
+                       run_metadata(judge, labels_path, len(rows), dataset_meta), ci=ci,
+                       groups=groups_of(records, rows))
+    result.completeness = counts
+    return result
 
 
 def write_judgments(result: AuditResult, path: str) -> None:

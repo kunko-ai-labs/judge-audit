@@ -66,6 +66,8 @@ jobs:
         run: |
           python scripts/heldout_report.py
           git diff --exit-code -- docs/finetuned-baseline-2026-09.md docs/finetuned-baseline-2026-09.json
+      - name: Every checkpoint answers every labelled question once (no shrunken denominator)
+        run: python scripts/check_complete.py
       - name: Checkpoint decisions match the current parser (no silent re-parse debt)
         run: python scripts/reparse_checkpoints.py --dry-run | tee /tmp/reparse.txt && grep -q '^0 judgment' /tmp/reparse.txt
       - name: Consensus and jury tables recompute from their checkpoints

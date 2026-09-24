@@ -33,6 +33,7 @@ from judge_audit.judges.simulated import SIMULATED_TAG  # noqa: E402
 from judge_audit.report import fmt4, render_html, render_markdown  # noqa: E402
 from judge_audit.runner import (  # noqa: E402
     AuditResult,
+    answer_gaps,
     checkpoint_record,
     display_path,
     groups_of,
@@ -222,6 +223,14 @@ def main() -> None:
                                   "cost_usd": j.cost_usd, "raw": j.raw,
                                   "parse_status": j.parse_status}
                                  for j in judgments]}
+            # The same contract as the live runner: a skipped question is written down as a
+            # no-answer (wrong, confidence unknown), a doubled one stops the run.
+            gap = answer_gaps(row, [j.question for j in judgments])
+            if gap["duplicate"] or gap["orphan_labels"]:
+                raise SystemExit(f"row {idx}: {gap} — the checkpoint would not be complete")
+            rec["judgments"] += [{"question": q, "decision": "", "confidence": None,
+                                  "latency_s": 0.0, "cost_usd": 0.0, "raw": {"missing": True},
+                                  "parse_status": "no_answer"} for q in gap["missing"]]
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
             f.flush()
             done[idx] = rec
