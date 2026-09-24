@@ -43,6 +43,8 @@ for (const item of input.items) {
       answers: r.answers ?? null,
       providerMetadata: r.providerMetadata ?? null,
       usage: r.usage ?? null,
+      // what the gateway says it served, when it says it (null otherwise)
+      response: r.response ? { modelId: r.response.modelId ?? null, id: r.response.id ?? null } : null,
       latencyMs: Date.now() - t0,
     });
   } catch (e) {

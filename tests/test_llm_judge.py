@@ -225,3 +225,37 @@ def test_extract_json_scans_past_prose_braces_and_fenced_then_prose():
     assert _extract_json(fenced)["answers"]["route"]["confidence"] == 0.7
     with pytest.raises(ValueError):
         _extract_json("No JSON here, only `{'python': 'dict'}` syntax.")
+
+
+def test_the_served_model_version_is_recorded_as_the_provider_reports_it(monkeypatch):
+    import io
+    import urllib.request
+
+    from judge_audit.judges import llm as llm_mod
+
+    monkeypatch.setenv("LLM_PROVIDER", "openai-compatible")
+    monkeypatch.setenv("LLM_BASE_URL", "http://unit.test/v1")
+    monkeypatch.setenv("LLM_MODEL", "gpt-5-mini")
+    reply = {"model": "gpt-5-mini-2026-08-07", "system_fingerprint": "fp_abc",
+             "choices": [{"message": {"content":
+                          '{"answers": {"category": {"decision": "spam", "confidence": 0.8}}}'}}],
+             "usage": {"prompt_tokens": 1, "completion_tokens": 1}}
+
+    class Resp(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+    monkeypatch.setattr(urllib.request, "urlopen",
+                        lambda req, timeout=0: Resp(json.dumps(reply).encode()))
+    monkeypatch.setattr(llm_mod.time, "sleep", lambda s: None)
+    (out,) = LLMJudge().decide("x", [Q])
+    assert out.raw["served"] == {"model": "gpt-5-mini-2026-08-07", "system_fingerprint": "fp_abc"}
+
+
+def test_no_reported_version_is_unknown_not_the_requested_name(monkeypatch):
+    (out,) = make(monkeypatch, '{"answers": {"category": {"decision": "spam", "confidence": 0.8}}}'
+                  ).decide("x", [Q])
+    assert out.raw["served"] == {"model": None, "system_fingerprint": None}

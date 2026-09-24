@@ -27,7 +27,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from .base import Judge, Judgment, Question, QuestionType
+from .base import Judge, Judgment, Question, QuestionType, served_of
 
 # Version of what the judge is shown: `_sdk_question` / `_direct_question`, the criteria
 # map built from each question's options and descriptions. Jev has no text prompt, so this
@@ -175,7 +175,8 @@ class JevJudge(Judge):
                 cost_usd=cost / max(len(questions), 1),
                 raw={"answer": ans,
                      "typesafe_confidence": ts_meta.get(q.name),
-                     "usage": usage},
+                     "usage": usage,
+                     "served": served_of({"model": (res.get("response") or {}).get("modelId")})},
             ))
         return out
 
@@ -237,7 +238,8 @@ class JevJudge(Judge):
                 latency_s=latency / max(len(questions), 1),
                 cost_usd=cost / max(len(questions), 1),
                 raw={"answer": ans, "typesafe_confidence": ans.get("confidence"),
-                     "usage": usage, "model": body.get("model")},
+                     "usage": usage, "model": body.get("model"),
+                     "served": served_of({"model": body.get("model")})},
             ))
         return out
 

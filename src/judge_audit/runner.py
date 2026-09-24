@@ -340,6 +340,29 @@ def summarize(judge_name: str, records: list[dict], run: dict | None = None,
     )
 
 
+def served_versions(records: list[dict]) -> dict | None:
+    """The model versions the provider reported serving, over a run's decisions: each
+    distinct {model, system_fingerprint} and how many decisions it answered, plus how many
+    came back without one. None when the adapter records nothing (older checkpoints,
+    local judges), so a report rebuilt from them is unchanged."""
+    seen: dict[str, int] = {}
+    without = 0
+    for r in records:
+        raw = r.get("raw")
+        if not isinstance(raw, dict) or "served" not in raw:
+            continue
+        s = raw.get("served") or {}
+        if not any(s.values()):
+            without += 1
+            continue
+        key = json.dumps(s, sort_keys=True)
+        seen[key] = seen.get(key, 0) + 1
+    if not seen and not without:
+        return None
+    return {"versions": [{**json.loads(k), "decisions": n} for k, n in sorted(seen.items())],
+            "decisions_without_version": without}
+
+
 def record_of(idx: int, row: dict, judgment, expected: str) -> dict:
     confidence = clamp_confidence(judgment.confidence)
     status = judgment.parse_status
@@ -375,9 +398,13 @@ def run_audit(judge: Judge, rows: list[dict], labels_path: str | None = None,
             if expected is None:
                 continue
             records.append(record_of(idx, row, judgment, expected))
-    return summarize(judge.name, records,
-                     run_metadata(judge, labels_path, len(rows), dataset_meta), ci=ci,
-                     groups=groups_of(records, rows))
+    result = summarize(judge.name, records,
+                       run_metadata(judge, labels_path, len(rows), dataset_meta), ci=ci,
+                       groups=groups_of(records, rows))
+    served = served_versions(records)
+    if served:
+        result.run["served"] = served
+    return result
 
 
 def write_judgments(result: AuditResult, path: str) -> None:

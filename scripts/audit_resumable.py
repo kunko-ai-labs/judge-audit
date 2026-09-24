@@ -39,6 +39,7 @@ from judge_audit.runner import (  # noqa: E402
     load_dataset,
     questions_of,
     run_metadata,
+    served_versions,
     sha256_of,
     summarize,
 )
@@ -113,6 +114,9 @@ def build_result(judge_name: str, rows: list[dict], dataset_meta: dict, wanted: 
             records.append(checkpoint_record(idx, row, j, expected, run))
     # Intervals resample distinct texts, as every published interval does (the report
     # says so); without `groups` they would silently be row-i.i.d. and too narrow.
+    served = served_versions(records)  # None for checkpoints written before it was recorded
+    if served:
+        run["served"] = served
     return summarize(judge_name, records, run,
                      groups=groups_of(records, cluster_rows or rows))
 

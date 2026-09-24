@@ -252,3 +252,16 @@ def test_record_of_marks_an_invalid_confidence_from_any_adapter_as_no_confidence
     assert record["confidence"] is None and record["parse_status"] == "no_confidence"
     blank = Judgment("category", "", 0.0, parse_status="no_answer")
     assert record_of(0, {}, blank, "spam")["confidence"] is None
+
+
+def test_served_versions_count_decisions_per_reported_version_and_skip_old_records():
+    from judge_audit.runner import served_versions
+
+    recs = [{"raw": {"served": {"model": "m-1", "system_fingerprint": None}}}] * 3 + \
+           [{"raw": {"served": {"model": "m-2", "system_fingerprint": "fp"}}}] + \
+           [{"raw": {"served": {"model": None, "system_fingerprint": None}}}] * 2
+    s = served_versions(recs)
+    assert s == {"versions": [{"model": "m-1", "system_fingerprint": None, "decisions": 3},
+                              {"model": "m-2", "system_fingerprint": "fp", "decisions": 1}],
+                 "decisions_without_version": 2}
+    assert served_versions([{"raw": {"text": "old checkpoint"}}]) is None

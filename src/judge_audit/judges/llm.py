@@ -35,7 +35,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from .base import Judge, Judgment, Question, QuestionType
+from .base import Judge, Judgment, Question, QuestionType, served_of
 
 # HTTP statuses worth waiting out: rate limit, overloaded, unavailable, gateway timeout.
 TRANSIENT = {429, 503, 529, 502, 504}
@@ -244,11 +244,15 @@ class LLMJudge(Judge):
 
     # ---------------------------------------------------------------- calls
     def _call(self, user: str) -> tuple[str, int, int]:
-        """Returns (text, input_tokens, output_tokens)."""
+        """Returns (text, input_tokens, output_tokens); what the provider says it served
+        lands in `self._served` (a custom provider may return it as a 4th element)."""
         if self.provider == "anthropic":
             return self._call_anthropic(user)
         if self.provider == "custom":
-            return self._custom.call(self.model, SYSTEM, user)
+            out = self._custom.call(self.model, SYSTEM, user)
+            if len(out) > 3 and isinstance(out[3], dict):
+                self._served = out[3]
+            return out[0], out[1], out[2]
         return self._call_openai_compatible(user)
 
     def _call_anthropic(self, user: str) -> tuple[str, int, int]:
@@ -267,6 +271,7 @@ class LLMJudge(Judge):
         if resp.stop_reason == "refusal":
             raise RuntimeError("model refused the request")
         text = "".join(b.text for b in resp.content if b.type == "text")
+        self._served = {"model": getattr(resp, "model", None)}
         return text, resp.usage.input_tokens, resp.usage.output_tokens
 
     def _call_openai_compatible(self, user: str) -> tuple[str, int, int]:
@@ -305,13 +310,17 @@ class LLMJudge(Judge):
             # "rate-limited" is what scripts/audit_resumable.py looks for before sleeping.
             raise RuntimeError(f"rate-limited by {self.base_url} after retries ({last})")
         text = data["choices"][0]["message"]["content"]
+        self._served = {"model": data.get("model"),
+                        "system_fingerprint": data.get("system_fingerprint")}
         usage = data.get("usage") or {}
         return text, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
 
     # ---------------------------------------------------------------- judge
     def decide(self, state: str, questions: list[Question]) -> list[Judgment]:
         t0 = time.monotonic()
+        self._served: dict = {}
         text, in_tok, out_tok = self._call(_render(state, questions))
+        served = served_of(self._served)
         latency = time.monotonic() - t0
         price = self._price()
         local_free = price is None and self.provider == "openai-compatible" and _is_local_url(
@@ -328,7 +337,7 @@ class LLMJudge(Judge):
                 latency_s=latency / max(len(questions), 1),
                 cost_usd=cost / max(len(questions), 1) if cost is not None else None,
                 raw={"text": text, "usage": {"input_tokens": in_tok, "output_tokens": out_tok},
-                     "parsed": ans, "priced": priced},
+                     "parsed": ans, "priced": priced, "served": served},
                 parse_status=status,
             ))
         return out

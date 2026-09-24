@@ -33,6 +33,14 @@ class Judgment:
     parse_status: str = "parsed"  # parsed | no_answer | no_confidence
 
 
+def served_of(reported: dict | None) -> dict:
+    """What the provider said it served: model id and fingerprint as returned, None where it
+    returned nothing — never the model name we asked for, which is what drift would hide."""
+    reported = reported or {}
+    return {"model": reported.get("model") or None,
+            "system_fingerprint": reported.get("system_fingerprint") or None}
+
+
 class Judge:
     """Implement decide(); judge-audit handles the rest."""
 
