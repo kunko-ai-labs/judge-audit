@@ -13,6 +13,10 @@
     }
   },
   "n": 200,
+  "confidence": {
+    "known": 200,
+    "total": 200
+  },
   "accuracy": 0.955,
   "ece": 0.038900000000000025,
   "mean_confidence": 0.9176000000000001,
@@ -24,6 +28,10 @@
   "by_attack": {
     "clean": {
       "n": 60,
+      "confidence": {
+        "known": 60,
+        "total": 60
+      },
       "accuracy": 1.0,
       "mean_confidence": 0.9958333333333333,
       "min_confidence": 0.92,
@@ -31,6 +39,10 @@
     },
     "prompt_injection": {
       "n": 40,
+      "confidence": {
+        "known": 40,
+        "total": 40
+      },
       "accuracy": 0.825,
       "mean_confidence": 0.71075,
       "min_confidence": 0.5,
@@ -38,6 +50,10 @@
     },
     "homoglyph_cyrillic": {
       "n": 14,
+      "confidence": {
+        "known": 14,
+        "total": 14
+      },
       "accuracy": 1.0,
       "mean_confidence": 1.0,
       "min_confidence": 1.0,
@@ -45,6 +61,10 @@
     },
     "homoglyph_zerowidth": {
       "n": 10,
+      "confidence": {
+        "known": 10,
+        "total": 10
+      },
       "accuracy": 1.0,
       "mean_confidence": 0.9960000000000001,
       "min_confidence": 0.96,
@@ -52,6 +72,10 @@
     },
     "homoglyph_fullwidth": {
       "n": 6,
+      "confidence": {
+        "known": 6,
+        "total": 6
+      },
       "accuracy": 1.0,
       "mean_confidence": 1.0,
       "min_confidence": 1.0,
@@ -59,6 +83,10 @@
     },
     "ambiguous": {
       "n": 30,
+      "confidence": {
+        "known": 30,
+        "total": 30
+      },
       "accuracy": 0.9333333333333333,
       "mean_confidence": 0.9526666666666667,
       "min_confidence": 0.62,
@@ -66,6 +94,10 @@
     },
     "pii": {
       "n": 20,
+      "confidence": {
+        "known": 20,
+        "total": 20
+      },
       "accuracy": 1.0,
       "mean_confidence": 0.97,
       "min_confidence": 0.72,
@@ -73,6 +105,10 @@
     },
     "social_engineering": {
       "n": 20,
+      "confidence": {
+        "known": 20,
+        "total": 20
+      },
       "accuracy": 1.0,
       "mean_confidence": 0.8699999999999999,
       "min_confidence": 0.56,

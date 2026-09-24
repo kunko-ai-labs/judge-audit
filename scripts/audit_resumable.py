@@ -33,10 +33,9 @@ from judge_audit.judges.simulated import SIMULATED_TAG  # noqa: E402
 from judge_audit.report import fmt4, render_html, render_markdown  # noqa: E402
 from judge_audit.runner import (  # noqa: E402
     AuditResult,
-    clamp_confidence,
+    checkpoint_record,
     display_path,
     groups_of,
-    is_correct,
     load_dataset,
     questions_of,
     run_metadata,
@@ -111,14 +110,7 @@ def build_result(judge_name: str, rows: list[dict], dataset_meta: dict, wanted: 
             expected = labels.get(j["question"])
             if expected is None:
                 continue
-            records.append({
-                "idx": idx, "question": j["question"], "expected": str(expected),
-                "decision": str(j["decision"]),
-                "correct": is_correct(j["decision"], expected),
-                "confidence": clamp_confidence(j["confidence"]),
-                "latency_s": j.get("latency_s", 0.0), "cost_usd": j.get("cost_usd", 0.0),
-                "meta": row.get("_meta", {}), "raw": j.get("raw", {}),
-            })
+            records.append(checkpoint_record(idx, row, j, expected, run))
     # Intervals resample distinct texts, as every published interval does (the report
     # says so); without `groups` they would silently be row-i.i.d. and too narrow.
     return summarize(judge_name, records, run,
@@ -227,7 +219,8 @@ def main() -> None:
             rec = {"idx": idx,
                    "judgments": [{"question": j.question, "decision": j.decision,
                                   "confidence": j.confidence, "latency_s": j.latency_s,
-                                  "cost_usd": j.cost_usd, "raw": j.raw}
+                                  "cost_usd": j.cost_usd, "raw": j.raw,
+                                  "parse_status": j.parse_status}
                                  for j in judgments]}
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
             f.flush()
@@ -244,10 +237,13 @@ def main() -> None:
     Path(args.json).write_text(json.dumps(result.to_dict(), indent=2), encoding="utf-8")
     if args.html:
         Path(args.html).write_text(render_html(result, tag=tag), encoding="utf-8")
+    confidence = result.confidence
+    cost = f"${result.total_cost_usd:.4f}" if result.total_cost_usd is not None else "unknown"
     print(f"judge={result.judge} n={result.n} accuracy={result.accuracy:.1%} "
-          f"ece={result.ece:.4f} ece_equal_mass={fmt4(result.ece_equal_mass)} "
+          f"confidence_known={confidence['known']}/{confidence['total']} "
+          f"ece={fmt4(result.ece)} ece_equal_mass={fmt4(result.ece_equal_mass)} "
           f"brier={fmt4(result.brier)} gt={result.run['dataset']['ground_truth']['tier']} "
-          f"cost=${result.total_cost_usd:.4f} -> {args.out}")
+          f"cost={cost} -> {args.out}")
 
 
 if __name__ == "__main__":

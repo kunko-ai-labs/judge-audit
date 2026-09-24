@@ -18,7 +18,8 @@ def rec(decision, confidence, expected="b"):
 
 def test_judge_stats_empty_and_no_errors():
     assert judge_stats([]) == {"accuracy": None, "accuracy_ci": None,
-                               "accuracy_ci_method": None, "ece": None,
+                               "accuracy_ci_method": None,
+                               "confidence": {"known": 0, "total": 0}, "ece": None,
                                "mean_conf_wrong": None}
     s = judge_stats([rec("b", 0.9), rec("b", 0.8)])
     assert s["accuracy"] == 1.0 and s["mean_conf_wrong"] is None

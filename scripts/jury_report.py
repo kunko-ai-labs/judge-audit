@@ -42,12 +42,17 @@ def judge_stats(recs: list[dict], groups: list[str] | None = None) -> dict:
     on the original state, never on the deliberation prompt built around it."""
     if not recs:
         return {"accuracy": None, "accuracy_ci": None, "accuracy_ci_method": None,
-                "ece": None, "mean_conf_wrong": None}
-    wrong = [r["confidence"] for r in recs if not r["correct"]]
+                "confidence": {"known": 0, "total": 0}, "ece": None,
+                "mean_conf_wrong": None}
+    known_idx = [i for i, r in enumerate(recs) if r["confidence"] is not None]
+    known = [recs[i] for i in known_idx]
+    wrong = [r["confidence"] for r in known if not r["correct"]]
     return {"accuracy": round(statistics.mean(r["correct"] for r in recs), 4),
             **ci_fields("accuracy", accuracy_ci([r["correct"] for r in recs], groups=groups)),
-            "ece": round(expected_calibration_error([r["confidence"] for r in recs],
-                                                    [r["correct"] for r in recs]), 4),
+            "confidence": {"known": len(known), "total": len(recs)},
+            "ece": (round(expected_calibration_error([r["confidence"] for r in known],
+                                                      [r["correct"] for r in known]), 4)
+                    if known else None),
             "mean_conf_wrong": round(statistics.mean(wrong), 3) if wrong else None}
 
 
@@ -133,6 +138,11 @@ def num(x):
     return "—" if x is None else f"{x:.3f}"
 
 
+def known(stats: dict) -> str:
+    confidence = stats.get("confidence") or {"known": 0, "total": 0}
+    return f"{confidence['known']}/{confidence['total']}"
+
+
 def acc_ci(stats: dict) -> str:
     """`86.7% [80.0, 92.5]` from a judge_stats dict."""
     return pct(stats["accuracy"]) + interval_of(stats, "accuracy_ci", pct=True)
@@ -173,12 +183,14 @@ def render(data: dict) -> str:
                      f"{num(s['mean_share_when_right'])} / " +
                      f"{num(s['mean_share_when_wrong'])} | {num(s['vote_share_ece'])} | " +
                      f"{pct(s['vote_share_zero_error_coverage'])} |")
-        L += ["", "| judge | accuracy r1 → r2 | hard accuracy r1 → r2 | ECE r1 → r2 | " +
+        L += ["", "| judge | accuracy r1 → r2 | confidence known r1 → r2 | " +
+              "hard accuracy r1 → r2 | ECE r1 → r2 | " +
               "conf when wrong r1 → r2 | no answer r1 / r2 | switched | → correct / → wrong | " +
               "followed the panel majority |",
-              "|---|---|---|---|---|---|---|---|---|"]
+              "|---|---|---|---|---|---|---|---|---|---|"]
         for slug, j in e["judges"].items():
             L.append(f"| {slug} | {acc_ci(j['round1'])} → {acc_ci(j['round2'])} | " +
+                     f"{known(j['round1'])} → {known(j['round2'])} | " +
                      f"{acc_ci(j['hard_round1'])} → {acc_ci(j['hard_round2'])} | " +
                      f"{num(j['round1']['ece'])} → {num(j['round2']['ece'])} | " +
                      f"{num(j['round1']['mean_conf_wrong'])} → {num(j['round2']['mean_conf_wrong'])} | " +
@@ -199,6 +211,8 @@ def render(data: dict) -> str:
           "stays put — Shao's \"nearly unanimous, mostly incorrect\" in miniature.",
           "- **followed the panel majority** counts switches that landed on the majority of the votes the " +
           "judge actually saw (committed in its `.r2.input.jsonl`): conformity, whether or not it was right.",
+          "- **confidence known** is shown per judge and round. ECE and confidence-when-wrong " +
+          "use only those rows; accuracy and switch counts still use every row.",
           "- **no answer**: blank (unparseable) answers per round. They are abstentions — not votes, not " +
           "switches — and were not shown to other judges.",
           "- **ties**: an even split among those who answered is no decision; counted as not correct in " +

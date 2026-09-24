@@ -148,14 +148,18 @@ def main(argv: list[str] | None = None) -> None:
         _write_json(args.json, result.to_dict())
         if args.judgments:
             write_judgments(result, args.judgments)
+        confidence = result.confidence
+        cost = (f"${result.total_cost_usd:.4f}" if result.total_cost_usd is not None
+                else "unknown")
         print(f"judge={result.judge} n={result.n} "
               f"accuracy={result.accuracy:.1%}{interval(result.accuracy_ci, pct=True)} "
-              f"ece={result.ece:.4f}{interval(result.ece_ci)} "
+              f"confidence_known={confidence['known']}/{confidence['total']} "
+              f"ece={fmt4(result.ece)}{interval(result.ece_ci)} "
               f"ece_equal_mass={fmt4(result.ece_equal_mass)}"
               f"{interval(result.ece_equal_mass_ci)} "
               f"brier={fmt4(result.brier)}{interval(result.brier_ci)} "
               f"gt={ground_truth_of(result.run).tier} "
-              f"cost=${result.total_cost_usd:.4f} -> {out}")
+              f"cost={cost} -> {out}")
     else:
         failures: list[str] = []
         try:
@@ -185,7 +189,8 @@ def main(argv: list[str] | None = None) -> None:
             for fl in failures:
                 print(f"  - {fl}", file=sys.stderr)
             sys.exit(1)
-        print(f"OK: no drift (ece={result.ece:.4f}, accuracy={result.accuracy:.1%}, "
+        ece = fmt4(result.ece)
+        print(f"OK: no drift (ece={ece}, accuracy={result.accuracy:.1%}, "
               f"gt={ground_truth_of(result.run).tier})")
 
 

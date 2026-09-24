@@ -2,15 +2,19 @@
   "judge": "llm",
   "n": 120,
   "accuracy": 0.55,
-  "ece": 0.3787,
-  "ece_equal_mass": 0.3829,
-  "brier": 0.3914,
+  "confidence": {
+    "known": 119,
+    "total": 120
+  },
+  "ece": 0.3819,
+  "ece_equal_mass": 0.3861,
+  "brier": 0.3947,
   "reliability_bins": [
     {
       "bin": "0.0-0.1",
-      "avg_confidence": 0.0,
-      "accuracy": 0.0,
-      "n": 1
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
     },
     {
       "bin": "0.1-0.2",
@@ -69,58 +73,52 @@
   ],
   "accuracy_coverage": [
     {
-      "coverage": 0.0833,
+      "coverage": 0.084,
       "accuracy": 0.4,
       "n": 10,
       "min_confidence": 1.0
     },
     {
-      "coverage": 0.1583,
+      "coverage": 0.1597,
       "accuracy": 0.6842,
       "n": 19,
       "min_confidence": 0.99
     },
     {
-      "coverage": 0.225,
+      "coverage": 0.2269,
       "accuracy": 0.7778,
       "n": 27,
       "min_confidence": 0.98
     },
     {
-      "coverage": 0.25,
-      "accuracy": 0.7333,
-      "n": 30,
-      "min_confidence": 0.96
+      "coverage": 0.2437,
+      "accuracy": 0.7586,
+      "n": 29,
+      "min_confidence": 0.97
     },
     {
-      "coverage": 0.8417,
+      "coverage": 0.8487,
       "accuracy": 0.5545,
       "n": 101,
       "min_confidence": 0.95
     },
     {
-      "coverage": 0.8667,
-      "accuracy": 0.5481,
-      "n": 104,
-      "min_confidence": 0.9
+      "coverage": 0.8992,
+      "accuracy": 0.5514,
+      "n": 107,
+      "min_confidence": 0.85
     },
     {
-      "coverage": 0.9417,
+      "coverage": 0.9496,
       "accuracy": 0.5575,
       "n": 113,
       "min_confidence": 0.8
     },
     {
-      "coverage": 0.9583,
-      "accuracy": 0.5565,
-      "n": 115,
-      "min_confidence": 0.75
-    },
-    {
       "coverage": 1.0,
-      "accuracy": 0.55,
-      "n": 120,
-      "min_confidence": 0.0
+      "accuracy": 0.5546,
+      "n": 119,
+      "min_confidence": 0.7
     }
   ],
   "zero_error_coverage": {
@@ -175,23 +173,23 @@
   ],
   "accuracy_ci_method": "bootstrap",
   "ece_ci": [
-    0.2557,
-    0.5132
+    0.2531,
+    0.5275
   ],
   "ece_ci_method": "bootstrap",
   "ece_equal_mass_ci": [
-    0.258,
-    0.5147
+    0.2557,
+    0.5286
   ],
   "ece_equal_mass_ci_method": "bootstrap",
   "brier_ci": [
-    0.2752,
-    0.5125
+    0.2788,
+    0.5231
   ],
   "brier_ci_method": "bootstrap",
   "zero_error_coverage_ci": [
     0.0,
-    0.0303
+    0.0305
   ],
   "zero_error_coverage_ci_method": "clopper-pearson",
   "bootstrap": {
@@ -201,7 +199,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T13:41:20+00:00",
+    "utc": "2026-09-23T18:32:04+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/jury/router-bare/deepseek-r1.r2.ckpt.jsonl",

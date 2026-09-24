@@ -31,7 +31,8 @@ def reliability_diagram_png(result, path: str | None = None) -> bytes:
         ax.annotate(str(n), (x, y), fontsize=8, ha="center", va="bottom")
     ax.set_xlabel("mean confidence in bin")
     ax.set_ylabel("accuracy in bin")
-    ax.set_title(f"Reliability diagram — {result.judge} (ECE={result.ece:.4f})")
+    ece = "unknown" if result.ece is None else f"{result.ece:.4f}"
+    ax.set_title(f"Reliability diagram — {result.judge} (ECE={ece})")
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
     ax.legend()

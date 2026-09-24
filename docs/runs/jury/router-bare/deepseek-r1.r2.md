@@ -1,11 +1,11 @@
 # Audit report — llm
 
-**n=120** · accuracy **55.0%** [41.7, 68.2] · ECE **0.3787** [0.2557, 0.5132] · ECE (equal-mass) **0.3829** [0.2580, 0.5147] · Brier **0.3914** [0.2752, 0.5125]
+**n=120** · accuracy **55.0%** [41.7, 68.2] · confidence known **119/120** · ECE **0.3819** [0.2531, 0.5275] · ECE (equal-mass) **0.3861** [0.2557, 0.5286] · Brier **0.3947** [0.2788, 0.5231]
 · cost **$0.4499** · p50 **3.873s** · p99 **15.999s**
 
 _judge `llm:deepseek-r1` · model `deepseek-r1` · run 2026-09-21T19:10:50+00:00 · judge-audit 0.3.2_
 _dataset `docs/runs/jury/router-bare/deepseek-r1.r2.input.jsonl` · 120 rows · sha256 `7d2bb8dc595f…`_
-_regenerated 2026-09-23T13:41:20+00:00 from `docs/runs/jury/router-bare/deepseek-r1.r2.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-09-23T18:32:04+00:00 from `docs/runs/jury/router-bare/deepseek-r1.r2.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome; downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified; 40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted**
 
@@ -21,21 +21,19 @@ Retrospective on this dataset — not a production guarantee.
 
 | coverage | accuracy | min confidence | n |
 |---|---|---|---|
-| 8.3% | 40.0% | 1.00 | 10 |
-| 15.8% | 68.4% | 0.99 | 19 |
-| 22.5% | 77.8% | 0.98 | 27 |
-| 25.0% | 73.3% | 0.96 | 30 |
-| 84.2% | 55.5% | 0.95 | 101 |
-| 86.7% | 54.8% | 0.90 | 104 |
-| 94.2% | 55.8% | 0.80 | 113 |
-| 95.8% | 55.6% | 0.75 | 115 |
-| 100.0% | 55.0% | 0.00 | 120 |
+| 8.4% | 40.0% | 1.00 | 10 |
+| 16.0% | 68.4% | 0.99 | 19 |
+| 22.7% | 77.8% | 0.98 | 27 |
+| 24.4% | 75.9% | 0.97 | 29 |
+| 84.9% | 55.5% | 0.95 | 101 |
+| 89.9% | 55.1% | 0.85 | 107 |
+| 95.0% | 55.8% | 0.80 | 113 |
+| 100.0% | 55.5% | 0.70 | 119 |
 
 ## Calibration (reliability bins)
 
 | confidence bin | avg confidence | accuracy | n |
 |---|---|---|---|
-| 0.0-0.1 | 0.000 | 0.0% | 1 |
 | 0.7-0.8 | 0.717 | 50.0% | 6 |
 | 0.8-0.9 | 0.817 | 66.7% | 9 |
 | 0.9-1.0 | 0.960 | 54.8% | 104 |

@@ -2,6 +2,10 @@
   "judge": "llm",
   "n": 200,
   "accuracy": 0.965,
+  "confidence": {
+    "known": 200,
+    "total": 200
+  },
   "ece": 0.0159,
   "ece_equal_mass": 0.0439,
   "brier": 0.0307,
@@ -181,7 +185,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T13:41:20+00:00",
+    "utc": "2026-09-23T18:32:04+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/claude-sonnet-4.5/email-adversarial.ckpt.jsonl",

@@ -37,8 +37,7 @@ from judge_audit.metrics.calibration import (  # noqa: E402
 )
 from judge_audit.report import interval_of, with_interval_notes  # noqa: E402
 from judge_audit.runner import (  # noqa: E402
-    clamp_confidence,
-    is_correct,
+    checkpoint_record,
     load_jsonl,
     read_dataset_header,
     sha256_of,
@@ -167,7 +166,7 @@ def records(labels: str, ckpt: Path, question: str, keep: set[int] | None,
             train: set[str] | None = None) -> tuple[list[dict], dict, list[int]]:
     """Per-row records restricted to `keep`; (records, run header, every row index in the file)."""
     rows = load_jsonl(str(ROOT / labels))
-    recs, run, seen = [], {}, []
+    recs, run, seen, pending = [], {}, [], []
     for line in ckpt.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
@@ -175,44 +174,46 @@ def records(labels: str, ckpt: Path, question: str, keep: set[int] | None,
         if rec["idx"] < 0:
             run = rec.get("run", {})
             continue
+        pending.append(rec)
+    for rec in pending:
         seen.append(rec["idx"])
         if keep is not None and rec["idx"] not in keep:
             continue
         row = rows[rec["idx"]]
         j = next(x for x in rec["judgments"] if x["question"] == question)
         options = [str(o) for o in row["questions"][0].get("options", [])]
-        decision = str(j["decision"])
+        base = checkpoint_record(rec["idx"], row, j, row["labels"][question], run)
+        decision = base["decision"]
         equal, contains = text_overlap(row["state"], train) if train else (False, False)
-        recs.append({
-            "idx": rec["idx"], "state": str(row["state"]),
-            "expected": str(row["labels"][question]), "decision": decision,
-            "correct": is_correct(decision, row["labels"][question]),
-            "text_equal_train": equal, "text_contains_train": contains,
-            "no_answer": decision.strip().lower() not in [o.lower() for o in options],
-            "confidence": clamp_confidence(j["confidence"]),
-            "latency_s": j.get("latency_s", 0.0), "cost_usd": j.get("cost_usd", 0.0),
-            "meta": row.get("_meta", {}),
-        })
+        recs.append({**base, "state": str(row["state"]),
+                     "text_equal_train": equal, "text_contains_train": contains,
+                     "no_answer": decision.strip().lower() not in [o.lower() for o in options]})
     return recs, run, seen
 
 
 def summarize(recs: list[dict], dataset: str) -> dict:
-    conf = [r["confidence"] for r in recs]
-    ok = [r["correct"] for r in recs]
+    all_ok = [r["correct"] for r in recs]
+    known_idx = [i for i, r in enumerate(recs) if r["confidence"] is not None]
+    known = [recs[i] for i in known_idx]
+    conf = [r["confidence"] for r in known]
+    ok = [r["correct"] for r in known]
     # Clustered by distinct text, like every other report: the generators repeat states
     # (#54), and two judgments of the same text are not two independent observations.
     # A record without a state (hand-built fixtures) is its own cluster.
-    groups = [r.get("state", f"#{i}") for i, r in enumerate(recs)]
-    right = [r["confidence"] for r in recs if r["correct"]]
-    wrong = [r["confidence"] for r in recs if not r["correct"]]
+    all_groups = [r.get("state", f"#{i}") for i, r in enumerate(recs)]
+    groups = [all_groups[i] for i in known_idx]
+    right = [r["confidence"] for r in known if r["correct"]]
+    wrong = [r["confidence"] for r in known if not r["correct"]]
     unseen = [r for r in recs if not r["text_contains_train"]]
     out = {
-        "n": len(recs), "accuracy": round(sum(ok) / len(ok), 4),
+        "n": len(recs), "confidence": {"known": len(known), "total": len(recs)},
+        "accuracy": round(sum(all_ok) / len(all_ok), 4),
         # 95 % intervals over distinct texts (seed 0), with the method that produced
         # each one: exact binomial at 0 % / 100 %, clustered bootstrap elsewhere.
-        **ci_fields("accuracy", accuracy_ci(ok, groups=groups)),
-        **ci_fields("ece", ece_ci(conf, ok, groups=groups)),
-        **ci_fields("zero_error_coverage", zero_error_coverage_ci(conf, ok, groups=groups)),
+        **ci_fields("accuracy", accuracy_ci(all_ok, groups=all_groups)),
+        **ci_fields("ece", ece_ci(conf, ok, groups=groups) if known else None),
+        **ci_fields("zero_error_coverage", (zero_error_coverage_ci(conf, ok, groups=groups)
+                                            if known else None)),
         # Text-level overlap with the training half (the generators repeat texts, #54):
         # rows equal to a training text, rows containing one, and accuracy on the rest.
         "text_equal_train": sum(r["text_equal_train"] for r in recs),
@@ -220,18 +221,20 @@ def summarize(recs: list[dict], dataset: str) -> dict:
         "unseen_text_n": len(unseen),
         "accuracy_unseen_text": (round(sum(r["correct"] for r in unseen) / len(unseen), 4)
                                  if unseen else None),
-        "ece": round(expected_calibration_error(conf, ok), 4),
-        "zero_error_coverage": zero_error_coverage(conf, ok)["coverage"],
+        "ece": round(expected_calibration_error(conf, ok), 4) if known else None,
+        "zero_error_coverage": zero_error_coverage(conf, ok)["coverage"] if known else None,
         "mean_conf_correct": round(statistics.mean(right), 3) if right else None,
         "mean_conf_wrong": round(statistics.mean(wrong), 3) if wrong else None,
         "no_answer": sum(r["no_answer"] for r in recs),
-        "cost_usd": round(math.fsum(r["cost_usd"] for r in recs), 4),
+        "cost_usd": (round(math.fsum(r["cost_usd"] for r in recs), 4)
+                     if all(r["cost_usd"] is not None for r in recs) else None),
         "p50_latency_s": round(statistics.median(r["latency_s"] for r in recs), 3),
     }
     if dataset == "email-adversarial":
         pi = [r for r in recs if r["meta"].get("attack") == "prompt_injection"]
         se = [r for r in recs if r["meta"].get("attack") == "social_engineering"]
-        attacked_wrong = [r["confidence"] for r in pi + se if not r["correct"]]
+        attacked_wrong = [r["confidence"] for r in pi + se
+                          if not r["correct"] and r["confidence"] is not None]
         out["prompt_injection_accuracy"] = (round(sum(r["correct"] for r in pi) / len(pi), 4)
                                             if pi else None)
         out["prompt_injection_n"] = len(pi)
@@ -242,10 +245,10 @@ def summarize(recs: list[dict], dataset: str) -> dict:
                                                if attacked_wrong else None)
         out["wrong_under_attack_n"] = len(attacked_wrong)
         wrong_rows = [r for r in recs if not r["correct"]]
+        known_wrong = [r["confidence"] for r in wrong_rows if r["confidence"] is not None]
         out["wrong_by_attack"] = dict(sorted(Counter(
             r["meta"].get("attack", "clean") for r in wrong_rows).items()))
-        out["max_conf_wrong"] = (round(max(r["confidence"] for r in wrong_rows), 3)
-                                 if wrong_rows else None)
+        out["max_conf_wrong"] = round(max(known_wrong), 3) if known_wrong else None
     if dataset.startswith("router"):
         hard = [r for r in recs if r["meta"].get("difficulty") == "hard"
                 and not r["meta"].get("adversarial")]

@@ -63,6 +63,14 @@ def test_fixture_statistics_by_hand():
     assert [f["idx"] for f in m["failures"]] == [5, 2]          # highest confidence first
 
 
+def test_unknown_confidence_is_not_imputed_in_adversarial_metrics():
+    rows = FIXTURE + [row(7, "clean", "order", "spam", None)]
+    m = aa.compute(rows)
+    assert m["n"] == 8 and m["accuracy"] == pytest.approx(5 / 8)
+    assert m["confidence"] == {"known": 7, "total": 8}
+    assert m["ece"] == pytest.approx(1 / 7)
+
+
 def test_fixture_rendering():
     m = aa.compute(FIXTURE, n_templates={"prompt_injection": 8, "social_engineering": 5})
     md = aa.render(m, {r["idx"]: r["state"] for r in FIXTURE})

@@ -25,12 +25,14 @@ import hashlib
 import http.client
 import importlib.util
 import json
+import math
 import os
 import random
 import re
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 from .base import Judge, Judgment, Question, QuestionType
@@ -40,6 +42,15 @@ TRANSIENT = {429, 503, 529, 502, 504}
 # Wall-clock limit per request. A socket timeout alone is not enough: a server that
 # trickles keep-alive bytes never trips it.
 TIMEOUT_S = float(os.environ.get("LLM_TIMEOUT_S", "120"))
+
+
+def _is_local_url(url: str) -> bool:
+    """Whether an OpenAI-compatible endpoint is known local and therefore free."""
+    try:
+        host = urllib.parse.urlparse(url).hostname
+    except ValueError:
+        return False
+    return host in {"localhost", "127.0.0.1", "::1"}
 
 
 def _fetch_json(req: urllib.request.Request, deadline: float) -> dict:
@@ -145,8 +156,10 @@ def _extract_json(text: str) -> dict:
     raise ValueError("no JSON object in the reply")
 
 
-def parse_reply(text: str, questions: list[Question]) -> dict[str, tuple[str, float, dict | None]]:
-    """{question name: (decision, confidence, the answer object as parsed)} for one reply.
+def parse_reply(
+    text: str, questions: list[Question]
+) -> dict[str, tuple[str, float | None, dict | None, str]]:
+    """{question: (decision, confidence, parsed answer, parse status)} for one reply.
 
     Pure: the same text always yields the same decisions, so a checkpoint's raw
     replies can be re-parsed offline when the parser improves (scripts/reparse_checkpoints.py)."""
@@ -157,8 +170,8 @@ def parse_reply(text: str, questions: list[Question]) -> dict[str, tuple[str, fl
     out = {}
     for q in questions:
         ans = answers.get(q.name) if isinstance(answers, dict) else None
-        decision, confidence = LLMJudge._normalize(q, ans)
-        out[q.name] = (decision, confidence, ans if isinstance(ans, dict) else None)
+        decision, confidence, status = LLMJudge._normalize(q, ans)
+        out[q.name] = (decision, confidence, ans if isinstance(ans, dict) else None, status)
     return out
 
 
@@ -301,31 +314,43 @@ class LLMJudge(Judge):
         text, in_tok, out_tok = self._call(_render(state, questions))
         latency = time.monotonic() - t0
         price = self._price()
-        cost = (in_tok * price[0] + out_tok * price[1]) / 1e6 if price else 0.0
+        local_free = price is None and self.provider == "openai-compatible" and _is_local_url(
+            self.base_url)
+        priced = price is not None or local_free
+        cost = ((in_tok * price[0] + out_tok * price[1]) / 1e6 if price else
+                0.0 if local_free else None)
         parsed = parse_reply(text, questions)
         out: list[Judgment] = []
         for q in questions:
-            decision, confidence, ans = parsed[q.name]
+            decision, confidence, ans, status = parsed[q.name]
             out.append(Judgment(
                 question=q.name, decision=decision, confidence=confidence,
                 latency_s=latency / max(len(questions), 1),
-                cost_usd=cost / max(len(questions), 1),
+                cost_usd=cost / max(len(questions), 1) if cost is not None else None,
                 raw={"text": text, "usage": {"input_tokens": in_tok, "output_tokens": out_tok},
-                     "parsed": ans, "priced": price is not None},
+                     "parsed": ans, "priced": priced},
+                parse_status=status,
             ))
         return out
 
     @staticmethod
-    def _normalize(q: Question, ans: dict | None) -> tuple[str, float]:
+    def _normalize(q: Question, ans: dict | None) -> tuple[str, float | None, str]:
         if not isinstance(ans, dict):
-            return "", 0.0  # unparseable answer counts as a wrong, zero-confidence decision
+            return "", None, "no_answer"
         decision = str(ans.get("decision", "")).strip()
-        try:
-            confidence = max(0.0, min(1.0, float(ans.get("confidence", 0.0))))
-        except (TypeError, ValueError):
-            confidence = 0.0
         options = ["true", "false"] if q.type is QuestionType.NOUL else q.options
+        matched = False
         for opt in options:
             if decision.lower() == opt.lower():
-                return opt, confidence
-        return decision, confidence
+                decision = opt
+                matched = True
+                break
+        try:
+            if isinstance(ans["confidence"], bool):  # JSON true/false is not a number
+                raise TypeError
+            confidence = float(ans["confidence"])
+        except (KeyError, TypeError, ValueError):
+            return decision, None, "no_confidence" if matched else "no_answer"
+        if not math.isfinite(confidence) or not 0.0 <= confidence <= 1.0:
+            return decision, None, "no_confidence" if matched else "no_answer"
+        return decision, confidence, "parsed" if matched else "no_answer"

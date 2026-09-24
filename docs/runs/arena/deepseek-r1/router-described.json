@@ -2,15 +2,19 @@
   "judge": "llm",
   "n": 120,
   "accuracy": 0.7917,
-  "ece": 0.1478,
-  "ece_equal_mass": 0.1438,
-  "brier": 0.182,
+  "confidence": {
+    "known": 119,
+    "total": 120
+  },
+  "ece": 0.1491,
+  "ece_equal_mass": 0.1425,
+  "brier": 0.1836,
   "reliability_bins": [
     {
       "bin": "0.0-0.1",
-      "avg_confidence": 0.0,
-      "accuracy": 0.0,
-      "n": 1
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
     },
     {
       "bin": "0.1-0.2",
@@ -69,46 +73,40 @@
   ],
   "accuracy_coverage": [
     {
-      "coverage": 0.0833,
+      "coverage": 0.084,
       "accuracy": 0.0,
       "n": 10,
       "min_confidence": 1.0
     },
     {
-      "coverage": 0.175,
+      "coverage": 0.1765,
       "accuracy": 0.5238,
       "n": 21,
       "min_confidence": 0.99
     },
     {
-      "coverage": 0.775,
+      "coverage": 0.7815,
       "accuracy": 0.7957,
       "n": 93,
       "min_confidence": 0.95
     },
     {
-      "coverage": 0.8917,
+      "coverage": 0.8992,
       "accuracy": 0.8131,
       "n": 107,
       "min_confidence": 0.9
     },
     {
-      "coverage": 0.9,
-      "accuracy": 0.8148,
-      "n": 108,
-      "min_confidence": 0.85
-    },
-    {
-      "coverage": 0.9583,
+      "coverage": 0.9664,
       "accuracy": 0.8,
       "n": 115,
       "min_confidence": 0.8
     },
     {
       "coverage": 1.0,
-      "accuracy": 0.7917,
-      "n": 120,
-      "min_confidence": 0.0
+      "accuracy": 0.7983,
+      "n": 119,
+      "min_confidence": 0.5
     }
   ],
   "zero_error_coverage": {
@@ -163,23 +161,23 @@
   ],
   "accuracy_ci_method": "bootstrap",
   "ece_ci": [
-    0.0744,
-    0.2369
+    0.0738,
+    0.2498
   ],
   "ece_ci_method": "bootstrap",
   "ece_equal_mass_ci": [
-    0.0802,
-    0.2375
+    0.0794,
+    0.2471
   ],
   "ece_equal_mass_ci_method": "bootstrap",
   "brier_ci": [
-    0.1134,
-    0.2592
+    0.1142,
+    0.2708
   ],
   "brier_ci_method": "bootstrap",
   "zero_error_coverage_ci": [
     0.0,
-    0.0303
+    0.0305
   ],
   "zero_error_coverage_ci_method": "clopper-pearson",
   "bootstrap": {
@@ -189,7 +187,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T13:41:20+00:00",
+    "utc": "2026-09-23T18:32:04+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/deepseek-r1/router-described.ckpt.jsonl",

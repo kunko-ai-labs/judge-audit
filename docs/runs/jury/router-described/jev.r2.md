@@ -2,12 +2,12 @@
 
 # Audit report — jev
 
-**n=120** · accuracy **100.0%** [97.0, 100.0]† · ECE **0.0436** [0.0235, 0.0684] · ECE (equal-mass) **0.0436** [0.0235, 0.0684] · Brier **0.0076** [0.0026, 0.0145]
+**n=120** · accuracy **100.0%** [97.0, 100.0]† · confidence known **120/120** · ECE **0.0436** [0.0235, 0.0684] · ECE (equal-mass) **0.0436** [0.0235, 0.0684] · Brier **0.0076** [0.0026, 0.0145]
 · cost **$0.0030** · p50 **0.589s** · p99 **0.778s**
 
 _judge `jev` · model `jev-latest` · backend `typesafe` · run 2026-09-21T19:06:02+00:00 · judge-audit 0.3.2_
 _dataset `docs/runs/jury/router-described/jev.r2.input.jsonl` · 120 rows · sha256 `c00355b6ede7…`_
-_regenerated 2026-09-23T13:41:20+00:00 from `docs/runs/jury/router-described/jev.r2.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-09-23T18:32:04+00:00 from `docs/runs/jury/router-described/jev.r2.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome; downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified; 40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted**
 

@@ -39,7 +39,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from judge_audit.metrics.calibration import expected_calibration_error  # noqa: E402
 from judge_audit.runner import (  # noqa: E402
     _percentile,
-    clamp_confidence,
+    checkpoint_record,
     display_path,
     load_jsonl,
 )
@@ -95,17 +95,12 @@ def main() -> None:
             continue
         j = next((x for x in ckpt[idx] if x["question"] == "route"), ckpt[idx][0])
         expected = row["labels"]["route"]
-        decision = str(j["decision"]).strip().lower()
-        ok = decision == str(expected).strip().lower()
-        recs.append({
-            "idx": idx, "segment": segment_of(row),
+        base = checkpoint_record(idx, row, j, expected, run)
+        recs.append({**base,
+            "segment": segment_of(row),
             "difficulty": row["_meta"].get("difficulty"),
             "attack": row["_meta"].get("attack"),
             "target": row["_meta"].get("target"),
-            "expected": expected, "decision": decision, "correct": ok,
-            "confidence": clamp_confidence(j["confidence"]),
-            "latency_s": j.get("latency_s", 0.0),
-            "cost_usd": j.get("cost_usd", 0.0),
             "state": row["state"],
         })
 
@@ -115,17 +110,20 @@ def main() -> None:
     def stats(rs):
         n = len(rs)
         if not n:
-            return {"n": 0}
-        conf = [r["confidence"] for r in rs]
-        corr = [r["correct"] for r in rs]
+            return {"n": 0, "confidence": {"known": 0, "total": 0}}
+        known = [r for r in rs if r["confidence"] is not None]
+        conf = [r["confidence"] for r in known]
+        corr = [r["correct"] for r in known]
         ece = (round(expected_calibration_error(conf, corr), 4)
-               if n >= args.min_segment_n else None)
-        return {"n": n,
-                "accuracy": round(sum(corr) / n, 4),
+               if len(known) >= args.min_segment_n else None)
+        costs = [r["cost_usd"] for r in rs]
+        return {"n": n, "confidence": {"known": len(known), "total": n},
+                "accuracy": round(sum(r["correct"] for r in rs) / n, 4),
                 "ece": ece,
-                "mean_confidence": round(sum(conf) / n, 4),
+                "mean_confidence": round(sum(conf) / len(conf), 4) if conf else None,
                 "p50_latency_s": _percentile([r["latency_s"] for r in rs], 50),
-                "judge_cost_usd": round(sum(r["cost_usd"] for r in rs), 6)}
+                "judge_cost_usd": (round(sum(costs), 6)
+                                   if all(cost is not None for cost in costs) else None)}
 
     by_segment = {s: stats(seg(recs, s)) for s in SEGMENTS}
     overall = stats(recs)
@@ -141,13 +139,16 @@ def main() -> None:
     overpay_usd = round(len(overpay) * (args.strong_cost - args.easy_cost), 4)
 
     clean = [r for r in recs if r["segment"] != "adversarial"]
-    mean_conf = lambda rs: round(sum(r["confidence"] for r in rs) / len(rs), 4) if rs else None  # noqa: E731
+    def mean_conf(rs):
+        conf = [r["confidence"] for r in rs if r["confidence"] is not None]
+        return round(sum(conf) / len(conf), 4) if conf else None
 
     # Sanity numbers a reader needs before believing any headline.
     decisions = Counter(r["decision"] for r in recs)
     labels_ct = Counter(r["expected"] for r in recs)
     baseline = round(max(labels_ct.values()) / len(recs), 4) if recs else None
-    fail_conf = sorted(r["confidence"] for r in recs if not r["correct"])
+    fail_conf = sorted(r["confidence"] for r in recs
+                       if not r["correct"] and r["confidence"] is not None)
     n_unique_states = len({r["state"] for r in recs})
     never_strong = decisions.get("route_strong", 0) == 0
 
@@ -259,6 +260,7 @@ def render(r: dict) -> str:
          banner,
          "",
          f"**n={r['n']}** · routing accuracy **{r['overall'].get('accuracy', 0):.1%}** · "
+         f"confidence known **{r['overall']['confidence']['known']}/{r['overall']['confidence']['total']}** · "
          f"ECE **{r['overall'].get('ece')}**",
          "",
          *_provenance(r.get("run", {})),
@@ -274,8 +276,10 @@ def render(r: dict) -> str:
     for s in SEGMENTS:
         b = r["by_segment"][s]
         ece = "n/a (small n)" if b.get("ece") is None else f"{b['ece']:.4f}"
+        mean = b.get("mean_confidence")
+        mean_text = "—" if mean is None else f"{mean:.3f}"
         L.append(f"| {s} | {b['n']} | {b.get('accuracy', 0):.1%} | {ece} | "
-                 f"{b.get('mean_confidence', 0):.3f} |")
+                 f"{mean_text} |")
     L += ["",
           "## Cost-inflation attack",
           "",
@@ -308,8 +312,9 @@ def render(r: dict) -> str:
           "|---|---|---|---|---|---|---|"]
     for f in r["failures"]:
         atk = f"{f['attack']}/{f['target']}" if f["attack"] != "clean" else "clean"
+        confidence = "—" if f["confidence"] is None else f"{f['confidence']:.2f}"
         L.append(f"| {f['idx']} | {f['segment']} | {f['expected']} | {f['decision']} | "
-                 f"{f['confidence']:.2f} | {atk} | {f['state'].replace(chr(10), ' ')} |")
+                 f"{confidence} | {atk} | {f['state'].replace(chr(10), ' ')} |")
     if not r["failures"]:
         L.append("| — | no failures | — | — | — | — | — |")
     L += ["", "## Caveats", ""]

@@ -6,6 +6,7 @@ import json
 import math
 import os
 import platform
+import urllib.parse
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -41,11 +42,11 @@ class AuditResult:
     judge: str
     n: int
     accuracy: float
-    ece: float
+    ece: float | None
     reliability: list[dict] = field(default_factory=list)
     curve: list[dict] = field(default_factory=list)
     zero_error: dict = field(default_factory=dict)
-    total_cost_usd: float = 0.0
+    total_cost_usd: float | None = 0.0
     p50_latency_s: float = 0.0
     p99_latency_s: float = 0.0
     run: dict = field(default_factory=dict)
@@ -65,14 +66,17 @@ class AuditResult:
     brier: float | None = None
     ece_equal_mass_ci: Interval | None = None
     brier_ci: Interval | None = None
+    confidence: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         d = {
             "judge": self.judge, "n": self.n, "accuracy": self.accuracy,
+            "confidence": self.confidence,
             "ece": self.ece, "ece_equal_mass": self.ece_equal_mass, "brier": self.brier,
             "reliability_bins": self.reliability,
             "accuracy_coverage": self.curve, "zero_error_coverage": self.zero_error,
-            "total_cost_usd": round(self.total_cost_usd, 6),
+            "total_cost_usd": (round(self.total_cost_usd, 6)
+                               if self.total_cost_usd is not None else None),
             "p50_latency_s": round(self.p50_latency_s, 3),
             "p99_latency_s": round(self.p99_latency_s, 3),
             "run": self.run,
@@ -106,20 +110,103 @@ def questions_of(row: dict) -> list[Question]:
             for q in row["questions"]]
 
 
-def clamp_confidence(value) -> float:
-    """A declared confidence as a number in [0, 1]; a NaN or an infinity is refused.
+def clamp_confidence(value) -> float | None:
+    """Return a declared probability, or None when it is absent or invalid.
 
-    Clamping is fine for 1.02 from a chat model; it is imputation for NaN, which
-    `max(0.0, min(1.0, nan))` silently turns into 1.0."""
-    x = float(value)
-    if not math.isfinite(x):
-        raise ValueError(f"confidence {value!r} is not finite; an unknown confidence is "
-                         "reported, never imputed")
-    return max(0.0, min(1.0, x))
+    Out-of-range values are rejected rather than clamped: both clamping and replacing an
+    invalid declaration with zero or one would fabricate evidence the judge did not give.
+    """
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        confidence = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(confidence) or not 0.0 <= confidence <= 1.0:
+        return None
+    return confidence
 
 
 def is_correct(decision: str, expected: str) -> bool:
     return str(decision).strip().lower() == str(expected).strip().lower()
+
+
+def checkpoint_parse_status(judgment: dict) -> str:
+    """Parse status for current and legacy checkpoint rows, without broad inference.
+
+    Old LLM checkpoints recorded `raw.parsed` for every answer. A null parsed object is
+    therefore explicit evidence of no answer; its historical 0.0 confidence was imputed and
+    becomes unknown. Other adapters often have no `raw.parsed` key at all, which says nothing
+    about parsing and stays `parsed`.
+    """
+    status = judgment.get("parse_status")
+    if status in {"parsed", "no_answer", "no_confidence"}:
+        return status
+    raw = judgment.get("raw")
+    if isinstance(raw, dict) and "parsed" in raw:
+        parsed = raw["parsed"]
+        if parsed is None:
+            return "no_answer"
+        if not isinstance(parsed, dict) or not str(parsed.get("decision", "")).strip():
+            return "no_answer"
+        if clamp_confidence(parsed.get("confidence")) is None:
+            return "no_confidence"
+    return "parsed"
+
+
+def checkpoint_confidence(judgment: dict) -> float | None:
+    """Declared confidence in a current or legacy checkpoint judgment."""
+    status = checkpoint_parse_status(judgment)
+    raw = judgment.get("raw")
+    if status == "no_answer" and isinstance(raw, dict) and raw.get("parsed") is None:
+        return None
+    if status == "no_confidence":
+        return None
+    return clamp_confidence(judgment.get("confidence"))
+
+
+def _local_endpoint(run: dict | None) -> bool:
+    judge = (run or {}).get("judge") or {}
+    if judge.get("provider") != "openai-compatible":
+        return False
+    try:
+        host = urllib.parse.urlparse(str(judge.get("base_url", ""))).hostname
+    except ValueError:
+        return False
+    return host in {"localhost", "127.0.0.1", "::1"}
+
+
+def checkpoint_cost(judgment: dict, run: dict | None = None) -> float | None:
+    """Known row cost; legacy unpriced local endpoints are known free, hosted ones unknown."""
+    raw = judgment.get("raw")
+    if isinstance(raw, dict) and raw.get("priced") is False:
+        return 0.0 if _local_endpoint(run) else None
+    value = judgment.get("cost_usd")
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        cost = float(value)
+    except (TypeError, ValueError):
+        return None
+    return cost if math.isfinite(cost) and cost >= 0.0 else None
+
+
+def checkpoint_record(idx: int, row: dict, judgment: dict, expected: str,
+                      run: dict | None = None) -> dict:
+    """Normalise one checkpoint judgment into the record schema used by `summarize`."""
+    return {
+        "idx": idx,
+        "question": judgment["question"],
+        "expected": str(expected),
+        "decision": str(judgment.get("decision", "")),
+        "correct": is_correct(judgment.get("decision", ""), expected),
+        "confidence": checkpoint_confidence(judgment),
+        "parse_status": checkpoint_parse_status(judgment),
+        "latency_s": judgment.get("latency_s", 0.0),
+        "cost_usd": checkpoint_cost(judgment, run),
+        "meta": row.get("_meta", {}),
+        "raw": judgment.get("raw", {}),
+    }
 
 
 def display_path(path: str | Path) -> str:
@@ -212,36 +299,45 @@ def summarize(judge_name: str, records: list[dict], run: dict | None = None,
     `ci` adds the bootstrap intervals; None defers to `JUDGE_AUDIT_BOOTSTRAP`.
     `groups` is one cluster key per record (`groups_of`); without it every row is its own
     cluster, which overstates precision on a dataset with repeated texts."""
-    confidences = [r["confidence"] for r in records]
-    correct = [bool(r["correct"]) for r in records]
-    latencies = [r.get("latency_s", 0.0) for r in records]
     total = len(records)
-    hits = sum(correct)
+    hits = sum(bool(r["correct"]) for r in records)
+    known_idx = [i for i, r in enumerate(records)
+                 if clamp_confidence(r.get("confidence")) is not None]
+    confidences = [clamp_confidence(records[i]["confidence"]) for i in known_idx]
+    correct = [bool(records[i]["correct"]) for i in known_idx]
+    known_groups = [groups[i] for i in known_idx] if groups is not None else None
+    latencies = [r.get("latency_s", 0.0) for r in records]
+    costs = [r.get("cost_usd") for r in records]
+    total_cost = None if any(cost is None for cost in costs) else math.fsum(costs)
+    known = len(confidences)
     if ci is None:
         ci = bootstrap_enabled()
     return AuditResult(
         judge=judge_name, n=total,
         accuracy=round(hits / total, 4) if total else 0.0,
-        ece=round(expected_calibration_error(confidences, correct), 4) if total else 0.0,
-        reliability=reliability_bins(confidences, correct),
-        curve=accuracy_coverage(confidences, correct) if total else [],
-        zero_error=zero_error_coverage(confidences, correct),
-        total_cost_usd=math.fsum(r.get("cost_usd", 0.0) for r in records),
+        confidence={"known": known, "total": total},
+        ece=(round(expected_calibration_error(confidences, correct), 4) if known else None),
+        reliability=reliability_bins(confidences, correct) if known else [],
+        curve=accuracy_coverage(confidences, correct) if known else [],
+        zero_error=(zero_error_coverage(confidences, correct) if known else
+                    {"coverage": None, "n": 0, "threshold": None}),
+        total_cost_usd=total_cost,
         p50_latency_s=_percentile(latencies, 50),
         p99_latency_s=_percentile(latencies, 99),
         run=run or {},
-        accuracy_ci=accuracy_ci(correct, groups=groups) if ci and total else None,
-        ece_ci=ece_ci(confidences, correct, groups=groups) if ci and total else None,
-        zero_error_coverage_ci=(zero_error_coverage_ci(confidences, correct, groups=groups)
-                                if ci and total else None),
+        accuracy_ci=accuracy_ci([bool(r["correct"]) for r in records], groups=groups)
+        if ci and total else None,
+        ece_ci=ece_ci(confidences, correct, groups=known_groups) if ci and known else None,
+        zero_error_coverage_ci=(zero_error_coverage_ci(
+            confidences, correct, groups=known_groups) if ci and known else None),
         records=records,
         ece_equal_mass=(round(expected_calibration_error(confidences, correct,
                                                          binning=EQUAL_MASS), 4)
-                        if total else None),
-        brier=round(brier_score(confidences, correct), 4) if total else None,
-        ece_equal_mass_ci=(ece_ci(confidences, correct, groups=groups, binning=EQUAL_MASS)
-                           if ci and total else None),
-        brier_ci=brier_ci(confidences, correct, groups=groups) if ci and total else None,
+                        if known else None),
+        brier=round(brier_score(confidences, correct), 4) if known else None,
+        ece_equal_mass_ci=(ece_ci(confidences, correct, groups=known_groups,
+                                  binning=EQUAL_MASS) if ci and known else None),
+        brier_ci=brier_ci(confidences, correct, groups=known_groups) if ci and known else None,
     )
 
 
@@ -253,6 +349,7 @@ def record_of(idx: int, row: dict, judgment, expected: str) -> dict:
         "decision": str(judgment.decision),
         "correct": is_correct(judgment.decision, expected),
         "confidence": clamp_confidence(judgment.confidence),
+        "parse_status": judgment.parse_status,
         "latency_s": judgment.latency_s,
         "cost_usd": judgment.cost_usd,
         "meta": row.get("_meta", {}),

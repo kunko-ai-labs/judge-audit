@@ -8,9 +8,12 @@ from judge_audit.judges.base import Judge, Judgment, Question
 from judge_audit.judges.simulated import SimulatedJudge
 from judge_audit.metrics.calibration import accuracy_ci, brier_ci, clopper_pearson, ece_ci
 from judge_audit.runner import (
+    checkpoint_confidence,
+    checkpoint_cost,
     clamp_confidence,
     groups_of,
     load_jsonl,
+    record_of,
     run_audit,
     summarize,
     write_judgments,
@@ -73,7 +76,7 @@ def test_rows_without_a_label_for_the_question_are_skipped(tmp_path):
     p.write_text(json.dumps({"state": "s", "questions": [{"name": "q", "options": ["a", "b"]}],
                              "labels": {}}) + "\n")
     res = run_audit(ConstantJudge("a", 0.5), load_jsonl(str(p)))
-    assert res.n == 0 and res.accuracy == 0.0 and res.ece == 0.0
+    assert res.n == 0 and res.accuracy == 0.0 and res.ece is None
 
 
 def test_summary_carries_bootstrap_intervals_around_the_point_estimates(labels_path):
@@ -173,11 +176,59 @@ def test_brier_and_equal_mass_ece_of_no_rows_are_unknown_not_zero(tmp_path):
     assert res.to_dict()["brier"] is None
 
 
-@pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf")])
-def test_a_non_finite_confidence_stops_the_audit_instead_of_being_clamped(labels_path, bad):
-    # max(0, min(1, nan)) is 1.0: clamping would impute full confidence to an unknown one
-    rows = load_jsonl(str(labels_path))
-    with pytest.raises(ValueError, match="not finite"):
-        run_audit(ConstantJudge("quote_request", bad), rows, ci=False)
-    assert clamp_confidence(1.2) == 1.0 and clamp_confidence(-0.1) == 0.0
+def test_unknown_confidence_is_excluded_from_calibration_not_accuracy(labels_path):
+    records = [
+        {"confidence": 0.9, "correct": True, "latency_s": 0.1, "cost_usd": 0.01},
+        {"confidence": None, "correct": False, "latency_s": 0.2, "cost_usd": None},
+    ]
+    res = summarize("mixed", records, ci=False, groups=["known", "unknown"])
+    assert res.n == 2 and res.accuracy == 0.5
+    assert res.confidence == {"known": 1, "total": 2}
+    assert res.ece == 0.1 and res.ece_equal_mass == 0.1 and res.brier == 0.01
+    assert sum(b["n"] for b in res.reliability) == 1 and res.curve
+    assert res.zero_error == {"coverage": 1.0, "n": 1, "threshold": 0.9}
+    assert res.total_cost_usd is None
+    assert res.to_dict()["confidence"] == {"known": 1, "total": 2}
+    assert res.to_dict()["total_cost_usd"] is None
+
+
+def test_no_known_confidence_publishes_null_calibration_metrics():
+    records = [{"confidence": None, "correct": False, "cost_usd": 0.0}]
+    res = summarize("unknown", records, ci=True, groups=["one"])
+    assert res.n == 1 and res.accuracy == 0.0
+    assert res.confidence == {"known": 0, "total": 1}
+    assert res.ece is None and res.ece_equal_mass is None and res.brier is None
+    assert res.reliability == [] and res.curve == []
+    assert res.zero_error == {"coverage": None, "n": 0, "threshold": None}
+    assert res.ece_ci is None and res.zero_error_coverage_ci is None
+
+
+def test_legacy_checkpoint_only_unimputes_explicit_null_parsed_answer():
+    missing = {"confidence": 0.0, "raw": {"parsed": None}}
+    malformed_with_zero = {"confidence": 0.0, "raw": {"parsed": {"confidence": 0.0}}}
+    non_llm = {"confidence": 0.7, "raw": {}}
+    assert checkpoint_confidence(missing) is None
+    assert checkpoint_confidence(malformed_with_zero) == 0.0
+    assert checkpoint_confidence(non_llm) == 0.7
+
+
+def test_legacy_checkpoint_cost_distinguishes_local_free_from_unknown_hosted():
+    judgment = {"cost_usd": 0.0, "raw": {"priced": False}}
+    local = {"judge": {"provider": "openai-compatible", "base_url": "http://localhost:11434/v1"}}
+    hosted = {"judge": {"provider": "openai-compatible", "base_url": "https://example.test/v1"}}
+    assert checkpoint_cost(judgment, local) == 0.0
+    assert checkpoint_cost(judgment, hosted) is None
+
+
+def test_record_preserves_parse_status_and_unknown_confidence():
+    row = {"_meta": {"split": "test"}}
+    judgment = Judgment("category", "", None, parse_status="no_answer", cost_usd=None)
+    record = record_of(0, row, judgment, "spam")
+    assert record["confidence"] is None and record["parse_status"] == "no_answer"
+    assert record["correct"] is False and record["cost_usd"] is None
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), float("-inf"), "NaN", "x", -0.1, 1.2])
+def test_invalid_confidence_is_unknown_not_clamped(bad):
+    assert clamp_confidence(bad) is None
     assert clamp_confidence("0.5") == 0.5

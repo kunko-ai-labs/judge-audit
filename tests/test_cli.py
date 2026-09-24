@@ -19,6 +19,8 @@ def test_run_simulated_writes_report_json_and_judgments(labels_path, tmp_path):
     assert "SIMULATED" in (tmp_path / "audit-report.md").read_text()
     res = json.loads((tmp_path / "audit-result.json").read_text())
     assert res["n"] == 12 and res["run"]["judge"]["name"] == "simulated"
+    assert res["confidence"] == {"known": 12, "total": 12}
+    assert "confidence_known=12/12" in r.stdout
     assert (tmp_path / "audit-judgments.jsonl").read_text().count("\n") == 12
 
 

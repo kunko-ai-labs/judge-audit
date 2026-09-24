@@ -10,8 +10,8 @@
   "/deberta-nli/datasets/router-described/ece": 0.1952,
   "/deepseek-r1/datasets/email-adversarial/ece": 0.1265,
   "/deepseek-r1/datasets/email-clean/ece": 0.0519,
-  "/deepseek-r1/datasets/router-bare/ece": 0.3734,
-  "/deepseek-r1/datasets/router-described/ece": 0.1478,
+  "/deepseek-r1/datasets/router-bare/ece": 0.3766,
+  "/deepseek-r1/datasets/router-described/ece": 0.1491,
   "/finetuned-deberta-run2-ts/datasets/email-adversarial/ece": 0.017,
   "/finetuned-deberta-run2/datasets/email-adversarial/ece": 0.048,
   "/finetuned-deberta/datasets/email-adversarial/ece": 0.4961,
@@ -95,7 +95,7 @@
   "/email-clean/subsets/clean/vote_share_ece": 0.0294,
   "/router-bare/declared_confidence/claude-sonnet-4.5/ece": 0.2353,
   "/router-bare/declared_confidence/deberta-nli/ece": 0.4027,
-  "/router-bare/declared_confidence/deepseek-r1/ece": 0.3734,
+  "/router-bare/declared_confidence/deepseek-r1/ece": 0.3766,
   "/router-bare/declared_confidence/gemini-3-flash/ece": 0.3154,
   "/router-bare/declared_confidence/gemma4/ece": 0.3446,
   "/router-bare/declared_confidence/jev/ece": 0.3181,
@@ -163,7 +163,7 @@
   "/router-bare/subsets/hard/vote_share_ece": 0.5076,
   "/router-described/declared_confidence/claude-sonnet-4.5/ece": 0.0322,
   "/router-described/declared_confidence/deberta-nli/ece": 0.1952,
-  "/router-described/declared_confidence/deepseek-r1/ece": 0.1478,
+  "/router-described/declared_confidence/deepseek-r1/ece": 0.1491,
   "/router-described/declared_confidence/gemini-3-flash/ece": 0.0121,
   "/router-described/declared_confidence/gemma4/ece": 0.18,
   "/router-described/declared_confidence/jev/ece": 0.053,
@@ -241,8 +241,8 @@
   "/judges/deberta-nli/datasets/router-described/ece": 0.1787,
   "/judges/deepseek-r1/datasets/email-adversarial/ece": 0.1265,
   "/judges/deepseek-r1/datasets/email-clean/ece": 0.0501,
-  "/judges/deepseek-r1/datasets/router-bare/ece": 0.3327,
-  "/judges/deepseek-r1/datasets/router-described/ece": 0.0577,
+  "/judges/deepseek-r1/datasets/router-bare/ece": 0.3383,
+  "/judges/deepseek-r1/datasets/router-described/ece": 0.0586,
   "/judges/finetuned-deberta-run2-ts/datasets/email-adversarial/ece": 0.017,
   "/judges/finetuned-deberta-run2-ts/datasets/email-clean/ece": 0.0,
   "/judges/finetuned-deberta-run2-ts/datasets/router-bare/ece": 0.0,
@@ -286,8 +286,8 @@
   "/router-bare/judges/claude-sonnet-4.5/round2/ece": 0.2311,
   "/router-bare/judges/deepseek-r1/hard_round1/ece": 0.3925,
   "/router-bare/judges/deepseek-r1/hard_round2/ece": 0.794,
-  "/router-bare/judges/deepseek-r1/round1/ece": 0.3734,
-  "/router-bare/judges/deepseek-r1/round2/ece": 0.3787,
+  "/router-bare/judges/deepseek-r1/round1/ece": 0.3766,
+  "/router-bare/judges/deepseek-r1/round2/ece": 0.3819,
   "/router-bare/judges/gemini-3-flash/hard_round1/ece": 0.8862,
   "/router-bare/judges/gemini-3-flash/hard_round2/ece": 0.7562,
   "/router-bare/judges/gemini-3-flash/round1/ece": 0.3154,
@@ -318,7 +318,7 @@
   "/router-described/judges/claude-sonnet-4.5/round2/ece": 0.0484,
   "/router-described/judges/deepseek-r1/hard_round1/ece": 0.0925,
   "/router-described/judges/deepseek-r1/hard_round2/ece": 0.0535,
-  "/router-described/judges/deepseek-r1/round1/ece": 0.1478,
+  "/router-described/judges/deepseek-r1/round1/ece": 0.1491,
   "/router-described/judges/deepseek-r1/round2/ece": 0.0507,
   "/router-described/judges/gemini-3-flash/hard_round1/ece": 0.0312,
   "/router-described/judges/gemini-3-flash/hard_round2/ece": 0.065,
@@ -374,10 +374,10 @@
   "/ece": 0.0519
  },
  "docs/runs/arena/deepseek-r1/router-bare.json": {
-  "/ece": 0.3734
+  "/ece": 0.3766
  },
  "docs/runs/arena/deepseek-r1/router-described.json": {
-  "/ece": 0.1478
+  "/ece": 0.1491
  },
  "docs/runs/arena/finetuned-deberta-run2-ts/email-adversarial.json": {
   "/ece": 0.017
@@ -467,7 +467,7 @@
   "/ece": 0.2311
  },
  "docs/runs/jury/router-bare/deepseek-r1.r2.json": {
-  "/ece": 0.3787
+  "/ece": 0.3819
  },
  "docs/runs/jury/router-bare/gemini-3-flash.r2.json": {
   "/ece": 0.3047

@@ -69,6 +69,10 @@ def _ground_truth(run: dict) -> tuple[str, str]:
     return cell, f"Ground truth: {cell} — {tail}"
 
 
+def _metric(value: object, spec: str) -> str:
+    return "unknown" if value is None else format(value, spec)
+
+
 def build(result: dict, drift: dict | None = None, artifact_url: str = "",
           marker: str = MARKER) -> str:
     run = result.get("run", {}) or {}
@@ -78,14 +82,18 @@ def build(result: dict, drift: dict | None = None, artifact_url: str = "",
     if tag:
         lines += [f"> ⚠️ **{_md(tag)}**", ""]
     gt_cell, gt_line = _ground_truth(run)
+    confidence = result.get("confidence") or {"known": result.get("n", 0),
+                                               "total": result.get("n", 0)}
     lines += [f"Judge {_judge_line(run)}", "",
-              "| n | accuracy | ground truth | ECE | zero-error coverage | cost | p50 | p99 |",
-              "|---|---|---|---|---|---|---|---|",
-              f"| {_md(result.get('n', 0))} | {result.get('accuracy', 0):.1%} | {gt_cell} | "
-              f"{result.get('ece', 0):.4f} | {zec.get('coverage', 0):.1%} "
+              "| n | confidence known | accuracy | ground truth | ECE | zero-error coverage | cost | p50 | p99 |",
+              "|---|---|---|---|---|---|---|---|---|",
+              f"| {_md(result.get('n', 0))} | {confidence['known']}/{confidence['total']} | "
+              f"{result.get('accuracy', 0):.1%} | {gt_cell} | "
+              f"{_metric(result.get('ece'), '.4f')} | "
+              f"{_metric(zec.get('coverage'), '.1%')} "
               f"(n={_md(zec.get('n', 0))}, conf ≥ {_md(zec.get('threshold'))}) | "
-              f"${result.get('total_cost_usd', 0):.4f} | {result.get('p50_latency_s', 0)} s | "
-              f"{result.get('p99_latency_s', 0)} s |", "",
+              f"{('$' + format(result['total_cost_usd'], '.4f')) if result.get('total_cost_usd') is not None else 'unknown'} | "
+              f"{result.get('p50_latency_s', 0)} s | {result.get('p99_latency_s', 0)} s |", "",
               f"_{gt_line}_", ""]
     if drift is not None:
         base = _md(drift.get("baseline", "baseline"))

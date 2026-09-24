@@ -117,6 +117,14 @@ def test_summarize_hand_computed_including_no_answer():
         assert lo <= point <= hi, (key, lo, point, hi)
 
 
+def test_unknown_confidence_stays_out_of_heldout_calibration():
+    rows = [rec(0, "a", "a", 0.9), rec(1, "b", "", None)]
+    s = heldout_report.summarize(rows, "email-clean")
+    assert s["n"] == 2 and s["accuracy"] == 0.5
+    assert s["confidence"] == {"known": 1, "total": 2}
+    assert s["ece"] == pytest.approx(0.1)
+
+
 def test_summarize_n1_and_all_correct_have_no_wrong_confidence():
     s = heldout_report.summarize([rec(0, "a", "a", 1.0)], "email-clean")
     assert s["n"] == 1 and s["accuracy"] == 1.0 and s["mean_conf_wrong"] is None

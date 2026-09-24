@@ -25,11 +25,12 @@ class Question:
 @dataclass
 class Judgment:
     question: str
-    decision: str        # the chosen option / level / "true"/"false"
-    confidence: float    # 0..1 — the number we're here to audit
+    decision: str             # the chosen option / level / "true"/"false"
+    confidence: float | None  # 0..1 when declared; None when unknown
     latency_s: float = 0.0
-    cost_usd: float = 0.0
+    cost_usd: float | None = 0.0
     raw: dict = field(default_factory=dict)
+    parse_status: str = "parsed"  # parsed | no_answer | no_confidence
 
 
 class Judge:

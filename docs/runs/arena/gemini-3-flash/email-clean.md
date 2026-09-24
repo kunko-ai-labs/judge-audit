@@ -1,11 +1,11 @@
 # Audit report — llm
 
-**n=200** · accuracy **100.0%** [98.2, 100.0]† · ECE **0.0047** [0.0025, 0.0075] · ECE (equal-mass) **0.0047** [0.0025, 0.0075] · Brier **0.0002** [0.0001, 0.0004]
+**n=200** · accuracy **100.0%** [98.2, 100.0]† · confidence known **200/200** · ECE **0.0047** [0.0025, 0.0075] · ECE (equal-mass) **0.0047** [0.0025, 0.0075] · Brier **0.0002** [0.0001, 0.0004]
 · cost **$0.0246** · p50 **2.074s** · p99 **61.984s**
 
 _judge `llm:gemini-3-flash-preview` · model `gemini-3-flash-preview` · run 2026-09-20T18:11:22+00:00 · judge-audit 0.3.1_
 _dataset `examples/email-routing/labels.jsonl` · 200 rows · sha256 `c5b4c111290a…`_
-_regenerated 2026-09-23T13:41:20+00:00 from `docs/runs/arena/gemini-3-flash/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-09-23T18:32:04+00:00 from `docs/runs/arena/gemini-3-flash/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic: seeded templates with item and number fills, not real mail; the label is the template's category by design; no human checked it; 100 % here is the floor a judge must clear, not evidence of production routing accuracy**
 

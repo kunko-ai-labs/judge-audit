@@ -1,11 +1,11 @@
 # Audit report — llm
 
-**n=120** · accuracy **79.2%** [69.9, 86.9] · ECE **0.1478** [0.0744, 0.2369] · ECE (equal-mass) **0.1438** [0.0802, 0.2375] · Brier **0.1820** [0.1134, 0.2592]
+**n=120** · accuracy **79.2%** [69.9, 86.9] · confidence known **119/120** · ECE **0.1491** [0.0738, 0.2498] · ECE (equal-mass) **0.1425** [0.0794, 0.2471] · Brier **0.1836** [0.1142, 0.2708]
 · cost **$0.4660** · p50 **4.089s** · p99 **28.476s**
 
 _judge `llm:deepseek-r1` · model `deepseek-r1` · run 2026-09-21T15:21:30+00:00 · judge-audit 0.3.2_
 _dataset `examples/task-routing/labels-described.jsonl` · 120 rows · sha256 `4571c9661a0c…`_
-_regenerated 2026-09-23T13:41:20+00:00 from `docs/runs/arena/deepseek-r1/router-described.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-09-23T18:32:04+00:00 from `docs/runs/arena/deepseek-r1/router-described.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome; downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified; 40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted**
 
@@ -21,19 +21,17 @@ Retrospective on this dataset — not a production guarantee.
 
 | coverage | accuracy | min confidence | n |
 |---|---|---|---|
-| 8.3% | 0.0% | 1.00 | 10 |
-| 17.5% | 52.4% | 0.99 | 21 |
-| 77.5% | 79.6% | 0.95 | 93 |
-| 89.2% | 81.3% | 0.90 | 107 |
-| 90.0% | 81.5% | 0.85 | 108 |
-| 95.8% | 80.0% | 0.80 | 115 |
-| 100.0% | 79.2% | 0.00 | 120 |
+| 8.4% | 0.0% | 1.00 | 10 |
+| 17.6% | 52.4% | 0.99 | 21 |
+| 78.1% | 79.6% | 0.95 | 93 |
+| 89.9% | 81.3% | 0.90 | 107 |
+| 96.6% | 80.0% | 0.80 | 115 |
+| 100.0% | 79.8% | 0.50 | 119 |
 
 ## Calibration (reliability bins)
 
 | confidence bin | avg confidence | accuracy | n |
 |---|---|---|---|
-| 0.0-0.1 | 0.000 | 0.0% | 1 |
 | 0.5-0.6 | 0.500 | 0.0% | 1 |
 | 0.7-0.8 | 0.700 | 100.0% | 3 |
 | 0.8-0.9 | 0.806 | 62.5% | 8 |

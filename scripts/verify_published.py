@@ -17,8 +17,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
 from judge_audit.runner import (  # noqa: E402
-    clamp_confidence,
-    is_correct,
+    checkpoint_record,
     load_jsonl,
     sha256_of,
     sha256_rows_of,
@@ -58,19 +57,21 @@ PUBLISHED = [
 def recompute(labels_path: Path, ckpt_path: Path, question: str):
     rows = load_jsonl(str(labels_path))
     records = []
+    run = {}
+    checkpoint_rows = []
     for line in ckpt_path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
         rec = json.loads(line)
         if rec["idx"] < 0:
+            run = rec.get("run", {})
             continue
+        checkpoint_rows.append(rec)
+    for rec in checkpoint_rows:
         row = rows[rec["idx"]]
         expected = row["labels"][question]
         j = next(x for x in rec["judgments"] if x["question"] == question)
-        records.append({"confidence": clamp_confidence(j["confidence"]),
-                        "correct": is_correct(j["decision"], expected),
-                        "latency_s": j.get("latency_s", 0.0),
-                        "cost_usd": j.get("cost_usd", 0.0)})
+        records.append(checkpoint_record(rec["idx"], row, j, expected, run))
     return summarize("recomputed", records, ci=False).to_dict()
 
 

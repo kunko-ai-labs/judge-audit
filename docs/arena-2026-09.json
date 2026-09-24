@@ -10,6 +10,10 @@
     "datasets": {
       "email-clean": {
         "n": 200,
+        "confidence": {
+          "known": 200,
+          "total": 200
+        },
         "accuracy": 1.0,
         "ece": 0.0036,
         "ece_equal_mass": 0.0036,
@@ -44,11 +48,16 @@
         "mean_conf_wrong": null,
         "distinct_confidence_values": 10,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0037,
         "p50_latency_s": 0.863
       },
       "email-adversarial": {
         "n": 200,
+        "confidence": {
+          "known": 200,
+          "total": 200
+        },
         "accuracy": 0.955,
         "ece": 0.0389,
         "ece_equal_mass": 0.0374,
@@ -83,6 +92,7 @@
         "mean_conf_wrong": 0.597,
         "distinct_confidence_values": 40,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0038,
         "p50_latency_s": 0.738,
         "prompt_injection_accuracy": 0.825,
@@ -101,6 +111,10 @@
       },
       "router-bare": {
         "n": 120,
+        "confidence": {
+          "known": 120,
+          "total": 120
+        },
         "accuracy": 0.6667,
         "ece": 0.3181,
         "ece_equal_mass": 0.2926,
@@ -135,6 +149,7 @@
         "mean_conf_wrong": 0.926,
         "distinct_confidence_values": 25,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.002,
         "p50_latency_s": 0.704,
         "hard_routed_strong": 0,
@@ -146,6 +161,10 @@
       },
       "router-described": {
         "n": 120,
+        "confidence": {
+          "known": 120,
+          "total": 120
+        },
         "accuracy": 0.975,
         "ece": 0.053,
         "ece_equal_mass": 0.053,
@@ -180,6 +199,7 @@
         "mean_conf_wrong": 0.583,
         "distinct_confidence_values": 31,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0023,
         "p50_latency_s": 0.864,
         "hard_routed_strong": 37,
@@ -225,6 +245,10 @@
     "datasets": {
       "email-clean": {
         "n": 200,
+        "confidence": {
+          "known": 200,
+          "total": 200
+        },
         "accuracy": 1.0,
         "ece": 0.029,
         "ece_equal_mass": 0.029,
@@ -259,11 +283,16 @@
         "mean_conf_wrong": null,
         "distinct_confidence_values": 4,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.3798,
         "p50_latency_s": 2.913
       },
       "email-adversarial": {
         "n": 200,
+        "confidence": {
+          "known": 200,
+          "total": 200
+        },
         "accuracy": 0.965,
         "ece": 0.0159,
         "ece_equal_mass": 0.0439,
@@ -298,6 +327,7 @@
         "mean_conf_wrong": 0.877,
         "distinct_confidence_values": 7,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.4538,
         "p50_latency_s": 3.48,
         "prompt_injection_accuracy": 0.875,
@@ -316,6 +346,10 @@
       },
       "router-bare": {
         "n": 120,
+        "confidence": {
+          "known": 120,
+          "total": 120
+        },
         "accuracy": 0.6583,
         "ece": 0.2353,
         "ece_equal_mass": 0.2363,
@@ -350,6 +384,7 @@
         "mean_conf_wrong": 0.832,
         "distinct_confidence_values": 10,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.5004,
         "p50_latency_s": 6.158,
         "hard_routed_strong": 6,
@@ -362,6 +397,10 @@
       },
       "router-described": {
         "n": 120,
+        "confidence": {
+          "known": 120,
+          "total": 120
+        },
         "accuracy": 0.95,
         "ece": 0.0322,
         "ece_equal_mass": 0.0719,
@@ -396,6 +435,7 @@
         "mean_conf_wrong": 0.983,
         "distinct_confidence_values": 4,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.3998,
         "p50_latency_s": 4.553,
         "hard_routed_strong": 40,
@@ -433,6 +473,10 @@
     "datasets": {
       "email-clean": {
         "n": 200,
+        "confidence": {
+          "known": 200,
+          "total": 200
+        },
         "accuracy": 0.865,
         "ece": 0.1765,
         "ece_equal_mass": 0.163,
@@ -467,11 +511,16 @@
         "mean_conf_wrong": 0.504,
         "distinct_confidence_values": 59,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0,
         "p50_latency_s": 0.321
       },
       "email-adversarial": {
         "n": 200,
+        "confidence": {
+          "known": 200,
+          "total": 200
+        },
         "accuracy": 0.595,
         "ece": 0.1247,
         "ece_equal_mass": 0.1106,
@@ -506,6 +555,7 @@
         "mean_conf_wrong": 0.559,
         "distinct_confidence_values": 66,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0,
         "p50_latency_s": 0.354,
         "prompt_injection_accuracy": 0.475,
@@ -524,6 +574,10 @@
       },
       "router-bare": {
         "n": 120,
+        "confidence": {
+          "known": 120,
+          "total": 120
+        },
         "accuracy": 0.475,
         "ece": 0.4027,
         "ece_equal_mass": 0.435,
@@ -558,6 +612,7 @@
         "mean_conf_wrong": 0.812,
         "distinct_confidence_values": 31,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0,
         "p50_latency_s": 0.094,
         "hard_routed_strong": 40,
@@ -570,6 +625,10 @@
       },
       "router-described": {
         "n": 120,
+        "confidence": {
+          "known": 120,
+          "total": 120
+        },
         "accuracy": 0.4917,
         "ece": 0.1952,
         "ece_equal_mass": 0.2131,
@@ -605,6 +664,7 @@
         "mean_conf_wrong": 0.677,
         "distinct_confidence_values": 31,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0,
         "p50_latency_s": 0.105,
         "hard_routed_strong": 40,
@@ -644,6 +704,10 @@
     "datasets": {
       "email-clean": {
         "n": 200,
+        "confidence": {
+          "known": 200,
+          "total": 200
+        },
         "accuracy": 1.0,
         "ece": 0.0519,
         "ece_equal_mass": 0.0519,
@@ -678,11 +742,16 @@
         "mean_conf_wrong": null,
         "distinct_confidence_values": 4,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.3848,
         "p50_latency_s": 2.902
       },
       "email-adversarial": {
         "n": 200,
+        "confidence": {
+          "known": 200,
+          "total": 200
+        },
         "accuracy": 0.805,
         "ece": 0.1265,
         "ece_equal_mass": 0.134,
@@ -717,6 +786,7 @@
         "mean_conf_wrong": 0.9,
         "distinct_confidence_values": 9,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.589,
         "p50_latency_s": 3.097,
         "prompt_injection_accuracy": 0.275,
@@ -735,10 +805,14 @@
       },
       "router-bare": {
         "n": 120,
+        "confidence": {
+          "known": 119,
+          "total": 120
+        },
         "accuracy": 0.5583,
-        "ece": 0.3734,
-        "ece_equal_mass": 0.3482,
-        "brier": 0.3798,
+        "ece": 0.3766,
+        "ece_equal_mass": 0.3613,
+        "brier": 0.383,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.4248,
@@ -746,29 +820,30 @@
         ],
         "accuracy_ci_method": "bootstrap",
         "ece_ci": [
-          0.2622,
-          0.4956
+          0.2645,
+          0.5004
         ],
         "ece_ci_method": "bootstrap",
         "ece_equal_mass_ci": [
-          0.2473,
-          0.4841
+          0.2501,
+          0.4881
         ],
         "ece_equal_mass_ci_method": "bootstrap",
         "brier_ci": [
-          0.2723,
-          0.4924
+          0.2746,
+          0.4955
         ],
         "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.0303
+          0.0305
         ],
         "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.886,
-        "mean_conf_wrong": 0.888,
-        "distinct_confidence_values": 12,
+        "mean_conf_wrong": 0.905,
+        "distinct_confidence_values": 11,
         "no_answer": 1,
+        "no_confidence": 0,
         "cost_usd": 0.4379,
         "p50_latency_s": 4.24,
         "hard_routed_strong": 22,
@@ -782,10 +857,14 @@
       },
       "router-described": {
         "n": 120,
+        "confidence": {
+          "known": 119,
+          "total": 120
+        },
         "accuracy": 0.7917,
-        "ece": 0.1478,
-        "ece_equal_mass": 0.1438,
-        "brier": 0.182,
+        "ece": 0.1491,
+        "ece_equal_mass": 0.1425,
+        "brier": 0.1836,
         "zero_error_coverage": 0.0,
         "accuracy_ci": [
           0.6992,
@@ -793,29 +872,30 @@
         ],
         "accuracy_ci_method": "bootstrap",
         "ece_ci": [
-          0.0744,
-          0.2369
+          0.0738,
+          0.2498
         ],
         "ece_ci_method": "bootstrap",
         "ece_equal_mass_ci": [
-          0.0802,
-          0.2375
+          0.0794,
+          0.2471
         ],
         "ece_equal_mass_ci_method": "bootstrap",
         "brier_ci": [
-          0.1134,
-          0.2592
+          0.1142,
+          0.2708
         ],
         "brier_ci_method": "bootstrap",
         "zero_error_coverage_ci": [
           0.0,
-          0.0303
+          0.0305
         ],
         "zero_error_coverage_ci_method": "clopper-pearson",
         "mean_conf_correct": 0.933,
-        "mean_conf_wrong": 0.894,
-        "distinct_confidence_values": 9,
+        "mean_conf_wrong": 0.931,
+        "distinct_confidence_values": 8,
         "no_answer": 1,
+        "no_confidence": 0,
         "cost_usd": 0.466,
         "p50_latency_s": 4.077,
         "hard_routed_strong": 40,
@@ -895,6 +975,10 @@
     "datasets": {
       "email-adversarial": {
         "n": 200,
+        "confidence": {
+          "known": 200,
+          "total": 200
+        },
         "accuracy": 0.97,
         "ece": 0.4961,
         "ece_equal_mass": 0.4961,
@@ -929,6 +1013,7 @@
         "mean_conf_wrong": 0.15,
         "distinct_confidence_values": 55,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0,
         "p50_latency_s": 0.017,
         "prompt_injection_accuracy": 1.0,
@@ -1026,6 +1111,10 @@
     "datasets": {
       "email-adversarial": {
         "n": 200,
+        "confidence": {
+          "known": 200,
+          "total": 200
+        },
         "accuracy": 0.99,
         "ece": 0.048,
         "ece_equal_mass": 0.0403,
@@ -1060,6 +1149,7 @@
         "mean_conf_wrong": 0.614,
         "distinct_confidence_values": 21,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0,
         "p50_latency_s": 0.018,
         "prompt_injection_accuracy": 1.0,
@@ -1157,6 +1247,10 @@
     "datasets": {
       "email-adversarial": {
         "n": 200,
+        "confidence": {
+          "known": 200,
+          "total": 200
+        },
         "accuracy": 0.99,
         "ece": 0.017,
         "ece_equal_mass": 0.0004,
@@ -1191,6 +1285,7 @@
         "mean_conf_wrong": 0.918,
         "distinct_confidence_values": 9,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0,
         "p50_latency_s": 0.019,
         "prompt_injection_accuracy": 1.0,
@@ -1232,6 +1327,10 @@
     "datasets": {
       "email-clean": {
         "n": 200,
+        "confidence": {
+          "known": 200,
+          "total": 200
+        },
         "accuracy": 1.0,
         "ece": 0.0047,
         "ece_equal_mass": 0.0047,
@@ -1266,11 +1365,16 @@
         "mean_conf_wrong": null,
         "distinct_confidence_values": 4,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0246,
         "p50_latency_s": 2.072
       },
       "email-adversarial": {
         "n": 200,
+        "confidence": {
+          "known": 200,
+          "total": 200
+        },
         "accuracy": 0.97,
         "ece": 0.0151,
         "ece_equal_mass": 0.0439,
@@ -1305,6 +1409,7 @@
         "mean_conf_wrong": 0.983,
         "distinct_confidence_values": 7,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0263,
         "p50_latency_s": 2.446,
         "prompt_injection_accuracy": 0.875,
@@ -1323,6 +1428,10 @@
       },
       "router-bare": {
         "n": 120,
+        "confidence": {
+          "known": 120,
+          "total": 120
+        },
         "accuracy": 0.6667,
         "ece": 0.3154,
         "ece_equal_mass": 0.3154,
@@ -1357,6 +1466,7 @@
         "mean_conf_wrong": 0.965,
         "distinct_confidence_values": 4,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0161,
         "p50_latency_s": 2.402,
         "hard_routed_strong": 3,
@@ -1369,6 +1479,10 @@
       },
       "router-described": {
         "n": 120,
+        "confidence": {
+          "known": 120,
+          "total": 120
+        },
         "accuracy": 0.9833,
         "ece": 0.0121,
         "ece_equal_mass": 0.0071,
@@ -1403,6 +1517,7 @@
         "mean_conf_wrong": 0.825,
         "distinct_confidence_values": 4,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0185,
         "p50_latency_s": 2.452,
         "hard_routed_strong": 40,
@@ -1438,6 +1553,10 @@
     "datasets": {
       "email-clean": {
         "n": 200,
+        "confidence": {
+          "known": 200,
+          "total": 200
+        },
         "accuracy": 1.0,
         "ece": 0.0258,
         "ece_equal_mass": 0.0258,
@@ -1472,11 +1591,16 @@
         "mean_conf_wrong": null,
         "distinct_confidence_values": 3,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0,
         "p50_latency_s": 9.452
       },
       "email-adversarial": {
         "n": 200,
+        "confidence": {
+          "known": 200,
+          "total": 200
+        },
         "accuracy": 0.81,
         "ece": 0.1534,
         "ece_equal_mass": 0.1796,
@@ -1511,6 +1635,7 @@
         "mean_conf_wrong": 0.974,
         "distinct_confidence_values": 5,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0,
         "p50_latency_s": 12.232,
         "prompt_injection_accuracy": 0.3,
@@ -1529,6 +1654,10 @@
       },
       "router-bare": {
         "n": 120,
+        "confidence": {
+          "known": 120,
+          "total": 120
+        },
         "accuracy": 0.5917,
         "ece": 0.3446,
         "ece_equal_mass": 0.3446,
@@ -1563,6 +1692,7 @@
         "mean_conf_wrong": 0.954,
         "distinct_confidence_values": 4,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0,
         "p50_latency_s": 13.236,
         "hard_routed_strong": 28,
@@ -1575,6 +1705,10 @@
       },
       "router-described": {
         "n": 120,
+        "confidence": {
+          "known": 120,
+          "total": 120
+        },
         "accuracy": 0.775,
         "ece": 0.18,
         "ece_equal_mass": 0.18,
@@ -1609,6 +1743,7 @@
         "mean_conf_wrong": 0.981,
         "distinct_confidence_values": 3,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0,
         "p50_latency_s": 13.293,
         "hard_routed_strong": 40,
@@ -1647,6 +1782,10 @@
     "datasets": {
       "email-clean": {
         "n": 200,
+        "confidence": {
+          "known": 200,
+          "total": 200
+        },
         "accuracy": 1.0,
         "ece": 0.0909,
         "ece_equal_mass": 0.0909,
@@ -1681,11 +1820,16 @@
         "mean_conf_wrong": null,
         "distinct_confidence_values": 4,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0397,
         "p50_latency_s": 0.805
       },
       "email-adversarial": {
         "n": 200,
+        "confidence": {
+          "known": 200,
+          "total": 200
+        },
         "accuracy": 0.905,
         "ece": 0.0155,
         "ece_equal_mass": 0.1325,
@@ -1720,6 +1864,7 @@
         "mean_conf_wrong": 0.821,
         "distinct_confidence_values": 6,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0411,
         "p50_latency_s": 0.811,
         "prompt_injection_accuracy": 0.625,
@@ -1738,6 +1883,10 @@
       },
       "router-bare": {
         "n": 120,
+        "confidence": {
+          "known": 120,
+          "total": 120
+        },
         "accuracy": 0.65,
         "ece": 0.2333,
         "ece_equal_mass": 0.2367,
@@ -1772,6 +1921,7 @@
         "mean_conf_wrong": 0.926,
         "distinct_confidence_values": 3,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0258,
         "p50_latency_s": 0.795,
         "hard_routed_strong": 29,
@@ -1784,6 +1934,10 @@
       },
       "router-described": {
         "n": 120,
+        "confidence": {
+          "known": 120,
+          "total": 120
+        },
         "accuracy": 0.8667,
         "ece": 0.0433,
         "ece_equal_mass": 0.1933,
@@ -1818,6 +1972,7 @@
         "mean_conf_wrong": 0.969,
         "distinct_confidence_values": 3,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0314,
         "p50_latency_s": 0.808,
         "hard_routed_strong": 40,
@@ -1853,6 +2008,10 @@
     "datasets": {
       "email-clean": {
         "n": 200,
+        "confidence": {
+          "known": 200,
+          "total": 200
+        },
         "accuracy": 0.9,
         "ece": 0.034,
         "ece_equal_mass": 0.034,
@@ -1887,11 +2046,16 @@
         "mean_conf_wrong": 0.845,
         "distinct_confidence_values": 2,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0,
         "p50_latency_s": 0.703
       },
       "email-adversarial": {
         "n": 200,
+        "confidence": {
+          "known": 200,
+          "total": 200
+        },
         "accuracy": 0.725,
         "ece": 0.154,
         "ece_equal_mass": 0.154,
@@ -1926,6 +2090,7 @@
         "mean_conf_wrong": 0.905,
         "distinct_confidence_values": 3,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0,
         "p50_latency_s": 0.747,
         "prompt_injection_accuracy": 0.675,
@@ -1944,6 +2109,10 @@
       },
       "router-bare": {
         "n": 120,
+        "confidence": {
+          "known": 120,
+          "total": 120
+        },
         "accuracy": 0.6583,
         "ece": 0.3958,
         "ece_equal_mass": 0.3958,
@@ -1978,6 +2147,7 @@
         "mean_conf_wrong": 1.0,
         "distinct_confidence_values": 2,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0,
         "p50_latency_s": 0.749,
         "hard_routed_strong": 0,
@@ -1990,6 +2160,10 @@
       },
       "router-described": {
         "n": 120,
+        "confidence": {
+          "known": 120,
+          "total": 120
+        },
         "accuracy": 0.5917,
         "ece": 0.4292,
         "ece_equal_mass": 0.4292,
@@ -2024,6 +2198,7 @@
         "mean_conf_wrong": 1.0,
         "distinct_confidence_values": 2,
         "no_answer": 0,
+        "no_confidence": 0,
         "cost_usd": 0.0,
         "p50_latency_s": 0.877,
         "hard_routed_strong": 0,

@@ -62,8 +62,12 @@ def deliberation_rows(dataset: str, slug: str, panel: list[str] | None = None) -
     for idx, row in enumerate(rows):
         order = [j for j in panel if votes[j][idx]["decision"].strip()]
         random.Random(f"{SEED}:{idx}").shuffle(order)
-        lines = [f"- Judge {chr(65 + k)}: {votes[j][idx]['decision']} "
-                 f"(confidence {votes[j][idx]['confidence']:.2f})" for k, j in enumerate(order)]
+        lines = []
+        for k, j in enumerate(order):
+            confidence = votes[j][idx]["confidence"]
+            suffix = (f" (confidence {confidence:.2f})" if confidence is not None else
+                      " (confidence unknown)")
+            lines.append(f"- Judge {chr(65 + k)}: {votes[j][idx]['decision']}{suffix}")
         text = (PREAMBLE.format(k=len(order), s="" if len(order) == 1 else "s", votes="\n".join(lines))
                 if order else PREAMBLE_NONE)
         new = dict(row)

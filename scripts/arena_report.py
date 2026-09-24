@@ -33,9 +33,8 @@ from judge_audit.metrics.calibration import (  # noqa: E402
 )
 from judge_audit.report import interval_of, with_interval_notes  # noqa: E402
 from judge_audit.runner import (  # noqa: E402
-    clamp_confidence,
+    checkpoint_record,
     groups_of,
-    is_correct,
     load_jsonl,
     read_dataset_header,
 )
@@ -73,7 +72,7 @@ def ground_truth_tier(labels: str) -> GroundTruth:
 
 def records(labels: str, ckpt: Path, question: str) -> tuple[list[dict], dict]:
     rows = load_jsonl(str(ROOT / labels))
-    recs, run = [], {}
+    recs, run, pending = [], {}, []
     for line in ckpt.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
@@ -81,16 +80,11 @@ def records(labels: str, ckpt: Path, question: str) -> tuple[list[dict], dict]:
         if rec["idx"] < 0:
             run = rec.get("run", {})
             continue
+        pending.append(rec)
+    for rec in pending:
         row = rows[rec["idx"]]
         j = next(x for x in rec["judgments"] if x["question"] == question)
-        recs.append({
-            "idx": rec["idx"],
-            "expected": row["labels"][question], "decision": str(j["decision"]),
-            "correct": is_correct(j["decision"], row["labels"][question]),
-            "confidence": clamp_confidence(j["confidence"]),
-            "latency_s": j.get("latency_s", 0.0), "cost_usd": j.get("cost_usd", 0.0),
-            "meta": row.get("_meta", {}),
-        })
+        recs.append(checkpoint_record(rec["idx"], row, j, row["labels"][question], run))
     return recs, run
 
 
@@ -100,39 +94,47 @@ def summarize(recs: list[dict], dataset: str, rows: list[dict] | None = None) ->
     `rows` are the dataset's labeled rows; they supply the cluster keys of the bootstrap
     intervals (distinct state texts — the router repeats each of its 61 texts about
     twice). Without them every row is its own cluster, which overstates precision."""
-    conf = [r["confidence"] for r in recs]
-    ok = [r["correct"] for r in recs]
-    groups = groups_of(recs, rows) if rows else None
-    right = [r["confidence"] for r in recs if r["correct"]]
-    wrong = [r["confidence"] for r in recs if not r["correct"]]
+    all_ok = [r["correct"] for r in recs]
+    known_idx = [i for i, r in enumerate(recs) if r["confidence"] is not None]
+    conf = [recs[i]["confidence"] for i in known_idx]
+    ok = [recs[i]["correct"] for i in known_idx]
+    all_groups = groups_of(recs, rows) if rows else None
+    groups = [all_groups[i] for i in known_idx] if all_groups is not None else None
+    right = [r["confidence"] for r in recs if r["correct"] and r["confidence"] is not None]
+    wrong = [r["confidence"] for r in recs if not r["correct"] and r["confidence"] is not None]
+    known = len(conf)
     point = {
-        "accuracy": round(sum(ok) / len(ok), 4),
-        "ece": round(expected_calibration_error(conf, ok), 4),
+        "accuracy": round(sum(all_ok) / len(all_ok), 4),
+        "ece": round(expected_calibration_error(conf, ok), 4) if known else None,
         # Two calibration numbers that do not hinge on ten fixed bins (docs/judges.md
         # § Three calibration numbers). Kept separate: there is no composite score.
-        "ece_equal_mass": round(expected_calibration_error(conf, ok, binning=EQUAL_MASS), 4),
-        "brier": round(brier_score(conf, ok), 4),
-        "zero_error_coverage": zero_error_coverage(conf, ok)["coverage"],
+        "ece_equal_mass": (round(expected_calibration_error(conf, ok, binning=EQUAL_MASS), 4)
+                           if known else None),
+        "brier": round(brier_score(conf, ok), 4) if known else None,
+        "zero_error_coverage": zero_error_coverage(conf, ok)["coverage"] if known else None,
     }
+    costs = [r["cost_usd"] for r in recs]
     out = {
-        "n": len(recs), **point,
+        "n": len(recs), "confidence": {"known": known, "total": len(recs)}, **point,
         # 95 % intervals over distinct texts (seed 0), each with the method that
         # produced it — exact at the boundary, bootstrap elsewhere; see docs/judges.md.
         # A point outside its own interval is flagged (`*_ci_point_outside`).
-        **ci_fields("accuracy", accuracy_ci(ok, groups=groups), point["accuracy"]),
-        **ci_fields("ece", ece_ci(conf, ok, groups=groups), point["ece"]),
-        **ci_fields("ece_equal_mass", ece_ci(conf, ok, groups=groups, binning=EQUAL_MASS),
-                    point["ece_equal_mass"]),
-        **ci_fields("brier", brier_ci(conf, ok, groups=groups), point["brier"]),
-        **ci_fields("zero_error_coverage", zero_error_coverage_ci(conf, ok, groups=groups),
+        **ci_fields("accuracy", accuracy_ci(all_ok, groups=all_groups), point["accuracy"]),
+        **ci_fields("ece", ece_ci(conf, ok, groups=groups) if known else None, point["ece"]),
+        **ci_fields("ece_equal_mass", (ece_ci(conf, ok, groups=groups, binning=EQUAL_MASS)
+                                       if known else None), point["ece_equal_mass"]),
+        **ci_fields("brier", brier_ci(conf, ok, groups=groups) if known else None,
+                    point["brier"]),
+        **ci_fields("zero_error_coverage", (zero_error_coverage_ci(conf, ok, groups=groups)
+                                            if known else None),
                     point["zero_error_coverage"]),
         "mean_conf_correct": round(statistics.mean(right), 3) if right else None,
         "mean_conf_wrong": round(statistics.mean(wrong), 3) if wrong else None,
         "distinct_confidence_values": len(set(round(c, 2) for c in conf)),
-        # A blank decision is a reply the adapter could not parse (format failure, truncated
-        # reasoning budget); it counts as wrong above, and is counted here on its own.
-        "no_answer": sum(1 for r in recs if not r["decision"].strip()),
-        "cost_usd": round(math.fsum(r["cost_usd"] for r in recs), 4),
+        "no_answer": sum(1 for r in recs if r.get("parse_status") == "no_answer"),
+        "no_confidence": sum(1 for r in recs if r.get("parse_status") == "no_confidence"),
+        "cost_usd": (round(math.fsum(costs), 4)
+                     if all(cost is not None for cost in costs) else None),
         "p50_latency_s": round(statistics.median(r["latency_s"] for r in recs), 3),
     }
     if dataset == "email-adversarial":
@@ -215,6 +217,10 @@ def fmt(x, pct=False):
     if x is None:
         return "—"
     return f"{x:.1%}" if pct else f"{x:.3f}" if isinstance(x, float) else str(x)
+
+
+def fmt4(x):
+    return "—" if x is None else f"{x:.4f}"
 
 
 CALIBRATION_KEYS = ("ece", "ece_equal_mass", "brier")
@@ -343,12 +349,13 @@ def render(judges: dict) -> str:
             s = j["datasets"].get(ds)
             if not s:
                 continue
-            row = (f"| {j['label']} | {j['method']} | " +
+            row = (f"| {j['label']} | {j['method']} (known "
+                   f"{s['confidence']['known']}/{s['confidence']['total']}) | " +
                    f"{fmt(s['accuracy'], True)}{interval_of(s, 'accuracy_ci', pct=True)} | " +
                    f"{fmt(s['ece'])}{interval_of(s, 'ece_ci', digits=3)} | " +
-                   f"{s['ece_equal_mass']:.4f}{interval_of(s, 'ece_equal_mass_ci')} | " +
+                   f"{fmt4(s['ece_equal_mass'])}{interval_of(s, 'ece_equal_mass_ci')} | " +
                    # four decimals: a near-perfect judge's Brier is 0.0002, not 0.000
-                   f"{s['brier']:.4f}{interval_of(s, 'brier_ci')} | " +
+                   f"{fmt4(s['brier'])}{interval_of(s, 'brier_ci')} | " +
                    f"{fmt(s['zero_error_coverage'], True)}" +
                    f"{interval_of(s, 'zero_error_coverage_ci', pct=True)} | {fmt(s['mean_conf_correct'])} / " +
                    f"{fmt(s['mean_conf_wrong'])} | {s['distinct_confidence_values']} | " +
@@ -435,15 +442,19 @@ def render(judges: dict) -> str:
           "confidence carries no information about correctness.",
           "- **distinct confidence values**: a chat model that only ever says 0.8 or 0.9 is not " +
           "estimating anything; it is filling a field.",
+          "- **confidence known k/n**: calibration, Brier and automation coverage use only the " +
+          "rows where the judge declared a valid probability. Accuracy still uses all n rows; " +
+          "an unknown confidence is never replaced with 0 or 1.",
           "- **no answer**: replies the adapter could not parse (format failure, exhausted reasoning " +
-          "budget). They count as wrong at confidence 0 in every other column; this one keeps " +
-          "format failures visible apart from judgment quality.",
+          "budget). They count as wrong in accuracy; calibration includes one only when the reply " +
+          "actually declared a valid confidence.",
           "- **zero-error coverage**: the most-confident share of decisions with no observed error — " +
           "the automation budget. Cut at whole confidence groups: a group of tied confidences counts " +
           "only if every decision in it is right, so the number does not depend on row order. " +
           "Retrospective on this dataset.",
           "- Costs are as reported by each adapter (vendor list price for Jev; $0 for local models; " +
-          "list price for known hosted chat models).",
+          "list price for known hosted chat models; unknown when a hosted model's price was not " +
+          "recorded).",
           "",
           "## Provenance: what each judge was asked, and how", "",
           "Read from the checkpoint headers (`docs/runs/**/*.ckpt.jsonl`), not from memory:", "",

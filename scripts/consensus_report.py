@@ -206,7 +206,8 @@ def panel_stats(votes: dict[str, list[dict]], rows: list[dict], question: str,
             unanimous += 1
             unanimous_wrong += not ok
         if not ok:
-            conf_wrong += [votes[j][i]["confidence"] for j in judges if vote(j, i) == win]
+            conf_wrong += [votes[j][i]["confidence"] for j in judges
+                           if vote(j, i) == win and votes[j][i]["confidence"] is not None]
     return {
         "n": len(idxs), "judges": judges,
         "pairwise_agreement": round(statistics.mean(pair_agree), 4) if pair_agree else None,
@@ -219,6 +220,7 @@ def panel_stats(votes: dict[str, list[dict]], rows: list[dict], question: str,
         **ci_fields("majority_accuracy", accuracy_ci(maj_ok,
                                                      groups=state_groups(rows, idxs))),
         "majority_accuracy_decided": round(statistics.mean(decided_ok), 4) if decided_ok else None,
+        "confidence": {"known": len(decided_ok), "total": len(idxs)},
         "majority_wrong": sum(not ok for ok in maj_ok),
         "best_single_accuracy": round(max(
             statistics.mean(votes[j][i]["correct"] for i in idxs) for j in judges), 4),
@@ -357,7 +359,8 @@ def jury_composition(votes: dict[str, list[dict]], rows: list[dict], question: s
                                 if all(votes[j][i]["decision"].strip() and not votes[j][i]["correct"]
                                        for j in jury)),
             "cost_usd": (round(math.fsum(m["cost_usd"] for m in members), 4)
-                         if all(members) else None),
+                         if all(m is not None and m.get("cost_usd") is not None
+                                for m in members) else None),
             "p50_latency_s": (round(statistics.mean(m["p50_latency_s"] for m in members), 3)
                               if all(members) else None),
         })
@@ -431,11 +434,14 @@ def collect_dataset(ds: str) -> dict:
     entry["declared_confidence"] = {}
     for j in list(votes) + [j for j in everyone if j not in votes]:
         recs = everyone[j]
-        conf, ok = [r["confidence"] for r in recs], [r["correct"] for r in recs]
+        known = [r for r in recs if r["confidence"] is not None]
+        conf, ok = [r["confidence"] for r in known], [r["correct"] for r in known]
         entry["declared_confidence"][j] = {
-            "ece": round(expected_calibration_error(conf, ok), 4),
-            "zero_error_coverage": zero_error_coverage(conf, ok)["coverage"],
-            "accuracy": round(statistics.mean(ok), 4),
+            "confidence": {"known": len(known), "total": len(recs)},
+            "ece": round(expected_calibration_error(conf, ok), 4) if known else None,
+            "zero_error_coverage": (zero_error_coverage(conf, ok)["coverage"]
+                                    if known else None),
+            "accuracy": round(statistics.mean(r["correct"] for r in recs), 4),
             "juror": j in votes,
             **({} if j in votes else not_a_juror(ds, j))}
     return entry
@@ -454,7 +460,7 @@ def num(x):
 
 
 def money(x):
-    return "—" if x is None else f"${x:.4f}"
+    return "unknown" if x is None else f"${x:.4f}"
 
 
 def secs(x):
@@ -599,13 +605,17 @@ def render(data: dict) -> str:
                      f"{s['mean_conf_of_wrong_majority'] if s['mean_conf_of_wrong_majority'] is not None else '—'} |")
         L += ["", "**Vote share as a confidence score** (the way most agent juries use it) against each " +
               "judge's own declared confidence, same ECE and zero-error coverage:", "",
-              "| confidence source | accuracy | ECE | zero-error coverage |", "|---|---|---|---|",
-              f"| panel vote share (majority) | {pct(p['majority_accuracy'])}" +
+              "| confidence source | confidence known | accuracy | ECE | zero-error coverage |",
+              "|---|---|---|---|---|",
+              f"| panel vote share (majority) | {p['confidence']['known']}/{p['confidence']['total']} | " +
+              f"{pct(p['majority_accuracy'])}" +
               f"{interval_of(p, 'majority_accuracy_ci', pct=True)} | {num(p['vote_share_ece'])} | " +
               f"{pct(p['vote_share_zero_error_coverage'])} |"]
         for j, d in e["declared_confidence"].items():
             label = f"{j} (declared" + (f"; {d['not_a_juror']})" if "not_a_juror" in d else ")")
-            L.append(f"| {label} | {pct(d['accuracy'])} | {d['ece']:.3f} | " +
+            confidence = d["confidence"]
+            L.append(f"| {label} | {confidence['known']}/{confidence['total']} | " +
+                     f"{pct(d['accuracy'])} | {num(d['ece'])} | " +
                      f"{pct(d['zero_error_coverage'])} |")
         hard = e["subsets"].get("hard", {}).get("jury_sensitivity")
         if hard:
@@ -643,6 +653,8 @@ def render(data: dict) -> str:
           "- **vote share right / wrong**: mean share of the winning option when the majority was right vs. wrong. " +
           "If the two numbers are close, agreement carries no information about correctness.",
           "- **conf of the wrong majority**: mean declared confidence of the judges who voted with a wrong majority.",
+          "- **confidence known** is the calibration denominator. Declared-confidence ECE and " +
+          "zero-error coverage exclude unknown confidences; accuracy still counts all rows.",
           "- **vote share as confidence**: ECE and zero-error coverage computed with the share as the confidence " +
           "of the majority decision — the number an agent jury would act on.",
           "- **error correlation** (per judge pair, over the rows where both answered; n stated per " +

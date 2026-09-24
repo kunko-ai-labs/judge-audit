@@ -44,10 +44,11 @@ def reparse(ckpt: Path, rows: list[dict], dry_run: bool) -> int:
             text = raw.get("text") if isinstance(raw, dict) else None
             if not text:
                 continue
-            decision, confidence, ans = parse_reply(text, qs)[j["question"]]
-            if (decision, confidence) != (j["decision"], j["confidence"]):
+            decision, confidence, ans, status = parse_reply(text, qs)[j["question"]]
+            if (decision, confidence, status) != (
+                    j["decision"], j["confidence"], j.get("parse_status", "parsed")):
                 changed += 1
-                j["decision"], j["confidence"] = decision, confidence
+                j["decision"], j["confidence"], j["parse_status"] = decision, confidence, status
                 raw["parsed"] = ans
         out.append(rec)
     if changed and header_at is not None:

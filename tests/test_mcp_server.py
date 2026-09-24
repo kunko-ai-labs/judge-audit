@@ -16,6 +16,7 @@ def test_run_audit_simulated_is_tagged_and_carries_provenance(labels_path, tmp_p
                                judgments_path=str(tmp_path / "j.jsonl"))
     assert "error" not in out
     assert out["n"] == 12 and 0.0 <= out["ece"] <= 1.0
+    assert out["confidence"] == {"known": 12, "total": 12}
     assert out["tag"] == SIMULATED_TAG
     assert out["run"]["judge"]["name"] == "simulated"
     assert out["run"]["dataset"]["rows"] == 12

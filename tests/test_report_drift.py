@@ -43,6 +43,18 @@ def with_prompt_hash(tmp_path, prompt_sha256: str) -> str:
     return str(path)
 
 
+def test_reports_publish_confidence_coverage_and_unknown_cost():
+    from judge_audit.report import render_markdown
+
+    r = result(ece=None, ece_equal_mass=None, brier=None, total_cost_usd=None,
+               confidence={"known": 0, "total": 200}, reliability=[], curve=[],
+               zero_error={"coverage": None, "n": 0, "threshold": None})
+    md = render_markdown(r)
+    assert "confidence known **0/200**" in md
+    assert "ECE **—**" in md and "cost **unknown**" in md
+    assert "Zero-error coverage is **unknown**" in md
+
+
 def test_html_escapes_provenance_strings():
     pytest.importorskip("matplotlib")
     from judge_audit.report import render_html

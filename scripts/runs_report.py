@@ -192,7 +192,8 @@ def moved(ref: str, t: dict, result) -> dict:
     old = json.loads(subprocess.run(["git", "show", f"{ref}:{t['json']}"], cwd=ROOT,
                                     capture_output=True, text=True, check=True).stdout)
     new = result.to_dict()
-    conf = sorted((r["confidence"], r["correct"]) for r in result.records)[::-1]
+    conf = sorted((r["confidence"], r["correct"]) for r in result.records
+                  if r["confidence"] is not None)[::-1]
     mixed = defaultdict(set)
     for c, ok in conf:
         mixed[c].add(ok)
@@ -206,8 +207,9 @@ def moved(ref: str, t: dict, result) -> dict:
             inside += 1  # the cut split a group of tied confidences
             dependent += len(mixed[conf[k][0]]) == 2  # ...one that mixes right and wrong
     headline = [f"{key} {old.get(key)} -> {new.get(key)}"
-                for key in ("n", "accuracy", "ece", "zero_error_coverage", "total_cost_usd",
-                            "p50_latency_s", "p99_latency_s", "reliability_bins")
+                for key in ("n", "accuracy", "confidence", "ece", "zero_error_coverage",
+                            "total_cost_usd", "p50_latency_s", "p99_latency_s",
+                            "reliability_bins")
                 if old.get(key) != new.get(key)]
     return {"old": len(old["accuracy_coverage"]), "new": len(new["accuracy_coverage"]),
             "moved": gone, "inside_tie": inside, "order_dependent": dependent,

@@ -15,17 +15,17 @@ Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flas
 
 **Vote share as a confidence score** (the way most agent juries use it) against each judge's own declared confidence, same ECE and zero-error coverage:
 
-| confidence source | accuracy | ECE | zero-error coverage |
-|---|---|---|---|
-| panel vote share (majority) | 100.0% [98.2, 100.0]† | 0.029 | 100.0% |
-| jev (declared) | 100.0% | 0.004 | 100.0% |
-| claude-sonnet-4.5 (declared) | 100.0% | 0.029 | 100.0% |
-| deberta-nli (declared) | 86.5% | 0.176 | 51.5% |
-| deepseek-r1 (declared) | 100.0% | 0.052 | 100.0% |
-| gemini-3-flash (declared) | 100.0% | 0.005 | 100.0% |
-| gemma4 (declared) | 100.0% | 0.026 | 100.0% |
-| llama-3.3-70b (declared) | 100.0% | 0.091 | 100.0% |
-| llama32 (declared) | 90.0% | 0.034 | 0.0% |
+| confidence source | confidence known | accuracy | ECE | zero-error coverage |
+|---|---|---|---|---|
+| panel vote share (majority) | 200/200 | 100.0% [98.2, 100.0]† | 0.029 | 100.0% |
+| jev (declared) | 200/200 | 100.0% | 0.004 | 100.0% |
+| claude-sonnet-4.5 (declared) | 200/200 | 100.0% | 0.029 | 100.0% |
+| deberta-nli (declared) | 200/200 | 86.5% | 0.176 | 51.5% |
+| deepseek-r1 (declared) | 200/200 | 100.0% | 0.052 | 100.0% |
+| gemini-3-flash (declared) | 200/200 | 100.0% | 0.005 | 100.0% |
+| gemma4 (declared) | 200/200 | 100.0% | 0.026 | 100.0% |
+| llama-3.3-70b (declared) | 200/200 | 100.0% | 0.091 | 100.0% |
+| llama32 (declared) | 200/200 | 90.0% | 0.034 | 0.0% |
 
 ### Error correlation (n=200)
 
@@ -97,20 +97,20 @@ Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flas
 
 **Vote share as a confidence score** (the way most agent juries use it) against each judge's own declared confidence, same ECE and zero-error coverage:
 
-| confidence source | accuracy | ECE | zero-error coverage |
-|---|---|---|---|
-| panel vote share (majority) | 90.0% [85.6, 93.9] | 0.073 | 43.9% |
-| jev (declared) | 95.5% | 0.039 | 73.0% |
-| claude-sonnet-4.5 (declared) | 96.5% | 0.016 | 0.0% |
-| deberta-nli (declared) | 59.5% | 0.125 | 8.0% |
-| deepseek-r1 (declared) | 80.5% | 0.127 | 0.0% |
-| gemini-3-flash (declared) | 97.0% | 0.015 | 0.0% |
-| gemma4 (declared) | 81.0% | 0.153 | 0.0% |
-| llama-3.3-70b (declared) | 90.5% | 0.015 | 0.0% |
-| llama32 (declared) | 72.5% | 0.154 | 0.0% |
-| finetuned-deberta (declared; not a juror: fine-tuned on half of email-clean; 49 of these 200 rows contain a training text) | 97.0% | 0.496 | 97.0% |
-| finetuned-deberta-run2 (declared; not a juror: fine-tuned on half of email-clean; 49 of these 200 rows contain a training text) | 99.0% | 0.048 | 96.0% |
-| finetuned-deberta-run2-ts (declared; not a juror: fine-tuned on half of email-clean; 49 of these 200 rows contain a training text) | 99.0% | 0.017 | 96.0% |
+| confidence source | confidence known | accuracy | ECE | zero-error coverage |
+|---|---|---|---|---|
+| panel vote share (majority) | 189/200 | 90.0% [85.6, 93.9] | 0.073 | 43.9% |
+| jev (declared) | 200/200 | 95.5% | 0.039 | 73.0% |
+| claude-sonnet-4.5 (declared) | 200/200 | 96.5% | 0.016 | 0.0% |
+| deberta-nli (declared) | 200/200 | 59.5% | 0.125 | 8.0% |
+| deepseek-r1 (declared) | 200/200 | 80.5% | 0.127 | 0.0% |
+| gemini-3-flash (declared) | 200/200 | 97.0% | 0.015 | 0.0% |
+| gemma4 (declared) | 200/200 | 81.0% | 0.153 | 0.0% |
+| llama-3.3-70b (declared) | 200/200 | 90.5% | 0.015 | 0.0% |
+| llama32 (declared) | 200/200 | 72.5% | 0.154 | 0.0% |
+| finetuned-deberta (declared; not a juror: fine-tuned on half of email-clean; 49 of these 200 rows contain a training text) | 200/200 | 97.0% | 0.496 | 97.0% |
+| finetuned-deberta-run2 (declared; not a juror: fine-tuned on half of email-clean; 49 of these 200 rows contain a training text) | 200/200 | 99.0% | 0.048 | 96.0% |
+| finetuned-deberta-run2-ts (declared; not a juror: fine-tuned on half of email-clean; 49 of these 200 rows contain a training text) | 200/200 | 99.0% | 0.017 | 96.0% |
 
 ### Error correlation (n=200)
 
@@ -177,17 +177,17 @@ Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flas
 
 **Vote share as a confidence score** (the way most agent juries use it) against each judge's own declared confidence, same ECE and zero-error coverage:
 
-| confidence source | accuracy | ECE | zero-error coverage |
-|---|---|---|---|
-| panel vote share (majority) | 48.3% [34.4, 61.6] | 0.174 | 18.5% |
-| jev (declared) | 66.7% | 0.318 | 0.0% |
-| claude-sonnet-4.5 (declared) | 65.8% | 0.235 | 0.0% |
-| deberta-nli (declared) | 47.5% | 0.403 | 0.0% |
-| deepseek-r1 (declared) | 55.8% | 0.373 | 0.0% |
-| gemini-3-flash (declared) | 66.7% | 0.315 | 0.0% |
-| gemma4 (declared) | 59.2% | 0.345 | 0.0% |
-| llama-3.3-70b (declared) | 65.0% | 0.233 | 0.0% |
-| llama32 (declared) | 65.8% | 0.396 | 0.0% |
+| confidence source | confidence known | accuracy | ECE | zero-error coverage |
+|---|---|---|---|---|
+| panel vote share (majority) | 92/120 | 48.3% [34.4, 61.6] | 0.174 | 18.5% |
+| jev (declared) | 120/120 | 66.7% | 0.318 | 0.0% |
+| claude-sonnet-4.5 (declared) | 120/120 | 65.8% | 0.235 | 0.0% |
+| deberta-nli (declared) | 120/120 | 47.5% | 0.403 | 0.0% |
+| deepseek-r1 (declared) | 119/120 | 55.8% | 0.377 | 0.0% |
+| gemini-3-flash (declared) | 120/120 | 66.7% | 0.315 | 0.0% |
+| gemma4 (declared) | 120/120 | 59.2% | 0.345 | 0.0% |
+| llama-3.3-70b (declared) | 120/120 | 65.0% | 0.233 | 0.0% |
+| llama32 (declared) | 120/120 | 65.8% | 0.396 | 0.0% |
 
 **Pick the jury, pick the headline.** Over all 56 three-judge juries drawn from this panel, majority accuracy on the 40 hard tasks runs from 0.0% [0.0, 8.8]† (jev + claude-sonnet-4.5 + llama32) to 92.5% [76.9, 100.0] (deberta-nli + gemma4 + llama-3.3-70b); the most consensual wrong jury is unanimous and wrong on 37 / 40 (jev + gemini-3-flash + llama32).
 
@@ -321,17 +321,17 @@ Panel: 8 judges (jev, claude-sonnet-4.5, deberta-nli, deepseek-r1, gemini-3-flas
 
 **Vote share as a confidence score** (the way most agent juries use it) against each judge's own declared confidence, same ECE and zero-error coverage:
 
-| confidence source | accuracy | ECE | zero-error coverage |
-|---|---|---|---|
-| panel vote share (majority) | 85.8% [77.7, 92.2] | 0.110 | 75.7% |
-| jev (declared) | 97.5% | 0.053 | 94.2% |
-| claude-sonnet-4.5 (declared) | 95.0% | 0.032 | 0.0% |
-| deberta-nli (declared) | 49.2% | 0.195 | 0.0% |
-| deepseek-r1 (declared) | 79.2% | 0.148 | 0.0% |
-| gemini-3-flash (declared) | 98.3% | 0.012 | 72.5% |
-| gemma4 (declared) | 77.5% | 0.180 | 0.0% |
-| llama-3.3-70b (declared) | 86.7% | 0.043 | 0.0% |
-| llama32 (declared) | 59.2% | 0.429 | 0.0% |
+| confidence source | confidence known | accuracy | ECE | zero-error coverage |
+|---|---|---|---|---|
+| panel vote share (majority) | 107/120 | 85.8% [77.7, 92.2] | 0.110 | 75.7% |
+| jev (declared) | 120/120 | 97.5% | 0.053 | 94.2% |
+| claude-sonnet-4.5 (declared) | 120/120 | 95.0% | 0.032 | 0.0% |
+| deberta-nli (declared) | 120/120 | 49.2% | 0.195 | 0.0% |
+| deepseek-r1 (declared) | 119/120 | 79.2% | 0.149 | 0.0% |
+| gemini-3-flash (declared) | 120/120 | 98.3% | 0.012 | 72.5% |
+| gemma4 (declared) | 120/120 | 77.5% | 0.180 | 0.0% |
+| llama-3.3-70b (declared) | 120/120 | 86.7% | 0.043 | 0.0% |
+| llama32 (declared) | 120/120 | 59.2% | 0.429 | 0.0% |
 
 **Pick the jury, pick the headline.** Over all 56 three-judge juries drawn from this panel, majority accuracy on the 40 hard tasks runs from 92.5% [76.9, 100.0] (jev + claude-sonnet-4.5 + llama32) to 100.0% [91.2, 100.0]† (jev + claude-sonnet-4.5 + deberta-nli); no three-judge jury is unanimous and wrong on any hard task.
 
@@ -462,6 +462,7 @@ Every 3-judge jury from the frozen panel (jev, claude-sonnet-4.5, deberta-nli, d
 - **abstentions**: blank (unparseable) answers across the panel; an abstention is not a vote.
 - **vote share right / wrong**: mean share of the winning option when the majority was right vs. wrong. If the two numbers are close, agreement carries no information about correctness.
 - **conf of the wrong majority**: mean declared confidence of the judges who voted with a wrong majority.
+- **confidence known** is the calibration denominator. Declared-confidence ECE and zero-error coverage exclude unknown confidences; accuracy still counts all rows.
 - **vote share as confidence**: ECE and zero-error coverage computed with the share as the confidence of the majority decision — the number an agent jury would act on.
 - **error correlation** (per judge pair, over the rows where both answered; n stated per pair): *joint error* is the share of rows where both were wrong; *P(A wrong | B wrong)* is the joint errors over B's errors; *error-set Jaccard* is shared errors over the union of the two error sets; *phi* is the correlation between the two 0/1 error indicators (+1: identical errors, 0: independent, −1: never wrong together). Phi is undefined when a judge has no error (or no correct answer) on the compared rows, the conditional when the conditioning judge has none, Jaccard when neither erred. Three judges with phi near 1 are one opinion voting three times.
 - **jury composition**: *mean pairwise error phi* averages the three pairs' phi (pairs with an undefined phi are left out and the count is shown; "—" when all three are), on the hard rows and on every row of the dataset; *shared wrong* counts the hard rows where all three answered and all three were wrong; *diversity vs accuracy* is the Spearman rank correlation between mean phi and majority accuracy across the juries — reported as computed, on 40 scored rows.

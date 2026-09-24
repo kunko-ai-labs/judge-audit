@@ -2,6 +2,10 @@
   "judge": "jev",
   "n": 120,
   "accuracy": 0.725,
+  "confidence": {
+    "known": 120,
+    "total": 120
+  },
   "ece": 0.2083,
   "ece_equal_mass": 0.2083,
   "brier": 0.2149,
@@ -204,7 +208,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T13:41:20+00:00",
+    "utc": "2026-09-23T18:32:04+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/jury/router-bare/jev.r2.ckpt.jsonl",

@@ -48,7 +48,7 @@ def test_a_fresh_run_reports_the_new_calibration_numbers(tmp_path):
     assert "ECE (equal-mass)" in (tmp_path / "r.md").read_text()
 
 
-def test_a_non_finite_confidence_in_a_checkpoint_is_refused(tmp_path):
+def test_a_non_finite_confidence_in_a_checkpoint_stays_unknown(tmp_path):
     ckpt = tmp_path / "c.ckpt.jsonl"
     rows = sum(1 for line in LABELS.read_text().splitlines()
                if line.strip() and json.loads(line).get("idx") != -1)
@@ -61,5 +61,9 @@ def test_a_non_finite_confidence_in_a_checkpoint_is_refused(tmp_path):
                         "--checkpoint", str(ckpt), "--out", str(tmp_path / "r.md"),
                         "--json", str(tmp_path / "r.json")],
                        cwd=tmp_path, capture_output=True, text=True)
-    assert p.returncode != 0 and "finite" in p.stderr
-    assert not (tmp_path / "r.json").exists()
+    assert p.returncode == 0, p.stderr
+    result = json.loads((tmp_path / "r.json").read_text())
+    assert result["n"] == rows
+    assert result["confidence"] == {"known": rows - 1, "total": rows}
+    judgments = [json.loads(line) for line in ckpt.read_text().splitlines()[1:]]
+    assert any(str(j["judgments"][0]["confidence"]) == "nan" for j in judgments)

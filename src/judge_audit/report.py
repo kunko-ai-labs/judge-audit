@@ -142,6 +142,29 @@ def fmt4(value: float | None) -> str:
     return "—" if value is None else f"{value:.4f}"
 
 
+def fmt_cost(value: float | None, bold: tuple[str, str] = ("**", "**")) -> str:
+    """Known spend in dollars, or an explicit unknown when any billable cost is unknown."""
+    b0, b1 = bold
+    return f"{b0}${value:.4f}{b1}" if value is not None else f"{b0}unknown{b1}"
+
+
+def confidence_coverage(d: dict) -> dict:
+    """Normalise the JSON coverage field, including reports written before it existed."""
+    value = d.get("confidence")
+    if isinstance(value, dict):
+        return {"known": int(value.get("known", 0)), "total": int(value.get("total", d["n"]))}
+    return {"known": int(d["n"]), "total": int(d["n"])}
+
+
+def zero_error_sentence(d: dict, zec_ci: str = "") -> str:
+    """Human-readable selective prediction result, including the no-confidence case."""
+    zero = d["zero_error_coverage"]
+    if zero.get("coverage") is None:
+        return "Zero-error coverage is **unknown**: no decisions have known confidence."
+    return (f"Zero observed errors through the most confident **{zero['coverage']:.1%}**"
+            f"{zec_ci} ({zero['n']} decisions, confidence ≥ {zero['threshold']}).")
+
+
 def calibration_numbers(d: dict, bold: tuple[str, str] = ("**", "**")) -> str:
     """`ECE (equal-mass) **y** [ci] · Brier **z** [ci]` — the two numbers that need no
     fixed bins, printed right after the equal-width ECE they qualify."""
@@ -156,12 +179,15 @@ def render_markdown(result: AuditResult) -> str:
     acc_ci = interval_of(d, "accuracy_ci", pct=True)
     ece_ci = interval_of(d, "ece_ci")
     zec_ci = interval_of(d, "zero_error_coverage_ci", pct=True)
+    confidence = confidence_coverage(d)
     lines = [
         f"# Audit report — {d['judge']}",
         "",
-        f"**n={d['n']}** · accuracy **{d['accuracy']:.1%}**{acc_ci} · ECE **{d['ece']:.4f}**{ece_ci}"
-        + calibration_numbers(d),
-        f"· cost **${d['total_cost_usd']:.4f}** · p50 **{d['p50_latency_s']}s** · p99 **{d['p99_latency_s']}s**",
+        f"**n={d['n']}** · accuracy **{d['accuracy']:.1%}**{acc_ci} · "
+        f"confidence known **{confidence['known']}/{confidence['total']}** · "
+        f"ECE **{fmt4(d.get('ece'))}**{ece_ci}" + calibration_numbers(d),
+        f"· cost {fmt_cost(d.get('total_cost_usd'))} · p50 **{d['p50_latency_s']}s** · "
+        f"p99 **{d['p99_latency_s']}s**",
         "",
         *provenance_lines(d.get("run", {})),
         *regeneration_lines(d),
@@ -171,9 +197,7 @@ def render_markdown(result: AuditResult) -> str:
         "",
         "## Can I automate this?",
         "",
-        f"Zero observed errors through the most confident **{d['zero_error_coverage']['coverage']:.1%}**"
-        f"{zec_ci} ({d['zero_error_coverage']['n']} decisions, "
-        f"confidence ≥ {d['zero_error_coverage']['threshold']}).",
+        zero_error_sentence(d, zec_ci),
         "Retrospective on this dataset — not a production guarantee.",
         "",
         "## Accuracy vs coverage",
@@ -219,6 +243,12 @@ def render_html(result: AuditResult, tag: str = "") -> str:
     acc_ci = interval_of(d, "accuracy_ci", pct=True)
     ece_ci = interval_of(d, "ece_ci")
     zec_ci = interval_of(d, "zero_error_coverage_ci", pct=True)
+    confidence = confidence_coverage(d)
+    zero = d["zero_error_coverage"]
+    zero_html = ("Zero-error coverage is <b>unknown</b>: no decisions have known confidence."
+                 if zero.get("coverage") is None else
+                 f"Zero observed errors through the most confident <b>{zero['coverage']:.1%}</b>"
+                 f"{zec_ci} ({zero['n']} decisions, confidence ≥ {zero['threshold']}).")
     ci_note = "".join(f"<p class=\"prov\">{html.escape(line.strip('_'))}</p>"
                       for line in ci_lines(d) if line)
     rel = png_to_data_uri(reliability_diagram_png(result))
@@ -249,14 +279,13 @@ th{{background:#f5f5f5}}img{{max-width:100%;border:1px solid #eee;border-radius:
 h2{{margin-top:2.5rem}}.prov{{color:#666;font-size:.9rem}}</style></head><body>
 {banner}
 <h1>Audit report — {judge}</h1>
-<p class="metric"><b>{d['n']}</b> decisions · accuracy <b>{d['accuracy']:.1%}</b>{acc_ci} · ECE <b>{d['ece']:.4f}</b>{ece_ci}{calibration_numbers(d, ("<b>", "</b>"))}<br>
-cost <b>${d['total_cost_usd']:.4f}</b> · p50 <b>{d['p50_latency_s']}s</b> · p99 <b>{d['p99_latency_s']}s</b></p>
+<p class="metric"><b>{d['n']}</b> decisions · accuracy <b>{d['accuracy']:.1%}</b>{acc_ci} · confidence known <b>{confidence['known']}/{confidence['total']}</b> · ECE <b>{fmt4(d.get('ece'))}</b>{ece_ci}{calibration_numbers(d, ("<b>", "</b>"))}<br>
+cost {fmt_cost(d.get('total_cost_usd'), ("<b>", "</b>"))} · p50 <b>{d['p50_latency_s']}s</b> · p99 <b>{d['p99_latency_s']}s</b></p>
 <p class="prov">{prov}</p>
 <p class="gt"><b>{gt}</b></p>
 {ci_note}
 <h2>Can I automate this?</h2>
-<p>Zero observed errors through the most confident <b>{d['zero_error_coverage']['coverage']:.1%}</b>{zec_ci}
-({d['zero_error_coverage']['n']} decisions, confidence ≥ {d['zero_error_coverage']['threshold']}).<br>
+<p>{zero_html}<br>
 <em>Retrospective on this dataset — not a production guarantee.</em></p>
 <h2>Reliability diagram</h2>
 <img src="{rel}" alt="reliability diagram">

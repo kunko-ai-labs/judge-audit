@@ -21,6 +21,10 @@
             0.8032
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.3181,
           "mean_conf_wrong": 0.926
         },
@@ -31,6 +35,10 @@
             0.8455
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.2083,
           "mean_conf_wrong": 0.86
         },
@@ -41,6 +49,10 @@
             0.0881
           ],
           "accuracy_ci_method": "clopper-pearson",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.9263,
           "mean_conf_wrong": 0.926
         },
@@ -51,6 +63,10 @@
             0.375
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.6605,
           "mean_conf_wrong": 0.86
         },
@@ -77,6 +93,10 @@
             0.7869
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.2353,
           "mean_conf_wrong": 0.832
         },
@@ -87,6 +107,10 @@
             0.8208
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.2311,
           "mean_conf_wrong": 0.877
         },
@@ -97,6 +121,10 @@
             0.3415
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.6583,
           "mean_conf_wrong": 0.816
         },
@@ -107,6 +135,10 @@
             0.475
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.6433,
           "mean_conf_wrong": 0.874
         },
@@ -136,8 +168,12 @@
             0.6818
           ],
           "accuracy_ci_method": "bootstrap",
-          "ece": 0.3734,
-          "mean_conf_wrong": 0.888
+          "confidence": {
+            "known": 119,
+            "total": 120
+          },
+          "ece": 0.3766,
+          "mean_conf_wrong": 0.905
         },
         "round2": {
           "accuracy": 0.55,
@@ -146,8 +182,12 @@
             0.6818
           ],
           "accuracy_ci_method": "bootstrap",
-          "ece": 0.3787,
-          "mean_conf_wrong": 0.916
+          "confidence": {
+            "known": 119,
+            "total": 120
+          },
+          "ece": 0.3819,
+          "mean_conf_wrong": 0.934
         },
         "hard_round1": {
           "accuracy": 0.55,
@@ -156,6 +196,10 @@
             0.775
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.3925,
           "mean_conf_wrong": 0.881
         },
@@ -166,6 +210,10 @@
             0.2974
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.794,
           "mean_conf_wrong": 0.932
         },
@@ -195,6 +243,10 @@
             0.8
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.3154,
           "mean_conf_wrong": 0.965
         },
@@ -205,6 +257,10 @@
             0.7965
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.3047,
           "mean_conf_wrong": 0.93
         },
@@ -215,6 +271,10 @@
             0.225
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.8862,
           "mean_conf_wrong": 0.966
         },
@@ -225,6 +285,10 @@
             0.425
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.7562,
           "mean_conf_wrong": 0.933
         },
@@ -250,6 +314,10 @@
             0.712
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.3446,
           "mean_conf_wrong": 0.954
         },
@@ -260,6 +328,10 @@
             0.7426
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.3098,
           "mean_conf_wrong": 0.92
         },
@@ -270,6 +342,10 @@
             0.9025
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.1775,
           "mean_conf_wrong": 0.858
         },
@@ -280,6 +356,10 @@
             0.3902
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.7283,
           "mean_conf_wrong": 0.91
         },
@@ -305,6 +385,10 @@
             0.7669
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.2333,
           "mean_conf_wrong": 0.926
         },
@@ -315,6 +399,10 @@
             0.6905
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.3903,
           "mean_conf_wrong": 0.936
         },
@@ -325,6 +413,10 @@
             0.9286
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.135,
           "mean_conf_wrong": 0.8
         },
@@ -335,6 +427,10 @@
             0.225
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.857,
           "mean_conf_wrong": 0.938
         },
@@ -364,6 +460,10 @@
             0.7925
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.3958,
           "mean_conf_wrong": 1.0
         },
@@ -374,6 +474,10 @@
             0.8032
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.2816,
           "mean_conf_wrong": 0.829
         },
@@ -384,6 +488,10 @@
             0.0881
           ],
           "accuracy_ci_method": "clopper-pearson",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 1.0,
           "mean_conf_wrong": 1.0
         },
@@ -394,6 +502,10 @@
             0.0881
           ],
           "accuracy_ci_method": "clopper-pearson",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.8287,
           "mean_conf_wrong": 0.829
         },
@@ -436,6 +548,10 @@
       ],
       "majority_accuracy_ci_method": "bootstrap",
       "majority_accuracy_decided": 0.6304,
+      "confidence": {
+        "known": 92,
+        "total": 120
+      },
       "majority_wrong": 62,
       "best_single_accuracy": 0.6667,
       "mean_share_when_right": 0.85,
@@ -468,6 +584,10 @@
       ],
       "majority_accuracy_ci_method": "bootstrap",
       "majority_accuracy_decided": 0.6552,
+      "confidence": {
+        "known": 116,
+        "total": 120
+      },
       "majority_wrong": 44,
       "best_single_accuracy": 0.725,
       "mean_share_when_right": 0.863,
@@ -500,6 +620,10 @@
       ],
       "majority_accuracy_ci_method": "bootstrap",
       "majority_accuracy_decided": 0.1818,
+      "confidence": {
+        "known": 33,
+        "total": 40
+      },
       "majority_wrong": 34,
       "best_single_accuracy": 1,
       "mean_share_when_right": 0.688,
@@ -532,6 +656,10 @@
       ],
       "majority_accuracy_ci_method": "bootstrap",
       "majority_accuracy_decided": 0.1795,
+      "confidence": {
+        "known": 39,
+        "total": 40
+      },
       "majority_wrong": 33,
       "best_single_accuracy": 1,
       "mean_share_when_right": 0.75,
@@ -563,6 +691,10 @@
             1.0
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.053,
           "mean_conf_wrong": 0.583
         },
@@ -573,6 +705,10 @@
             1.0
           ],
           "accuracy_ci_method": "clopper-pearson",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.0436,
           "mean_conf_wrong": null
         },
@@ -583,6 +719,10 @@
             1.0
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.1457,
           "mean_conf_wrong": 0.583
         },
@@ -593,6 +733,10 @@
             1.0
           ],
           "accuracy_ci_method": "clopper-pearson",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.1238,
           "mean_conf_wrong": null
         },
@@ -619,6 +763,10 @@
             0.9849
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.0322,
           "mean_conf_wrong": 0.983
         },
@@ -629,6 +777,10 @@
             0.9849
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.0484,
           "mean_conf_wrong": 0.8
         },
@@ -639,6 +791,10 @@
             1.0
           ],
           "accuracy_ci_method": "clopper-pearson",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.07,
           "mean_conf_wrong": null
         },
@@ -649,6 +805,10 @@
             1.0
           ],
           "accuracy_ci_method": "clopper-pearson",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.085,
           "mean_conf_wrong": null
         },
@@ -678,8 +838,12 @@
             0.8692
           ],
           "accuracy_ci_method": "bootstrap",
-          "ece": 0.1478,
-          "mean_conf_wrong": 0.894
+          "confidence": {
+            "known": 119,
+            "total": 120
+          },
+          "ece": 0.1491,
+          "mean_conf_wrong": 0.931
         },
         "round2": {
           "accuracy": 0.8917,
@@ -688,6 +852,10 @@
             0.9457
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.0507,
           "mean_conf_wrong": 0.846
         },
@@ -698,6 +866,10 @@
             1.0
           ],
           "accuracy_ci_method": "clopper-pearson",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.0925,
           "mean_conf_wrong": null
         },
@@ -708,6 +880,10 @@
             1.0
           ],
           "accuracy_ci_method": "clopper-pearson",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.0535,
           "mean_conf_wrong": null
         },
@@ -737,6 +913,10 @@
             1.0
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.0121,
           "mean_conf_wrong": 0.825
         },
@@ -747,6 +927,10 @@
             1.0
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.0236,
           "mean_conf_wrong": 0.9
         },
@@ -757,6 +941,10 @@
             1.0
           ],
           "accuracy_ci_method": "clopper-pearson",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.0312,
           "mean_conf_wrong": null
         },
@@ -767,6 +955,10 @@
             1.0
           ],
           "accuracy_ci_method": "clopper-pearson",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.065,
           "mean_conf_wrong": null
         },
@@ -792,6 +984,10 @@
             0.8705
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.18,
           "mean_conf_wrong": 0.981
         },
@@ -802,6 +998,10 @@
             0.976
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.0266,
           "mean_conf_wrong": 0.912
         },
@@ -812,6 +1012,10 @@
             1.0
           ],
           "accuracy_ci_method": "clopper-pearson",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.05,
           "mean_conf_wrong": null
         },
@@ -822,6 +1026,10 @@
             1.0
           ],
           "accuracy_ci_method": "clopper-pearson",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.0437,
           "mean_conf_wrong": null
         },
@@ -847,6 +1055,10 @@
             0.9339
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.0433,
           "mean_conf_wrong": 0.969
         },
@@ -857,6 +1069,10 @@
             0.9922
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.0133,
           "mean_conf_wrong": 0.925
         },
@@ -867,6 +1083,10 @@
             1.0
           ],
           "accuracy_ci_method": "clopper-pearson",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.0925,
           "mean_conf_wrong": null
         },
@@ -877,6 +1097,10 @@
             1.0
           ],
           "accuracy_ci_method": "clopper-pearson",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.0262,
           "mean_conf_wrong": null
         },
@@ -906,6 +1130,10 @@
             0.7302
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.4292,
           "mean_conf_wrong": 1.0
         },
@@ -916,6 +1144,10 @@
             1.0
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 120,
+            "total": 120
+          },
           "ece": 0.1349,
           "mean_conf_wrong": 0.6
         },
@@ -926,6 +1158,10 @@
             0.0881
           ],
           "accuracy_ci_method": "clopper-pearson",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 1.0,
           "mean_conf_wrong": 1.0
         },
@@ -936,6 +1172,10 @@
             1.0
           ],
           "accuracy_ci_method": "bootstrap",
+          "confidence": {
+            "known": 40,
+            "total": 40
+          },
           "ece": 0.1405,
           "mean_conf_wrong": 0.6
         },
@@ -978,6 +1218,10 @@
       ],
       "majority_accuracy_ci_method": "bootstrap",
       "majority_accuracy_decided": 0.9626,
+      "confidence": {
+        "known": 107,
+        "total": 120
+      },
       "majority_wrong": 17,
       "best_single_accuracy": 0.9833,
       "mean_share_when_right": 0.86,
@@ -1010,6 +1254,10 @@
       ],
       "majority_accuracy_ci_method": "bootstrap",
       "majority_accuracy_decided": 0.9913,
+      "confidence": {
+        "known": 115,
+        "total": 120
+      },
       "majority_wrong": 6,
       "best_single_accuracy": 1,
       "mean_share_when_right": 0.92,
@@ -1042,6 +1290,10 @@
       ],
       "majority_accuracy_ci_method": "clopper-pearson",
       "majority_accuracy_decided": 1,
+      "confidence": {
+        "known": 40,
+        "total": 40
+      },
       "majority_wrong": 0,
       "best_single_accuracy": 1,
       "mean_share_when_right": 0.866,
@@ -1074,6 +1326,10 @@
       ],
       "majority_accuracy_ci_method": "clopper-pearson",
       "majority_accuracy_decided": 1,
+      "confidence": {
+        "known": 40,
+        "total": 40
+      },
       "majority_wrong": 0,
       "best_single_accuracy": 1,
       "mean_share_when_right": 0.981,
