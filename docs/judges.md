@@ -112,7 +112,7 @@ Each number carries the same 95 % interval as the others (§ Confidence interval
 
 ## Latency percentiles
 
-p50 and p99 are interpolated between order statistics (Hyndman–Fan type 7: numpy's default, `statistics.quantiles(method="inclusive")`), the same rule the bootstrap uses to cut its interval. With 200 rows a p99 sits between the second- and third-slowest rows, so one or two stalled calls barely move it: every report therefore prints the slowest call next to the p99.
+p50 and p99 are interpolated between order statistics (Hyndman–Fan type 7: numpy's default, `statistics.quantiles(method="inclusive")`), the same rule the bootstrap uses to cut its interval. With 200 rows a p99 sits between the second- and third-slowest rows, so one or two stalled calls barely move it: every report that prints a p99 (run reports, the adversarial audit, the Action's PR comment) therefore prints the slowest call next to it.
 
 ## Confidence intervals
 

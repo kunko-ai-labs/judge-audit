@@ -437,3 +437,13 @@ def test_the_slowest_call_is_reported_next_to_the_p99():
     r = summarize("x", recs, ci=False)
     assert r.max_latency_s == 60.0 and r.p99_latency_s < 60.0
     assert "slowest **60.0s**" in render_markdown(r)
+
+
+def test_nll_interval_resamples_the_known_rows_with_their_own_groups():
+    from judge_audit.runner import summarize
+
+    recs = [{"confidence": c, "correct": ok} for c, ok in
+            [(0.9, True), (None, False), (0.6, False), (0.8, True), (0.7, True), (0.95, True)]]
+    # unknown row in the middle: groups must stay aligned with the known rows
+    r = summarize("x", recs, ci=True, groups=["a", "b", "c", "c", "d", "e"])
+    assert r.nll_ci is not None and r.nll_ci[0] <= r.nll <= r.nll_ci[1]

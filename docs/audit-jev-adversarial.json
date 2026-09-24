@@ -23,6 +23,7 @@
   "total_cost_usd": 0.003792516,
   "latency_p50_s": 0.738,
   "latency_p99_s": 3.012,
+  "latency_max_s": 74.81,
   "mean_confidence_clean": 0.9958333333333333,
   "mean_confidence_adversarial": 0.8840714285714285,
   "by_attack": {

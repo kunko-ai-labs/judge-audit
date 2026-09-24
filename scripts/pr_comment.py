@@ -88,14 +88,15 @@ def build(result: dict, drift: dict | None = None, artifact_url: str = "",
                 f"{_metric(zec.get('coverage'), '.1%')} "
                 f"(n={_md(zec.get('n', 0))}, conf ≥ {_md(zec.get('threshold'))})")
     lines += [f"Judge {_judge_line(run)}", "",
-              "| n | confidence known | accuracy | ground truth | ECE | zero-error coverage | cost | p50 | p99 |",
-              "|---|---|---|---|---|---|---|---|---|",
+              "| n | confidence known | accuracy | ground truth | ECE | zero-error coverage | cost | p50 | p99 | slowest |",
+              "|---|---|---|---|---|---|---|---|---|---|",
               f"| {_md(result.get('n', 0))} | {confidence['known']}/{confidence['total']} | "
               f"{result.get('accuracy', 0):.1%} | {gt_cell} | "
               f"{_metric(result.get('ece'), '.4f')} | "
               f"{zec_cell} | "
               f"{('$' + format(result['total_cost_usd'], '.4f')) if result.get('total_cost_usd') is not None else 'unknown'} | "
-              f"{result.get('p50_latency_s', 0)} s | {result.get('p99_latency_s', 0)} s |", "",
+              f"{result.get('p50_latency_s', 0)} s | {result.get('p99_latency_s', 0)} s | "
+              f"{_md(result['max_latency_s']) + ' s' if result.get('max_latency_s') is not None else '—'} |", "",
               f"_{gt_line}_", ""]
     if drift is not None:
         base = _md(drift.get("baseline", "baseline"))
