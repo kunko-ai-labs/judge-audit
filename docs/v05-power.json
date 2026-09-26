@@ -1,0 +1,424 @@
+{
+ "seed": 2026,
+ "reps": 200,
+ "delta": 0.05,
+ "power": 0.8,
+ "a_certification": {
+  "rows_to_certify": {
+   "0.01": {
+    "0": 299,
+    "1": 473,
+    "2": 628,
+    "5": 1049,
+    "10": 1693
+   },
+   "0.02": {
+    "0": 149,
+    "1": 236,
+    "2": 313,
+    "5": 523,
+    "10": 845
+   },
+   "0.05": {
+    "0": 59,
+    "1": 93,
+    "2": 124,
+    "5": 208,
+    "10": 336
+   }
+  },
+  "rows_for_80pct_power": {
+   "0.01": {
+    "0": 299,
+    "0.0025": 773,
+    "0.005": 2185
+   },
+   "0.02": {
+    "0": 149,
+    "0.005": 386,
+    "0.01": 1091
+   },
+   "0.05": {
+    "0": 59,
+    "0.01": 124,
+    "0.025": 434
+   }
+  }
+ },
+ "b_paired_auroc": {
+  "assumptions": {
+   "latent_auroc": [
+    0.7,
+    0.75
+   ],
+   "tie_shares": {
+    "none": null,
+    "tied": [
+     0.05,
+     0.05,
+     0.1,
+     0.15,
+     0.25,
+     0.4
+    ]
+   },
+   "model": "binormal latent score per method, errors N(0,1), right answers N(mu,1); the two methods' noise correlated rho; then cut into tied levels"
+  },
+  "rows": [
+   {
+    "n": 950,
+    "accuracy": 0.85,
+    "rho": 0.3,
+    "ties": "none",
+    "errors_expected": 143,
+    "auroc_a": 0.701,
+    "auroc_b": 0.749,
+    "sd_difference": 0.0303,
+    "mde": 0.085
+   },
+   {
+    "n": 1540,
+    "accuracy": 0.85,
+    "rho": 0.3,
+    "ties": "none",
+    "errors_expected": 231,
+    "auroc_a": 0.701,
+    "auroc_b": 0.75,
+    "sd_difference": 0.0235,
+    "mde": 0.066
+   },
+   {
+    "n": 3079,
+    "accuracy": 0.85,
+    "rho": 0.3,
+    "ties": "none",
+    "errors_expected": 462,
+    "auroc_a": 0.701,
+    "auroc_b": 0.751,
+    "sd_difference": 0.0153,
+    "mde": 0.043
+   },
+   {
+    "n": 950,
+    "accuracy": 0.85,
+    "rho": 0.7,
+    "ties": "none",
+    "errors_expected": 143,
+    "auroc_a": 0.701,
+    "auroc_b": 0.749,
+    "sd_difference": 0.0193,
+    "mde": 0.054
+   },
+   {
+    "n": 1540,
+    "accuracy": 0.85,
+    "rho": 0.7,
+    "ties": "none",
+    "errors_expected": 231,
+    "auroc_a": 0.7,
+    "auroc_b": 0.75,
+    "sd_difference": 0.0148,
+    "mde": 0.041
+   },
+   {
+    "n": 3079,
+    "accuracy": 0.85,
+    "rho": 0.7,
+    "ties": "none",
+    "errors_expected": 462,
+    "auroc_a": 0.701,
+    "auroc_b": 0.751,
+    "sd_difference": 0.0115,
+    "mde": 0.032
+   },
+   {
+    "n": 950,
+    "accuracy": 0.93,
+    "rho": 0.3,
+    "ties": "none",
+    "errors_expected": 66,
+    "auroc_a": 0.7,
+    "auroc_b": 0.756,
+    "sd_difference": 0.0388,
+    "mde": 0.109
+   },
+   {
+    "n": 1540,
+    "accuracy": 0.93,
+    "rho": 0.3,
+    "ties": "none",
+    "errors_expected": 108,
+    "auroc_a": 0.702,
+    "auroc_b": 0.751,
+    "sd_difference": 0.0287,
+    "mde": 0.081
+   },
+   {
+    "n": 3079,
+    "accuracy": 0.93,
+    "rho": 0.3,
+    "ties": "none",
+    "errors_expected": 216,
+    "auroc_a": 0.701,
+    "auroc_b": 0.749,
+    "sd_difference": 0.0223,
+    "mde": 0.063
+   },
+   {
+    "n": 950,
+    "accuracy": 0.93,
+    "rho": 0.7,
+    "ties": "none",
+    "errors_expected": 66,
+    "auroc_a": 0.701,
+    "auroc_b": 0.75,
+    "sd_difference": 0.0236,
+    "mde": 0.066
+   },
+   {
+    "n": 1540,
+    "accuracy": 0.93,
+    "rho": 0.7,
+    "ties": "none",
+    "errors_expected": 108,
+    "auroc_a": 0.699,
+    "auroc_b": 0.749,
+    "sd_difference": 0.023,
+    "mde": 0.064
+   },
+   {
+    "n": 3079,
+    "accuracy": 0.93,
+    "rho": 0.7,
+    "ties": "none",
+    "errors_expected": 216,
+    "auroc_a": 0.702,
+    "auroc_b": 0.752,
+    "sd_difference": 0.0159,
+    "mde": 0.045
+   },
+   {
+    "n": 950,
+    "accuracy": 0.85,
+    "rho": 0.3,
+    "ties": "tied",
+    "errors_expected": 143,
+    "auroc_a": 0.687,
+    "auroc_b": 0.739,
+    "sd_difference": 0.03,
+    "mde": 0.084
+   },
+   {
+    "n": 1540,
+    "accuracy": 0.85,
+    "rho": 0.3,
+    "ties": "tied",
+    "errors_expected": 231,
+    "auroc_a": 0.685,
+    "auroc_b": 0.739,
+    "sd_difference": 0.0224,
+    "mde": 0.063
+   },
+   {
+    "n": 3079,
+    "accuracy": 0.85,
+    "rho": 0.3,
+    "ties": "tied",
+    "errors_expected": 462,
+    "auroc_a": 0.688,
+    "auroc_b": 0.736,
+    "sd_difference": 0.0165,
+    "mde": 0.046
+   },
+   {
+    "n": 950,
+    "accuracy": 0.85,
+    "rho": 0.7,
+    "ties": "tied",
+    "errors_expected": 143,
+    "auroc_a": 0.687,
+    "auroc_b": 0.735,
+    "sd_difference": 0.0206,
+    "mde": 0.058
+   },
+   {
+    "n": 1540,
+    "accuracy": 0.85,
+    "rho": 0.7,
+    "ties": "tied",
+    "errors_expected": 231,
+    "auroc_a": 0.688,
+    "auroc_b": 0.737,
+    "sd_difference": 0.0158,
+    "mde": 0.044
+   },
+   {
+    "n": 3079,
+    "accuracy": 0.85,
+    "rho": 0.7,
+    "ties": "tied",
+    "errors_expected": 462,
+    "auroc_a": 0.686,
+    "auroc_b": 0.737,
+    "sd_difference": 0.01,
+    "mde": 0.028
+   },
+   {
+    "n": 950,
+    "accuracy": 0.93,
+    "rho": 0.3,
+    "ties": "tied",
+    "errors_expected": 66,
+    "auroc_a": 0.689,
+    "auroc_b": 0.738,
+    "sd_difference": 0.0389,
+    "mde": 0.109
+   },
+   {
+    "n": 1540,
+    "accuracy": 0.93,
+    "rho": 0.3,
+    "ties": "tied",
+    "errors_expected": 108,
+    "auroc_a": 0.689,
+    "auroc_b": 0.739,
+    "sd_difference": 0.0299,
+    "mde": 0.084
+   },
+   {
+    "n": 3079,
+    "accuracy": 0.93,
+    "rho": 0.3,
+    "ties": "tied",
+    "errors_expected": 216,
+    "auroc_a": 0.691,
+    "auroc_b": 0.738,
+    "sd_difference": 0.0215,
+    "mde": 0.06
+   },
+   {
+    "n": 950,
+    "accuracy": 0.93,
+    "rho": 0.7,
+    "ties": "tied",
+    "errors_expected": 66,
+    "auroc_a": 0.689,
+    "auroc_b": 0.736,
+    "sd_difference": 0.0285,
+    "mde": 0.08
+   },
+   {
+    "n": 1540,
+    "accuracy": 0.93,
+    "rho": 0.7,
+    "ties": "tied",
+    "errors_expected": 108,
+    "auroc_a": 0.688,
+    "auroc_b": 0.738,
+    "sd_difference": 0.0218,
+    "mde": 0.061
+   },
+   {
+    "n": 3079,
+    "accuracy": 0.93,
+    "rho": 0.7,
+    "ties": "tied",
+    "errors_expected": 216,
+    "auroc_a": 0.688,
+    "auroc_b": 0.739,
+    "sd_difference": 0.0148,
+    "mde": 0.041
+   }
+  ]
+ },
+ "c_paired_ece": {
+  "assumptions": {
+   "confidence_values": [
+    0.6,
+    0.7,
+    0.8,
+    0.85,
+    0.9,
+    0.95,
+    1.0
+   ],
+   "weights": [
+    0.03,
+    0.05,
+    0.1,
+    0.12,
+    0.25,
+    0.3,
+    0.15
+   ],
+   "gaps": [
+    0.05,
+    0.08
+   ],
+   "bins": 10,
+   "model": "P(right) = confidence - gap; the two judges' outcomes linked by a Gaussian copula rho"
+  },
+  "rows": [
+   {
+    "n": 950,
+    "rho": 0.3,
+    "true_ece_a": 0.05,
+    "true_ece_b": 0.08,
+    "mean_ece_a": 0.051,
+    "mean_ece_b": 0.079,
+    "sd_difference": 0.0145,
+    "mde": 0.041
+   },
+   {
+    "n": 1540,
+    "rho": 0.3,
+    "true_ece_a": 0.05,
+    "true_ece_b": 0.08,
+    "mean_ece_a": 0.051,
+    "mean_ece_b": 0.081,
+    "sd_difference": 0.0116,
+    "mde": 0.032
+   },
+   {
+    "n": 3079,
+    "rho": 0.3,
+    "true_ece_a": 0.05,
+    "true_ece_b": 0.08,
+    "mean_ece_a": 0.051,
+    "mean_ece_b": 0.08,
+    "sd_difference": 0.0089,
+    "mde": 0.025
+   },
+   {
+    "n": 950,
+    "rho": 0.7,
+    "true_ece_a": 0.05,
+    "true_ece_b": 0.08,
+    "mean_ece_a": 0.052,
+    "mean_ece_b": 0.084,
+    "sd_difference": 0.0131,
+    "mde": 0.037
+   },
+   {
+    "n": 1540,
+    "rho": 0.7,
+    "true_ece_a": 0.05,
+    "true_ece_b": 0.08,
+    "mean_ece_a": 0.052,
+    "mean_ece_b": 0.082,
+    "sd_difference": 0.0093,
+    "mde": 0.026
+   },
+   {
+    "n": 3079,
+    "rho": 0.7,
+    "true_ece_a": 0.05,
+    "true_ece_b": 0.08,
+    "mean_ece_a": 0.051,
+    "mean_ece_b": 0.081,
+    "sd_difference": 0.0071,
+    "mde": 0.02
+   }
+  ]
+ }
+}

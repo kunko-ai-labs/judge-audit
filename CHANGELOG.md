@@ -3,6 +3,11 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
+## [0.5.0] — unreleased (dated when tagged)
+
+### Added
+- **Power analysis for the v0.5 study** (US-005-006, #91, first part). `scripts/v05_power.py` → `docs/v05-power.md/.json`, seeded and regenerated in CI, no API call. Exact: the automated rows one half needs to certify an error rate below 1 %, 2 % or 5 % with 0 to 10 errors (299, 149, 59 with none), and for 80 % power when the true rate is lower. Simulated, with the assumptions stated in each table: the smallest paired AUROC and ECE differences resolvable at the dataset sizes of #99 (on BANKING77's 3,079 distinct test texts, about 0.03–0.06 AUROC and 0.02–0.025 ECE). The pilot replaces the assumed accuracies, correlations and tie shares before the plan fixes n.
+
 ## [0.4.0] — 2026-09-26
 
 ### Added
