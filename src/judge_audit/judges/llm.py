@@ -22,8 +22,8 @@ Providers:
 
 Environment: LLM_PROVIDER, LLM_MODEL, LLM_MODEL_LABEL (what reports show; defaults to LLM_MODEL),
 LLM_BASE_URL, LLM_API_KEY, LLM_EFFORT (anthropic only), LLM_PROVIDER_MODULE (custom only),
-LLM_EXTRA_BODY (openai-compatible only: a JSON object merged into every request, e.g. a
-gateway's routing fields; recorded in the run's provenance).
+LLM_EXTRA_BODY (openai-compatible only: a gateway's routing object, `provider` or
+`providerOptions`, merged into every request and recorded in the run's provenance).
 """
 from __future__ import annotations
 
@@ -59,16 +59,19 @@ def _is_local_url(url: str) -> bool:
     return host in {"localhost", "127.0.0.1", "::1"}
 
 
-# Fields LLM_EXTRA_BODY may not set: they would change what the judge is asked, or how it
-# samples, behind the provenance that `describe()` records.
-PROTECTED_BODY_KEYS = frozenset({"model", "messages", "temperature", "top_p", "n", "seed",
-                                  "stream", "response_format", "logprobs", "top_logprobs"})
+# The only top-level fields LLM_EXTRA_BODY may set: a gateway's routing object. Everything
+# else (the model, the messages, sampling, token limits, a fallback model list, prompt
+# transforms) is fixed by the adapter and recorded in provenance, and a server that reads
+# keys case-insensitively must not be handed a second "Temperature" behind it.
+ALLOWED_BODY_KEYS = ("provider", "providerOptions")
+UPSTREAM_MAX_LEN = 64
 
 
 def extra_body_of(raw: str) -> dict:
-    """LLM_EXTRA_BODY parsed: a JSON object of request fields a gateway needs, such as
-    `{"provider": {"order": ["openai"], "allow_fallbacks": false}}`, a routing field some
-    gateways accept to pin the upstream that serves the model. Empty string -> {}."""
+    """LLM_EXTRA_BODY parsed: a gateway's routing object, such as
+    `{"provider": {"order": ["openai"], "allow_fallbacks": false}}`, which pins the
+    upstream that serves the model. Only `provider` and `providerOptions` are accepted, by
+    exact name. Empty string -> {}."""
     if not raw.strip():
         return {}
     try:
@@ -77,11 +80,44 @@ def extra_body_of(raw: str) -> dict:
         raise ValueError(f"LLM_EXTRA_BODY is not valid JSON: {e}") from e
     if not isinstance(body, dict):
         raise ValueError("LLM_EXTRA_BODY must be a JSON object")
-    clash = sorted(PROTECTED_BODY_KEYS & body.keys())
-    if clash:
-        raise ValueError(f"LLM_EXTRA_BODY may not set {clash}: the judge's prompt and "
-                         "sampling are fixed by the adapter and recorded in provenance")
+    refused = sorted(k for k in body if k not in ALLOWED_BODY_KEYS)
+    if refused:
+        raise ValueError(f"LLM_EXTRA_BODY may only set {list(ALLOWED_BODY_KEYS)}, not "
+                         f"{refused}: the judge's model, prompt and sampling are fixed by the "
+                         "adapter and recorded in provenance")
     return body
+
+
+def pinned_upstreams(extra_body: dict) -> list[str]:
+    """The upstreams a routing object pins, lower-cased: `provider.order`/`provider.only`,
+    or `providerOptions.gateway.order`/`.only`. Empty when none is pinned."""
+    found: list[str] = []
+    for obj in (extra_body.get("provider"),
+                (extra_body.get("providerOptions") or {}).get("gateway")
+                if isinstance(extra_body.get("providerOptions"), dict) else None):
+        if isinstance(obj, dict):
+            for key in ("order", "only"):
+                vals = obj.get(key)
+                if isinstance(vals, list):
+                    found += [str(v).lower() for v in vals]
+    return found
+
+
+def checked_upstream(reported, extra_body: dict) -> str | None:
+    """The upstream a gateway says it used, kept only when it is one the run pinned.
+
+    Nothing is recorded without routing fields (so a plain OpenAI-compatible run is
+    unchanged) or without a pinned list (so no unvetted name reaches the checkpoint). A
+    reported upstream outside the pinned list fails the decision: the routing the
+    provenance records did not hold."""
+    pinned = pinned_upstreams(extra_body)
+    if not extra_body or not pinned or not isinstance(reported, str):
+        return None
+    name = reported.strip()
+    if name.lower() not in pinned or len(name) > UPSTREAM_MAX_LEN:
+        raise RuntimeError(f"the gateway served the request from an upstream outside the "
+                           f"pinned list {pinned}; the run's routing did not hold")
+    return name
 
 
 def _fetch_json(req: urllib.request.Request, deadline: float) -> dict:
@@ -353,7 +389,7 @@ class LLMJudge(Judge):
         self._served = {"model": data.get("model"),
                         "system_fingerprint": data.get("system_fingerprint")}
         # A gateway may say which upstream served the request, in a "provider" field.
-        self._upstream = data.get("provider") if isinstance(data.get("provider"), str) else None
+        self._upstream = checked_upstream(data.get("provider"), self.extra_body)
         usage = data.get("usage") or {}
         return text, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
 

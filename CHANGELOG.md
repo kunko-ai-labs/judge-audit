@@ -6,7 +6,7 @@ All notable changes to this project are documented here. The format follows
 ## [0.5.0] — unreleased (dated when tagged)
 
 ### Added
-- **`LLM_EXTRA_BODY` and a log-probability smoke test** (US-005-003 #88, US-005-004 #89, groundwork). The OpenAI-compatible path of the `llm` judge merges a JSON object of extra request fields into every call (a gateway's routing fields, to pin the upstream that serves a model), refuses any field that would change the prompt or sampling, records the object in provenance (`extra_body`) and keeps the upstream a gateway reports per decision (`raw.upstream_provider`). Without the variable, requests, provenance and raw records are unchanged. `scripts/logprob_smoke.py` asks one endpoint once whether it returns token log-probabilities for a model (exit 0 yes, 1 no or ignored, 2 failed), without ever printing the key.
+- **`LLM_EXTRA_BODY` and a log-probability smoke test** (US-005-003 #88, US-005-004 #89, groundwork). The OpenAI-compatible path of the `llm` judge accepts a gateway's routing object (`provider` or `providerOptions`, by exact name; any other field is refused), merges it into every call and records it in provenance (`extra_body`). When it pins upstreams, the upstream the gateway reports is kept per decision only if it is one of them (`raw.upstream_provider`), and the decision fails otherwise. Without routing fields nothing about a run changes, and a checkpoint is not resumed with different ones. `scripts/logprob_smoke.py` asks one endpoint once whether it returns numeric token log-probabilities for a model (exit 0 yes, 1 no or ignored, 2 failed, 3 unreadable shape) and removes the key from everything it prints or writes.
 
 ## [0.4.0] — 2026-09-26
 
