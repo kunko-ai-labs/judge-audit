@@ -319,7 +319,7 @@ def test_custom_provider_reports_a_version_only_through_its_optional_4th_element
 # --- LLM_EXTRA_BODY: gateway routing fields, recorded in provenance ------------------------
 
 def _gateway(monkeypatch, extra: str | None, response: dict):
-    import judge_audit.judges.llm as llm_mod
+    from judge_audit.judges import llm as llm_mod
 
     monkeypatch.setenv("LLM_PROVIDER", "openai-compatible")
     monkeypatch.setenv("LLM_BASE_URL", "https://gateway.test/v1")
