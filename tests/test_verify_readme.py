@@ -197,3 +197,33 @@ def test_the_headline_fails_when_the_data_stop_supporting_it(monkeypatch, judge,
 
     monkeypatch.setattr(verify_readme, "load", patched)
     assert any(expect in f for f in check(README).failures if f.startswith("headline"))
+
+
+@pytest.mark.parametrize("name,path,value", [
+    ("repeats-2026-09.json", ("P3", "held"), False),
+    ("robustness-distinct-2026-09.json", ("headline", "separated"), False),
+])
+def test_the_robustness_verdicts_are_read_from_their_reports(monkeypatch, name, path, value):
+    import copy
+
+    import verify_readme
+
+    real = verify_readme.load
+
+    def patched(n):
+        d = real(n)
+        if n == name:
+            d = copy.deepcopy(d)
+            if name.startswith("repeats"):
+                next(p for p in d["predictions"] if p["id"] == path[0])[path[1]] = value
+            else:
+                d[path[0]][path[1]] = value
+        return d
+
+    monkeypatch.setattr(verify_readme, "load", patched)
+    assert any(f.startswith("robustness") for f in check(README).failures)
+
+
+def test_rewording_the_robustness_sentence_fails_instead_of_skipping():
+    assert any("robustness" in f for f in check(edit(
+        "Two robustness checks back the Jev–Gemini gap", "Two checks back the gap")).failures)

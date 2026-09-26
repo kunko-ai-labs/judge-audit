@@ -23,7 +23,8 @@
         "config": {
           "model": "gemini-3-flash-preview",
           "provider": "openai-compatible"
-        }
+        },
+        "zec_upper": 0.0183
       },
       "repeats": {
         "r1": {
@@ -46,7 +47,8 @@
           "config": {
             "model": "gemini-3-flash-preview",
             "provider": "openai-compatible"
-          }
+          },
+          "zec_upper": 0.0183
         },
         "r2": {
           "n": 200,
@@ -68,7 +70,8 @@
           "config": {
             "model": "gemini-3-flash-preview",
             "provider": "openai-compatible"
-          }
+          },
+          "zec_upper": 0.0183
         },
         "r3": {
           "n": 200,
@@ -90,7 +93,8 @@
           "config": {
             "model": "gemini-3-flash-preview",
             "provider": "openai-compatible"
-          }
+          },
+          "zec_upper": 0.0183
         }
       },
       "spread": {
@@ -104,6 +108,11 @@
           "max": 0.0,
           "sd": 0.0
         },
+        "zec_upper": {
+          "min": 0.0183,
+          "max": 0.0183,
+          "sd": 0.0
+        },
         "mean_conf_correct": {
           "min": 0.98,
           "max": 0.983,
@@ -113,9 +122,15 @@
           "min": 0.983,
           "max": 0.983,
           "sd": 0.0
+        },
+        "nll_infinite": {
+          "min": 5,
+          "max": 5,
+          "sd": 0.0
         }
       },
-      "spread_over": "Arena run + r1\u2013r3"
+      "spread_over": "Arena run + r1\u2013r3",
+      "rows_with_changed_decision": 0
     },
     "claude-sonnet-4.5": {
       "arena": {
@@ -138,7 +153,8 @@
         "config": {
           "model": "claude-sonnet-4.5",
           "provider": "hosted-api"
-        }
+        },
+        "zec_upper": 0.9086
       },
       "repeats": {
         "r1": {
@@ -161,7 +177,8 @@
           "config": {
             "model": "claude-sonnet-4.5",
             "provider": "hosted-api"
-          }
+          },
+          "zec_upper": 0.335
         },
         "r2": {
           "n": 200,
@@ -183,7 +200,8 @@
           "config": {
             "model": "claude-sonnet-4.5",
             "provider": "hosted-api"
-          }
+          },
+          "zec_upper": 0.335
         },
         "r3": {
           "n": 200,
@@ -205,7 +223,8 @@
           "config": {
             "model": "claude-sonnet-4.5",
             "provider": "hosted-api"
-          }
+          },
+          "zec_upper": 0.9086
         }
       },
       "spread": {
@@ -219,6 +238,11 @@
           "max": 0.0,
           "sd": 0.0
         },
+        "zec_upper": {
+          "min": 0.335,
+          "max": 0.9086,
+          "sd": 0.3312
+        },
         "mean_conf_correct": {
           "min": 0.957,
           "max": 0.958,
@@ -228,9 +252,15 @@
           "min": 0.877,
           "max": 0.886,
           "sd": 0.0043
+        },
+        "nll_infinite": {
+          "min": 2,
+          "max": 2,
+          "sd": 0.0
         }
       },
-      "spread_over": "Arena run + r1\u2013r3"
+      "spread_over": "Arena run + r1\u2013r3",
+      "rows_with_changed_decision": 0
     },
     "jev": {
       "arena": {
@@ -250,7 +280,8 @@
         "mean_conf_correct": 0.933,
         "mean_conf_wrong": 0.597,
         "nll_infinite": 0,
-        "config": {}
+        "config": {},
+        "zec_upper": 0.94
       },
       "repeats": {
         "r1": {
@@ -273,7 +304,8 @@
           "config": {
             "model": "jev-latest",
             "backend": "typesafe"
-          }
+          },
+          "zec_upper": 0.9495
         },
         "r2": {
           "n": 200,
@@ -295,7 +327,8 @@
           "config": {
             "model": "jev-latest",
             "backend": "typesafe"
-          }
+          },
+          "zec_upper": 0.9436
         },
         "r3": {
           "n": 200,
@@ -317,7 +350,8 @@
           "config": {
             "model": "jev-latest",
             "backend": "typesafe"
-          }
+          },
+          "zec_upper": 0.9554
         }
       },
       "spread": {
@@ -331,6 +365,11 @@
           "max": 0.71,
           "sd": 0.0132
         },
+        "zec_upper": {
+          "min": 0.9436,
+          "max": 0.9554,
+          "sd": 0.0059
+        },
         "mean_conf_correct": {
           "min": 0.925,
           "max": 0.931,
@@ -340,13 +379,20 @@
           "min": 0.599,
           "max": 0.647,
           "sd": 0.0264
+        },
+        "nll_infinite": {
+          "min": 0,
+          "max": 0,
+          "sd": 0.0
         }
       },
-      "spread_over": "r1\u2013r3"
+      "spread_over": "r1\u2013r3",
+      "rows_with_changed_decision": 3
     }
   },
   "predictions": [
     {
+      "id": "P1",
       "prediction": "Gemini 3 Flash's zero-error coverage is 0 % in each repeat",
       "per_run": {
         "r1": true,
@@ -356,6 +402,7 @@
       "held": true
     },
     {
+      "id": "P2",
       "prediction": "Jev's zero-error coverage is at least 50 % in each repeat",
       "per_run": {
         "r1": true,
@@ -365,6 +412,7 @@
       "held": true
     },
     {
+      "id": "P3",
       "prediction": "Gemini's 95 % upper bound lies below Jev's 95 % lower bound in each repeat",
       "per_run": {
         "r1": true,
@@ -374,6 +422,7 @@
       "held": true
     },
     {
+      "id": "P4",
       "prediction": "Claude Sonnet 4.5's zero-error coverage stays below Jev's in each repeat",
       "per_run": {
         "r1": true,
@@ -383,6 +432,7 @@
       "held": true
     },
     {
+      "id": "P5",
       "prediction": "Each judge's accuracy in each repeat lies inside its Arena 95 % interval",
       "per_run": {
         "gemini-3-flash r1": true,
@@ -398,6 +448,7 @@
       "held": true
     },
     {
+      "id": "P6",
       "prediction": "nll_infinite \u2265 1 for Gemini and Sonnet and 0 for Jev, in each repeat",
       "per_run": {
         "r1": true,
@@ -406,5 +457,27 @@
       },
       "held": true
     }
-  ]
+  ],
+  "sonnet_vs_jev": {
+    "Arena": {
+      "sonnet_upper": 0.9086,
+      "jev_lower": 0.6701,
+      "separated": false
+    },
+    "r1": {
+      "sonnet_upper": 0.335,
+      "jev_lower": 0.6497,
+      "separated": true
+    },
+    "r2": {
+      "sonnet_upper": 0.335,
+      "jev_lower": 0.645,
+      "separated": true
+    },
+    "r3": {
+      "sonnet_upper": 0.9086,
+      "jev_lower": 0.6224,
+      "separated": false
+    }
+  }
 }

@@ -438,15 +438,21 @@ def check_headline(ck: Checker, md: str, attack: dict) -> None:
                            f"not below Jev's lower bound {j_lo}, so the gap is not separated")
 
 
+ROBUSTNESS = ("Two robustness checks back the Jev–Gemini gap: it is separated in each of three "
+              "pre-registered repeat runs")
+
+
 def check_robustness(ck: Checker, md: str) -> None:
-    """The caption's two robustness claims must match the reports they link."""
-    if "it holds in each of three pre-registered repeat runs" in md:
-        rep = load("repeats-2026-09.json")
-        sep = rep["predictions"][2]
-        ck.eq("robustness / headline separated in every repeat", sep["held"], True)
-    if "and on one row per distinct text" in md:
-        ck.eq("robustness / headline separated on distinct texts",
-              load("robustness-distinct-2026-09.json")["headline"]["separated"], True)
+    """The caption's two robustness claims must be there, word for word, and match the
+    reports they link: rewording the sentence fails instead of switching the check off."""
+    ck.checked += 1
+    if ROBUSTNESS not in md:
+        ck.failures.append("robustness: the caption's repeat-runs sentence is missing or reworded")
+        return
+    rep = {p["id"]: p for p in load("repeats-2026-09.json")["predictions"]}
+    ck.eq("robustness / Jev–Gemini separated in every repeat (P3)", rep["P3"]["held"], True)
+    ck.eq("robustness / Jev–Gemini separated on distinct texts",
+          load("robustness-distinct-2026-09.json")["headline"]["separated"], True)
 
 
 def check(md: str) -> Checker:

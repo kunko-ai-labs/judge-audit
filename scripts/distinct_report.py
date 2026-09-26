@@ -48,6 +48,28 @@ def first_of_each_text(rows: list[dict]) -> set[int]:
     return set(first.values())
 
 
+def mix(ds: str, rows: list[dict], idx) -> dict[str, int]:
+    """What deduplication can unbalance: the category of a clean email, the attack of an
+    email under attack, the segment of a router task."""
+    if ds.startswith("router"):
+        return segments(rows, idx)
+    out: dict[str, int] = {}
+    for i in idx:
+        r = rows[i]
+        k = ((r.get("_meta") or {}).get("attack") or "clean") if ds == "email-adversarial" \
+            else str(r["labels"]["category"])
+        out[k] = out.get(k, 0) + 1
+    return dict(sorted(out.items()))
+
+
+def shifts(m: dict) -> str:
+    """The groups that lose the largest share of their rows, as `name all→distinct`."""
+    moved = sorted(((m["all"][k] - m["distinct"].get(k, 0)) / m["all"][k], k)
+                   for k in m["all"])[::-1]
+    return ", ".join(f"{k} {m['all'][k]}→{m['distinct'].get(k, 0)}"
+                     for share, k in moved[:4] if share > 0)
+
+
 def segments(rows: list[dict], idx) -> dict[str, int]:
     """Router rows per segment: easy, hard, or easy with an injected instruction."""
     out: dict[str, int] = {}
@@ -72,9 +94,8 @@ def collect() -> dict:
         rows = load_jsonl(str(ROOT / labels))
         keep = first_of_each_text(rows)
         out[ds] = {"rows": len(rows), "distinct_texts": len(keep), "judges": {}}
-        if ds.startswith("router"):
-            out[ds]["segments"] = {"all": segments(rows, range(len(rows))),
-                                   "distinct": segments(rows, sorted(keep))}
+        out[ds]["mix"] = {"all": mix(ds, rows, range(len(rows))),
+                          "distinct": mix(ds, rows, sorted(keep))}
         recs, _ = records(labels, ROOT / JEV[ds], q)
         out[ds]["judges"]["jev"] = both(recs, ds, rows)
         for d in sorted(p for p in ARENA.iterdir() if p.is_dir()):
@@ -100,7 +121,7 @@ def headline(judges: dict) -> dict:
             "separated": g["zero_error_coverage_ci"][1] < j["zero_error_coverage_ci"][0]}
 
 
-def mix(seg: dict[str, int]) -> str:
+def mixtext(seg: dict[str, int]) -> str:
     return " / ".join(f"{n} {k}" for k, n in seg.items())
 
 
@@ -133,14 +154,17 @@ def render(data: dict) -> str:
         f"{h['jev_ci'][1] * 100:.1f}]; the intervals "
         f"{'do not overlap' if h['separated'] else 'overlap'}.",
         "",
-        f"**Read the router with care.** Deduplicating the router keeps "
+        f"**Read the distinct-text columns with care.** Deduplicating the router keeps "
         f"{data['router-bare']['distinct_texts']} of {data['router-bare']['rows']} rows, and "
         f"the repeats sit in its easy and hard segments: it goes from "
-        f"{mix(data['router-bare']['segments']['all'])} to "
-        f"{mix(data['router-bare']['segments']['distinct'])}. So the distinct-text router "
+        f"{mixtext(data['router-bare']['mix']['all'])} to "
+        f"{mixtext(data['router-bare']['mix']['distinct'])}. So the distinct-text router "
         "is mostly the injected segment, and its accuracy moves because the *question mix* "
-        "changes, not only because repeats are gone. Compare the router rows with that in "
-        "mind; the email datasets keep their mix.",
+        "changes, not only because repeats are gone. The emails change mix as well: the "
+        f"clean emails lose most of their repeated categories ({shifts(data['email-clean']['mix'])}), "
+        f"the emails under attack the least ({shifts(data['email-adversarial']['mix'])}). "
+        "Read every distinct-text column as a slightly different dataset, not only as the "
+        "same one without repeats.",
         "",
     ]
     for ds, title in TITLES.items():

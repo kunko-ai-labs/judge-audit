@@ -36,14 +36,17 @@ The same 200 emails under attack (`examples/email-routing-adversarial/labels.jso
 
 The spread is min–max (SD) over runs of the same configuration. Read it next to the Arena run's 95 % interval: a spread much smaller than the interval means the number moves more with the texts than with the run.
 
-| judge | over | accuracy | zero-error coverage | conf when wrong |
-|---|---|---|---|---|
-| Gemini 3 Flash | Arena run + r1–r3 | 97.0–97.0 % (SD 0.00) | 0.0–0.0 % (SD 0.00) | 0.983–0.983 (SD 0.000) |
-| Claude Sonnet 4.5 | Arena run + r1–r3 | 96.5–96.5 % (SD 0.00) | 0.0–0.0 % (SD 0.00) | 0.877–0.886 (SD 0.004) |
-| Jev | r1–r3 | 96.0–97.0 % (SD 0.58) | 68.5–71.0 % (SD 1.32) | 0.599–0.647 (SD 0.026) |
+| judge | over | accuracy (Arena 95 % interval) | zero-error coverage (Arena 95 % interval) | its 95 % upper bound | conf when right | conf when wrong | certain and wrong |
+|---|---|---|---|---|---|---|---|
+| Gemini 3 Flash | Arena run + r1–r3 | 97.0–97.0 % (SD 0.00) ([94.5, 99.0]) | 0.0–0.0 % (SD 0.00) ([0.0, 1.8]†) | 1.8–1.8 % (SD 0.00) | 0.980–0.983 (SD 0.001) | 0.983–0.983 (SD 0.000) | 5–5 |
+| Claude Sonnet 4.5 | Arena run + r1–r3 | 96.5–96.5 % (SD 0.00) ([93.9, 99.0]) | 0.0–0.0 % (SD 0.00) ([0.0, 90.9]) | 33.5–90.9 % (SD 33.12) | 0.957–0.958 (SD 0.001) | 0.877–0.886 (SD 0.004) | 2–2 |
+| Jev | r1–r3 | 96.0–97.0 % (SD 0.58) ([92.5, 98.0]) | 68.5–71.0 % (SD 1.32) ([67.0, 94.0]) | 94.4–95.5 % (SD 0.59) | 0.925–0.931 (SD 0.003) | 0.599–0.647 (SD 0.026) | 0–0 |
+
+**Not every interval is stable between runs.** The README caption says Jev is not separated from Claude Sonnet 4.5. That holds in Arena, r3 but not in r1, r2: Sonnet changes 0 of its 200 decisions between runs and its accuracy not at all, yet the upper bound of its zero-error interval is 90.9 % (Arena), 33.5 % (r1), 33.5 % (r2), 90.9 % (r3). Its coverage is 0 % because a few of its most confident answers are wrong, and which bootstrap resamples keep them depends on small confidence changes between runs. So Sonnet's *interval* moves with the run; its point estimate and its decisions do not.
 
 ## Caveats
 
-- Jev's Arena run used `typesafe-ai/jev` through the AI Gateway evaluate API; the repeats use the direct TypeSafe API (`jev-latest`). A difference between them may come from the backend or the version, so Jev's spread is over the three repeats only.
+- Jev's Arena run under attack predates run headers, so its checkpoint records no model; `docs/audit-jev-adversarial.md` names it: `typesafe-ai/jev` through the AI Gateway evaluate API. The repeats use the direct TypeSafe API (`jev-latest`). A difference between them may come from the backend or the version, so Jev's spread is over the three repeats only.
 - Three repeats measure run-to-run movement coarsely; they do not make the data less synthetic or the sample larger.
-- Temperature 0 for the chat models, as in the Arena; any movement is the provider's nondeterminism at that setting.
+- The chat models ran at temperature 0. The movement between runs is the provider's nondeterminism at that setting or a silent model update: the Arena runs (20–21 September) predate the recording of the served version, the hosted Sonnet path reports none, and the Arena headers do not record the temperature, so the two cannot be told apart.
+- Deviation from the plan: it said the runs would go one after another. To finish in about an hour, r2 and r3 of Gemini and Sonnet ran in parallel with their r1 (same settings, separate checkpoints); Jev's ran one after another.

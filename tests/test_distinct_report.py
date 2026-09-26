@@ -8,7 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from distinct_report import first_of_each_text, headline, segments  # noqa: E402
+from distinct_report import first_of_each_text, headline, mix, segments, shifts  # noqa: E402
 
 
 def test_the_first_row_of_each_text_is_kept_in_file_order():
@@ -40,3 +40,9 @@ def test_the_committed_report_says_the_headline_holds_on_distinct_texts():
     assert data["headline"]["separated"] is True
     md = (ROOT / "docs" / "robustness-distinct-2026-09.md").read_text()
     assert "The README headline holds on distinct texts" in md
+
+
+def test_the_mix_of_every_dataset_is_reported_and_its_largest_shifts_named():
+    rows = [{"labels": {"category": c}} for c in ["spam", "spam", "order", "order"]]
+    m = {"all": mix("email-clean", rows, range(4)), "distinct": mix("email-clean", rows, [0, 2, 3])}
+    assert m["all"] == {"order": 2, "spam": 2} and shifts(m) == "spam 2→1"

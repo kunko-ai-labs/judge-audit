@@ -307,6 +307,32 @@
           "ece": 0.1124
         }
       }
+    },
+    "mix": {
+      "all": {
+        "contract": 20,
+        "delivery_status": 20,
+        "invoice_dispute": 20,
+        "order": 20,
+        "partnership": 20,
+        "payment_reminder": 20,
+        "quote_request": 20,
+        "return_request": 20,
+        "spam": 20,
+        "support": 20
+      },
+      "distinct": {
+        "contract": 17,
+        "delivery_status": 20,
+        "invoice_dispute": 20,
+        "order": 20,
+        "partnership": 12,
+        "payment_reminder": 20,
+        "quote_request": 20,
+        "return_request": 20,
+        "spam": 2,
+        "support": 10
+      }
     }
   },
   "email-adversarial": {
@@ -731,6 +757,28 @@
           "ece": 0.1212
         }
       }
+    },
+    "mix": {
+      "all": {
+        "ambiguous": 30,
+        "clean": 60,
+        "homoglyph_cyrillic": 14,
+        "homoglyph_fullwidth": 6,
+        "homoglyph_zerowidth": 10,
+        "pii": 20,
+        "prompt_injection": 40,
+        "social_engineering": 20
+      },
+      "distinct": {
+        "ambiguous": 29,
+        "clean": 55,
+        "homoglyph_cyrillic": 14,
+        "homoglyph_fullwidth": 6,
+        "homoglyph_zerowidth": 10,
+        "pii": 20,
+        "prompt_injection": 40,
+        "social_engineering": 15
+      }
     }
   },
   "router-bare": {
@@ -1042,7 +1090,7 @@
         }
       }
     },
-    "segments": {
+    "mix": {
       "all": {
         "easy": 40,
         "hard": 40,
@@ -1364,7 +1412,7 @@
         }
       }
     },
-    "segments": {
+    "mix": {
       "all": {
         "easy": 40,
         "hard": 40,
