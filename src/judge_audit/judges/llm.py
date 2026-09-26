@@ -2,9 +2,10 @@
 
 Most judges in production are not judgment models: they are a chat model with
 a prompt that says "classify this and tell me how sure you are". This adapter
-audits exactly that. The confidence is *verbalized* (the model writes a number),
-which the literature and our own audits show is often poorly calibrated — that is
-the point of measuring it.
+audits exactly that. The confidence is *verbalized* (the model writes a number).
+The literature finds it overconfident (Xiong et al. 2024) but not uniformly worse
+calibrated than token probabilities (Tian et al. 2023); see docs/judges.md § Why two
+kinds of confidence. Measuring it on the decisions at hand is the point.
 
 Providers:
   anthropic          official SDK (`pip install 'judge-audit[anthropic]'`), ANTHROPIC_API_KEY

@@ -63,7 +63,19 @@ Evaluate it only on rows it did not train on: `scripts/audit_resumable.py … --
 
 ## Why two kinds of confidence
 
-A judgment model returns a probability distribution over options; the confidence *is* the probability of the chosen option. A chat model has no such distribution exposed — it says "0.9" in text. Verbalized confidence is what almost everyone deploys and what the literature finds worst calibrated; auditing it is not a limitation of the tool, it is the audit people need.
+A judgment model returns a probability distribution over options; the confidence *is* the probability of the chosen option. A chat model deployed as a judge usually returns text, and its confidence is a number it writes ("0.9"): **verbalized** confidence. That is what most LLM-as-judge deployments read, so it is what the Arena audits; auditing it is not a limitation of the tool, it is the audit people need.
+
+A chat model's own probability of the option it chose can sometimes be read from **token log-probabilities**, but not from every API. The Claude Messages API has no log-probability parameter, and OpenAI's reasoning models return none; open-weight models served locally do (Ollama from v0.12.11, vLLM, MLX). v0.5 measures chat models by verbalized confidence, token log-probability where the API exposes it, and self-consistency (agreement over repeated samples), each as its own row ([#89](https://github.com/kunko-ai-labs/judge-audit/issues/89)).
+
+**What the literature does and does not say.** It does not say that verbalized confidence is always the worst calibrated:
+
+- For RLHF-tuned chat models (ChatGPT, GPT-4, Claude), verbalized confidence was typically *better* calibrated than the model's conditional token probabilities on TriviaQA, SciQ and TruthfulQA, often cutting ECE by a relative 50 % (Tian et al., EMNLP 2023, [Just Ask for Calibration](https://aclanthology.org/2023.emnlp-main.330/)).
+- Verbalized confidence is overconfident: values sit mostly between 80 % and 100 %, often in multiples of 5; calibration and failure prediction improve with model scale but stay far from ideal (Xiong et al., ICLR 2024, [Can LLMs Express Their Uncertainty?](https://openreview.net/forum?id=gjeQKFxFpZ)).
+- The verbalized-versus-token comparison depends on measurement choices that are rarely written down: which answer string gets the token-probability score, how that score is read from its tokens, and under which context (Kim & Kang 2026, [arXiv:2605.27752](https://arxiv.org/abs/2605.27752)).
+
+So which kind of confidence is better calibrated is an empirical question per model, task and protocol, and a comparison between them means something only when the protocol is fixed before the run.
+
+**What this repository has measured so far** (GT-1 synthetic, n ≤ 200, one prompt): under attack, the verbalized confidence of the chat models barely separates their right answers from their wrong ones (Gemini 3 Flash 0.98 / 0.98), while Jev's option probability does (0.93 / 0.60; [Arena](arena-2026-09.md)). Those wrong-answer means rest on 6 and 9 errors, and the comparison mixes the model with its confidence method. It shows what these judges did on these rows; it is not evidence that verbalized confidence is worse in general.
 
 ## Writing an adapter
 
