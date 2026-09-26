@@ -10,6 +10,7 @@ import pytest
 
 from judge_audit.metrics.calibration import bootstrap_ci, clopper_pearson
 from judge_audit.metrics.selective import (
+    aggregate_by_group,
     aurc,
     aurc_ci,
     bootstrap_defined,
@@ -134,10 +135,18 @@ def test_zero_errors_need_299_rows_for_a_one_percent_bound():
     assert risk_upper_bound(0, 100) == pytest.approx(1 - 0.05 ** (1 / 100))
 
 
-def test_upper_bound_matches_the_one_sided_clopper_pearson():
-    for errors, n in [(2, 500), (5, 1000), (10, 1000), (20, 2000), (7, 40)]:
-        assert risk_upper_bound(errors, n, 0.05) == pytest.approx(
-            clopper_pearson(errors, n, alpha=0.10)[1], abs=5e-5)
+def _binom_cdf(k: int, n: int, p: float) -> float:
+    return math.fsum(math.comb(n, i) * p ** i * (1 - p) ** (n - i) for i in range(k + 1))
+
+
+def test_upper_bound_inverts_the_binomial_cdf():
+    # independent of the incomplete-beta code: at the bound u, P(X <= errors | n, u) = delta
+    for errors, n in [(0, 59), (1, 71), (2, 500), (5, 1000), (10, 1000), (20, 2000), (7, 40)]:
+        u = risk_upper_bound(errors, n, 0.05)
+        assert _binom_cdf(errors, n, u) == pytest.approx(0.05, abs=1e-9)
+    # and agrees with the two-sided exact interval at twice the level, to its 4 decimals
+    assert risk_upper_bound(5, 1000) == pytest.approx(clopper_pearson(5, 1000, 0.10)[1],
+                                                       abs=5e-5)
 
 
 def test_upper_bound_edges_and_bad_input():
@@ -231,6 +240,39 @@ def test_coverage_at_risk_rejects_bad_input():
         coverage_at_risk([math.inf], [True], [0.9], [True], 0.05)
 
 
+def _false_certification_rate(texts: int, copies: int, risk: float, as_texts: bool) -> float:
+    """Exact probability that one confidence group whose true risk is `risk` gets certified
+    at target `risk`: each text is right or wrong for all of its `copies` rows at once."""
+    rows = texts if as_texts else texts * copies
+    per_error = 1 if as_texts else copies
+    passing = [e for e in range(texts + 1)
+               if rows >= min_rows_to_certify(risk)
+               and risk_upper_bound(e * per_error, rows) <= risk]
+    return math.fsum(math.comb(texts, e) * risk ** e * (1 - risk) ** (texts - e)
+                     for e in passing)
+
+
+def test_the_guarantee_needs_independent_units():
+    # 300 texts, each present twice with one outcome (a temperature-0 judge), true risk at
+    # the target: counted as 600 rows, a 5 % test certifies 12 % of the time; counted as
+    # 300 texts it stays under delta
+    assert _false_certification_rate(300, 2, 0.05, as_texts=False) > 0.10
+    assert _false_certification_rate(300, 2, 0.05, as_texts=True) <= 0.05
+
+
+def test_aggregation_counts_a_repeated_text_once():
+    conf = [0.9, 0.9, 0.95, 0.8]
+    ok = [True, True, True, False]
+    groups = ["a", "a", "b", "b"]
+    assert aggregate_by_group(conf, ok, groups) == ([0.9, 0.8], [True, False])
+    # 100 texts x 2 copies, all right: 200 rows would certify 2 %, 100 texts cannot
+    c, o = [0.9] * 200, [True] * 200
+    g = [i // 2 for i in range(200)]
+    assert coverage_at_risk(c, o, c, o, 0.02)["threshold"] == 0.9
+    units = aggregate_by_group(c, o, g)
+    assert coverage_at_risk(*units, *units, 0.02)["threshold"] is None
+
+
 # --- cross-fitting by distinct text ----------------------------------------------------
 
 
@@ -243,17 +285,41 @@ def test_split_keeps_every_text_on_one_side_and_is_seeded():
     assert len({groups[i] for i in a}) == 3          # 5 texts -> 3 and 2
 
 
-def test_crossfit_pools_two_test_halves_that_cover_every_row_once():
+def test_crossfit_pools_two_test_halves_that_cover_every_text_once():
     conf, ok = _random_judge(800, seed=9, levels=10)
     groups = [f"text{i // 2}" for i in range(800)]    # every text appears twice
     res = coverage_at_risk_crossfit(conf, ok, 0.1, groups=groups, seed=0)
     fa, fb = res["folds"]
-    assert fa["test"]["n"] + fb["test"]["n"] == 800
+    assert res["unit"] == "text"
+    assert fa["test"]["n"] + fb["test"]["n"] == 400    # distinct texts, not rows
     assert fa["calibration"]["n"] == fb["test"]["n"]
     assert res["pooled"]["covered"] == fa["test"]["covered"] + fb["test"]["covered"]
     assert res["pooled"]["errors"] == fa["test"]["errors"] + fb["test"]["errors"]
-    assert res["pooled"]["n"] == 800
+    assert res["pooled"]["n"] == 400
     assert coverage_at_risk_crossfit(conf, ok, 0.1, groups=groups, seed=0) == res
+    rows = coverage_at_risk_crossfit(conf, ok, 0.1, seed=0)
+    assert rows["unit"] == "row" and rows["pooled"]["n"] == 800
+
+
+def test_crossfit_does_not_depend_on_row_order():
+    conf, ok = _random_judge(1000, seed=13, levels=10)
+    groups = [f"text{i // 2}" for i in range(1000)]
+    expected = coverage_at_risk_crossfit(conf, ok, 0.1, groups=groups, seed=0)
+    rows = list(zip(conf, ok, groups, strict=True))
+    rng = random.Random(4)
+    for _ in range(10):
+        rng.shuffle(rows)
+        got = coverage_at_risk_crossfit([c for c, _, _ in rows], [o for _, o, _ in rows],
+                                        0.1, groups=[g for _, _, g in rows], seed=0)
+        assert got == expected
+
+
+def test_split_does_not_depend_on_row_order():
+    groups = ["t1", "t1", "t2", "t3", "t3", "t3", "t4", "t5"]
+    a, _ = split_by_group(groups, seed=0)
+    rev = groups[::-1]
+    a_rev, _ = split_by_group(rev, seed=0)
+    assert {groups[i] for i in a} == {rev[i] for i in a_rev}
 
 
 # --- bootstrap of a statistic that can be undefined ------------------------------------
@@ -337,3 +403,6 @@ def test_mcnemar_exact_on_hand_counts():
     assert mcnemar_exact(b, a)["p_value"] == res["p_value"]
     assert mcnemar_exact([True, False], [True, False]) == {"a_only": 0, "b_only": 0,
                                                             "p_value": 1.0}
+    # as many rows favour each judge: 2 * P(X <= 3 | 6, 1/2) = 84/64, capped at 1
+    even = mcnemar_exact([True] * 3 + [False] * 3, [False] * 3 + [True] * 3)
+    assert (even["a_only"], even["b_only"], even["p_value"]) == (3, 3, 1.0)

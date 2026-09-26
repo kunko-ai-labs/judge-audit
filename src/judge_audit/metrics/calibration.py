@@ -103,6 +103,10 @@ def worst_calibration_bin(confidences: list[float], correct: list[bool], n_bins:
         raise ValueError(f"{len(confidences)} confidences for {len(correct)} outcomes")
     if not confidences:
         raise ValueError("maximum_calibration_error of no rows is undefined")
+    outside = next((c for c in confidences if not 0.0 <= c <= 1.0), None)
+    if outside is not None:
+        # a confidence below 0 would land in a bin from the top by Python's negative index
+        raise ValueError(f"confidence must lie in [0, 1], got {outside!r}")
     worst: dict = {}
     for b in _binned_rows(confidences, correct, n_bins, binning):
         acc = sum(ok for _, ok in b) / len(b)
@@ -510,8 +514,8 @@ def mce_ci(confidences: Sequence[float], correct: Sequence[bool], n_bins: int = 
            n_boot: int = N_BOOT, seed: int = 0,
            groups: Sequence[Hashable] | None = None,
            binning: str = EQUAL_WIDTH) -> Interval | None:
-    """95 % interval of `maximum_calibration_error`, bins rebuilt on every resample — the
-    clustered bootstrap of `ece_ci`. A maximum over bins tends to rise on resamples, so the
+    """95 % interval of `maximum_calibration_error`, bins rebuilt on every resample, by the
+    same clustered bootstrap as `ece_ci`. A maximum over bins tends to rise on resamples, so the
     point estimate can sit near the bottom of its interval or below it (`ci_fields` marks
     that ◊)."""
     rows = list(zip(confidences, correct, strict=True))

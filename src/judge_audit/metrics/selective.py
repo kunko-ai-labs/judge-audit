@@ -11,10 +11,12 @@ prediction, § Paired comparisons):
 - is judge A better than judge B on the same rows? (`paired_difference_ci`,
   `mcnemar_exact`)
 
-Every function here treats a tie as one threshold, as `zero_error_coverage` does: rows
-with the same confidence are never split by the order they happen to arrive in, so no
-result depends on row order. A confidence that is not a finite number is refused, never
-imputed.
+Every point estimate here treats a tie as one threshold, as `zero_error_coverage` does:
+rows with the same confidence are never split by the order they happen to arrive in, and no
+point estimate depends on row order. The intervals use the repository's seeded bootstrap,
+which draws texts in first-appearance order: like every interval published here, an
+interval is reproducible for a given file, not invariant to reordering it. A confidence
+that is not a finite number is refused, never imputed.
 """
 from __future__ import annotations
 
@@ -172,9 +174,13 @@ def coverage_at_risk(cal_confidences: Sequence[float], cal_correct: Sequence[boo
     with a guaranteed risk is Geifman & El-Yaniv (NeurIPS 2017); Jung, Brahman & Choi
     (ICLR 2025) apply the same idea to LLM judges. With probability at least 1 − `delta`
     over the calibration draw, the true error rate above the threshold is at most
-    `target_risk` — if the two splits are exchangeable, which a dataset that repeats texts
-    breaks unless both copies of a text stay on one side (`coverage_at_risk_crossfit`
-    splits by text).
+    `target_risk` — **provided the calibration rows are independent draws**, and the test
+    rows come from the same distribution. The binomial bound counts every row as one
+    independent trial: two copies of a text that a judge answers the same way are one
+    observation counted twice, and the bound is then too tight (on 300 texts each
+    present twice, a 5 % test certifies 12 % of the time at a true risk of 5 %). With
+    repeated texts, pass one unit per text (`aggregate_by_group`), as
+    `coverage_at_risk_crossfit` does when given `groups`.
 
     **Checking it (test split).** The threshold is applied to the test rows unchanged:
     their coverage, errors, observed risk and its own one-sided bound are reported. No
@@ -221,16 +227,39 @@ def coverage_at_risk(cal_confidences: Sequence[float], cal_correct: Sequence[boo
     }
 
 
+def _key_order(key: Hashable) -> tuple[str, str]:
+    return type(key).__name__, repr(key)
+
+
 def split_by_group(groups: Sequence[Hashable], seed: int = 0) -> tuple[list[int], list[int]]:
-    """Two halves of the row indices, whole groups on one side: the distinct keys are
-    shuffled with `random.Random(seed)` in first-appearance order and the first half of
-    them (rounded up) goes to fold A. Deterministic for a seed."""
-    keys: list[Hashable] = list(dict.fromkeys(groups))
+    """Two halves of the row indices, whole groups on one side: the distinct keys are put in
+    a fixed order (sorted), shuffled with `random.Random(seed)`, and the first half of them
+    (rounded up) goes to fold A. The partition depends on the keys and the seed, never on
+    the order of the rows."""
+    keys: list[Hashable] = sorted(set(groups), key=_key_order)
     random.Random(seed).shuffle(keys)
     fold_a = set(keys[:(len(keys) + 1) // 2])
     a = [i for i, g in enumerate(groups) if g in fold_a]
     b = [i for i, g in enumerate(groups) if g not in fold_a]
     return a, b
+
+
+def aggregate_by_group(confidences: Sequence[float], correct: Sequence[bool],
+                       groups: Sequence[Hashable]) -> tuple[list[float], list[bool]]:
+    """One unit per distinct group (text): its lowest confidence, and whether every one of
+    its rows is right. A text is then above a threshold only when all of its rows are, and
+    wrong when any of them is — the conservative reading that makes texts, not rows, the
+    independent draws `risk_upper_bound` assumes. Units come out in a fixed (sorted-key)
+    order, so the result does not depend on row order."""
+    if not len(confidences) == len(correct) == len(groups):
+        raise ValueError("one confidence, one outcome and one group key per row")
+    lowest: dict[Hashable, float] = {}
+    all_right: dict[Hashable, bool] = {}
+    for c, ok, g in zip(confidences, correct, groups, strict=True):
+        lowest[g] = min(c, lowest.get(g, c))
+        all_right[g] = all_right.get(g, True) and bool(ok)
+    keys = sorted(lowest, key=_key_order)
+    return [lowest[k] for k in keys], [all_right[k] for k in keys]
 
 
 def coverage_at_risk_crossfit(confidences: Sequence[float], correct: Sequence[bool],
@@ -240,10 +269,13 @@ def coverage_at_risk_crossfit(confidences: Sequence[float], correct: Sequence[bo
     """`coverage_at_risk` both ways over two halves of one dataset, split by distinct text.
 
     The rows are split in two by `split_by_group` (every row of a text on the same side;
-    without `groups` each row is its own group). Fold A chooses a threshold that fold B
-    checks, then the roles swap. `pooled` adds the two test halves together: every row is
-    judged once, against a threshold it did not help choose. The two thresholds can differ;
-    both are reported.
+    without `groups` each row is its own group). With `groups`, each half is reduced to one
+    unit per text (`aggregate_by_group`) before testing, so a text that repeats counts
+    once, and coverage and risk are shares of texts (`unit: "text"`); without it they are
+    shares of rows. Fold A chooses a threshold that fold B checks, then the roles swap.
+    `pooled` adds the two test halves together: every unit is judged once, against a
+    threshold it did not help choose. The two thresholds can differ; both are reported.
+    The split depends on `seed`: pre-register it, or report the spread over seeds.
     """
     if len(confidences) != len(correct):
         raise ValueError(f"{len(confidences)} confidences for {len(correct)} outcomes")
@@ -253,15 +285,19 @@ def coverage_at_risk_crossfit(confidences: Sequence[float], correct: Sequence[bo
     a, b = split_by_group(keys, seed)
 
     def part(idx: list[int]) -> tuple[list[float], list[bool]]:
-        return [confidences[i] for i in idx], [correct[i] for i in idx]
+        conf, ok = [confidences[i] for i in idx], [correct[i] for i in idx]
+        if groups is None:
+            return conf, ok
+        return aggregate_by_group(conf, ok, [groups[i] for i in idx])
 
     folds = [coverage_at_risk(*part(cal), *part(test), target_risk, delta)
              for cal, test in ((a, b), (b, a))]
     covered = sum(f["test"]["covered"] for f in folds)
     errs = sum(f["test"]["errors"] for f in folds)
-    n = len(confidences)
+    n = sum(f["test"]["n"] for f in folds)
     return {
         "target_risk": target_risk, "delta": delta, "seed": seed,
+        "unit": "row" if groups is None else "text",
         "folds": folds,
         "pooled": {"n": n, "covered": covered, "errors": errs,
                    "coverage": round(covered / n, 4) if n else None,

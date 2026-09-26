@@ -38,6 +38,24 @@ def test_mce_is_never_below_ece_under_either_binning():
                     >= expected_calibration_error(conf, ok, binning=binning) - 1e-12)
 
 
+def test_mce_equal_mass_by_hand():
+    # two equal-mass bins: {0.1, 0.2} none right (gap 0.15), {0.8, 0.9} one of two (gap 0.35)
+    conf, ok = [0.1, 0.2, 0.8, 0.9], [False, False, True, False]
+    assert maximum_calibration_error(conf, ok, n_bins=2, binning=EQUAL_MASS) == \
+        pytest.approx(0.35)
+
+
+def test_the_lowest_confidence_bin_wins_a_tie():
+    # bin 0.2-0.3 (0.25, never right) and bin 0.7-0.8 (0.75, always right): both gap 0.25
+    worst = worst_calibration_bin([0.25, 0.25, 0.75, 0.75], [False, False, True, True])
+    assert worst["gap"] == 0.25 and worst["avg_confidence"] == 0.25
+
+
+def test_mce_refuses_a_confidence_outside_zero_one():
+    with pytest.raises(ValueError, match=r"\[0, 1\]"):
+        maximum_calibration_error([1.3, -0.2], [True, False])
+
+
 def test_mce_of_a_perfectly_calibrated_judge_is_zero():
     assert maximum_calibration_error([0.75] * 4, [True, True, True, False]) == pytest.approx(0.0)
 
