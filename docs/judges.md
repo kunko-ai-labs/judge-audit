@@ -1,6 +1,6 @@
 # Judges: what plugs in and how
 
-judge-audit audits anything that maps `(state, questions) -> (decision, confidence)`. Five adapters ship; writing a sixth is ~30 lines.
+judge-audit audits anything that maps `(state, questions) -> (decision, confidence)`. Six adapters ship; writing a seventh is ~30 lines.
 
 | `--judge` | What it audits | Confidence comes from | Needs |
 |---|---|---|---|
@@ -9,6 +9,7 @@ judge-audit audits anything that maps `(state, questions) -> (decision, confiden
 | `llm` | a chat model with a "classify and say how sure you are" prompt — what most production judges actually are | **verbalized**: the model writes a number | Anthropic: `pip install 'judge-audit[anthropic]'` + `ANTHROPIC_API_KEY` · OpenAI-compatible (OpenAI, Ollama, vLLM, LM Studio): `LLM_PROVIDER=openai-compatible LLM_BASE_URL=… LLM_MODEL=…` |
 | `nli` | a small zero-shot encoder (DeBERTa-class cross-encoder) — the **control** row: small, instruction-immune, real softmax confidence; not a competitor | **NLI entailment softmax** over the options: a real probability, computed locally | `pip install 'kunko-judge-audit[nli]'`; optional `NLI_MODEL`, `NLI_HYPOTHESIS`, `NLI_DEVICE` |
 | `finetuned` | **your own classifier**: a DeBERTa-class encoder fine-tuned on your labelled rows (`scripts/train_classifier.py`) — the "isn't a judgment model just a classifier?" row | **softmax probability of the chosen option** from the classification head; reads only the state text | `pip install 'kunko-judge-audit[nli]'` + `FINETUNED_MODEL_DIR`; optional `FINETUNED_DEVICE`, `FINETUNED_MAX_LEN` |
+| `laya` | Laya, an open-weight judgment model (Convai Innovations, Apache-2.0) run locally: an encoder that scores every option in one forward pass | **the probability of the chosen option**, after the checkpoint's softmax temperature; never Laya's entropy-based `confidence` field | `pip install 'kunko-judge-audit[laya]'`; `LAYA_REVISION` recommended; optional `LAYA_MODEL`, `LAYA_DEVICE`, `LAYA_MAX_LEN`, `LAYA_HEAD_MAX_LEN` |
 | `simulated` | nothing real — a seeded simulator to see the pipeline | drawn from a distribution | nothing; output is stamped SIMULATED |
 
 ## Same dataset, several judges = the Arena
@@ -36,6 +37,15 @@ LLM_PROVIDER=openai-compatible LLM_BASE_URL=http://localhost:11434/v1 LLM_MODEL=
 ```
 
 Compare `ece`, `zero_error_coverage` and the prompt-injection confidence drop across the JSON files. The Judge Arena (roadmap v0.5) is this table, published and continuously updated.
+
+## Laya: a second judgment model, open and local
+
+Jev is one judgment model; a result about "judgment models" needs more than one. `laya` runs Laya (Convai Innovations, Apache-2.0, weights public) on your machine: a ModernBERT-class encoder with a decision head, 421M parameters in its English checkpoint, that returns a probability per option in one forward pass. Because the weights are public, anyone can reproduce its row at no cost. What the adapter records, from Laya's own code (v0.3.20):
+
+- **Confidence is `probabilities[choice]`**, the probability of the chosen option (Laya also returns it as `answer_confidence`). Laya's `confidence` field is a normalised entropy, 1 − H(p)/log k, on another scale; its documentation says it is not calibrated. It is kept in `raw` as `entropy_confidence` and never used, for the same reason Jev's API `confidence` field is not used.
+- **The checkpoint's softmax temperatures, shipped and applied.** Laya divides the logits by a temperature per question type and number of options that ships with the checkpoint, and the library clamps values outside [0.5, 5]. The shipped value for choices with 11 or more options sharpens the logits roughly tenfold; the library applies 0.5 instead. Both values change every probability, so both are in the provenance (`softmax_temperature`), with the package version and the checkpoint revision.
+- **Token budgets.** A question's options share `head_max_len` tokens (192 in the shipped config), and options that do not fit make Laya raise rather than truncate. BANKING77's 77 intent names need more; raising `LAYA_HEAD_MAX_LEN` runs Laya outside the budget it was trained with, and Laya's own alternative is to shortlist options with a separate embedding model first. Which one v0.5 uses is a pre-registration decision.
+- **The act head.** `act_probability`, Laya's own act-or-escalate signal, is kept in `raw` for an abstention analysis.
 
 ## Why an NLI control
 

@@ -3,6 +3,11 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
+## [0.5.0] — unreleased (dated when tagged)
+
+### Added
+- **`--judge laya`: Laya, an open-weight judgment model run locally** (US-005-003, #88). A second judgment model beside Jev, reproducible by anyone at no cost (`pip install 'kunko-judge-audit[laya]'`). Confidence is the probability of the chosen option, never Laya's entropy-based `confidence` field; the provenance records the model, the checkpoint revision, the package version, the shipped and applied softmax temperatures and the token budgets (`LAYA_MAX_LEN`, `LAYA_HEAD_MAX_LEN`); `act_probability` is kept per decision. Options that exceed Laya's token budget raise instead of being truncated. Listed by the CLI and the MCP server's `list_judges`.
+
 ## [0.4.0] — 2026-09-26
 
 ### Added
