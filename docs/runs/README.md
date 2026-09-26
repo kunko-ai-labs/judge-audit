@@ -43,14 +43,17 @@ in `docs/audit-*.md` / `.json`, `docs/arena-2026-09.md`, `docs/consensus-2026-09
 
   | dataset | files | licence (verified in the upstream `LICENSE`) | source, pinned commit | cite |
   |---|---|---|---|---|
-  | BANKING77 | `examples/banking77/labels-test.jsonl` (3,080 test queries), `labels-pilot.jsonl` (308 train queries) | CC BY 4.0 | [PolyAI-LDN/task-specific-datasets](https://github.com/PolyAI-LDN/task-specific-datasets) `57ec275d8078` | Casanueva et al. 2020, NLP4ConvAI (ACL 2020) |
-  | CLINC150 | `examples/clinc150/labels-test-banking-credit.jsonl` (900 test queries from two domains + 1,000 out-of-scope) | CC BY 3.0 | [clinc/oos-eval](https://github.com/clinc/oos-eval) `828f8093932c` | Larson et al. 2019, EMNLP-IJCNLP 2019 |
+  | BANKING77 | `examples/banking77/labels-test.jsonl` (3,080 test queries), `labels-pilot.jsonl` (308 train queries) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | [PolyAI-LDN/task-specific-datasets](https://github.com/PolyAI-LDN/task-specific-datasets) `57ec275d8078` | Casanueva et al. 2020, NLP4ConvAI (ACL 2020) |
+  | CLINC150 | `examples/clinc150/labels-test-banking-credit.jsonl` (900 test queries from two domains + 1,000 out-of-scope) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) | [clinc/oos-eval](https://github.com/clinc/oos-eval) `828f8093932c` | Larson et al. 2019, EMNLP-IJCNLP 2019 |
 
   Changes made to the upstream data: converted from CSV / JSON to the labels format, one
   question per row with the dataset's label names as options; CLINC150 restricted to the
   `banking` and `credit_cards` domains plus its out-of-scope queries, relabelled
-  `out_of_scope`; the BANKING77 pilot file is a seeded sample of the train split. Texts
-  and labels are unchanged.
+  `out_of_scope` (upstream: `oos`); the BANKING77 pilot file is a seeded sample of the
+  train split. Texts, BANKING77's labels and CLINC150's in-scope labels are unchanged. A
+  run on these files copies the header's `source` (licence, its URL, citation) into the
+  checkpoint's run metadata, so the attribution travels with the texts. The sdist leaves
+  both directories out: the package is Apache-2.0, the data is not.
 
 ## Provenance: the header line
 

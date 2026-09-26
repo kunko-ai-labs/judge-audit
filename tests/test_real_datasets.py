@@ -13,6 +13,10 @@ import pytest
 from judge_audit.runner import load_dataset, sha256_rows_of
 
 ROOT = Path(__file__).resolve().parent.parent
+# The sdist leaves the CC BY data out (pyproject.toml); in the repository CI's
+# `fetch_real_datasets.py --check` fails if a committed file is missing.
+needs_data = pytest.mark.skipif(not (ROOT / "examples/banking77/labels-test.jsonl").exists(),
+                                reason="third-party datasets are not in this source tree")
 
 
 def _load(name: str):
@@ -97,6 +101,7 @@ def test_fetch_refuses_a_file_whose_sha256_does_not_match_the_pin(tmp_path, monk
 # --- the committed files -----------------------------------------------------------------
 
 
+@needs_data
 @pytest.mark.parametrize("path", sorted(COMMITTED))
 def test_committed_dataset_is_what_its_header_says(path):
     key, upstream, n, n_options = COMMITTED[path]
@@ -107,17 +112,44 @@ def test_committed_dataset_is_what_its_header_says(path):
     assert src["commit"] == fetch.SOURCES[key]["commit"]
     assert src["sha256"] == fetch.SOURCES[key]["files"][upstream]
     assert src["licence"] == fetch.SOURCES[key]["licence"]
-    assert len({r["state"] for r in rows}) == n                      # every text distinct
+    assert src["licence_url"].startswith("https://creativecommons.org/licenses/by/")
+    distinct = {fetch.normalise(r["state"]) for r in rows}           # the one rule
+    assert f"{len(distinct)} distinct texts in {n} rows" in \
+        " ".join(dataset["ground_truth"]["caveats"])
+    assert not any("measured by" in c for c in dataset["ground_truth"]["caveats"])
     for r in rows:
         (q,) = r["questions"]
         assert len(q["options"]) == n_options
         assert r["labels"][q["name"]] in q["options"]
 
 
+@needs_data
 def test_the_pilot_never_shares_a_text_with_the_test_split():
-    test = {r["state"] for r in _rows("examples/banking77/labels-test.jsonl")}
-    pilot = {r["state"] for r in _rows("examples/banking77/labels-pilot.jsonl")}
+    test = {fetch.normalise(r["state"]) for r in _rows("examples/banking77/labels-test.jsonl")}
+    pilot = {fetch.normalise(r["state"])
+             for r in _rows("examples/banking77/labels-pilot.jsonl")}
     assert not test & pilot
+
+
+def test_distinct_texts_follow_the_train_overlap_rule_and_name_the_repeats():
+    rows = [("Which ATMs accept this card?", "atm"), ("\nwhich ATMs  accept this card?", "atm"),
+            ("Top up", "top_up"), ("top up", "other")]
+    caveat = fetch.distinct_caveat(rows)
+    assert caveat.startswith("2 distinct texts in 4 rows")
+    assert "rows 0 and 1 hold one text up to case or whitespace, same label" in caveat
+    assert "rows 2 and 3 hold one text up to case or whitespace, labelled other / top_up" \
+        in caveat
+
+
+@needs_data
+def test_a_run_on_third_party_data_records_its_source_and_licence():
+    from judge_audit.judges.simulated import SimulatedJudge
+    from judge_audit.runner import run_metadata
+
+    meta = run_metadata(SimulatedJudge(), str(ROOT / "examples/banking77/labels-pilot.jsonl"), 308)
+    src = meta["dataset"]["source"]
+    assert src["licence"] == "CC BY 4.0" and src["citation"].startswith("Casanueva")
+    assert src["licence_url"] == "https://creativecommons.org/licenses/by/4.0/"
 
 
 # --- relabelling -------------------------------------------------------------------------
@@ -144,10 +176,31 @@ def test_stratified_sample_is_proportional_and_seeded():
 
 
 def test_the_blind_sheet_does_not_keep_the_dataset_order():
-    order = relabel.sheet_order(list(range(40)), seed=2026)
+    order = relabel.sheet_order(list(range(40)), 2026, "a")
     assert sorted(order) == list(range(40)) and order != list(range(40))
+    assert relabel.sheet_order(list(range(40)), 2026, "b") != order   # one order per annotator
+    with pytest.raises(ValueError):
+        relabel.sheet_order([1], 2026, "A-1")
 
 
+def test_blind_sheet_ids_carry_no_dataset_order():
+    """Sorted by label, a dataset row index is a lookup of the label; the sheet id is the
+    position in the annotator's own order, and says nothing about the row."""
+    sample = {"indices": list(range(0, 400, 4)), "seed": 2026}
+    ids = relabel.sheet_ids(sample, "a")
+    assert list(ids) == [f"a-{k}" for k in range(1, 101)]
+    assert sorted(ids.values()) == sample["indices"]
+    positions = [int(sid.split("-")[1]) for sid in ids]
+    rows = list(ids.values())
+    # rank correlation between sheet position and dataset index is near zero
+    rank = {v: k for k, v in enumerate(sorted(rows))}
+    n = len(rows)
+    rho = sum((p - 1 - rank[r]) ** 2 for p, r in zip(positions, rows, strict=True))
+    rho = 1 - 6 * rho / (n * (n * n - 1))
+    assert abs(rho) < 0.3
+
+
+@needs_data
 @pytest.mark.parametrize("sample_path", ["examples/banking77/relabel-sample.json",
                                          "examples/clinc150/relabel-sample.json"])
 def test_committed_relabel_samples_regenerate(sample_path):
@@ -169,8 +222,67 @@ def test_score_reports_agreement_and_likely_label_errors(tmp_path):
     assert res["agreement_with_dataset"] == {"a": 0.5, "b": 0.25}
     assert res["both_annotators_differ_from_dataset"]["ids"] == [2, 3]
     assert res["annotators_disagree"]["ids"] == [1]
-    sheet = tmp_path / "a.csv"
-    with open(sheet, "w", newline="") as f:
-        csv.writer(f).writerows([["id", "text", "label"], [0, "s0", "z"]])
-    with pytest.raises(SystemExit, match="not an option"):
-        relabel.read_sheet(str(sheet), {"x", "y"})
+    assert res["both_annotators_differ_from_dataset"]["wilson_95"] == [0.15, 0.85]
+
+
+def test_wilson_interval_by_hand():
+    # 3 of 6: centre (0.5 + z²/12) / (1 + z²/6) = 0.5; half-width 0.3124 (z = 1.95996)
+    assert relabel.wilson_interval(3, 6) == pytest.approx((0.1876163, 0.8123837), abs=1e-6)
+    assert relabel.wilson_interval(0, 10) == pytest.approx((0.0, 0.2775328), abs=1e-6)
+    assert relabel.wilson_interval(1, 6) == pytest.approx((0.0300534, 0.5635028), abs=1e-6)
+    with pytest.raises(ValueError):
+        relabel.wilson_interval(1, 0)
+
+
+def _sheet(path, rows):
+    with open(path, "w", newline="", encoding="utf-8") as f:
+        csv.writer(f).writerows([["id", "text", "label"], *rows])
+    return str(path)
+
+
+def test_read_sheet_maps_ids_back_and_refuses_bad_sheets(tmp_path):
+    sample = {"indices": [3, 7, 9], "seed": 2026}
+    ids = relabel.sheet_ids(sample, "b")
+    ok = _sheet(tmp_path / "ok.csv", [[sid, "t", "x"] for sid in ids])
+    assert relabel.read_sheet(ok, sample, {"x", "y"}) == ("b", {3: "x", 7: "x", 9: "x"})
+    bad = {
+        "not an option": [[sid, "t", "z"] for sid in ids],
+        "appears twice": [["b-1", "t", "x"], ["b-1", "t", "y"]],
+        "not on b's sheet": [["b-4", "t", "x"]],
+        "one annotator's sheet": [["a-1", "t", "x"], ["b-2", "t", "x"]],
+    }
+    for message, rows in bad.items():
+        with pytest.raises(SystemExit, match=message):
+            relabel.read_sheet(_sheet(tmp_path / "bad.csv", rows), sample, {"x", "y"})
+
+
+def test_sheet_and_score_end_to_end(tmp_path):
+    ds = tmp_path / "d.jsonl"
+    labels = ["x", "x", "y", "y", "x", "y"]
+    ds.write_text("".join(json.dumps({"state": f"text {i}", "questions": [
+        {"name": "q", "type": "choice", "options": ["x", "y"]}], "labels": {"q": g}}) + "\n"
+        for i, g in enumerate(labels)), encoding="utf-8")
+    sample_path = tmp_path / "s.json"
+    assert relabel.main(["sample", str(ds), "--n", "6", "--out", str(sample_path)]) == 0
+    answers = {"a": ["x", "x", "y", "x", "x", "x"], "b": ["x", "y", "y", "x", "x", "x"]}
+    for who, said in answers.items():
+        sheet = tmp_path / f"{who}.csv"
+        relabel.main(["sheet", str(sample_path), "--annotator", who, "--out", str(sheet)])
+        with open(sheet, newline="", encoding="utf-8") as f:
+            filled = [dict(r, label=said[int(r["text"].split()[1])]) for r in csv.DictReader(f)]
+        assert all(r["id"].startswith(f"{who}-") for r in filled)
+        _sheet(sheet, [[r["id"], r["text"], r["label"]] for r in filled])
+    out = tmp_path / "r.json"
+    assert relabel.main(["score", str(sample_path), str(tmp_path / "a.csv"),
+                         str(tmp_path / "b.csv"), "--json", str(out)]) == 0
+    res = json.loads(out.read_text())
+    assert res["annotators"] == ["a", "b"] and res["n"] == 6
+    assert res["both_annotators_differ_from_dataset"]["ids"] == [3, 5]
+    assert res["annotators_disagree"]["ids"] == [1]
+    with pytest.raises(SystemExit, match="two annotators"):
+        relabel.main(["score", str(sample_path), str(tmp_path / "a.csv"),
+                      str(tmp_path / "a.csv")])
+    ds.write_text(ds.read_text().replace("text 0", "text zero"), encoding="utf-8")
+    with pytest.raises(SystemExit, match="changed since the sample was drawn"):
+        relabel.main(["sheet", str(sample_path), "--annotator", "a",
+                      "--out", str(tmp_path / "c.csv")])

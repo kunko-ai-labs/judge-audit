@@ -47,6 +47,7 @@ SOURCES = {
         "repo": "PolyAI-LDN/task-specific-datasets",
         "commit": "57ec275d8078af65b7731c2a98be812d844a6d6b",
         "licence": "CC BY 4.0",
+        "licence_url": "https://creativecommons.org/licenses/by/4.0/",
         "citation": ("Casanueva, Temcinas, Gerz, Henderson & Vulic 2020, Efficient Intent "
                      "Detection with Dual Sentence Encoders, NLP4ConvAI (ACL 2020)"),
         "files": {
@@ -64,6 +65,7 @@ SOURCES = {
         "repo": "clinc/oos-eval",
         "commit": "828f8093932c8fe6ca7936c3d2e52903b1c523de",
         "licence": "CC BY 3.0",
+        "licence_url": "https://creativecommons.org/licenses/by/3.0/",
         "citation": ("Larson, Mahendran, Peper, Clarke, Lee, Hill, Kummerfeld, Leach, "
                      "Laurenzano, Tang & Mars 2019, An Evaluation Dataset for Intent "
                      "Classification and Out-of-Scope Prediction, EMNLP-IJCNLP 2019"),
@@ -86,8 +88,24 @@ CLINC_INSTRUCTIONS = ("Which intent does this request to a banking assistant exp
 
 
 def normalise(text: str) -> str:
-    """Case- and whitespace-insensitive key used only to flag test texts seen in train."""
+    """The one rule for "the same text", used for every distinctness and train-overlap
+    claim here: case and whitespace ignored."""
     return " ".join(text.lower().split())
+
+
+def distinct_caveat(rows: list[tuple[str, str]]) -> str:
+    """How many distinct texts a file holds under `normalise`, naming the rows (0-based,
+    header excluded) that repeat one: clustered statistics must count them as one text."""
+    by_key: dict[str, list[int]] = defaultdict(list)
+    for i, (text, _) in enumerate(rows):
+        by_key[normalise(text)].append(i)
+    repeats = [idx for idx in by_key.values() if len(idx) > 1]
+    out = f"{len(by_key)} distinct texts in {len(rows)} rows (case and whitespace ignored)"
+    for idx in repeats:
+        labels = sorted({rows[i][1] for i in idx})
+        out += (f"; rows {' and '.join(map(str, idx))} hold one text up to case or whitespace, "
+                + ("same label" if len(labels) == 1 else f"labelled {' / '.join(labels)}"))
+    return out
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -112,7 +130,8 @@ def provenance(key: str, path: str) -> dict:
     s = SOURCES[key]
     return {"name": s["name"], "repository": f"https://github.com/{s['repo']}",
             "commit": s["commit"], "file": path, "sha256": s["files"][path],
-            "licence": s["licence"], "citation": s["citation"]}
+            "licence": s["licence"], "licence_url": s["licence_url"],
+            "citation": s["citation"]}
 
 
 def jsonl(header: dict, rows: list[dict]) -> str:
@@ -148,18 +167,24 @@ def banking77(test: list[tuple[str, str]], train: list[tuple[str, str]],
                  for i, ((t, label), seen) in enumerate(zip(test, in_train, strict=True))]
     common_caveats = [
         "public since 2020: probably in the pretraining data of the judges audited",
-        "one label per query from the dataset's authors, no published inter-annotator "
-        "agreement; Ying & Thomas (2022) estimate that about 14 % of the train split may be "
-        "mislabelled, and the test split's label noise is measured by a relabelled sample",
+        "online-banking queries with one intent label each, as released by the authors; how "
+        "the queries were collected and labelled is not documented upstream, and no "
+        "inter-annotator agreement is published",
+        "Ying & Thomas (2022, https://aclanthology.org/2022.insights-1.19/) flag over 1,400 "
+        "of the 10,003 train queries (about 14 %) as possibly mislabelled, found by automated "
+        "detection, not by relabelling",
         "the options are the dataset's label names without definitions; some names mislead "
         "(get_physical_card also holds questions about the PIN)",
     ]
     test_header = {
         "ground_truth": {
             "tier": "GT-3", "label": "human-annotated", "validation": "not_validated",
-            "purpose": ["calibration and selective prediction on real customer-support "
-                        "messages", "comparison between judges on the same rows"],
+            "purpose": ["calibration and selective prediction on human-written "
+                        "online-banking queries", "comparison between judges on the same rows"],
             "caveats": common_caveats + [
+                "label noise of the test split not yet measured: a 500-row random sample is "
+                "drawn for two blind annotators (examples/banking77/relabel-sample.json)",
+                distinct_caveat(test),
                 f"{sum(in_train)} of {len(test)} test texts also appear in the train split "
                 "(case and whitespace ignored); _meta.text_in_train marks them"],
         },
@@ -183,7 +208,8 @@ def banking77(test: list[tuple[str, str]], train: list[tuple[str, str]],
                         "pre-registration fixes n; never used to score a judge"],
             "caveats": common_caveats + [
                 f"{PILOT_PER_INTENT} train queries per intent, drawn with "
-                f"random.Random({SEED}) in categories.json order"],
+                f"random.Random({SEED}) in categories.json order; label noise not measured",
+                distinct_caveat([train[i] for i in picked])],
         },
         "source": provenance("banking77", "banking_data/train.csv"),
     }
@@ -223,8 +249,13 @@ def clinc150(data: dict, domains: dict[str, list[str]],
                         "on out-of-scope requests?"],
             "caveats": [
                 "public since 2019: probably in the pretraining data of the judges audited",
-                "crowd-sourced queries and labels, one label per query; label noise is "
-                "measured by a relabelled sample",
+                "queries written by crowd workers to a prompt (paraphrase a seed phrase, or "
+                "answer a scenario, for a given intent; out-of-scope queries crowd-sourced "
+                "too; Larson et al. 2019), not production traffic; one label per query, no "
+                "inter-annotator agreement published",
+                "label noise not yet measured: a 500-row random sample is drawn for two blind "
+                "annotators (examples/clinc150/relabel-sample.json)",
+                distinct_caveat([(r["state"], r["labels"]["intent"]) for r in rows]),
                 f"domains {', '.join(selected)} only: {in_scope} in-scope test queries, "
                 f"{len(rows) - in_scope} out-of-scope ones (out of scope for all 150 "
                 "intents); a draft subset until the pre-registration fixes it",

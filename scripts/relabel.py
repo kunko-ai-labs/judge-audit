@@ -8,26 +8,30 @@ measured one, in three steps:
            before anyone labels them:
              python scripts/relabel.py sample examples/banking77/labels-test.jsonl \
                  --n 500 --out examples/banking77/relabel-sample.json
-  sheet    write the blind annotation sheet for one annotator: id and text only, never the
-           dataset's label or any judge's answer, plus the list of allowed options:
+  sheet    write the blind annotation sheet for one annotator: a sheet id and the text only,
+           never the dataset's label, its row index or any judge's answer, in an order of its
+           own for each annotator, plus the list of allowed options:
              python scripts/relabel.py sheet examples/banking77/relabel-sample.json \
-                 --out /tmp/relabel-sheet.csv
+                 --annotator a --out /tmp/relabel-a.csv
   score    read two annotators' filled sheets (id,label) and report their agreement
            (Cohen's kappa), each one's agreement with the dataset's label, the rows both
-           annotators label differently from the dataset (likely label errors), and the
-           rows they disagree on (to adjudicate):
+           annotators label differently from the dataset (likely label errors, with a Wilson
+           95 % interval on their share), and the rows they disagree on (to adjudicate):
              python scripts/relabel.py score examples/banking77/relabel-sample.json \
                  annotator-a.csv annotator-b.csv --json relabel-result.json
 
 The sample is random, never chosen from where judges disagree with the label: that would
-make the "clean" subset agree with the judges by construction.
+make the "clean" subset agree with the judges by construction. Nothing is measured until two
+annotators have filled their sheets and `score` has run.
 """
 from __future__ import annotations
 
 import argparse
 import csv
 import json
+import math
 import random
+import re
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -38,6 +42,8 @@ sys.path.insert(0, str(ROOT / "src"))
 from judge_audit.runner import load_jsonl, sha256_rows_of  # noqa: E402
 
 SEED = 2026
+Z95 = 1.959963984540054                 # two-sided 95 % standard normal quantile
+ANNOTATOR = re.compile(r"[a-z0-9_]{1,16}")
 
 
 def stratified_sample(labels: list[str], n: int, seed: int = SEED) -> list[int]:
@@ -90,6 +96,18 @@ def cohen_kappa(a: list[str], b: list[str]) -> float | None:
     return (observed - chance) / (1 - chance)
 
 
+def wilson_interval(k: int, n: int, z: float = Z95) -> tuple[float, float]:
+    """Wilson score interval for a proportion k/n (Wilson 1927): unlike the normal
+    approximation it stays inside [0, 1] and is not empty at k = 0."""
+    if not 0 <= k <= n or n == 0:
+        raise ValueError(f"no interval for {k} of {n}")
+    p = k / n
+    den = 1 + z * z / n
+    centre = (p + z * z / (2 * n)) / den
+    half = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n)) / den
+    return max(0.0, centre - half), min(1.0, centre + half)
+
+
 def question_of(rows: list[dict], question: str | None) -> str:
     names = {q["name"] for r in rows for q in r["questions"]}
     if question is None:
@@ -126,23 +144,37 @@ def _load_sample(path: str) -> tuple[dict, list[dict]]:
     return sample, rows
 
 
-def sheet_order(indices: list[int], seed: int = SEED) -> list[int]:
-    """The sampled rows in a seeded random order. Datasets are often sorted by label
-    (BANKING77's test split holds each intent's 40 queries together), so listing the rows
-    by index would show an annotator which ones share a label."""
+def sheet_order(indices: list[int], seed: int, annotator: str) -> list[int]:
+    """The sampled rows in a seeded random order of the annotator's own. Datasets are often
+    sorted by label (BANKING77's test split holds each intent's 40 queries together), so
+    listing the rows by index, or labelling them by it, would show which ones share a
+    label; a different order per annotator keeps order effects from being shared."""
+    if not ANNOTATOR.fullmatch(annotator):
+        raise ValueError(f"annotator name {annotator!r}: 1-16 of a-z, 0-9, _")
     order = list(indices)
-    random.Random(seed).shuffle(order)
+    random.Random(f"{seed}:{annotator}").shuffle(order)
     return order
+
+
+def sheet_ids(sample: dict, annotator: str) -> dict[str, int]:
+    """Sheet id (`<annotator>-<position>`, position 1..n in the sheet's order) -> dataset
+    row index. The id says nothing about the row; `score` maps it back."""
+    order = sheet_order(sample["indices"], sample["seed"], annotator)
+    return {f"{annotator}-{pos}": i for pos, i in enumerate(order, 1)}
 
 
 def cmd_sheet(args) -> int:
     sample, rows = _load_sample(args.sample)
     q = sample["question"]
+    try:
+        ids = sheet_ids(sample, args.annotator)
+    except ValueError as e:
+        raise SystemExit(str(e)) from e
     with open(args.out, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(["id", "text", "label"])
-        for i in sheet_order(sample["indices"], sample["seed"]):
-            w.writerow([i, rows[i]["state"], ""])
+        for sid, i in ids.items():
+            w.writerow([sid, rows[i]["state"], ""])
     options = next(qq["options"] for qq in rows[sample["indices"][0]]["questions"]
                    if qq["name"] == q)
     opt_path = Path(args.out).with_suffix(".options.txt")
@@ -151,15 +183,31 @@ def cmd_sheet(args) -> int:
     return 0
 
 
-def read_sheet(path: str, allowed: set[str]) -> dict[int, str]:
+def read_sheet(path: str, sample: dict, allowed: set[str]) -> tuple[str, dict[int, str]]:
+    """(annotator, dataset row index -> label) from one filled sheet. Refuses an id that is
+    not on that annotator's sheet, an id given twice, a sheet that mixes annotators, and a
+    label that is not an option."""
     with open(path, newline="", encoding="utf-8") as f:
-        out: dict[int, str] = {}
-        for r in csv.DictReader(f):
-            label = (r.get("label") or "").strip()
-            if label not in allowed:
-                raise SystemExit(f"{path}: row id {r['id']} has label {label!r}, not an option")
-            out[int(r["id"])] = label
-    return out
+        records = list(csv.DictReader(f))
+    names = {str(r.get("id") or "").rsplit("-", 1)[0] for r in records}
+    if len(names) != 1:
+        raise SystemExit(f"{path}: expected one annotator's sheet, found ids for {sorted(names)}")
+    (annotator,) = names
+    try:
+        ids = sheet_ids(sample, annotator)
+    except ValueError as e:
+        raise SystemExit(f"{path}: {e}") from e
+    out: dict[int, str] = {}
+    for r in records:
+        sid, label = r["id"], (r.get("label") or "").strip()
+        if sid not in ids:
+            raise SystemExit(f"{path}: id {sid!r} is not on {annotator}'s sheet")
+        if ids[sid] in out:
+            raise SystemExit(f"{path}: id {sid!r} appears twice")
+        if label not in allowed:
+            raise SystemExit(f"{path}: id {sid} has label {label!r}, not an option")
+        out[ids[sid]] = label
+    return annotator, out
 
 
 def score(sample: dict, rows: list[dict], a: dict[int, str], b: dict[int, str]) -> dict:
@@ -175,6 +223,7 @@ def score(sample: dict, rows: list[dict], a: dict[int, str], b: dict[int, str]) 
     both_differ = [i for i, g, x, y in zip(ids, gold, la, lb, strict=True) if x == y != g]
     disagree = [i for i, x, y in zip(ids, la, lb, strict=True) if x != y]
     kappa = cohen_kappa(la, lb)
+    lo, hi = wilson_interval(len(both_differ), n)
     return {
         "n": n,
         "annotator_agreement": round(sum(x == y for x, y in zip(la, lb, strict=True)) / n, 4),
@@ -184,6 +233,7 @@ def score(sample: dict, rows: list[dict], a: dict[int, str], b: dict[int, str]) 
             "b": round(sum(y == g for y, g in zip(lb, gold, strict=True)) / n, 4)},
         "both_annotators_differ_from_dataset": {"n": len(both_differ),
                                                 "share": round(len(both_differ) / n, 4),
+                                                "wilson_95": [round(lo, 4), round(hi, 4)],
                                                 "ids": both_differ},
         "annotators_disagree": {"n": len(disagree), "ids": disagree},
     }
@@ -194,7 +244,11 @@ def cmd_score(args) -> int:
     q = sample["question"]
     allowed = set(next(qq["options"] for qq in rows[sample["indices"][0]]["questions"]
                        if qq["name"] == q))
-    result = score(sample, rows, read_sheet(args.a, allowed), read_sheet(args.b, allowed))
+    name_a, a = read_sheet(args.a, sample, allowed)
+    name_b, b = read_sheet(args.b, sample, allowed)
+    if name_a == name_b:
+        raise SystemExit(f"both sheets are {name_a}'s: score needs two annotators")
+    result = score(sample, rows, a, b) | {"annotators": [name_a, name_b]}
     print(json.dumps({k: v for k, v in result.items() if k != "annotators_disagree"}
                      | {"annotators_disagree": result["annotators_disagree"]["n"]}, indent=1))
     if args.json:
@@ -214,6 +268,8 @@ def main(argv: list[str] | None = None) -> int:
     s.set_defaults(func=cmd_sample)
     h = sub.add_parser("sheet", help="write a blind annotation sheet")
     h.add_argument("sample")
+    h.add_argument("--annotator", required=True,
+                   help="a short name (a-z, 0-9, _); each annotator gets an order of their own")
     h.add_argument("--out", required=True)
     h.set_defaults(func=cmd_sheet)
     c = sub.add_parser("score", help="score two filled sheets")

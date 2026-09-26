@@ -31,11 +31,16 @@ quality (does the cheap model really solve the "easy" tasks?) is not measured.
 Their caveats say so in every report that uses them.
 
 The human-labelled datasets added for v0.5 ([#86](https://github.com/kunko-ai-labs/judge-audit/issues/86))
-are **GT-3**: BANKING77 (`examples/banking77/`) and CLINC150 (`examples/clinc150/`) are real
-customer and assistant queries, each labelled once by the dataset's authors or crowd
-workers, with no inter-annotator agreement published. A relabelled random sample
-(`scripts/relabel.py`, 500 rows per dataset, two annotators blind to the label) measures
-their label noise; the adjudicated sample is what can be reported as GT-4.
+are **GT-3**: human-written queries with one label each and no inter-annotator agreement
+published. CLINC150's (`examples/clinc150/`) were written by crowd workers to a prompt
+(paraphrase a seed phrase, or answer a scenario, for a given intent; Larson et al. 2019), so
+they are not production traffic. BANKING77's (`examples/banking77/`) are online-banking
+customer-service queries per their authors; how they were collected and labelled is not
+documented upstream. Their label noise is **not yet measured**: a random sample (500 rows
+per dataset, `examples/*/relabel-sample.json`, drawn and committed before anyone labels it)
+is ready for two annotators blind to the label (`scripts/relabel.py`). Once scored, it gives
+the share of rows both annotators label differently from the dataset, with a Wilson 95 %
+interval; the adjudicated sample is what can be reported as GT-4.
 
 ## What each tier lets you claim
 
