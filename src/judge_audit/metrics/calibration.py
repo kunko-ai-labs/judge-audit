@@ -79,6 +79,54 @@ def _equal_mass_ece(confidences: list[float], correct: list[bool], n_bins: int) 
     return ece
 
 
+def _binned_rows(confidences: list[float], correct: list[bool], n_bins: int,
+                 binning: str) -> list[list[tuple[float, bool]]]:
+    """The non-empty bins `expected_calibration_error` uses, as (confidence, correct) rows."""
+    if binning == EQUAL_MASS:
+        rows = sorted(zip(confidences, correct, strict=True), key=lambda r: r[0])
+        cuts = _equal_mass_bins([c for c, _ in rows], n_bins)
+        return [rows[lo:hi] for lo, hi in zip(cuts, cuts[1:], strict=False) if hi > lo]
+    if binning != EQUAL_WIDTH:
+        raise ValueError(f"unknown binning {binning!r}: use {EQUAL_WIDTH!r} or {EQUAL_MASS!r}")
+    bins: list[list[tuple[float, bool]]] = [[] for _ in range(n_bins)]
+    for c, ok in zip(confidences, correct, strict=True):
+        bins[min(int(c * n_bins), n_bins - 1)].append((c, ok))
+    return [b for b in bins if b]
+
+
+def worst_calibration_bin(confidences: list[float], correct: list[bool], n_bins: int = 10,
+                          binning: str = EQUAL_WIDTH) -> dict:
+    """The bin with the largest |accuracy − confidence|: its gap, row count, mean
+    confidence and accuracy (the lowest-confidence bin wins a tie). The gap is the MCE."""
+    _require_finite(confidences)
+    if len(confidences) != len(correct):
+        raise ValueError(f"{len(confidences)} confidences for {len(correct)} outcomes")
+    if not confidences:
+        raise ValueError("maximum_calibration_error of no rows is undefined")
+    worst: dict = {}
+    for b in _binned_rows(confidences, correct, n_bins, binning):
+        acc = sum(ok for _, ok in b) / len(b)
+        avg_conf = math.fsum(c for c, _ in b) / len(b)
+        gap = abs(acc - avg_conf)
+        if not worst or gap > worst["gap"]:
+            worst = {"gap": gap, "n": len(b), "avg_confidence": avg_conf, "accuracy": acc}
+    return worst
+
+
+def maximum_calibration_error(confidences: list[float], correct: list[bool],
+                              n_bins: int = 10, binning: str = EQUAL_WIDTH) -> float:
+    """MCE: the largest gap between confidence and accuracy in any non-empty bin.
+
+    The worst bin rather than the row-weighted average (Naeini, Cooper & Hauskrecht, AAAI
+    2015; Guo et al. 2017): an ECE of 0.03 can hide one confidence range that is wrong
+    half the time. Same bins as `expected_calibration_error` under either `binning`. A
+    maximum over bins of different sizes can be decided by a bin of one row, so read it
+    with that bin's count (`worst_calibration_bin`). Proposed here as evidence for the
+    documentation an auditor asks for, not as a legal requirement. No rows → raises.
+    """
+    return worst_calibration_bin(confidences, correct, n_bins, binning)["gap"]
+
+
 def brier_score(confidences: list[float], correct: list[bool]) -> float:
     """Top-label Brier score: mean of (confidence − correct)², 0 = certain and right.
 
@@ -453,6 +501,21 @@ def ece_ci(confidences: Sequence[float], correct: Sequence[bool], n_bins: int = 
     """
     rows = list(zip(confidences, correct, strict=True))
     ci = bootstrap_ci(rows, lambda rs: expected_calibration_error(
+        [c for c, _ in rs], [ok for _, ok in rs], n_bins, binning), n_boot, seed,
+        groups=groups)
+    return None if ci is None else Interval(ci[0], ci[1], BOOTSTRAP)
+
+
+def mce_ci(confidences: Sequence[float], correct: Sequence[bool], n_bins: int = 10,
+           n_boot: int = N_BOOT, seed: int = 0,
+           groups: Sequence[Hashable] | None = None,
+           binning: str = EQUAL_WIDTH) -> Interval | None:
+    """95 % interval of `maximum_calibration_error`, bins rebuilt on every resample — the
+    clustered bootstrap of `ece_ci`. A maximum over bins tends to rise on resamples, so the
+    point estimate can sit near the bottom of its interval or below it (`ci_fields` marks
+    that ◊)."""
+    rows = list(zip(confidences, correct, strict=True))
+    ci = bootstrap_ci(rows, lambda rs: maximum_calibration_error(
         [c for c, _ in rs], [ok for _, ok in rs], n_bins, binning), n_boot, seed,
         groups=groups)
     return None if ci is None else Interval(ci[0], ci[1], BOOTSTRAP)

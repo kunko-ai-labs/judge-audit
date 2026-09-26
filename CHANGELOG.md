@@ -3,6 +3,16 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
+## [0.5.0] — unreleased (dated when tagged)
+
+### Added
+- **Metrics for the v0.5 benchmark, fixed in code before its pre-registration** (`judge_audit.metrics.selective`; `docs/judges.md` § Discrimination, selective prediction at a target risk, and paired comparisons). Library functions only: no v0.4 report prints them and no published number moves (`runs_report.py --check` is clean).
+  - `failure_auroc` (a tie counts one half; `None` when every answer is right or every one wrong) and `aurc`, the area under the risk–coverage curve, taken as its expectation over the orders of tied confidences, so neither depends on row order.
+  - `coverage_at_risk`: the share of decisions a judge can automate at a target risk r, with the threshold chosen on a calibration split by fixed-sequence exact binomial tests (one-sided, level 1 − δ, starting at the first cut that holds `min_rows_to_certify(r, δ)` rows: 299 for 1 %, 149 for 2 %, 59 for 5 %) and checked on a test split no row of which chose it. `coverage_at_risk_crossfit` runs it both ways over two halves split by distinct text and pools the test halves. Zero-error coverage stays, but cannot carry a benchmark on a thousand rows with noisy labels.
+  - `paired_difference_ci`: the clustered bootstrap of statistic(A) − statistic(B), both judges scored on each resample, instead of reading whether two intervals overlap; `mcnemar_exact` for accuracy on the discordant rows.
+  - `bootstrap_defined`, `failure_auroc_ci`, `aurc_ci`: the same resamples as every other interval, with the resamples where a statistic is undefined counted rather than dropped silently.
+  - **MCE** (US-003-002, #12, first criterion): `maximum_calibration_error` over the ECE's bins under either binning, `worst_calibration_bin` with that bin's row count, and `mce_ci`. Printing it next to the ECE in the reports is the second criterion, left for the v0.5 reports.
+
 ## [0.4.0] — 2026-09-26
 
 ### Added
