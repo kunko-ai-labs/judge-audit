@@ -167,26 +167,26 @@ def banking77(test: list[tuple[str, str]], train: list[tuple[str, str]],
                  for i, ((t, label), seen) in enumerate(zip(test, in_train, strict=True))]
     common_caveats = [
         "public since 2020: probably in the pretraining data of the judges audited",
-        "online-banking queries with one intent label each, as released by the authors; how "
-        "the queries were collected and labelled is not documented upstream, and no "
-        "inter-annotator agreement is published",
-        "Ying & Thomas (2022, https://aclanthology.org/2022.insights-1.19/) flag over 1,400 "
-        "of the 10,003 train queries (about 14 %) as possibly mislabelled, found by automated "
-        "detection, not by relabelling",
-        "the options are the dataset's label names without definitions; some names mislead "
-        "(get_physical_card also holds questions about the PIN)",
+        ("online-banking queries with one intent label each, as released by the authors; how "
+         "the queries were collected and labelled is not documented upstream, and no "
+         "inter-annotator agreement is published"),
+        ("Ying & Thomas (2022, https://aclanthology.org/2022.insights-1.19/) flag over 1,400 "
+         "of the 10,003 train queries (about 14 %) as possibly mislabelled, found by automated "
+         "detection, not by relabelling"),
+        ("the options are the dataset's label names without definitions; some names mislead "
+         "(get_physical_card also holds questions about the PIN)"),
     ]
     test_header = {
         "ground_truth": {
             "tier": "GT-3", "label": "human-annotated", "validation": "not_validated",
-            "purpose": ["calibration and selective prediction on human-written "
-                        "online-banking queries", "comparison between judges on the same rows"],
+            "purpose": [("calibration and selective prediction on human-written "
+                         "online-banking queries"), "comparison between judges on the same rows"],
             "caveats": common_caveats + [
-                "label noise of the test split not yet measured: a 500-row random sample is "
-                "drawn for two blind annotators (examples/banking77/relabel-sample.json)",
+                ("label noise of the test split not yet measured: a 500-row random sample is "
+                 "drawn for two blind annotators (examples/banking77/relabel-sample.json)"),
                 distinct_caveat(test),
-                f"{sum(in_train)} of {len(test)} test texts also appear in the train split "
-                "(case and whitespace ignored); _meta.text_in_train marks them"],
+                (f"{sum(in_train)} of {len(test)} test texts also appear in the train split "
+                 "(case and whitespace ignored); _meta.text_in_train marks them")],
         },
         "source": provenance("banking77", "banking_data/test.csv"),
     }
@@ -204,11 +204,11 @@ def banking77(test: list[tuple[str, str]], train: list[tuple[str, str]],
     pilot_header = {
         "ground_truth": {
             "tier": "GT-3", "label": "human-annotated", "validation": "not_validated",
-            "purpose": ["pilot: token counts, throughput and variance before the "
-                        "pre-registration fixes n; never used to score a judge"],
+            "purpose": [("pilot: token counts, throughput and variance before the "
+                         "pre-registration fixes n; never used to score a judge")],
             "caveats": common_caveats + [
-                f"{PILOT_PER_INTENT} train queries per intent, drawn with "
-                f"random.Random({SEED}) in categories.json order; label noise not measured",
+                (f"{PILOT_PER_INTENT} train queries per intent, drawn with "
+                 f"random.Random({SEED}) in categories.json order; label noise not measured"),
                 distinct_caveat([train[i] for i in picked])],
         },
         "source": provenance("banking77", "banking_data/train.csv"),
@@ -245,22 +245,22 @@ def clinc150(data: dict, domains: dict[str, list[str]],
     header = {
         "ground_truth": {
             "tier": "GT-3", "label": "human-annotated", "validation": "not_validated",
-            "purpose": ["selective prediction when no option applies: does confidence fall "
-                        "on out-of-scope requests?"],
+            "purpose": [("selective prediction when no option applies: does confidence fall "
+                         "on out-of-scope requests?")],
             "caveats": [
                 "public since 2019: probably in the pretraining data of the judges audited",
-                "queries written by crowd workers to a prompt (paraphrase a seed phrase, or "
-                "answer a scenario, for a given intent; out-of-scope queries crowd-sourced "
-                "too; Larson et al. 2019), not production traffic; one label per query, no "
-                "inter-annotator agreement published",
-                "label noise not yet measured: a 500-row random sample is drawn for two blind "
-                "annotators (examples/clinc150/relabel-sample.json)",
+                ("queries written by crowd workers to a prompt (paraphrase a seed phrase, or "
+                 "answer a scenario, for a given intent; out-of-scope queries crowd-sourced "
+                 "too; Larson et al. 2019), not production traffic; one label per query, no "
+                 "inter-annotator agreement published"),
+                ("label noise not yet measured: a 500-row random sample is drawn for two blind "
+                 "annotators (examples/clinc150/relabel-sample.json)"),
                 distinct_caveat([(r["state"], r["labels"]["intent"]) for r in rows]),
-                f"domains {', '.join(selected)} only: {in_scope} in-scope test queries, "
-                f"{len(rows) - in_scope} out-of-scope ones (out of scope for all 150 "
-                "intents); a draft subset until the pre-registration fixes it",
-                f"{seen} of {len(rows)} texts also appear in the train or validation "
-                "splits (case and whitespace ignored); _meta.text_in_train marks them",
+                (f"domains {', '.join(selected)} only: {in_scope} in-scope test queries, "
+                 f"{len(rows) - in_scope} out-of-scope ones (out of scope for all 150 "
+                 "intents); a draft subset until the pre-registration fixes it"),
+                (f"{seen} of {len(rows)} texts also appear in the train or validation "
+                 "splits (case and whitespace ignored); _meta.text_in_train marks them"),
             ],
         },
         "source": provenance("clinc150", "data/data_full.json"),
