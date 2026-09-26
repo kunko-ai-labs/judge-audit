@@ -58,7 +58,10 @@ build-backend = "hatchling.build"
 packages = ["src/judge_audit"]
 
 [tool.hatch.build.targets.sdist]
-exclude = ["src/judge_audit/judges/bridge/node_modules"]
+# The third-party datasets keep their own CC BY licences; the Apache-2.0 sdist leaves them
+# out, and their tests skip without them.
+exclude = ["src/judge_audit/judges/bridge/node_modules", "examples/banking77",
+           "examples/clinc150"]
 
 [tool.ruff]
 line-length = 100

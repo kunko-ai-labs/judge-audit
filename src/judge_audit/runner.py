@@ -265,13 +265,18 @@ def run_metadata(judge: Judge, labels_path: str | None = None,
     if labels_path:
         if dataset_meta is None:
             dataset_meta = read_dataset_header(labels_path)
-        meta["dataset"] = {
+        dataset: dict[str, object] = {
             "path": display_path(labels_path),
             "sha256": sha256_of(labels_path),
             "sha256_rows": sha256_rows_of(labels_path),
             "rows": n_rows,
             "ground_truth": parse_ground_truth(dataset_meta.get("ground_truth")).to_dict(),
         }
+        if isinstance(dataset_meta.get("source"), dict):
+            # third-party data: its source, licence and citation travel with the texts
+            # every checkpoint row carries (docs/runs/README.md)
+            dataset["source"] = dataset_meta["source"]
+        meta["dataset"] = dataset
     return meta
 
 

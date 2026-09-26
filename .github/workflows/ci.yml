@@ -120,6 +120,8 @@ jobs:
             (cd examples/$d && python generate.py >/dev/null)
           done
           git diff --exit-code -- examples/
+      - name: Third-party datasets regenerate from their pinned upstream files
+        run: python scripts/fetch_real_datasets.py --check
       - name: Pre-registered held-out split regenerates byte-identical
         run: |
           pip install -e .
