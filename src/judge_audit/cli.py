@@ -27,7 +27,7 @@ from .report import (
     render_html,
     render_markdown,
 )
-from .runner import load_dataset, run_audit, write_judgments
+from .runner import IncompleteAnswers, load_dataset, run_audit, write_judgments
 
 JUDGES = ("jev", "llm", "nli", "finetuned", "simulated")
 
@@ -114,6 +114,15 @@ def _parser() -> argparse.ArgumentParser:
     return ap
 
 
+def _audit(judge, rows: list[dict], args, dataset_meta: dict):
+    """run_audit, or exit 2 when the answers or the dataset would leave it incomplete."""
+    try:
+        return run_audit(judge, rows, labels_path=args.labels, dataset_meta=dataset_meta,
+                         ci=False if args.no_ci else None)
+    except IncompleteAnswers as e:
+        _die(f"the audit would not be complete: {e}")
+
+
 def main(argv: list[str] | None = None) -> None:
     args = _parser().parse_args(argv)
     rows: list[dict] = []
@@ -131,8 +140,8 @@ def main(argv: list[str] | None = None) -> None:
         _die(f"judge '{args.judge}' is not configured: {e}")
     lead = f"{tag} · " if tag else ""  # the line that gets copied says it is simulated
 
-    result = run_audit(judge, rows, labels_path=args.labels, dataset_meta=dataset_meta,
-                       ci=False if args.no_ci else None)
+    result = _audit(judge, rows, args, dataset_meta)
+    done = result.completeness
 
     if args.cmd == "run":
         fmt = args.format
@@ -155,6 +164,8 @@ def main(argv: list[str] | None = None) -> None:
                 else "unknown")
         print(f"{lead}judge={result.judge} n={result.n} "
               f"accuracy={result.accuracy:.1%}{interval(result.accuracy_ci, pct=True)} "
+              f"answered={done['answered']}/{done['expected']} "
+              f"{'unexpected=' + str(done['unexpected']) + ' ' if done['unexpected'] else ''}"
               f"confidence_known={confidence['known']}/{confidence['total']} "
               f"ece={fmt4(result.ece)}{interval(result.ece_ci)} "
               f"ece_equal_mass={fmt4(result.ece_equal_mass)}"

@@ -142,7 +142,9 @@ def summarize(recs: list[dict], dataset: str, rows: list[dict] | None = None) ->
         "no_confidence": sum(1 for r in recs if r.get("parse_status") == "no_confidence"),
         "cost_usd": (round(math.fsum(costs), 4)
                      if all(cost is not None for cost in costs) else None),
-        "p50_latency_s": round(statistics.median(r["latency_s"] for r in recs), 3),
+        # a skipped question has no latency: left out, never counted as instant
+        "p50_latency_s": round(statistics.median(
+            [r["latency_s"] for r in recs if r["latency_s"] is not None] or [0.0]), 3),
     }
     if dataset == "email-adversarial":
         pi = [r for r in recs if r["meta"].get("attack") == "prompt_injection"]

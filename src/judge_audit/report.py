@@ -155,6 +155,18 @@ def slowest(d: dict, bold=("**", "**")) -> str:
     return f" · slowest {bold[0]}{d['max_latency_s']}s{bold[1]}"
 
 
+def completeness_line(d: dict, bold=("**", "**")) -> str:
+    """Expected decisions vs answered ones, for a live run; "" for a checkpoint rebuild.
+    Only integers go into it, so it needs no escaping in HTML."""
+    c = d.get("completeness")
+    if not c:
+        return ""
+    b0, b1 = bold
+    return (f"answered {b0}{int(c['answered'])}/{int(c['expected'])}{b1} expected decisions · "
+            f"{int(c['missing'])} skipped (counted wrong, confidence unknown) · "
+            f"{int(c['unexpected'])} answers to questions not asked (dropped)")
+
+
 def confidence_coverage(d: dict) -> dict:
     """Normalise the JSON coverage field, including reports written before it existed."""
     value = d.get("confidence")
@@ -194,6 +206,7 @@ def render_markdown(result: AuditResult) -> str:
     ece_ci = interval_of(d, "ece_ci")
     zec_ci = interval_of(d, "zero_error_coverage_ci", pct=True)
     confidence = confidence_coverage(d)
+    complete = completeness_line(d)
     lines = [
         f"# Audit report — {d['judge']}",
         "",
@@ -202,6 +215,7 @@ def render_markdown(result: AuditResult) -> str:
         f"ECE **{fmt4(d.get('ece'))}**{ece_ci}" + calibration_numbers(d),
         f"· cost {fmt_cost(d.get('total_cost_usd'))} · p50 **{d['p50_latency_s']}s** · "
         f"p99 **{d['p99_latency_s']}s**{slowest(d)}",
+        *([complete] if complete else []),
         "",
         *provenance_lines(d.get("run", {})),
         *regeneration_lines(d),
@@ -296,6 +310,7 @@ h2{{margin-top:2.5rem}}.prov{{color:#666;font-size:.9rem}}</style></head><body>
 <h1>Audit report — {judge}</h1>
 <p class="metric"><b>{d['n']}</b> decisions · accuracy <b>{d['accuracy']:.1%}</b>{acc_ci} · confidence known <b>{confidence['known']}/{confidence['total']}</b> · ECE <b>{fmt4(d.get('ece'))}</b>{ece_ci}{calibration_numbers(d, ("<b>", "</b>"))}<br>
 cost {fmt_cost(d.get('total_cost_usd'), ("<b>", "</b>"))} · p50 <b>{d['p50_latency_s']}s</b> · p99 <b>{d['p99_latency_s']}s</b>{slowest(d, ("<b>", "</b>"))}</p>
+{f'<p class="complete">{completeness_line(d, ("<b>", "</b>"))}</p>' if d.get("completeness") else ""}
 <p class="prov">{prov}</p>
 <p class="gt"><b>{gt}</b></p>
 {ci_note}

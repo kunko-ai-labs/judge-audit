@@ -78,6 +78,9 @@ class AuditResult:
     nll: float | None = None
     nll_ci: Interval | None = None
     nll_infinite: int = 0
+    # Expected (row, question) pairs vs what the judge answered; empty for a report rebuilt
+    # from a checkpoint, where `scripts/audit_resumable.py` enforces the same rule.
+    completeness: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         d = {
@@ -103,6 +106,8 @@ class AuditResult:
                      **ci_fields("zero_error_coverage", self.zero_error_coverage_ci,
                                  self.zero_error.get("coverage")),
                      bootstrap=dict(BOOTSTRAP))
+        if self.completeness:
+            d["completeness"] = self.completeness
         if self.regenerated:
             d["regenerated"] = self.regenerated
         return d
@@ -321,7 +326,8 @@ def summarize(judge_name: str, records: list[dict], run: dict | None = None,
     confidences: list[float] = [c for c in declared if c is not None]
     correct = [bool(records[i]["correct"]) for i in known_idx]
     known_groups = [groups[i] for i in known_idx] if groups is not None else None
-    latencies = [r.get("latency_s", 0.0) for r in records]
+    # a skipped question has no latency (None): it is left out, not counted as instant
+    latencies = [lat for lat in (r.get("latency_s", 0.0) for r in records) if lat is not None]
     costs = [r.get("cost_usd") for r in records]
     total_cost = (None if any(cost is None for cost in costs)
                   else math.fsum(cost for cost in costs if cost is not None))
@@ -384,22 +390,101 @@ def record_of(idx: int, row: dict, judgment, expected: str) -> dict:
     }
 
 
+class IncompleteAnswers(ValueError):
+    """The judge broke the answer contract (two answers to one question), or the dataset
+    labels a question it never asks. Either way the audit would not mean what it says."""
+
+
+def answer_gaps(row: dict, answered: list[str]) -> dict:
+    """What a row's answers lack or add against its labels: {missing, duplicate, unexpected,
+    orphan_labels}, each a sorted list of question names. Shared by the live runner and the
+    checkpoint check, so a report built either way counts the same decisions."""
+    labels = set(row.get("labels", {}))
+    asked = {q["name"] for q in row["questions"]}
+    seen = [q for q in answered if q in asked]
+    blank = sorted(q for q, v in row.get("labels", {}).items()
+                   if v is None or not str(v).strip())
+    return {"missing": sorted(labels - set(seen)),
+            "duplicate": sorted({q for q in seen if seen.count(q) > 1}),
+            "unexpected": sorted(q for q in answered if q not in asked),
+            "orphan_labels": sorted(labels - asked),
+            "blank_labels": blank}
+
+
+def dataset_gaps(idx: int, row: dict) -> None:
+    """A label naming no question, or a blank / null label, is a dataset error: raise before
+    anyone pays for a call. (A blank label would score a skipped question as correct.)"""
+    g = answer_gaps(row, [])
+    if g["orphan_labels"]:
+        raise IncompleteAnswers(
+            f"row {idx}: label(s) {g['orphan_labels']} name no question in the row")
+    if g["blank_labels"]:
+        raise IncompleteAnswers(f"row {idx}: label(s) {g['blank_labels']} are blank or null")
+
+
+def missing_answer(question: str, returned: list) -> dict:
+    """The checkpoint judgment written for a labelled question the judge did not answer.
+
+    Latency unknown (None, left out of the percentiles: a silent judge must not look fast).
+    Cost 0.0 — the row's call is already paid by the answers it returned — unless nothing
+    came back with a known cost, in which case it is unknown too."""
+    costs = [getattr(j, "cost_usd", None) if not isinstance(j, dict) else j.get("cost_usd")
+             for j in returned]
+    known = bool(costs) and all(c is not None for c in costs)
+    return {"question": question, "decision": "", "confidence": None, "latency_s": None,
+            "cost_usd": 0.0 if known else None, "raw": {"missing": True},
+            "parse_status": "no_answer"}
+
+
+def reconcile(idx: int, row: dict, judgments, counts: dict) -> list[dict]:
+    """One record per labelled question, answered or not.
+
+    A labelled question the judge skipped is a no-answer record — wrong, confidence unknown —
+    so it stays in `n`: a judge cannot raise its score by staying silent. An answer to a
+    question the row does not ask is counted and dropped; a second answer to the same
+    question, or a label with no question, raises `IncompleteAnswers`."""
+    labels: dict = row.get("labels", {})
+    asked = {q["name"] for q in row["questions"]}
+    dataset_gaps(idx, row)
+    judgments = list(judgments)
+    answered: dict = {}
+    for judgment in judgments:
+        if judgment.question not in asked:
+            counts["unexpected"] += 1
+            continue
+        if judgment.question in answered:
+            raise IncompleteAnswers(
+                f"row {idx}: the judge answered {judgment.question!r} twice")
+        answered[judgment.question] = judgment
+    records = []
+    for name, expected in labels.items():
+        counts["expected"] += 1
+        judgment = answered.get(name)
+        if judgment is None:
+            counts["missing"] += 1
+            records.append(checkpoint_record(idx, row, missing_answer(name, judgments), expected))
+        else:
+            counts["answered"] += 1
+            records.append(record_of(idx, row, judgment, expected))
+    return records
+
+
 def run_audit(judge: Judge, rows: list[dict], labels_path: str | None = None,
               dataset_meta: dict | None = None, ci: bool | None = None) -> AuditResult:
     """rows: [{state, questions: [{name, type, instructions, options?, descriptions?}],
               labels: {name: expected}}]; dataset_meta: the header from `load_dataset`;
     ci: bootstrap intervals (None: unless `JUDGE_AUDIT_BOOTSTRAP=0`)."""
     records: list[dict] = []
+    counts = {"expected": 0, "answered": 0, "missing": 0, "unexpected": 0}
+    for idx, row in enumerate(rows):  # every row, before the first (paid) call
+        dataset_gaps(idx, row)
     for idx, row in enumerate(rows):
-        labels: dict = row.get("labels", {})
-        for judgment in judge.decide(row["state"], questions_of(row)):
-            expected = labels.get(judgment.question)
-            if expected is None:
-                continue
-            records.append(record_of(idx, row, judgment, expected))
-    return summarize(judge.name, records,
-                     run_metadata(judge, labels_path, len(rows), dataset_meta), ci=ci,
-                     groups=groups_of(records, rows))
+        records += reconcile(idx, row, judge.decide(row["state"], questions_of(row)), counts)
+    result = summarize(judge.name, records,
+                       run_metadata(judge, labels_path, len(rows), dataset_meta), ci=ci,
+                       groups=groups_of(records, rows))
+    result.completeness = counts
+    return result
 
 
 def write_judgments(result: AuditResult, path: str) -> None:
