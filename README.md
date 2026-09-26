@@ -112,7 +112,7 @@ Exit codes: `0` ok · `1` drift detected · `2` usage or configuration error (th
 **In CI:** the [GitHub Action](docs/integrations.md#github-action) runs the audit on every push or pull request and fails the build on drift:
 
 ```yaml
-- uses: kunko-ai-labs/judge-audit@v0.4      # resolves once v0.4.0 is tagged; or pin a release's commit SHA
+- uses: kunko-ai-labs/judge-audit@v0.4      # or pin the release's commit SHA
   with: { labels: audits/labels.jsonl, judge: jev, baseline: audits/baseline.json }
   env: { AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }} }
 ```
@@ -154,7 +154,7 @@ Accuracy tells you who wins a benchmark. Calibration tells you what you can auto
 
 ## Roadmap
 
-Score questions + MCE (maximum calibration error: the worst bin, not the average — our proposal for AI Act evidence, not a legal requirement) → Judge Arena as a living leaderboard with a submission spec (the first table is above) → AI Act evidence dossier. Details and reasons in [docs/ROADMAP.md](docs/ROADMAP.md); the live backlog is the issues.
+v0.5: a benchmark on real data — human-labelled public datasets with ≥ 1,000 rows per task and a hidden held-out slice, current models including OpenAI's, confidence measured three ways (verbalized, token log-probability, self-consistency), repeats for every judge, all pre-registered — plus MCE (the worst bin, not the average; our proposal for AI Act evidence, not a legal requirement) → v0.6: a public leaderboard with a submission spec and the AI Act evidence dossier. Details and reasons in [docs/ROADMAP.md](docs/ROADMAP.md); the live backlog is the issues.
 
 ## FAQ
 
