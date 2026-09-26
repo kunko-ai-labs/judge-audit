@@ -150,6 +150,18 @@ def recorded_judge(done: dict[int, dict]) -> str | None:
     return str(name).split(":")[0] if name else None
 
 
+# What makes two runs of one adapter the same measurement: a checkpoint resumed with any of
+# these changed would mix two methods under one header (e.g. LLM_SAMPLES or LLM_TEMPERATURE).
+METHOD_KEYS = ("name", "model", "confidence_method", "temperature", "samples", "prompt_sha256")
+
+
+def same_method(ckpt: Path, recorded: dict, now: dict) -> None:
+    for key in METHOD_KEYS:
+        if (key in recorded or key in now) and recorded.get(key) != now.get(key):
+            raise SystemExit(f"{ckpt} was started with judge {key}={recorded.get(key)!r}, "
+                             f"this run has {now.get(key)!r}; use a new checkpoint")
+
+
 def tag_of(judge_name: str) -> str:
     """The banner a report of this judge carries: only the simulated judge is fake."""
     return SIMULATED_TAG if judge_name == "simulated" else ""
@@ -217,6 +229,7 @@ def main() -> None:
             if was != now:
                 raise SystemExit(f"{ckpt} was started with LLM_EXTRA_BODY {was!r}, not {now!r}; "
                                  "resume with the same routing or use a new checkpoint")
+            same_method(ckpt, done[-1]["run"].get("judge") or {}, started["judge"])
     if subset:
         started["rows_subset"] = subset
 

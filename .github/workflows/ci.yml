@@ -126,3 +126,5 @@ jobs:
         run: |
           pip install -e .
           python scripts/split_heldout.py --check
+      - name: v0.5 power analysis regenerates byte-identical (seeded, no API call)
+        run: python scripts/v05_power.py --check
