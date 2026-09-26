@@ -65,6 +65,19 @@ Evaluate it only on rows it did not train on: `scripts/audit_resumable.py … --
 
 A judgment model returns a probability distribution over options; the confidence *is* the probability of the chosen option. A chat model has no such distribution exposed — it says "0.9" in text. Verbalized confidence is what almost everyone deploys and what the literature finds worst calibrated; auditing it is not a limitation of the tool, it is the audit people need.
 
+## Self-consistency: confidence from agreement between samples
+
+A third way to get a chat model's confidence, next to the number it writes and the probability of its answer token: ask the same question k times at a sampling temperature and count how often the answer comes back. `LLM_SAMPLES=k` (default 1) and `LLM_TEMPERATURE` (default 0; a number up to 2, or `default` to send no temperature for a model that refuses the parameter) switch the `llm` judge to it, for any provider. The decision is the one most of the k samples gave; a tie goes to the tied decision drawn first, which is random with respect to the option order. The confidence is its count over k. A sample with no answer counts in k and votes for nothing, since it did not agree; a decision outside the options votes like any other and is scored wrong. This is the agreement measure of self-consistency (Wang et al., ICLR 2023) used as a confidence (Xiong et al., ICLR 2024); whether it ranks errors better than the verbalized number is what the v0.5 study measures, not something assumed here.
+
+What it costs and what it changes, stated with every result that uses it:
+
+- **k times the calls, tokens, cost and latency.** The calls are sequential; the checkpoint records each sample's reply, token usage and served model version (`raw.samples`), the vote counts (`raw.votes`) and each sample's verbalized number (`raw.verbalized`, kept and not used), so the verbalized confidence at that temperature is measured from the same calls at no extra cost.
+- **A coarse confidence.** At k = 5 it takes at most five values; ties are the rule, not the exception. AURC is computed as its expectation over tie orders, and zero-error coverage and coverage at a target risk move over whole confidence groups (`metrics/selective.py`), so ties are not broken in the judge's favour.
+- **A sampled decision.** At a temperature above 0 the voted decision can differ from the temperature-0 one, so accuracy is reported for the voted decision, and the run records its temperature and k (`describe()`: `temperature`, `samples`, `confidence_method`). Several samples at temperature 0 are refused: they would measure the provider's nondeterminism, not the model's uncertainty.
+- **A custom provider** must accept a `temperature` keyword in `call()` (None = the platform's default) before `LLM_TEMPERATURE` can reach it; without one, the judge refuses to start rather than record a temperature it did not use.
+
+`scripts/reparse_checkpoints.py` re-votes a self-consistency checkpoint from its raw samples, as it re-parses a single reply.
+
 ## Writing an adapter
 
 ```python

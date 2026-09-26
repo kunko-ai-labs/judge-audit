@@ -1,6 +1,7 @@
 """Re-parse the raw replies in Arena checkpoints with the current parser. No API call.
 
-A checkpoint keeps every model's raw text (`raw.text`). When the parser
+A checkpoint keeps every model's raw text (`raw.text`, or one per sample in
+`raw.samples` for a self-consistency run, which is re-voted). When the parser
 improves (e.g. JSON followed by prose, or prose containing `{`), the
 decisions derived from that text can be recomputed offline; the evidence
 itself never changes. The checkpoint header records what was reparsed.
@@ -23,7 +24,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from arena_report import ARENA, DATASETS  # noqa: E402
 
 from judge_audit import __version__  # noqa: E402
-from judge_audit.judges.llm import parse_reply  # noqa: E402
+from judge_audit.judges.llm import parse_reply, vote_replies  # noqa: E402
 from judge_audit.runner import load_jsonl, questions_of  # noqa: E402
 
 
@@ -41,15 +42,23 @@ def reparse(ckpt: Path, rows: list[dict], dry_run: bool) -> int:
         qs = questions_of(rows[rec["idx"]])
         for j in rec["judgments"]:
             raw = j.get("raw")
-            text = raw.get("text") if isinstance(raw, dict) else None
-            if not text:
+            if not isinstance(raw, dict):
                 continue
-            decision, confidence, ans, status = parse_reply(text, qs)[j["question"]]
+            samples = raw.get("samples")
+            if isinstance(samples, list) and samples:
+                decision, confidence, status, votes = vote_replies(
+                    [str(x.get("text") or "") for x in samples], qs)[j["question"]]
+                update = {"votes": votes}
+            elif raw.get("text"):
+                decision, confidence, ans, status = parse_reply(raw["text"], qs)[j["question"]]
+                update = {"parsed": ans}
+            else:
+                continue
             if (decision, confidence, status) != (
                     j["decision"], j["confidence"], j.get("parse_status", "parsed")):
                 changed += 1
                 j["decision"], j["confidence"], j["parse_status"] = decision, confidence, status
-                raw["parsed"] = ans
+                raw.update(update)
         out.append(rec)
     if changed and header_at is not None:
         run = out[header_at].setdefault("run", {})

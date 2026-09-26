@@ -3,6 +3,11 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
+## [0.5.0] — unreleased (dated when tagged)
+
+### Added
+- **Self-consistency confidence for the `llm` judge** (US-005-004, #89, groundwork). `LLM_SAMPLES=k` asks each question k times at `LLM_TEMPERATURE` and reports the majority decision (ties to the decision drawn first) with its share of the k samples as confidence; a sample with no answer counts in k and votes for nothing. `LLM_TEMPERATURE=default` sends no temperature, for models that refuse the parameter, and is recorded as "provider default". Every sample's reply, usage, served version and verbalized number is kept in the checkpoint, and `scripts/reparse_checkpoints.py` re-votes them offline. Several samples at temperature 0 are refused, and a custom provider must accept a `temperature` keyword. With both variables unset nothing changes: one call at temperature 0, verbalized confidence. See `docs/judges.md` § Self-consistency.
+
 ## [0.4.0] — 2026-09-26
 
 ### Added

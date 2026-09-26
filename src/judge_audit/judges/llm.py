@@ -21,13 +21,23 @@ Providers:
                      For hosted platforms without an OpenAI-compatible endpoint.
 
 Environment: LLM_PROVIDER, LLM_MODEL, LLM_MODEL_LABEL (what reports show; defaults to LLM_MODEL),
-LLM_BASE_URL, LLM_API_KEY, LLM_EFFORT (anthropic only), LLM_PROVIDER_MODULE (custom only).
+LLM_BASE_URL, LLM_API_KEY, LLM_EFFORT (anthropic only), LLM_PROVIDER_MODULE (custom only),
+LLM_TEMPERATURE and LLM_SAMPLES (self-consistency, below).
+
+Self-consistency (#89): with LLM_SAMPLES=k > 1 the judge asks the same question k times at a
+sampling temperature (LLM_TEMPERATURE, a number, or `default` to send none, for models that
+refuse the parameter) and answers with the majority decision; its confidence is the share of
+the k samples that gave it (Wang et al. 2023; Xiong et al. 2024). Each sample's reply and
+verbalized number are kept in the checkpoint. With both variables unset, nothing changes: one
+call at temperature 0, verbalized confidence. A custom provider's `call` must then accept a
+`temperature` keyword (None = the platform's default).
 """
 from __future__ import annotations
 
 import hashlib
 import http.client
 import importlib.util
+import inspect
 import json
 import math
 import os
@@ -98,9 +108,38 @@ SYSTEM = (
 )
 
 
-# Every provider path is asked for temperature 0: an audit has to be reproducible, and a
-# confidence measured at one sampling temperature says nothing about another.
+# Every provider path is asked for temperature 0 unless LLM_TEMPERATURE says otherwise: an
+# audit has to be reproducible, and a confidence measured at one sampling temperature says
+# nothing about another. The temperature a run used is recorded in its provenance.
 TEMPERATURE = 0
+MAX_SAMPLES = 50
+
+
+def temperature_of(raw: str) -> float | int | None:
+    """LLM_TEMPERATURE: unset is 0; `default` is None (the parameter is not sent, for models
+    that refuse it); otherwise a number in [0, 2]."""
+    raw = raw.strip().lower()
+    if not raw:
+        return TEMPERATURE
+    if raw == "default":
+        return None
+    try:
+        t = float(raw)
+    except ValueError as e:
+        raise ValueError(f"LLM_TEMPERATURE={raw!r}: a number in [0, 2], or 'default'") from e
+    if not 0 <= t <= 2:
+        raise ValueError(f"LLM_TEMPERATURE={raw!r}: a number in [0, 2], or 'default'")
+    return t
+
+
+def samples_of(raw: str) -> int:
+    """LLM_SAMPLES: unset is 1 (one call, verbalized confidence)."""
+    raw = raw.strip()
+    if not raw:
+        return 1
+    if not raw.isdigit() or not 1 <= int(raw) <= MAX_SAMPLES:
+        raise ValueError(f"LLM_SAMPLES={raw!r}: an integer from 1 to {MAX_SAMPLES}")
+    return int(raw)
 
 
 def prompt_sha256() -> str:
@@ -179,6 +218,39 @@ def parse_reply(
     return out
 
 
+def vote(parsed: list[dict[str, tuple]], questions: list[Question]
+         ) -> dict[str, tuple[str, float | None, str, dict[str, int]]]:
+    """{question: (decision, confidence, parse status, votes)} over k parsed samples
+    (`parse_reply` outputs, in the order they were drawn).
+
+    The decision is the one most samples gave; a tie goes to the tied decision drawn first,
+    which is random with respect to the option order. The confidence is its count over k:
+    a sample with no answer counts in k and votes for nothing, since it did not agree. A
+    decision outside the options votes like any other and is scored wrong. With no answer
+    in any sample, there is no decision. Pure, so a checkpoint can be re-voted offline."""
+    k = len(parsed)
+    out: dict[str, tuple[str, float | None, str, dict[str, int]]] = {}
+    for q in questions:
+        votes: dict[str, int] = {}                  # insertion order = order first drawn
+        for sample in parsed:
+            decision, _, _, status = sample[q.name]
+            if status != "no_answer":
+                votes[decision] = votes.get(decision, 0) + 1
+        if not votes:
+            out[q.name] = ("", None, "no_answer", votes)
+            continue
+        top = max(votes.values())
+        winner = next(d for d, n in votes.items() if n == top)
+        out[q.name] = (winner, top / k, "parsed", votes)
+    return out
+
+
+def vote_replies(texts: list[str], questions: list[Question]
+                 ) -> dict[str, tuple[str, float | None, str, dict[str, int]]]:
+    """`vote` over raw reply texts: what a checkpoint's samples re-parse to."""
+    return vote([parse_reply(t, questions) for t in texts], questions)
+
+
 class LLMJudge(Judge):
     _served: dict  # what the provider said it served on the last call (per decide())
     name = "llm"
@@ -188,6 +260,11 @@ class LLMJudge(Judge):
         self.provider = provider or os.environ.get("LLM_PROVIDER", "anthropic")
         self.base_url = (base_url or os.environ.get("LLM_BASE_URL", "")).rstrip("/")
         self.effort = os.environ.get("LLM_EFFORT", "")
+        self.temperature = temperature_of(os.environ.get("LLM_TEMPERATURE", ""))
+        self.samples = samples_of(os.environ.get("LLM_SAMPLES", ""))
+        if self.samples > 1 and self.temperature == 0:
+            raise ValueError("LLM_SAMPLES > 1 needs sampling: set LLM_TEMPERATURE to a number "
+                             "above 0, or to 'default' for the provider's own")
         if self.provider == "anthropic":
             self.model = model or os.environ.get("LLM_MODEL", "claude-opus-5")
             try:
@@ -215,6 +292,12 @@ class LLMJudge(Judge):
             spec.loader.exec_module(self._custom)
             if not callable(getattr(self._custom, "call", None)):
                 raise RuntimeError(f"{path} has no call(model, system, user)")
+            params = inspect.signature(self._custom.call).parameters.values()
+            self._custom_takes_temperature = any(
+                p.name == "temperature" or p.kind is p.VAR_KEYWORD for p in params)
+            if self.temperature != TEMPERATURE and not self._custom_takes_temperature:
+                raise RuntimeError(f"{path}: call() takes no temperature keyword, so "
+                                   "LLM_TEMPERATURE cannot reach the model")
         elif self.provider == "openai-compatible":
             self.model = model or os.environ.get("LLM_MODEL", "")
             self.api_key = api_key or os.environ.get("LLM_API_KEY", "")
@@ -231,9 +314,15 @@ class LLMJudge(Judge):
         self.name = f"llm:{self.label}"
 
     def describe(self) -> dict:
-        d = {"name": self.name, "provider": self.provider, "model": self.label,
-             "confidence_method": "verbalized (model-reported probability)",
-             "temperature": TEMPERATURE, "prompt_sha256": prompt_sha256()}
+        d: dict = {"name": self.name, "provider": self.provider, "model": self.label,
+                   "confidence_method": "verbalized (model-reported probability)",
+                   "temperature": ("provider default" if self.temperature is None
+                                   else self.temperature),
+                   "prompt_sha256": prompt_sha256()}
+        if self.samples > 1:
+            d["confidence_method"] = ("self-consistency: share of the samples that gave the "
+                                      "majority decision (verbalized numbers kept, not used)")
+            d["samples"] = self.samples
         if self.provider == "custom":
             extra = getattr(self._custom, "describe", None)
             if callable(extra):
@@ -256,7 +345,9 @@ class LLMJudge(Judge):
         if self.provider == "anthropic":
             return self._call_anthropic(user)
         if self.provider == "custom":
-            out = self._custom.call(self.model, SYSTEM, user)
+            kwargs = ({"temperature": self.temperature}
+                      if self.temperature != TEMPERATURE else {})
+            out = self._custom.call(self.model, SYSTEM, user, **kwargs)
             if len(out) > 3 and isinstance(out[3], dict):
                 self._served = out[3]
             return out[0], out[1], out[2]
@@ -266,10 +357,11 @@ class LLMJudge(Judge):
         kwargs: dict = {}
         if self.effort:
             kwargs["output_config"] = {"effort": self.effort}
+        if self.temperature is not None:        # same as the OpenAI-compatible path
+            kwargs["temperature"] = self.temperature
         try:
             resp = self._client.messages.create(
                 model=self.model, max_tokens=int(os.environ.get("LLM_MAX_TOKENS", "1024")),
-                temperature=TEMPERATURE,  # same as the OpenAI-compatible path
                 system=SYSTEM, messages=[{"role": "user", "content": user}], **kwargs)
         except self._anthropic.RateLimitError as e:
             raise RuntimeError(f"rate-limited by Anthropic: {e.message}") from e
@@ -282,10 +374,12 @@ class LLMJudge(Judge):
         return text, resp.usage.input_tokens, resp.usage.output_tokens
 
     def _call_openai_compatible(self, user: str) -> tuple[str, int, int]:
-        body = {"model": self.model, "temperature": TEMPERATURE,
-                "response_format": {"type": "json_object"},
-                "messages": [{"role": "system", "content": SYSTEM},
-                             {"role": "user", "content": user}]}
+        body: dict = {"model": self.model, "temperature": self.temperature,
+                      "response_format": {"type": "json_object"},
+                      "messages": [{"role": "system", "content": SYSTEM},
+                                   {"role": "user", "content": user}]}
+        if self.temperature is None:
+            del body["temperature"]
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
@@ -323,18 +417,23 @@ class LLMJudge(Judge):
         return text, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
 
     # ---------------------------------------------------------------- judge
+    def _cost(self, in_tok: int, out_tok: int) -> tuple[float | None, bool]:
+        price = self._price()
+        local_free = price is None and self.provider == "openai-compatible" and _is_local_url(
+            self.base_url)
+        cost = ((in_tok * price[0] + out_tok * price[1]) / 1e6 if price else
+                0.0 if local_free else None)
+        return cost, price is not None or local_free
+
     def decide(self, state: str, questions: list[Question]) -> list[Judgment]:
+        if self.samples > 1:
+            return self._decide_by_vote(state, questions)
         t0 = time.monotonic()
         self._served = {}
         text, in_tok, out_tok = self._call(_render(state, questions))
         served = served_of(self._served)
         latency = time.monotonic() - t0
-        price = self._price()
-        local_free = price is None and self.provider == "openai-compatible" and _is_local_url(
-            self.base_url)
-        priced = price is not None or local_free
-        cost = ((in_tok * price[0] + out_tok * price[1]) / 1e6 if price else
-                0.0 if local_free else None)
+        cost, priced = self._cost(in_tok, out_tok)
         parsed = parse_reply(text, questions)
         out: list[Judgment] = []
         for q in questions:
@@ -345,6 +444,38 @@ class LLMJudge(Judge):
                 cost_usd=cost / max(len(questions), 1) if cost is not None else None,
                 raw={"text": text, "usage": {"input_tokens": in_tok, "output_tokens": out_tok},
                      "parsed": ans, "priced": priced, "served": served},
+                parse_status=status,
+            ))
+        return out
+
+    def _decide_by_vote(self, state: str, questions: list[Question]) -> list[Judgment]:
+        """k independent calls, one majority decision per question (`vote`)."""
+        t0 = time.monotonic()
+        user = _render(state, questions)
+        samples: list[dict] = []
+        for _ in range(self.samples):
+            self._served = {}
+            text, in_tok, out_tok = self._call(user)
+            samples.append({"text": text,
+                            "usage": {"input_tokens": in_tok, "output_tokens": out_tok},
+                            "served": served_of(self._served)})
+        latency = time.monotonic() - t0
+        in_all = sum(x["usage"]["input_tokens"] for x in samples)
+        out_all = sum(x["usage"]["output_tokens"] for x in samples)
+        cost, priced = self._cost(in_all, out_all)
+        parsed = [parse_reply(x["text"], questions) for x in samples]
+        voted = vote(parsed, questions)
+        out: list[Judgment] = []
+        for q in questions:
+            decision, confidence, status, votes = voted[q.name]
+            out.append(Judgment(
+                question=q.name, decision=decision, confidence=confidence,
+                latency_s=latency / max(len(questions), 1),
+                cost_usd=cost / max(len(questions), 1) if cost is not None else None,
+                raw={"samples": samples, "votes": votes,
+                     "verbalized": [p[q.name][1] for p in parsed],
+                     "usage": {"input_tokens": in_all, "output_tokens": out_all},
+                     "priced": priced, "served": samples[0]["served"]},
                 parse_status=status,
             ))
         return out
