@@ -92,6 +92,21 @@ jobs:
           python scripts/jury_deliberate.py --check
           git diff --exit-code -- docs/consensus-2026-09.md docs/consensus-2026-09.json docs/jury-consensus.md docs/jury-consensus.json
 
+  mlx:
+    # The logprob judge's scoring path on a tiny random model, with mlx's Linux CPU build.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Install with the mlx extra
+        run: pip install -e ".[dev,mlx]"
+      - name: Types with mlx-lm installed
+        run: mypy
+      - name: The MLX scoring path (cache vs full pass, bfloat16 vs float64, self-check)
+        run: pytest -q tests/test_logprob_mlx.py tests/test_logprob_judge.py
+
   datasets:
     runs-on: ubuntu-latest
     steps:

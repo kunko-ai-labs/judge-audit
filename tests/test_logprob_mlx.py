@@ -77,6 +77,58 @@ def test_a_label_that_starts_another_is_not_credited_with_it(backend):
     assert both["top_up"] < tokens_only
 
 
+def test_log_softmax_is_float32_whatever_the_logits_dtype():
+    """In bfloat16 a large-vocabulary softmax rounds P(top) to a handful of values."""
+    import math
+    import random
+
+    from judge_audit.judges.logprob import log_softmax
+
+    rng = random.Random(0)
+    worst = 0.0
+    for _ in range(20):
+        row = [rng.gauss(0, 3) for _ in range(50_000)]
+        row[0] = 18 + 16 * rng.random()
+        bf = mx.array(row).astype(mx.bfloat16)
+        exact = [float(v) for v in bf.astype(mx.float32).tolist()]  # the same logits, float64
+        top = max(exact)
+        lse = top + math.log(math.fsum(math.exp(v - top) for v in exact))
+        got = log_softmax(bf)
+        assert got.dtype == mx.float32
+        worst = max(worst, abs(math.exp(float(got[0])) - math.exp(exact[0] - lse)))
+    assert worst < 1e-3
+
+
+def test_a_bfloat16_model_scores_like_its_float64_reference(backend):
+    import math
+
+    from judge_audit.judges.logprob import MLXBackend
+
+    model = backend.model
+    model.set_dtype(mx.bfloat16)
+    try:
+        bf = MLXBackend(model, CharTokenizer())
+        prompt = bf.prompt_text(SYSTEM, "STATE:\nwhere is my card")
+        got = bf.option_logprobs(prompt, ["card", "top_up"])
+        for lab in ("card", "top_up"):
+            ids = bf.encode(prompt) + bf.encode(lab)
+            logits = [[float(v) for v in r] for r in
+                      model(mx.array([ids]))[0].astype(mx.float32).tolist()]
+
+            def lp(r, t):
+                top = max(r)
+                return r[t] - top - math.log(math.fsum(math.exp(v - top) for v in r))
+
+            n = len(bf.encode(prompt))
+            ref = sum(lp(logits[i - 1], ids[i]) for i in range(n, len(ids)))
+            last = logits[len(ids) - 1]
+            ends = [lp(last, e) for e in bf.end_ids]
+            ref += max(ends) + math.log(math.fsum(math.exp(e - max(ends)) for e in ends))
+            assert got[lab] == pytest.approx(ref, abs=2e-3)
+    finally:
+        model.set_dtype(mx.float32)
+
+
 def test_selfcheck_passes_on_a_model_whose_cache_is_exact(backend, tmp_path, monkeypatch, capsys):
     import importlib.util
     import json

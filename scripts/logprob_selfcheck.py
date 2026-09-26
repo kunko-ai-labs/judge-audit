@@ -7,7 +7,11 @@ rows per minute of the cached path. mlx-lm has an open report of prompt caching 
 different logits for repeated prompts; this is the check that it does not happen here.
 
   LOGPROB_MODEL=mlx-community/Qwen3-8B-4bit python scripts/logprob_selfcheck.py \\
-      examples/banking77/labels-pilot.jsonl --rows 20
+      <labels.jsonl> --rows 20
+
+It also counts the labels whose first characters merge with the prompt's last token and
+are therefore tokenised alone after it (`MLXBackend.continuations`): not an error, but a
+number to know before a run.
 
 Exit status 0 when every probability agrees within --tolerance and no decision changes,
 1 otherwise. Nothing is written; no network after the model is downloaded.
@@ -42,12 +46,14 @@ def main(argv: list[str] | None = None) -> int:
     judge = LogprobJudge(model=args.model or None)
     backend = judge.backend
     worst, flips, rows, seconds = 0.0, 0, 0, 0.0
+    alone: set[str] = set()
     for row in load_jsonl(args.labels)[:args.rows]:
         for q in questions_of(row):
             prompt = backend.prompt_text(SYSTEM, render(row["state"], q))
             t0 = time.monotonic()
             cached, _ = option_distribution(backend.option_logprobs(prompt, q.options))
             seconds += time.monotonic() - t0
+            alone.update(getattr(backend, "last_tokenised_alone", []) or [])
             fresh, _ = option_distribution(backend.option_logprobs(prompt, q.options,
                                                                    recompute=True))
             worst = max(worst, max(abs(cached[o] - fresh[o]) for o in q.options))
@@ -55,7 +61,9 @@ def main(argv: list[str] | None = None) -> int:
         rows += 1
     rate = 60 * rows / seconds if seconds else float("nan")
     print(f"model {judge.describe()['model_id']} · {rows} rows · largest probability "
-          f"difference {worst:.2e} · decisions changed {flips} · cached path {rate:.1f} rows/min")
+          f"difference {worst:.2e} · decisions changed {flips} · cached path {rate:.1f} rows/min"
+          f" · labels tokenised alone {len(alone)}" + (f" ({', '.join(sorted(alone))})"
+                                                        if alone else ""))
     return 0 if worst <= args.tolerance and flips == 0 else 1
 
 
