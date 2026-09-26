@@ -74,24 +74,62 @@ def test_the_power_window_skips_the_saw_tooth():
     assert len(dips) == 105 and dips[-1] == 2184
 
 
+def test_the_pass_rule_is_the_librarys_at_every_size():
+    """`certifiable_table` must allow exactly the errors `risk_upper_bound` allows, at every
+    size the report uses, for every target it reports."""
+    from judge_audit.metrics.selective import risk_upper_bound
+
+    for r in power.RISKS:
+        kstar = power.certifiable_table(r, max(power.HALVES))
+        for m in range(1, max(power.HALVES) + 1):
+            k = kstar[m]
+            if k >= 0:
+                assert risk_upper_bound(k, m) <= r
+            if k + 1 <= m:
+                assert risk_upper_bound(k + 1, m) > r
+
+
 def test_the_fast_walk_is_the_library_procedure():
     """A2 simulates `coverage_at_risk` through a precomputed pass rule; on random data with
-    ties it must choose the same threshold as the library."""
+    ties it must choose the same threshold as the library, including when it certifies."""
     import random
 
     from judge_audit.metrics.selective import coverage_at_risk
 
     rng = random.Random(7)
-    for r in (0.02, 0.05, 0.1):
-        kstar = power.certifiable_table(r, 700)
+    certified = 0
+    for r in (0.01, 0.02, 0.05):
+        kstar = power.certifiable_table(r, 1500)
         n_min = power.rows_to_certify(r, 0)
-        for _ in range(60):
-            n = rng.randint(50, 700)
+        for _ in range(40):
+            n = rng.randint(n_min, 1500)
+            err = rng.choice([0.0, r / 4, r, 4 * r])
             conf = [round(rng.random(), rng.choice([1, 2, 3])) for _ in range(n)]
-            ok = [rng.random() > (0.3 * (1 - c)) for c in conf]
+            ok = [rng.random() >= (err if c >= 0.5 else 0.3) for c in conf]
             ours = power.fixed_sequence_threshold(conf, ok, kstar, n_min)
             lib = coverage_at_risk(conf, ok, conf, ok, target_risk=r)["threshold"]
             assert ours == lib
+            certified += ours is not None
+    assert certified >= 30          # the comparison is not only None against None
+
+
+def test_delong_by_hand():
+    """Five rows: right answers A = 0.9, 0.8, 0.3 and B = 0.9, 0.2, 0.7; wrong answers
+    A = 0.5, 0.1 and B = 0.95, 0.1. Placements: A right (1, 1, 1/2), B right (1/2, 1/2,
+    1/2); A wrong (2/3, 1), B wrong (0, 1). AUROC A = 5/6, B = 1/2; the paired
+    differences' variances are s10 = 1/12 over right answers and s01 = 2/9 over wrong."""
+    comp = power.delong([0.9, 0.8, 0.3, 0.5, 0.1], [0.9, 0.2, 0.7, 0.95, 0.1],
+                        [True, True, True, False, False])
+    assert comp["auroc_a"] == pytest.approx(5 / 6) and comp["auroc_b"] == pytest.approx(0.5)
+    assert comp["s10"] == pytest.approx(1 / 12) and comp["s01"] == pytest.approx(2 / 9)
+    # n = 10 rows at 60 % accuracy: 6 right, 4 wrong
+    assert power.paired_auroc_sd(comp, 10, 0.6) == pytest.approx(
+        math.sqrt((1 / 12) / 6 + (2 / 9) / 4))
+
+
+def test_a2_certification_probability_is_exact():
+    assert power.max_safe_coverage(0.01, 0.0) == pytest.approx(0.5 * 0.2 / 0.19)
+    assert power.max_safe_coverage(0.01, 0.02) == 0.0
 
 
 def test_delong_matches_the_simulated_paired_sd():
@@ -133,3 +171,12 @@ def test_prose_ranges_are_computed_from_the_tables(monkeypatch):
     assert "to 0.999" in power.markdown(d)
     first = d["a_certification"]["rows_to_certify"]["0.01"]["0"]
     assert f"zero errors certify from {first:,} rows" in md
+    # the A2 verdicts follow their rows too
+    a2 = d["a2_fixed_sequence"]["rows"]
+    assert "which stays within the 5 % allowed" in md
+    a2[0]["violation_rate"] = 0.09
+    clean = next(r for r in a2 if r["true_rate"] == 0)
+    clean["p_certify_exact"] = 0.9
+    md2 = power.markdown(d)
+    assert "9.0 %, which **exceeds** the 5 % allowed" in md2
+    assert "certifies 90 % to 100 % of the time" in md2

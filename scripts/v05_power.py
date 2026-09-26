@@ -154,8 +154,8 @@ def rows_for_power(r: float, r_true: float, target: float = POWER, limit: int = 
 
 
 RISKS = [0.01, 0.02, 0.05]
-ALTERNATIVES = {0.01: [0.0, 0.0025, 0.005], 0.02: [0.0, 0.005, 0.01],
-                0.05: [0.0, 0.01, 0.025]}
+# r' = 0, a quarter and a half of each target
+ALTERNATIVES = {r: [0.0, r / 4, r / 2] for r in (0.01, 0.02, 0.05)}
 ERRORS = [0, 1, 2, 5, 10]
 
 
@@ -199,13 +199,12 @@ def simulate_fixed_sequence(n_half: int, r: float, r_true: float, rng: random.Ra
     true error rate above it exceeds r (the guarantee says at most DELTA of the time)."""
     cut = 1.0 - AUTOMATABLE
     certified = violations = 0
-    coverages: list[float] = []
+    coverages: list[float] = []                 # test coverage of the runs that certify
     for _ in range(REPS_A2):
         conf = [rng.random() for _ in range(n_half)]
         ok = [rng.random() >= (r_true if c >= cut else REST_ERROR) for c in conf]
         t = fixed_sequence_threshold(conf, ok, kstar, n_min)
         if t is None:
-            coverages.append(0.0)
             continue
         certified += 1
         coverages.append(sum(1 for _ in range(n_half) if rng.random() >= t) / n_half)
@@ -214,10 +213,22 @@ def simulate_fixed_sequence(n_half: int, r: float, r_true: float, rng: random.Ra
                      (AUTOMATABLE * r_true + (cut - t) * REST_ERROR) / above)
         violations += true_risk > r
     return {"n_half": n_half, "target": r, "true_rate": r_true,
-            "p_certify": round(certified / REPS_A2, 3),
-            "median_coverage": round(median(coverages), 3),
+            # continuous confidences: the first cut holds exactly n_min rows, all in the
+            # automatable slice, and passes only with no error, so this is exact
+            "p_certify_exact": round((1 - r_true) ** n_min, 3),
+            "p_certify_simulated": round(certified / REPS_A2, 3),
+            "median_coverage_if_certified": (round(median(coverages), 3) if coverages
+                                             else None),
             "mean_coverage": round(math.fsum(coverages) / REPS_A2, 3),
             "violation_rate": round(violations / REPS_A2, 3)}
+
+
+def max_safe_coverage(r: float, r_true: float) -> float:
+    """The largest share of rows whose true error rate is still at most r, in A2's model:
+    the automatable slice, then as many of the other rows as the budget allows."""
+    if r_true > r:
+        return 0.0
+    return min(1.0, AUTOMATABLE * (REST_ERROR - r_true) / (REST_ERROR - r))
 
 
 def section_a2(rng: random.Random) -> list[dict]:
@@ -483,55 +494,75 @@ def markdown(d: dict) -> str:
               f"further error costs about {inc_lo}–{inc_hi} more rows.", "",
               "Rows one **fixed** set needs for an 80 % chance to certify r when its true "
               "error rate is r′ (the power saw-tooths in n; the number is where it stays at "
-              "or above 80 % up to twice that n). This is an **upper bound** on the procedure "
-              "in A2, which chooses its set from the data and stops at the first cut that "
-              "fails:", "", "| target risk r | r′ | rows for 80 % power, one fixed set |",
+              "or above 80 % up to twice that n). The procedure in A2 chooses its set from the "
+              "data and stops at the first cut that fails, so this power is an upper bound on "
+              "its power, and these row counts are a lower bound on the rows it needs:", "", "| target risk r | r′ | rows for 80 % power, one fixed set |",
               "|---|---|---:|"]
     for r, row in a["rows_for_80pct_power_one_cut"].items():
         for t, m in row.items():
             lines.append(f"| {_pct(float(r))} | {_pct(float(t)) if float(t) else '0'} | "
                          + (f"{m:,} |" if m else "> 20,000 |"))
 
+    reps = d["a2_fixed_sequence"]["assumptions"]["reps"]
     lines += ["", "## A2. The certification procedure itself (simulated)", "",
               f"`coverage_at_risk` (#98) on a calibration half, applied to a test half of the "
               f"same size. Confidences are continuous; the top {_share(AUTOMATABLE)} of rows "
-              f"err at r′, the rest at {_share(REST_ERROR)}; so at most {_share(AUTOMATABLE)} of "
-              "a half "
-              f"can be automated. {d['a2_fixed_sequence']['assumptions']['reps']} simulated "
-              "datasets per cell (Monte Carlo SE of a share: at most "
-              f"{100 * math.sqrt(0.25 / d['a2_fixed_sequence']['assumptions']['reps']):.1f} "
-              "points). "
-              "*Violation* = a threshold whose true error rate above it exceeds r; the "
-              f"guarantee allows it {_pct(DELTA)} of the time.", "",
-              "| r | r′ | rows per half | P(certifies) | median coverage | mean coverage "
-              "| violations |", "|---|---|---:|---:|---:|---:|---:|"]
+              f"err at r′, the rest at {_share(REST_ERROR)}. The most a half can automate with a "
+              "true error rate still at most r is the slice plus as many other rows as r "
+              "allows: "
+              + ", ".join(f"{_share(max_safe_coverage(r, 0.0))} at {_pct(r)}" for r in RISKS)
+              + " when r′ = 0. With continuous confidences the first cut the procedure tests "
+              f"holds exactly the rows zero errors need ({first:,} at {_pct(RISKS[0])}), all "
+              "inside the slice, and passes only if they hold no error, so P(certifies) = "
+              "(1 − r′)^rows, exactly; the simulated share is printed next to it as a check. "
+              f"{reps} simulated datasets per cell (Monte Carlo SE of a share: at most "
+              f"{100 * math.sqrt(0.25 / reps):.1f} points). Coverage is on the test half, "
+              "given that the procedure certified; mean coverage counts a run that "
+              "certified nothing as 0. *Violation* = a threshold whose true error rate above "
+              f"it exceeds r; the guarantee allows it {_pct(DELTA)} of the time.", "",
+              "| r | r′ | rows per half | P(certifies), exact | simulated | coverage if "
+              "certified (median) | mean coverage | violations |",
+              "|---|---|---:|---:|---:|---:|---:|---:|"]
     for row in a2:
+        cov = row["median_coverage_if_certified"]
         lines.append(f"| {_pct(row['target'])} | "
                      f"{_pct(row['true_rate']) if row['true_rate'] else '0'} | "
-                     f"{row['n_half']:,} | {_share(row['p_certify'])} | "
-                     f"{_share(row['median_coverage'])} | {_share(row['mean_coverage'])} | "
-                     f"{row['violation_rate'] * 100:.1f} % |")
+                     f"{row['n_half']:,} | {_share(row['p_certify_exact'])} | "
+                     f"{_share(row['p_certify_simulated'])} | "
+                     f"{_share(cov) if cov is not None else '—'} | "
+                     f"{_share(row['mean_coverage'])} | {row['violation_rate'] * 100:.1f} % |")
     worst_violation = max(row["violation_rate"] for row in a2)
     clean = [row for row in a2 if row["true_rate"] == 0]
     quarter = [row for row in a2 if row["true_rate"] == row["target"] / 4]
     half = [row for row in a2 if row["true_rate"] == row["target"] / 2]
+
+    def p_range(rows: list[dict]) -> str:
+        lo = min(r["p_certify_exact"] for r in rows)
+        hi = max(r["p_certify_exact"] for r in rows)
+        return _share(lo) if _share(lo) == _share(hi) else f"{_share(lo)} to {_share(hi)}"
+
+    def cov_range(rows: list[dict]) -> str:
+        vals = [r["median_coverage_if_certified"] for r in rows
+                if r["median_coverage_if_certified"] is not None]
+        if not vals:
+            return "nothing"
+        lo, hi = _share(min(vals)), _share(max(vals))
+        return lo if lo == hi else f"{lo} to {hi}"
+
+    guarantee = ("stays within" if worst_violation <= DELTA else "**exceeds**")
     lines += ["", "**Read it this way.** With no error in the automatable slice the procedure "
-              f"certifies every time and automates {_share(min(r['median_coverage'] for r in clean))} "
-              f"to {_share(max(r['median_coverage'] for r in clean))} "
-              "of a half (median). With a true error rate a quarter of the target it certifies "
-              f"{_share(min(r['p_certify'] for r in quarter))} to "
-              f"{_share(max(r['p_certify'] for r in quarter))} of the time, and at half the "
-              f"target {_share(min(r['p_certify'] for r in half))} to "
-              f"{_share(max(r['p_certify'] for r in half))}; the median coverage there is "
-              f"{_share(min(r['median_coverage'] for r in half))}. The reason is where the "
-              "sequence starts: #98 starts at the smallest cut that could pass "
-              f"({first:,} rows at {_pct(RISKS[0])}, where it must hold zero errors), and with "
-              "continuous confidences one early error ends the walk before any larger cut is "
-              "tried. The guarantee holds: the largest violation rate in the table is "
-              f"{worst_violation * 100:.1f} %, against the {_pct(DELTA)} allowed. Starting the "
-              "sequence at a later, pre-registered cut keeps the guarantee and should certify "
-              "more often when the slice is not error-free; that choice, and its effect in "
-              "this simulation, belong in the plan.", "",
+              f"certifies {p_range(clean)} of the time and then automates "
+              f"{cov_range(clean)} of a half (median). With a true error rate a quarter of "
+              f"the target it certifies {p_range(quarter)} of the time, and at half the target "
+              f"{p_range(half)}; when it does certify there, it automates {cov_range(half)}. "
+              "The reason is where the sequence starts: #98 starts at the smallest cut that "
+              f"could pass ({first:,} rows at {_pct(RISKS[0])}, where it must hold zero "
+              "errors), and with continuous confidences one error among those rows ends the "
+              "walk before any larger cut is tried. The largest violation rate in the table "
+              f"is {worst_violation * 100:.1f} %, which {guarantee} the {_pct(DELTA)} allowed. "
+              "Starting the sequence at a later, pre-registered cut keeps the guarantee and "
+              "should certify more often when the slice is not error-free; that choice, and "
+              "its effect in this simulation, belong in the plan.", "",
               "## B. Paired AUROC: the smallest difference resolved", "",
               f"Two confidence methods on the same decisions, latent AUROCs {AUROC_A} and "
               f"{AUROC_B}. Ties \"none\": continuous scores; \"tied\": each method says one of "
@@ -550,12 +581,13 @@ def markdown(d: dict) -> str:
                      f"{r['n']:,} | "
                      f"{r['errors_expected']:,} | {r['auroc_a']:.3f} | {r['auroc_b']:.3f} | "
                      f"{r['sd_difference']:.4f} | **{r['mde']:.3f}** |")
-    gap = round(AUROC_B - AUROC_A, 3)
     for n in (big, clinc):
         cells = [r for r in b if r["n"] == n]
-        ok = [r for r in cells if r["mde"] <= gap]
-        lines += ["", f"At n = {n:,} the MDE is {_span([r['mde'] for r in cells])}; a latent "
-                  f"gap of {gap} is resolvable in {len(ok)} of {len(cells)} cells"
+        ok = [r for r in cells if r["mde"] <= round(r["auroc_b"] - r["auroc_a"], 3)]
+        gaps = [round(r["auroc_b"] - r["auroc_a"], 3) for r in cells]
+        lines += ["", f"At n = {n:,} the MDE is {_span([r['mde'] for r in cells])}; the gap "
+                  f"between the two methods (latent {round(AUROC_B - AUROC_A, 3)}, "
+                  f"{_span(gaps)} after ties) is resolvable in {len(ok)} of {len(cells)} cells"
                   + (": " + "; ".join(f"{TIE_LABEL[r['ties']]}, accuracy "
                                       f"{_share(r['accuracy'])}, ρ {r['rho']}" for r in ok)
                      if ok else "") + "."]

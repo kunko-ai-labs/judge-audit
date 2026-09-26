@@ -14,7 +14,7 @@ One-sided 95 % Clopper-Pearson bound, the rule `metrics.selective` applies. Rows
 
 At 1 %, zero errors certify from 299 rows, and each further error costs about 129–174 more rows.
 
-Rows one **fixed** set needs for an 80 % chance to certify r when its true error rate is r′ (the power saw-tooths in n; the number is where it stays at or above 80 % up to twice that n). This is an **upper bound** on the procedure in A2, which chooses its set from the data and stops at the first cut that fails:
+Rows one **fixed** set needs for an 80 % chance to certify r when its true error rate is r′ (the power saw-tooths in n; the number is where it stays at or above 80 % up to twice that n). The procedure in A2 chooses its set from the data and stops at the first cut that fails, so this power is an upper bound on its power, and these row counts are a lower bound on the rows it needs:
 
 | target risk r | r′ | rows for 80 % power, one fixed set |
 |---|---|---:|
@@ -25,35 +25,35 @@ Rows one **fixed** set needs for an 80 % chance to certify r when its true error
 | 2 % | 0.5 % | 386 |
 | 2 % | 1 % | 1,091 |
 | 5 % | 0 | 59 |
-| 5 % | 1 % | 124 |
+| 5 % | 1.25 % | 153 |
 | 5 % | 2.5 % | 434 |
 
 ## A2. The certification procedure itself (simulated)
 
-`coverage_at_risk` (#98) on a calibration half, applied to a test half of the same size. Confidences are continuous; the top 50 % of rows err at r′, the rest at 20 %; so at most 50 % of a half can be automated. 500 simulated datasets per cell (Monte Carlo SE of a share: at most 2.2 points). *Violation* = a threshold whose true error rate above it exceeds r; the guarantee allows it 5 % of the time.
+`coverage_at_risk` (#98) on a calibration half, applied to a test half of the same size. Confidences are continuous; the top 50 % of rows err at r′, the rest at 20 %. The most a half can automate with a true error rate still at most r is the slice plus as many other rows as r allows: 53 % at 1 %, 56 % at 2 %, 67 % at 5 % when r′ = 0. With continuous confidences the first cut the procedure tests holds exactly the rows zero errors need (299 at 1 %), all inside the slice, and passes only if they hold no error, so P(certifies) = (1 − r′)^rows, exactly; the simulated share is printed next to it as a check. 500 simulated datasets per cell (Monte Carlo SE of a share: at most 2.2 points). Coverage is on the test half, given that the procedure certified; mean coverage counts a run that certified nothing as 0. *Violation* = a threshold whose true error rate above it exceeds r; the guarantee allows it 5 % of the time.
 
-| r | r′ | rows per half | P(certifies) | median coverage | mean coverage | violations |
-|---|---|---:|---:|---:|---:|---:|
-| 1 % | 0 | 950 | 100 % | 51 % | 51 % | 2.2 % |
-| 1 % | 0.25 % | 950 | 48 % | 0 % | 22 % | 3.4 % |
-| 1 % | 0.5 % | 950 | 23 % | 0 % | 10 % | 1.4 % |
-| 1 % | 0 | 1,540 | 100 % | 51 % | 51 % | 2.0 % |
-| 1 % | 0.25 % | 1,540 | 51 % | 19 % | 21 % | 2.0 % |
-| 1 % | 0.5 % | 1,540 | 23 % | 0 % | 8 % | 1.2 % |
-| 2 % | 0 | 950 | 100 % | 52 % | 52 % | 2.4 % |
-| 2 % | 0.5 % | 950 | 49 % | 0 % | 19 % | 2.0 % |
-| 2 % | 1 % | 950 | 23 % | 0 % | 7 % | 0.8 % |
-| 2 % | 0 | 1,540 | 100 % | 53 % | 53 % | 3.0 % |
-| 2 % | 0.5 % | 1,540 | 50 % | 9 % | 17 % | 1.2 % |
-| 2 % | 1 % | 1,540 | 23 % | 0 % | 5 % | 1.0 % |
-| 5 % | 0 | 950 | 100 % | 60 % | 61 % | 4.8 % |
-| 5 % | 1 % | 950 | 55 % | 7 % | 24 % | 2.8 % |
-| 5 % | 2.5 % | 950 | 24 % | 0 % | 5 % | 0.8 % |
-| 5 % | 0 | 1,540 | 100 % | 62 % | 62 % | 3.6 % |
-| 5 % | 1 % | 1,540 | 56 % | 4 % | 24 % | 1.8 % |
-| 5 % | 2.5 % | 1,540 | 25 % | 0 % | 4 % | 0.2 % |
+| r | r′ | rows per half | P(certifies), exact | simulated | coverage if certified (median) | mean coverage | violations |
+|---|---|---:|---:|---:|---:|---:|---:|
+| 1 % | 0 | 950 | 100 % | 100 % | 51 % | 51 % | 2.2 % |
+| 1 % | 0.25 % | 950 | 47 % | 48 % | 49 % | 22 % | 3.4 % |
+| 1 % | 0.5 % | 950 | 22 % | 23 % | 46 % | 10 % | 1.4 % |
+| 1 % | 0 | 1,540 | 100 % | 100 % | 51 % | 51 % | 2.0 % |
+| 1 % | 0.25 % | 1,540 | 47 % | 51 % | 50 % | 21 % | 2.0 % |
+| 1 % | 0.5 % | 1,540 | 22 % | 23 % | 31 % | 8 % | 1.2 % |
+| 2 % | 0 | 950 | 100 % | 100 % | 52 % | 52 % | 2.4 % |
+| 2 % | 0.5 % | 950 | 47 % | 49 % | 50 % | 19 % | 2.0 % |
+| 2 % | 1 % | 950 | 22 % | 23 % | 24 % | 7 % | 0.8 % |
+| 2 % | 0 | 1,540 | 100 % | 100 % | 53 % | 53 % | 3.0 % |
+| 2 % | 0.5 % | 1,540 | 47 % | 50 % | 50 % | 17 % | 1.2 % |
+| 2 % | 1 % | 1,540 | 22 % | 23 % | 14 % | 5 % | 1.0 % |
+| 5 % | 0 | 950 | 100 % | 100 % | 60 % | 61 % | 4.8 % |
+| 5 % | 1.25 % | 950 | 48 % | 46 % | 54 % | 18 % | 2.4 % |
+| 5 % | 2.5 % | 950 | 22 % | 24 % | 9 % | 5 % | 1.0 % |
+| 5 % | 0 | 1,540 | 100 % | 100 % | 62 % | 62 % | 3.6 % |
+| 5 % | 1.25 % | 1,540 | 48 % | 49 % | 55 % | 17 % | 0.8 % |
+| 5 % | 2.5 % | 1,540 | 22 % | 24 % | 6 % | 4 % | 0.6 % |
 
-**Read it this way.** With no error in the automatable slice the procedure certifies every time and automates 51 % to 62 % of a half (median). With a true error rate a quarter of the target it certifies 48 % to 51 % of the time, and at half the target 23 % to 25 %; the median coverage there is 0 %. The reason is where the sequence starts: #98 starts at the smallest cut that could pass (299 rows at 1 %, where it must hold zero errors), and with continuous confidences one early error ends the walk before any larger cut is tried. The guarantee holds: the largest violation rate in the table is 4.8 %, against the 5 % allowed. Starting the sequence at a later, pre-registered cut keeps the guarantee and should certify more often when the slice is not error-free; that choice, and its effect in this simulation, belong in the plan.
+**Read it this way.** With no error in the automatable slice the procedure certifies 100 % of the time and then automates 51 % to 62 % of a half (median). With a true error rate a quarter of the target it certifies 47 % to 48 % of the time, and at half the target 22 %; when it does certify there, it automates 6 % to 46 %. The reason is where the sequence starts: #98 starts at the smallest cut that could pass (299 rows at 1 %, where it must hold zero errors), and with continuous confidences one error among those rows ends the walk before any larger cut is tried. The largest violation rate in the table is 4.8 %, which stays within the 5 % allowed. Starting the sequence at a later, pre-registered cut keeps the guarantee and should certify more often when the slice is not error-free; that choice, and its effect in this simulation, belong in the plan.
 
 ## B. Paired AUROC: the smallest difference resolved
 
@@ -61,42 +61,42 @@ Two confidence methods on the same decisions, latent AUROCs 0.7 and 0.75. Ties "
 
 | ties | accuracy | ρ | n | errors | AUROC A | AUROC B | SD(Δ) | MDE |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| no ties | 85 % | 0.3 | 950 | 143 | 0.699 | 0.748 | 0.0272 | **0.076** |
-| no ties | 85 % | 0.3 | 1,540 | 231 | 0.699 | 0.748 | 0.0214 | **0.060** |
-| no ties | 85 % | 0.3 | 1,900 | 285 | 0.699 | 0.748 | 0.0192 | **0.054** |
-| no ties | 85 % | 0.3 | 3,079 | 462 | 0.699 | 0.748 | 0.0151 | **0.042** |
-| no ties | 85 % | 0.7 | 950 | 143 | 0.699 | 0.748 | 0.0185 | **0.052** |
-| no ties | 85 % | 0.7 | 1,540 | 231 | 0.699 | 0.748 | 0.0145 | **0.041** |
-| no ties | 85 % | 0.7 | 1,900 | 285 | 0.699 | 0.748 | 0.0131 | **0.037** |
-| no ties | 85 % | 0.7 | 3,079 | 462 | 0.699 | 0.748 | 0.0103 | **0.029** |
-| no ties | 93 % | 0.3 | 950 | 66 | 0.697 | 0.746 | 0.0380 | **0.106** |
-| no ties | 93 % | 0.3 | 1,540 | 108 | 0.697 | 0.746 | 0.0299 | **0.084** |
-| no ties | 93 % | 0.3 | 1,900 | 133 | 0.697 | 0.746 | 0.0269 | **0.075** |
-| no ties | 93 % | 0.3 | 3,079 | 216 | 0.697 | 0.746 | 0.0211 | **0.059** |
-| no ties | 93 % | 0.7 | 950 | 66 | 0.697 | 0.746 | 0.0259 | **0.073** |
-| no ties | 93 % | 0.7 | 1,540 | 108 | 0.697 | 0.746 | 0.0203 | **0.057** |
-| no ties | 93 % | 0.7 | 1,900 | 133 | 0.697 | 0.746 | 0.0183 | **0.051** |
-| no ties | 93 % | 0.7 | 3,079 | 216 | 0.697 | 0.746 | 0.0144 | **0.040** |
-| 6 levels | 85 % | 0.3 | 950 | 143 | 0.686 | 0.736 | 0.0282 | **0.079** |
-| 6 levels | 85 % | 0.3 | 1,540 | 231 | 0.686 | 0.736 | 0.0221 | **0.062** |
-| 6 levels | 85 % | 0.3 | 1,900 | 285 | 0.686 | 0.736 | 0.0199 | **0.056** |
-| 6 levels | 85 % | 0.3 | 3,079 | 462 | 0.686 | 0.736 | 0.0157 | **0.044** |
-| 6 levels | 85 % | 0.7 | 950 | 143 | 0.686 | 0.736 | 0.0200 | **0.056** |
-| 6 levels | 85 % | 0.7 | 1,540 | 231 | 0.686 | 0.736 | 0.0157 | **0.044** |
-| 6 levels | 85 % | 0.7 | 1,900 | 285 | 0.686 | 0.736 | 0.0141 | **0.040** |
-| 6 levels | 85 % | 0.7 | 3,079 | 462 | 0.686 | 0.736 | 0.0111 | **0.031** |
-| 6 levels | 93 % | 0.3 | 950 | 66 | 0.686 | 0.735 | 0.0395 | **0.111** |
-| 6 levels | 93 % | 0.3 | 1,540 | 108 | 0.686 | 0.735 | 0.0310 | **0.087** |
-| 6 levels | 93 % | 0.3 | 1,900 | 133 | 0.686 | 0.735 | 0.0279 | **0.078** |
-| 6 levels | 93 % | 0.3 | 3,079 | 216 | 0.686 | 0.735 | 0.0219 | **0.061** |
-| 6 levels | 93 % | 0.7 | 950 | 66 | 0.686 | 0.734 | 0.0281 | **0.079** |
-| 6 levels | 93 % | 0.7 | 1,540 | 108 | 0.686 | 0.734 | 0.0220 | **0.062** |
-| 6 levels | 93 % | 0.7 | 1,900 | 133 | 0.686 | 0.734 | 0.0198 | **0.056** |
-| 6 levels | 93 % | 0.7 | 3,079 | 216 | 0.686 | 0.734 | 0.0156 | **0.044** |
+| no ties | 85 % | 0.3 | 950 | 143 | 0.700 | 0.748 | 0.0271 | **0.076** |
+| no ties | 85 % | 0.3 | 1,540 | 231 | 0.700 | 0.748 | 0.0213 | **0.060** |
+| no ties | 85 % | 0.3 | 1,900 | 285 | 0.700 | 0.748 | 0.0192 | **0.054** |
+| no ties | 85 % | 0.3 | 3,079 | 462 | 0.700 | 0.748 | 0.0151 | **0.042** |
+| no ties | 85 % | 0.7 | 950 | 143 | 0.700 | 0.749 | 0.0184 | **0.051** |
+| no ties | 85 % | 0.7 | 1,540 | 231 | 0.700 | 0.749 | 0.0144 | **0.040** |
+| no ties | 85 % | 0.7 | 1,900 | 285 | 0.700 | 0.749 | 0.0130 | **0.036** |
+| no ties | 85 % | 0.7 | 3,079 | 462 | 0.700 | 0.749 | 0.0102 | **0.029** |
+| no ties | 93 % | 0.3 | 950 | 66 | 0.697 | 0.750 | 0.0378 | **0.106** |
+| no ties | 93 % | 0.3 | 1,540 | 108 | 0.697 | 0.750 | 0.0297 | **0.083** |
+| no ties | 93 % | 0.3 | 1,900 | 133 | 0.697 | 0.750 | 0.0268 | **0.075** |
+| no ties | 93 % | 0.3 | 3,079 | 216 | 0.697 | 0.750 | 0.0210 | **0.059** |
+| no ties | 93 % | 0.7 | 950 | 66 | 0.697 | 0.749 | 0.0257 | **0.072** |
+| no ties | 93 % | 0.7 | 1,540 | 108 | 0.697 | 0.749 | 0.0201 | **0.056** |
+| no ties | 93 % | 0.7 | 1,900 | 133 | 0.697 | 0.749 | 0.0181 | **0.051** |
+| no ties | 93 % | 0.7 | 3,079 | 216 | 0.697 | 0.749 | 0.0142 | **0.040** |
+| 6 levels | 85 % | 0.3 | 950 | 143 | 0.688 | 0.735 | 0.0282 | **0.079** |
+| 6 levels | 85 % | 0.3 | 1,540 | 231 | 0.688 | 0.735 | 0.0222 | **0.062** |
+| 6 levels | 85 % | 0.3 | 1,900 | 285 | 0.688 | 0.735 | 0.0200 | **0.056** |
+| 6 levels | 85 % | 0.3 | 3,079 | 462 | 0.688 | 0.735 | 0.0157 | **0.044** |
+| 6 levels | 85 % | 0.7 | 950 | 143 | 0.688 | 0.736 | 0.0200 | **0.056** |
+| 6 levels | 85 % | 0.7 | 1,540 | 231 | 0.688 | 0.736 | 0.0157 | **0.044** |
+| 6 levels | 85 % | 0.7 | 1,900 | 285 | 0.688 | 0.736 | 0.0141 | **0.040** |
+| 6 levels | 85 % | 0.7 | 3,079 | 462 | 0.688 | 0.736 | 0.0111 | **0.031** |
+| 6 levels | 93 % | 0.3 | 950 | 66 | 0.686 | 0.738 | 0.0394 | **0.110** |
+| 6 levels | 93 % | 0.3 | 1,540 | 108 | 0.686 | 0.738 | 0.0309 | **0.087** |
+| 6 levels | 93 % | 0.3 | 1,900 | 133 | 0.686 | 0.738 | 0.0279 | **0.078** |
+| 6 levels | 93 % | 0.3 | 3,079 | 216 | 0.686 | 0.738 | 0.0219 | **0.061** |
+| 6 levels | 93 % | 0.7 | 950 | 66 | 0.686 | 0.737 | 0.0280 | **0.078** |
+| 6 levels | 93 % | 0.7 | 1,540 | 108 | 0.686 | 0.737 | 0.0220 | **0.062** |
+| 6 levels | 93 % | 0.7 | 1,900 | 133 | 0.686 | 0.737 | 0.0198 | **0.055** |
+| 6 levels | 93 % | 0.7 | 3,079 | 216 | 0.686 | 0.737 | 0.0155 | **0.044** |
 
-At n = 3,079 the MDE is 0.029 to 0.061; a latent gap of 0.05 is resolvable in 6 of 8 cells: no ties, accuracy 85 %, ρ 0.3; no ties, accuracy 85 %, ρ 0.7; no ties, accuracy 93 %, ρ 0.7; 6 levels, accuracy 85 %, ρ 0.3; 6 levels, accuracy 85 %, ρ 0.7; 6 levels, accuracy 93 %, ρ 0.7.
+At n = 3,079 the MDE is 0.029 to 0.061; the gap between the two methods (latent 0.05, 0.047 to 0.053 after ties) is resolvable in 6 of 8 cells: no ties, accuracy 85 %, ρ 0.3; no ties, accuracy 85 %, ρ 0.7; no ties, accuracy 93 %, ρ 0.7; 6 levels, accuracy 85 %, ρ 0.3; 6 levels, accuracy 85 %, ρ 0.7; 6 levels, accuracy 93 %, ρ 0.7.
 
-At n = 1,900 the MDE is 0.037 to 0.078; a latent gap of 0.05 is resolvable in 2 of 8 cells: no ties, accuracy 85 %, ρ 0.7; 6 levels, accuracy 85 %, ρ 0.7.
+At n = 1,900 the MDE is 0.036 to 0.078; the gap between the two methods (latent 0.05, 0.047 to 0.053 after ties) is resolvable in 3 of 8 cells: no ties, accuracy 85 %, ρ 0.7; no ties, accuracy 93 %, ρ 0.7; 6 levels, accuracy 85 %, ρ 0.7.
 
 What drives it is the number of **errors**, not rows: at 93 % accuracy 3,079 rows hold about 216.
 
@@ -106,22 +106,22 @@ Two judges on the same rows, overconfident by 0.05 and 0.08. Each draws its conf
 
 | ρ | n | true ECE A | mean ECE A | true ECE B | mean ECE B | SD(Δ) | MDE |
 |---:|---:|---:|---:|---:|---:|---:|---:|
-| 0.3 | 950 | 0.050 | 0.0513 | 0.080 | 0.0814 | 0.0153 | **0.043** ± 0.001 |
-| 0.3 | 1,540 | 0.050 | 0.0515 | 0.080 | 0.0804 | 0.0120 | **0.034** ± 0.001 |
-| 0.3 | 1,900 | 0.050 | 0.0511 | 0.080 | 0.0807 | 0.0108 | **0.030** ± 0.001 |
-| 0.3 | 3,079 | 0.050 | 0.0504 | 0.080 | 0.0800 | 0.0088 | **0.025** ± 0.001 |
-| 0.7 | 950 | 0.050 | 0.0526 | 0.080 | 0.0818 | 0.0128 | **0.036** ± 0.001 |
-| 0.7 | 1,540 | 0.050 | 0.0512 | 0.080 | 0.0803 | 0.0102 | **0.029** ± 0.001 |
-| 0.7 | 1,900 | 0.050 | 0.0510 | 0.080 | 0.0805 | 0.0093 | **0.026** ± 0.001 |
-| 0.7 | 3,079 | 0.050 | 0.0503 | 0.080 | 0.0800 | 0.0072 | **0.020** ± 0.001 |
+| 0.3 | 950 | 0.050 | 0.0524 | 0.080 | 0.0814 | 0.0148 | **0.041** ± 0.001 |
+| 0.3 | 1,540 | 0.050 | 0.0513 | 0.080 | 0.0808 | 0.0118 | **0.033** ± 0.001 |
+| 0.3 | 1,900 | 0.050 | 0.0507 | 0.080 | 0.0799 | 0.0107 | **0.030** ± 0.001 |
+| 0.3 | 3,079 | 0.050 | 0.0503 | 0.080 | 0.0800 | 0.0085 | **0.024** ± 0.001 |
+| 0.7 | 950 | 0.050 | 0.0517 | 0.080 | 0.0820 | 0.0123 | **0.034** ± 0.001 |
+| 0.7 | 1,540 | 0.050 | 0.0514 | 0.080 | 0.0807 | 0.0103 | **0.029** ± 0.001 |
+| 0.7 | 1,900 | 0.050 | 0.0506 | 0.080 | 0.0800 | 0.0093 | **0.026** ± 0.001 |
+| 0.7 | 3,079 | 0.050 | 0.0509 | 0.080 | 0.0806 | 0.0068 | **0.019** ± 0.000 |
 
-The binned ECE's bias against the true gap is at most 0.0026 here.
-At n = 3,079 the ECE MDE is 0.020 to 0.025.
+The binned ECE's bias against the true gap is at most 0.0024 here.
+At n = 3,079 the ECE MDE is 0.019 to 0.024.
 At n = 1,900 the ECE MDE is 0.026 to 0.030.
 
 ## What the plan takes from this (proposals for `docs/v05-plan.md`)
 
 - **n**: every distinct text, 3,079 for BANKING77 and 1,900 for CLINC150; paired comparisons use all of them, certification uses halves.
 - **Certification**: at 1 % zero errors certify from 299 automated rows and each further error costs about 129–174 more; the table in A2 shows how often the procedure succeeds at each target. The plan states which targets are primary per dataset on that basis, and where the fixed sequence starts.
-- **Smallest differences stated before the runs**: paired AUROC 0.029 to 0.061 on BANKING77 and 0.037 to 0.078 on CLINC150; ECE 0.020 to 0.025 and 0.026 to 0.030 (80 % power, α = 0.05). The plan states the MDE of the cell the pilot matches; a smaller observed difference is reported as not resolved, not as no difference.
+- **Smallest differences stated before the runs**: paired AUROC 0.029 to 0.061 on BANKING77 and 0.036 to 0.078 on CLINC150; ECE 0.019 to 0.024 and 0.026 to 0.030 (80 % power, α = 0.05). The plan states the MDE of the cell the pilot matches; a smaller observed difference is reported as not resolved, not as no difference.
 - **Caveat**: A2, B and C assume the shapes above; the pilot's estimates replace them before the plan is frozen.
