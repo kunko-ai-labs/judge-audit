@@ -13,8 +13,8 @@ Accuracy alone does not answer it, and neither does the average calibration erro
 
 | Page | In one line |
 |---|---|
-| [Three ways to read a chat model's confidence](confidence-methods.md) | The same model, asked three ways (the number it writes, the probability of its answer tokens, how often it repeats its answer), on the same rows. Is the v0.4 gap the model or the method? |
-| [How much can you automate at error ≤ X %?](automation-at-risk.md) | A threshold chosen on one half of the data, certified on the other with an exact binomial bound, instead of an ECE nobody can act on. |
+| [Three ways to read a chat model's confidence](confidence-methods.md) | The same model, read up to three ways (the number it writes, how often it repeats its answer, and, for open-weight models run locally, the probability of its answer tokens), on the same rows. Is the v0.4 gap the model or the method? |
+| [How much can you automate at error ≤ X %?](automation-at-risk.md) | A threshold chosen and certified on one half of the data with an exact binomial bound, then applied unchanged to the other half, which reports its own bound; instead of an ECE nobody can act on. |
 | [Judgment models against chat models, paired](judgment-models-vs-llms.md) | Jev and Laya return a probability per option by design; chat models do not. Compared on the same rows with paired tests, not by eyeballing intervals. |
 | [What runs where](where-to-run.md) | Which judges run on a laptop, which need a key, which need neither, and what CI checks. |
 | [Use it in your own workflow](use-in-your-workflow.md) | CLI, Python package, GitHub Action, MCP server for agents. |
@@ -47,4 +47,4 @@ Everything else (prompt templates, repeats, the fine-tuned learning curve, delib
 
 "On `main`" means available from source; the PyPI package is still v0.4.0 until v0.5 is released.
 
-**No v0.5 number has been measured yet.** The figures in this folder are of four kinds, each with its source next to it: v0.4 published results (recomputed from committed checkpoints), the power analysis (exact computations and stated simulations, regenerated in CI), figures quoted from a cited source (Laya's README, Ying & Thomas 2022), and rules of thumb, labelled as such.
+**No v0.5 number has been measured yet.** The figures in this folder are of four kinds, each with its source next to it: v0.4 published results (recomputed from committed checkpoints), the power analysis (exact computations and stated simulations, regenerated in CI), figures quoted from a cited source (Laya's README, Ying & Thomas 2022, and the findings of the papers in the [reading list](reading-list.md), such as Xiong et al. 2024 on verbalized confidence), and rules of thumb, labelled as such.

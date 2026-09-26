@@ -1,6 +1,6 @@
 # How much can you automate at error ≤ X %?
 
-**Short version.** A team deploying a judge does not ask "what is its ECE?". It asks: *if I let it decide alone whenever it is confident enough, what share of my traffic does it handle, and how often will those automatic decisions be wrong?* v0.5 answers that directly: choose the confidence threshold on one half of the data, then **certify** on the other half, with an exact binomial bound, that the automated decisions err at most X % of the time. The answer has the shape a manager can act on: "Y % of tickets, error at most X %, with 95 % confidence".
+**Short version.** A team deploying a judge does not ask "what is its ECE?". It asks: *if I let it decide alone whenever it is confident enough, what share of my traffic does it handle, and how often will those automatic decisions be wrong?* v0.5 answers that directly: on one half of the data, choose the confidence threshold and **certify**, with an exact binomial bound, that the decisions above it err at most X % of the time; then apply that threshold unchanged to the other half, which no row of it helped choose, and report the coverage and error bound it gets there. The answer has the shape a manager can act on: "Y % of tickets, error at most X %, with 95 % confidence".
 
 ## Why not ECE
 

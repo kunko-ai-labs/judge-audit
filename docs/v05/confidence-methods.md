@@ -1,6 +1,6 @@
 # Three ways to read a chat model's confidence
 
-**Short version.** v0.4 measured every chat model by the number it writes ("confidence: 0.9") and Jev by the probability its model assigns to the chosen option. Part of Jev's lead may therefore be the *method*, not the *model*. v0.5 reads each chat model's confidence three ways, on the same rows, and compares the methods **within the same model**. That comparison does not depend on any vendor, the literature has not settled it, and it answers the question this repository asks: can a judge's declared confidence decide what to automate?
+**Short version.** v0.4 measured every chat model by the number it writes ("confidence: 0.9") and Jev by the probability its model assigns to the chosen option. Part of Jev's lead may therefore be the *method*, not the *model*. v0.5 reads each chat model's confidence more than one way, on the same rows, and compares the methods **within the same model**: open-weight models run locally are read all three ways; hosted models (Claude, Gemini, GPT-5) two ways, verbalized and self-consistency, because no judge here reads a hosted model's token probabilities yet. That comparison does not depend on any vendor, the literature has not settled it, and it answers the question this repository asks: can a judge's declared confidence decide what to automate?
 
 ## The three methods
 
