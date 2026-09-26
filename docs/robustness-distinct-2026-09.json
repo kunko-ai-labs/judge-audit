@@ -1,0 +1,1391 @@
+{
+  "email-clean": {
+    "rows": 200,
+    "distinct_texts": 161,
+    "judges": {
+      "jev": {
+        "all": {
+          "n": 200,
+          "accuracy": 1.0,
+          "accuracy_ci": [
+            0.9817,
+            1.0
+          ],
+          "accuracy_ci_method": "clopper-pearson",
+          "zero_error_coverage": 1.0,
+          "zero_error_coverage_ci": [
+            0.9817,
+            1.0
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.996,
+          "mean_conf_wrong": null,
+          "ece": 0.0036
+        },
+        "distinct": {
+          "n": 161,
+          "accuracy": 1.0,
+          "accuracy_ci": [
+            0.9773,
+            1.0
+          ],
+          "accuracy_ci_method": "clopper-pearson",
+          "zero_error_coverage": 1.0,
+          "zero_error_coverage_ci": [
+            0.9773,
+            1.0
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.996,
+          "mean_conf_wrong": null,
+          "ece": 0.0044
+        }
+      },
+      "claude-sonnet-4.5": {
+        "all": {
+          "n": 200,
+          "accuracy": 1.0,
+          "accuracy_ci": [
+            0.9817,
+            1.0
+          ],
+          "accuracy_ci_method": "clopper-pearson",
+          "zero_error_coverage": 1.0,
+          "zero_error_coverage_ci": [
+            0.9817,
+            1.0
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.971,
+          "mean_conf_wrong": null,
+          "ece": 0.029
+        },
+        "distinct": {
+          "n": 161,
+          "accuracy": 1.0,
+          "accuracy_ci": [
+            0.9773,
+            1.0
+          ],
+          "accuracy_ci_method": "clopper-pearson",
+          "zero_error_coverage": 1.0,
+          "zero_error_coverage_ci": [
+            0.9773,
+            1.0
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.974,
+          "mean_conf_wrong": null,
+          "ece": 0.0263
+        }
+      },
+      "deberta-nli": {
+        "all": {
+          "n": 200,
+          "accuracy": 0.865,
+          "accuracy_ci": [
+            0.8083,
+            0.9159
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.515,
+          "zero_error_coverage_ci": [
+            0.4145,
+            0.641
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.74,
+          "mean_conf_wrong": 0.504,
+          "ece": 0.1765
+        },
+        "distinct": {
+          "n": 161,
+          "accuracy": 0.8385,
+          "accuracy_ci": [
+            0.7825,
+            0.8944
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.5155,
+          "zero_error_coverage_ci": [
+            0.4472,
+            0.6273
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.764,
+          "mean_conf_wrong": 0.505,
+          "ece": 0.1474
+        }
+      },
+      "deepseek-r1": {
+        "all": {
+          "n": 200,
+          "accuracy": 1.0,
+          "accuracy_ci": [
+            0.9817,
+            1.0
+          ],
+          "accuracy_ci_method": "clopper-pearson",
+          "zero_error_coverage": 1.0,
+          "zero_error_coverage_ci": [
+            0.9817,
+            1.0
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.948,
+          "mean_conf_wrong": null,
+          "ece": 0.0519
+        },
+        "distinct": {
+          "n": 161,
+          "accuracy": 1.0,
+          "accuracy_ci": [
+            0.9773,
+            1.0
+          ],
+          "accuracy_ci_method": "clopper-pearson",
+          "zero_error_coverage": 1.0,
+          "zero_error_coverage_ci": [
+            0.9773,
+            1.0
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.95,
+          "mean_conf_wrong": null,
+          "ece": 0.0499
+        }
+      },
+      "gemini-3-flash": {
+        "all": {
+          "n": 200,
+          "accuracy": 1.0,
+          "accuracy_ci": [
+            0.9817,
+            1.0
+          ],
+          "accuracy_ci_method": "clopper-pearson",
+          "zero_error_coverage": 1.0,
+          "zero_error_coverage_ci": [
+            0.9817,
+            1.0
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.995,
+          "mean_conf_wrong": null,
+          "ece": 0.0047
+        },
+        "distinct": {
+          "n": 161,
+          "accuracy": 1.0,
+          "accuracy_ci": [
+            0.9773,
+            1.0
+          ],
+          "accuracy_ci_method": "clopper-pearson",
+          "zero_error_coverage": 1.0,
+          "zero_error_coverage_ci": [
+            0.9773,
+            1.0
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.996,
+          "mean_conf_wrong": null,
+          "ece": 0.0038
+        }
+      },
+      "gemma4": {
+        "all": {
+          "n": 200,
+          "accuracy": 1.0,
+          "accuracy_ci": [
+            0.9817,
+            1.0
+          ],
+          "accuracy_ci_method": "clopper-pearson",
+          "zero_error_coverage": 1.0,
+          "zero_error_coverage_ci": [
+            0.9817,
+            1.0
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.974,
+          "mean_conf_wrong": null,
+          "ece": 0.0258
+        },
+        "distinct": {
+          "n": 161,
+          "accuracy": 1.0,
+          "accuracy_ci": [
+            0.9773,
+            1.0
+          ],
+          "accuracy_ci_method": "clopper-pearson",
+          "zero_error_coverage": 1.0,
+          "zero_error_coverage_ci": [
+            0.9773,
+            1.0
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.975,
+          "mean_conf_wrong": null,
+          "ece": 0.0245
+        }
+      },
+      "llama-3.3-70b": {
+        "all": {
+          "n": 200,
+          "accuracy": 1.0,
+          "accuracy_ci": [
+            0.9817,
+            1.0
+          ],
+          "accuracy_ci_method": "clopper-pearson",
+          "zero_error_coverage": 1.0,
+          "zero_error_coverage_ci": [
+            0.9817,
+            1.0
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.909,
+          "mean_conf_wrong": null,
+          "ece": 0.0909
+        },
+        "distinct": {
+          "n": 161,
+          "accuracy": 1.0,
+          "accuracy_ci": [
+            0.9773,
+            1.0
+          ],
+          "accuracy_ci_method": "clopper-pearson",
+          "zero_error_coverage": 1.0,
+          "zero_error_coverage_ci": [
+            0.9773,
+            1.0
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.912,
+          "mean_conf_wrong": null,
+          "ece": 0.0881
+        }
+      },
+      "llama32": {
+        "all": {
+          "n": 200,
+          "accuracy": 0.9,
+          "accuracy_ci": [
+            0.7783,
+            1.0
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            1.0
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.868,
+          "mean_conf_wrong": 0.845,
+          "ece": 0.034
+        },
+        "distinct": {
+          "n": 161,
+          "accuracy": 0.9876,
+          "accuracy_ci": [
+            0.9689,
+            1.0
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            1.0
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.875,
+          "mean_conf_wrong": 0.85,
+          "ece": 0.1124
+        }
+      }
+    }
+  },
+  "email-adversarial": {
+    "rows": 200,
+    "distinct_texts": 189,
+    "judges": {
+      "jev": {
+        "all": {
+          "n": 200,
+          "accuracy": 0.955,
+          "accuracy_ci": [
+            0.925,
+            0.9802
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.73,
+          "zero_error_coverage_ci": [
+            0.6701,
+            0.94
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.933,
+          "mean_conf_wrong": 0.597,
+          "ece": 0.0389
+        },
+        "distinct": {
+          "n": 189,
+          "accuracy": 0.9524,
+          "accuracy_ci": [
+            0.9206,
+            0.9788
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.7196,
+          "zero_error_coverage_ci": [
+            0.6614,
+            0.9365
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.931,
+          "mean_conf_wrong": 0.597,
+          "ece": 0.0393
+        }
+      },
+      "claude-sonnet-4.5": {
+        "all": {
+          "n": 200,
+          "accuracy": 0.965,
+          "accuracy_ci": [
+            0.9391,
+            0.9898
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.9086
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.957,
+          "mean_conf_wrong": 0.877,
+          "ece": 0.0159
+        },
+        "distinct": {
+          "n": 189,
+          "accuracy": 0.963,
+          "accuracy_ci": [
+            0.9365,
+            0.9894
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.9048
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.957,
+          "mean_conf_wrong": 0.877,
+          "ece": 0.0145
+        }
+      },
+      "deberta-nli": {
+        "all": {
+          "n": 200,
+          "accuracy": 0.595,
+          "accuracy_ci": [
+            0.517,
+            0.6667
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.08,
+          "zero_error_coverage_ci": [
+            0.0391,
+            0.16
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.731,
+          "mean_conf_wrong": 0.559,
+          "ece": 0.1247
+        },
+        "distinct": {
+          "n": 189,
+          "accuracy": 0.5979,
+          "accuracy_ci": [
+            0.5238,
+            0.6667
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0688,
+          "zero_error_coverage_ci": [
+            0.037,
+            0.1429
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.73,
+          "mean_conf_wrong": 0.539,
+          "ece": 0.1101
+        }
+      },
+      "deepseek-r1": {
+        "all": {
+          "n": 200,
+          "accuracy": 0.805,
+          "accuracy_ci": [
+            0.7476,
+            0.8564
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0183
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.939,
+          "mean_conf_wrong": 0.9,
+          "ece": 0.1265
+        },
+        "distinct": {
+          "n": 189,
+          "accuracy": 0.7989,
+          "accuracy_ci": [
+            0.7407,
+            0.8519
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0193
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.94,
+          "mean_conf_wrong": 0.903,
+          "ece": 0.1336
+        }
+      },
+      "finetuned-deberta": {
+        "all": {
+          "n": 200,
+          "accuracy": 0.97,
+          "accuracy_ci": [
+            0.9444,
+            0.9902
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.97,
+          "zero_error_coverage_ci": [
+            0.9444,
+            0.9902
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.484,
+          "mean_conf_wrong": 0.15,
+          "ece": 0.4961
+        },
+        "distinct": {
+          "n": 189,
+          "accuracy": 0.9683,
+          "accuracy_ci": [
+            0.9418,
+            0.9894
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.9683,
+          "zero_error_coverage_ci": [
+            0.9418,
+            0.9894
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.478,
+          "mean_conf_wrong": 0.15,
+          "ece": 0.5007
+        }
+      },
+      "finetuned-deberta-run2": {
+        "all": {
+          "n": 200,
+          "accuracy": 0.99,
+          "accuracy_ci": [
+            0.9746,
+            1.0
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.96,
+          "zero_error_coverage_ci": [
+            0.931,
+            1.0
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.953,
+          "mean_conf_wrong": 0.614,
+          "ece": 0.048
+        },
+        "distinct": {
+          "n": 189,
+          "accuracy": 0.9894,
+          "accuracy_ci": [
+            0.9735,
+            1.0
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.9577,
+          "zero_error_coverage_ci": [
+            0.9259,
+            1.0
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.952,
+          "mean_conf_wrong": 0.614,
+          "ece": 0.0495
+        }
+      },
+      "finetuned-deberta-run2-ts": {
+        "all": {
+          "n": 200,
+          "accuracy": 0.99,
+          "accuracy_ci": [
+            0.9746,
+            1.0
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.96,
+          "zero_error_coverage_ci": [
+            0.932,
+            1.0
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.991,
+          "mean_conf_wrong": 0.918,
+          "ece": 0.017
+        },
+        "distinct": {
+          "n": 189,
+          "accuracy": 0.9894,
+          "accuracy_ci": [
+            0.9735,
+            1.0
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.9577,
+          "zero_error_coverage_ci": [
+            0.9259,
+            1.0
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.991,
+          "mean_conf_wrong": 0.918,
+          "ece": 0.018
+        }
+      },
+      "gemini-3-flash": {
+        "all": {
+          "n": 200,
+          "accuracy": 0.97,
+          "accuracy_ci": [
+            0.9447,
+            0.9902
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0183
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.982,
+          "mean_conf_wrong": 0.983,
+          "ece": 0.0151
+        },
+        "distinct": {
+          "n": 189,
+          "accuracy": 0.9683,
+          "accuracy_ci": [
+            0.9418,
+            0.9894
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0193
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.981,
+          "mean_conf_wrong": 0.983,
+          "ece": 0.0168
+        }
+      },
+      "gemma4": {
+        "all": {
+          "n": 200,
+          "accuracy": 0.81,
+          "accuracy_ci": [
+            0.755,
+            0.8641
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0183
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.961,
+          "mean_conf_wrong": 0.974,
+          "ece": 0.1534
+        },
+        "distinct": {
+          "n": 189,
+          "accuracy": 0.7989,
+          "accuracy_ci": [
+            0.7407,
+            0.8571
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0193
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.961,
+          "mean_conf_wrong": 0.974,
+          "ece": 0.165
+        }
+      },
+      "llama-3.3-70b": {
+        "all": {
+          "n": 200,
+          "accuracy": 0.905,
+          "accuracy_ci": [
+            0.8614,
+            0.945
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0183
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.899,
+          "mean_conf_wrong": 0.821,
+          "ece": 0.0155
+        },
+        "distinct": {
+          "n": 189,
+          "accuracy": 0.9048,
+          "accuracy_ci": [
+            0.8624,
+            0.9471
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0193
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.899,
+          "mean_conf_wrong": 0.822,
+          "ece": 0.0154
+        }
+      },
+      "llama32": {
+        "all": {
+          "n": 200,
+          "accuracy": 0.725,
+          "accuracy_ci": [
+            0.6517,
+            0.7969
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0183
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.869,
+          "mean_conf_wrong": 0.905,
+          "ece": 0.154
+        },
+        "distinct": {
+          "n": 189,
+          "accuracy": 0.7566,
+          "accuracy_ci": [
+            0.6931,
+            0.8201
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0193
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.869,
+          "mean_conf_wrong": 0.904,
+          "ece": 0.1212
+        }
+      }
+    }
+  },
+  "router-bare": {
+    "rows": 120,
+    "distinct_texts": 61,
+    "judges": {
+      "jev": {
+        "all": {
+          "n": 120,
+          "accuracy": 0.6667,
+          "accuracy_ci": [
+            0.5246,
+            0.8032
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.448
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.976,
+          "mean_conf_wrong": 0.926,
+          "ece": 0.3181
+        },
+        "distinct": {
+          "n": 61,
+          "accuracy": 0.7705,
+          "accuracy_ci": [
+            0.6557,
+            0.8689
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.4426
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.961,
+          "mean_conf_wrong": 0.925,
+          "ece": 0.2321
+        }
+      },
+      "claude-sonnet-4.5": {
+        "all": {
+          "n": 120,
+          "accuracy": 0.6583,
+          "accuracy_ci": [
+            0.5191,
+            0.7869
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.1032
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.926,
+          "mean_conf_wrong": 0.832,
+          "ece": 0.2353
+        },
+        "distinct": {
+          "n": 61,
+          "accuracy": 0.6885,
+          "accuracy_ci": [
+            0.5738,
+            0.8033
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0492
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.931,
+          "mean_conf_wrong": 0.848,
+          "ece": 0.217
+        }
+      },
+      "deberta-nli": {
+        "all": {
+          "n": 120,
+          "accuracy": 0.475,
+          "accuracy_ci": [
+            0.3364,
+            0.6116
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0303
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.596,
+          "mean_conf_wrong": 0.812,
+          "ece": 0.4027
+        },
+        "distinct": {
+          "n": 61,
+          "accuracy": 0.3279,
+          "accuracy_ci": [
+            0.2131,
+            0.4426
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0587
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.596,
+          "mean_conf_wrong": 0.879,
+          "ece": 0.5762
+        }
+      },
+      "deepseek-r1": {
+        "all": {
+          "n": 120,
+          "accuracy": 0.5583,
+          "accuracy_ci": [
+            0.4248,
+            0.6818
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0305
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.886,
+          "mean_conf_wrong": 0.905,
+          "ece": 0.3766
+        },
+        "distinct": {
+          "n": 61,
+          "accuracy": 0.4262,
+          "accuracy_ci": [
+            0.3115,
+            0.5574
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0587
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.893,
+          "mean_conf_wrong": 0.909,
+          "ece": 0.5182
+        }
+      },
+      "gemini-3-flash": {
+        "all": {
+          "n": 120,
+          "accuracy": 0.6667,
+          "accuracy_ci": [
+            0.5351,
+            0.7949
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0303
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.991,
+          "mean_conf_wrong": 0.965,
+          "ece": 0.3154
+        },
+        "distinct": {
+          "n": 61,
+          "accuracy": 0.7377,
+          "accuracy_ci": [
+            0.623,
+            0.8361
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0587
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.988,
+          "mean_conf_wrong": 0.959,
+          "ece": 0.2426
+        }
+      },
+      "gemma4": {
+        "all": {
+          "n": 120,
+          "accuracy": 0.5917,
+          "accuracy_ci": [
+            0.4615,
+            0.712
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0303
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.924,
+          "mean_conf_wrong": 0.954,
+          "ece": 0.3446
+        },
+        "distinct": {
+          "n": 61,
+          "accuracy": 0.4426,
+          "accuracy_ci": [
+            0.3279,
+            0.5738
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0587
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.922,
+          "mean_conf_wrong": 0.974,
+          "ece": 0.5082
+        }
+      },
+      "llama-3.3-70b": {
+        "all": {
+          "n": 120,
+          "accuracy": 0.65,
+          "accuracy_ci": [
+            0.5167,
+            0.7669
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0303
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.86,
+          "mean_conf_wrong": 0.926,
+          "ece": 0.2333
+        },
+        "distinct": {
+          "n": 61,
+          "accuracy": 0.4918,
+          "accuracy_ci": [
+            0.377,
+            0.623
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0587
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.867,
+          "mean_conf_wrong": 0.945,
+          "ece": 0.4148
+        }
+      },
+      "llama32": {
+        "all": {
+          "n": 120,
+          "accuracy": 0.6583,
+          "accuracy_ci": [
+            0.5159,
+            0.7925
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0303
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.918,
+          "mean_conf_wrong": 1.0,
+          "ece": 0.3958
+        },
+        "distinct": {
+          "n": 61,
+          "accuracy": 0.7541,
+          "accuracy_ci": [
+            0.6393,
+            0.8525
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0587
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.88,
+          "mean_conf_wrong": 1.0,
+          "ece": 0.3361
+        }
+      }
+    },
+    "segments": {
+      "all": {
+        "easy": 40,
+        "hard": 40,
+        "injected": 40
+      },
+      "distinct": {
+        "easy": 14,
+        "hard": 14,
+        "injected": 33
+      }
+    }
+  },
+  "router-described": {
+    "rows": 120,
+    "distinct_texts": 61,
+    "judges": {
+      "jev": {
+        "all": {
+          "n": 120,
+          "accuracy": 0.975,
+          "accuracy_ci": [
+            0.9189,
+            1.0
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.9417,
+          "zero_error_coverage_ci": [
+            0.8594,
+            1.0
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.931,
+          "mean_conf_wrong": 0.583,
+          "ece": 0.053
+        },
+        "distinct": {
+          "n": 61,
+          "accuracy": 0.9836,
+          "accuracy_ci": [
+            0.9508,
+            1.0
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.9672,
+          "zero_error_coverage_ci": [
+            0.918,
+            1.0
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.946,
+          "mean_conf_wrong": 0.59,
+          "ece": 0.0464
+        }
+      },
+      "claude-sonnet-4.5": {
+        "all": {
+          "n": 120,
+          "accuracy": 0.95,
+          "accuracy_ci": [
+            0.9035,
+            0.9849
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0303
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.943,
+          "mean_conf_wrong": 0.983,
+          "ece": 0.0322
+        },
+        "distinct": {
+          "n": 61,
+          "accuracy": 0.9016,
+          "accuracy_ci": [
+            0.8197,
+            0.9672
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0587
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.94,
+          "mean_conf_wrong": 0.983,
+          "ece": 0.0818
+        }
+      },
+      "deberta-nli": {
+        "all": {
+          "n": 120,
+          "accuracy": 0.4917,
+          "accuracy_ci": [
+            0.3492,
+            0.6279
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0303
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.595,
+          "mean_conf_wrong": 0.677,
+          "ece": 0.1952
+        },
+        "distinct": {
+          "n": 61,
+          "accuracy": 0.3443,
+          "accuracy_ci": [
+            0.2295,
+            0.4594
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0587
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.599,
+          "mean_conf_wrong": 0.695,
+          "ece": 0.3178
+        }
+      },
+      "deepseek-r1": {
+        "all": {
+          "n": 120,
+          "accuracy": 0.7917,
+          "accuracy_ci": [
+            0.6992,
+            0.8692
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0305
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.933,
+          "mean_conf_wrong": 0.931,
+          "ece": 0.1491
+        },
+        "distinct": {
+          "n": 61,
+          "accuracy": 0.6557,
+          "accuracy_ci": [
+            0.541,
+            0.7705
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0596
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.927,
+          "mean_conf_wrong": 0.93,
+          "ece": 0.2817
+        }
+      },
+      "gemini-3-flash": {
+        "all": {
+          "n": 120,
+          "accuracy": 0.9833,
+          "accuracy_ci": [
+            0.9554,
+            1.0
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.725,
+          "zero_error_coverage_ci": [
+            0.6063,
+            1.0
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.986,
+          "mean_conf_wrong": 0.825,
+          "ece": 0.0121
+        },
+        "distinct": {
+          "n": 61,
+          "accuracy": 0.9672,
+          "accuracy_ci": [
+            0.918,
+            1.0
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.7049,
+          "zero_error_coverage_ci": [
+            0.5902,
+            1.0
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.986,
+          "mean_conf_wrong": 0.825,
+          "ece": 0.0131
+        }
+      },
+      "gemma4": {
+        "all": {
+          "n": 120,
+          "accuracy": 0.775,
+          "accuracy_ci": [
+            0.6721,
+            0.8705
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0303
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.947,
+          "mean_conf_wrong": 0.981,
+          "ece": 0.18
+        },
+        "distinct": {
+          "n": 61,
+          "accuracy": 0.6557,
+          "accuracy_ci": [
+            0.541,
+            0.7705
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0587
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.943,
+          "mean_conf_wrong": 0.976,
+          "ece": 0.2984
+        }
+      },
+      "llama-3.3-70b": {
+        "all": {
+          "n": 120,
+          "accuracy": 0.8667,
+          "accuracy_ci": [
+            0.7845,
+            0.9339
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0303
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.901,
+          "mean_conf_wrong": 0.969,
+          "ece": 0.0433
+        },
+        "distinct": {
+          "n": 61,
+          "accuracy": 0.7869,
+          "accuracy_ci": [
+            0.6885,
+            0.8852
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0587
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.9,
+          "mean_conf_wrong": 0.977,
+          "ece": 0.1295
+        }
+      },
+      "llama32": {
+        "all": {
+          "n": 120,
+          "accuracy": 0.5917,
+          "accuracy_ci": [
+            0.4553,
+            0.7302
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0303
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.965,
+          "mean_conf_wrong": 1.0,
+          "ece": 0.4292
+        },
+        "distinct": {
+          "n": 61,
+          "accuracy": 0.6557,
+          "accuracy_ci": [
+            0.541,
+            0.7705
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0587
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.938,
+          "mean_conf_wrong": 1.0,
+          "ece": 0.3852
+        }
+      }
+    },
+    "segments": {
+      "all": {
+        "easy": 40,
+        "hard": 40,
+        "injected": 40
+      },
+      "distinct": {
+        "easy": 14,
+        "hard": 14,
+        "injected": 33
+      }
+    }
+  },
+  "headline": {
+    "gemini_zero_error_coverage": 0.0,
+    "gemini_upper": 0.0193,
+    "gemini_method": "clopper-pearson",
+    "jev_zero_error_coverage": 0.7196,
+    "jev_ci": [
+      0.6614,
+      0.9365
+    ],
+    "separated": true
+  }
+}

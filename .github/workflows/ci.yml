@@ -64,6 +64,10 @@ jobs:
         run: |
           python scripts/analyze_adversarial.py
           git diff --exit-code -- docs/audit-jev-adversarial.md docs/audit-jev-adversarial.json
+      - name: Distinct-text robustness report recomputes from the Arena checkpoints
+        run: |
+          python scripts/distinct_report.py
+          git diff --exit-code -- docs/robustness-distinct-2026-09.md docs/robustness-distinct-2026-09.json
       - name: Router audits recompute from their checkpoints
         run: |
           python scripts/audit_router.py examples/task-routing/labels.jsonl --checkpoint docs/runs/audit-jev-router.ckpt.jsonl --out docs/audit-jev-router.md --json docs/audit-jev-router.json
