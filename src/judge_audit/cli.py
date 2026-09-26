@@ -18,6 +18,7 @@ from .judges.finetuned import FinetunedJudge
 from .judges.jev import JevJudge
 from .judges.laya import LayaJudge
 from .judges.llm import LLMJudge
+from .judges.logprob import LogprobJudge
 from .judges.nli import NLIJudge
 from .judges.simulated import SIMULATED_TAG, SimulatedJudge
 from .report import (
@@ -30,7 +31,7 @@ from .report import (
 )
 from .runner import IncompleteAnswers, load_dataset, run_audit, write_judgments
 
-JUDGES = ("jev", "llm", "nli", "finetuned", "laya", "simulated")
+JUDGES = ("jev", "llm", "nli", "finetuned", "laya", "logprob", "simulated")
 
 
 def _die(msg: str) -> NoReturn:
@@ -71,6 +72,8 @@ def _judge(name: str, rows: list | None = None):
         return NLIJudge(), ""
     if name == "finetuned":
         return FinetunedJudge(), ""
+    if name == "logprob":
+        return LogprobJudge(), ""
     if name == "laya":
         return LayaJudge(), ""
     if name == "simulated":
@@ -91,7 +94,8 @@ def _parser() -> argparse.ArgumentParser:
                    help="jev: AI_GATEWAY_API_KEY (or JEV_ENDPOINT) · llm: any chat model · "
                         "nli: local zero-shot encoder (control) · finetuned: your own "
                         "classifier, FINETUNED_MODEL_DIR · laya: open judgment model, local · "
-                        "see docs/judges.md · simulated: nothing")
+                        "logprob: an open model's own option probabilities, MLX · see "
+                        "docs/judges.md · simulated: nothing")
     r.add_argument("--format", choices=["md", "html"], default="md")
     r.add_argument("--out", default=None, help="report path (default audit-report.md|html)")
     r.add_argument("--json", default="audit-result.json", help="metrics + run metadata")

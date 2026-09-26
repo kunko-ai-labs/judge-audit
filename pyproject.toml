@@ -46,6 +46,8 @@ charts = ["matplotlib>=3.7"]
 anthropic = ["anthropic>=1.0"]
 mcp = ["mcp>=2.0"]
 nli = ["transformers>=4.40", "torch>=2.2"]
+# mlx-lm pulls in mlx on macOS only; its `cpu` extra brings the Linux CPU build.
+mlx = ["mlx-lm>=0.31", "mlx-lm[cpu]>=0.31; platform_system == 'Linux'"]
 # The adapter mirrors 0.3.x internals (question rendering, token budgets); tests check them.
 laya = ["laya>=0.3.20,<0.4"]
 dev = ["pytest>=8.0", "ruff>=0.5", "mypy>=1.10", "matplotlib>=3.7", "mcp>=2.0", "PyYAML>=6.0"]
@@ -58,7 +60,10 @@ build-backend = "hatchling.build"
 packages = ["src/judge_audit"]
 
 [tool.hatch.build.targets.sdist]
-exclude = ["src/judge_audit/judges/bridge/node_modules"]
+# The third-party datasets keep their own CC BY licences; the Apache-2.0 sdist leaves them
+# out, and their tests skip without them.
+exclude = ["src/judge_audit/judges/bridge/node_modules", "examples/banking77",
+           "examples/clinc150"]
 
 [tool.ruff]
 line-length = 100

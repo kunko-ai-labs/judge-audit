@@ -314,3 +314,80 @@ def test_custom_provider_reports_a_version_only_through_its_optional_4th_element
     del j._call
     (out,) = j.decide("x", [Q])
     assert out.raw["served"] == served
+
+
+# --- LLM_EXTRA_BODY: gateway routing fields, recorded in provenance ------------------------
+
+def _gateway(monkeypatch, extra: str | None, response: dict):
+    from judge_audit.judges import llm as llm_mod
+
+    monkeypatch.setenv("LLM_PROVIDER", "openai-compatible")
+    monkeypatch.setenv("LLM_BASE_URL", "https://gateway.test/v1")
+    monkeypatch.setenv("LLM_MODEL", "vendor/model-mini")
+    if extra is None:
+        monkeypatch.delenv("LLM_EXTRA_BODY", raising=False)
+    else:
+        monkeypatch.setenv("LLM_EXTRA_BODY", extra)
+    sent: list[dict] = []
+
+    def fake_fetch(req, deadline):
+        sent.append(json.loads(req.data))
+        return response
+
+    monkeypatch.setattr(llm_mod, "_fetch_json", fake_fetch)
+    return LLMJudge(), sent
+
+
+ANSWER = '{"answers": {"category": {"decision": "spam", "confidence": 0.9}}}'
+REPLY = {"model": "vendor/model-mini", "provider": "Vendor",
+         "choices": [{"message": {"content": ANSWER}}],
+         "usage": {"prompt_tokens": 10, "completion_tokens": 5}}
+ROUTING = {"provider": {"order": ["vendor"], "allow_fallbacks": False}}
+
+
+def test_extra_body_is_sent_recorded_and_a_pinned_upstream_kept(monkeypatch):
+    j, sent = _gateway(monkeypatch, json.dumps(ROUTING), REPLY)
+    (out,) = j.decide("buy now", [Q])
+    assert sent[0]["provider"] == ROUTING["provider"] and sent[0]["temperature"] == 0
+    assert j.describe()["extra_body"] == ROUTING
+    assert out.raw["upstream_provider"] == "Vendor" and out.decision == "spam"
+
+
+def test_an_upstream_outside_the_pinned_list_fails_the_decision(monkeypatch):
+    j, _ = _gateway(monkeypatch, json.dumps(ROUTING), dict(REPLY, provider="Somewhere Else"))
+    with pytest.raises(RuntimeError, match="outside the pinned list"):
+        j.decide("buy now", [Q])
+
+
+def test_without_a_pinned_list_no_upstream_is_recorded(monkeypatch):
+    j, _ = _gateway(monkeypatch, '{"provider": {"allow_fallbacks": false}}', REPLY)
+    (out,) = j.decide("buy now", [Q])
+    assert "upstream_provider" not in out.raw
+
+
+def test_without_extra_body_nothing_changes_even_if_the_reply_names_an_upstream(monkeypatch):
+    j, sent = _gateway(monkeypatch, None, REPLY)
+    (out,) = j.decide("buy now", [Q])
+    assert "provider" not in sent[0] and "extra_body" not in j.describe()
+    assert "upstream_provider" not in out.raw
+
+
+@pytest.mark.parametrize("extra, message", [
+    ('{"temperature": 1}', "may only set"),
+    ('{"Temperature": 1, "MODEL": "other"}', "may only set"),
+    ('{"models": ["a", "b"]}', "may only set"),
+    ('{"transforms": ["middle-out"]}', "may only set"),
+    ('{"max_tokens": 5}', "may only set"),
+    ('["provider"]', "JSON object"),
+    ("{not json", "not valid JSON"),
+])
+def test_extra_body_accepts_only_a_routing_object(monkeypatch, extra, message):
+    with pytest.raises(ValueError, match=message):
+        _gateway(monkeypatch, extra, REPLY)
+
+
+def test_extra_body_is_refused_outside_openai_compatible(monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "anthropic")
+    monkeypatch.setenv("LLM_EXTRA_BODY", '{"provider": {}}')
+    with pytest.raises(ValueError, match="openai-compatible only"):
+        LLMJudge()
