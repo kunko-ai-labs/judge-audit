@@ -3,6 +3,11 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
+## [0.5.0] — unreleased (dated when tagged)
+
+### Added
+- **`LLM_EXTRA_BODY` and a log-probability smoke test** (US-005-003 #88, US-005-004 #89, groundwork). The OpenAI-compatible path of the `llm` judge merges a JSON object of extra request fields into every call (a gateway's routing fields, to pin the upstream that serves a model), refuses any field that would change the prompt or sampling, records the object in provenance (`extra_body`) and keeps the upstream a gateway reports per decision (`raw.upstream_provider`). Without the variable, requests, provenance and raw records are unchanged. `scripts/logprob_smoke.py` asks one endpoint once whether it returns token log-probabilities for a model (exit 0 yes, 1 no or ignored, 2 failed), without ever printing the key.
+
 ## [0.4.0] — 2026-09-26
 
 ### Added

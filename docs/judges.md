@@ -88,6 +88,12 @@ Register it in `src/judge_audit/cli.py` (`JUDGES` + `_judge`), add a test with t
 
 `judge-audit-mcp` exposes the same engine to any MCP client (`run_audit`, `check_drift`, `list_judges`), so an agent can audit the judge it is about to rely on from inside its own session. Setup for Claude Code and Cursor in [integrations.md](integrations.md).
 
+## Gateways, extra request fields, and a log-probability smoke test
+
+An OpenAI-compatible gateway can serve a model through more than one upstream. `LLM_EXTRA_BODY`, a JSON object, adds the request fields such a gateway needs, for instance a routing field that pins the upstream and forbids falling back to another. The adapter refuses fields that would change what the judge is asked or how it samples (`model`, `messages`, `temperature`, `top_p`, `n`, `seed`, `stream`, `response_format`, `logprobs`, `top_logprobs`), records the object in the run's provenance (`extra_body`), and keeps, per decision, the upstream the gateway says it used (`raw.upstream_provider`) when the response names one. The endpoint itself is recorded as `base_url`, as for every OpenAI-compatible run.
+
+Before a model is given the token log-probability method (#89), `python scripts/logprob_smoke.py --model <id>` asks its endpoint once, with `logprobs` and `top_logprobs` set, to answer a one-word classification. It reports whether log-probabilities came back, the served model, the upstream, the first answer token and its probability; it exits 0 when they came back, 1 when the endpoint answered without them (unsupported or silently ignored), 2 when the call failed. It reads the key from `LLM_API_KEY` and never prints or writes it.
+
 ## Token budgets and unparseable replies
 
 A reply the adapter cannot parse counts as a wrong, zero-confidence decision — the house rule — and the raw text is kept in the checkpoint. Two causes seen in the Arena, and what to do about them:

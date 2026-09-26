@@ -314,3 +314,66 @@ def test_custom_provider_reports_a_version_only_through_its_optional_4th_element
     del j._call
     (out,) = j.decide("x", [Q])
     assert out.raw["served"] == served
+
+
+# --- LLM_EXTRA_BODY: gateway routing fields, recorded in provenance ------------------------
+
+def _gateway(monkeypatch, extra: str | None, response: dict):
+    import judge_audit.judges.llm as llm_mod
+
+    monkeypatch.setenv("LLM_PROVIDER", "openai-compatible")
+    monkeypatch.setenv("LLM_BASE_URL", "https://gateway.test/v1")
+    monkeypatch.setenv("LLM_MODEL", "openai/gpt-4.1-mini")
+    if extra is None:
+        monkeypatch.delenv("LLM_EXTRA_BODY", raising=False)
+    else:
+        monkeypatch.setenv("LLM_EXTRA_BODY", extra)
+    sent: list[dict] = []
+
+    def fake_fetch(req, deadline):
+        sent.append(json.loads(req.data))
+        return response
+
+    monkeypatch.setattr(llm_mod, "_fetch_json", fake_fetch)
+    return LLMJudge(), sent
+
+
+ANSWER = '{"answers": {"category": {"decision": "spam", "confidence": 0.9}}}'
+REPLY = {"model": "openai/gpt-4.1-mini", "provider": "OpenAI",
+         "choices": [{"message": {"content": ANSWER}}],
+         "usage": {"prompt_tokens": 10, "completion_tokens": 5}}
+
+
+def test_extra_body_is_sent_recorded_and_the_upstream_kept(monkeypatch):
+    routing = {"provider": {"order": ["openai"], "allow_fallbacks": False}}
+    j, sent = _gateway(monkeypatch, json.dumps(routing), REPLY)
+    (out,) = j.decide("buy now", [Q])
+    assert sent[0]["provider"] == routing["provider"] and sent[0]["temperature"] == 0
+    assert j.describe()["extra_body"] == routing
+    assert out.raw["upstream_provider"] == "OpenAI" and out.decision == "spam"
+
+
+def test_without_extra_body_nothing_changes(monkeypatch):
+    reply = {k: v for k, v in REPLY.items() if k != "provider"}
+    j, sent = _gateway(monkeypatch, None, reply)
+    (out,) = j.decide("buy now", [Q])
+    assert "provider" not in sent[0] and "extra_body" not in j.describe()
+    assert "upstream_provider" not in out.raw
+
+
+@pytest.mark.parametrize("extra, message", [
+    ('{"temperature": 1}', "may not set"),
+    ('{"logprobs": true}', "may not set"),
+    ('["provider"]', "JSON object"),
+    ("{not json", "not valid JSON"),
+])
+def test_extra_body_cannot_change_the_prompt_or_sampling(monkeypatch, extra, message):
+    with pytest.raises(ValueError, match=message):
+        _gateway(monkeypatch, extra, REPLY)
+
+
+def test_extra_body_is_refused_outside_openai_compatible(monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "anthropic")
+    monkeypatch.setenv("LLM_EXTRA_BODY", '{"provider": {}}')
+    with pytest.raises(ValueError, match="openai-compatible only"):
+        LLMJudge()

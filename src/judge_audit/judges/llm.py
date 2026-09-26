@@ -21,7 +21,9 @@ Providers:
                      For hosted platforms without an OpenAI-compatible endpoint.
 
 Environment: LLM_PROVIDER, LLM_MODEL, LLM_MODEL_LABEL (what reports show; defaults to LLM_MODEL),
-LLM_BASE_URL, LLM_API_KEY, LLM_EFFORT (anthropic only), LLM_PROVIDER_MODULE (custom only).
+LLM_BASE_URL, LLM_API_KEY, LLM_EFFORT (anthropic only), LLM_PROVIDER_MODULE (custom only),
+LLM_EXTRA_BODY (openai-compatible only: a JSON object merged into every request, e.g. a
+gateway's routing fields; recorded in the run's provenance).
 """
 from __future__ import annotations
 
@@ -55,6 +57,31 @@ def _is_local_url(url: str) -> bool:
     except ValueError:
         return False
     return host in {"localhost", "127.0.0.1", "::1"}
+
+
+# Fields LLM_EXTRA_BODY may not set: they would change what the judge is asked, or how it
+# samples, behind the provenance that `describe()` records.
+PROTECTED_BODY_KEYS = frozenset({"model", "messages", "temperature", "top_p", "n", "seed",
+                                  "stream", "response_format", "logprobs", "top_logprobs"})
+
+
+def extra_body_of(raw: str) -> dict:
+    """LLM_EXTRA_BODY parsed: a JSON object of request fields a gateway needs, such as
+    `{"provider": {"order": ["openai"], "allow_fallbacks": false}}`, a routing field some
+    gateways accept to pin the upstream that serves the model. Empty string -> {}."""
+    if not raw.strip():
+        return {}
+    try:
+        body = json.loads(raw)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"LLM_EXTRA_BODY is not valid JSON: {e}") from e
+    if not isinstance(body, dict):
+        raise ValueError("LLM_EXTRA_BODY must be a JSON object")
+    clash = sorted(PROTECTED_BODY_KEYS & body.keys())
+    if clash:
+        raise ValueError(f"LLM_EXTRA_BODY may not set {clash}: the judge's prompt and "
+                         "sampling are fixed by the adapter and recorded in provenance")
+    return body
 
 
 def _fetch_json(req: urllib.request.Request, deadline: float) -> dict:
@@ -181,6 +208,7 @@ def parse_reply(
 
 class LLMJudge(Judge):
     _served: dict  # what the provider said it served on the last call (per decide())
+    _upstream: str | None = None  # which upstream a gateway routed the last call to
     name = "llm"
 
     def __init__(self, provider: str | None = None, model: str | None = None,
@@ -188,6 +216,9 @@ class LLMJudge(Judge):
         self.provider = provider or os.environ.get("LLM_PROVIDER", "anthropic")
         self.base_url = (base_url or os.environ.get("LLM_BASE_URL", "")).rstrip("/")
         self.effort = os.environ.get("LLM_EFFORT", "")
+        self.extra_body = extra_body_of(os.environ.get("LLM_EXTRA_BODY", ""))
+        if self.extra_body and self.provider != "openai-compatible":
+            raise ValueError("LLM_EXTRA_BODY applies to LLM_PROVIDER=openai-compatible only")
         if self.provider == "anthropic":
             self.model = model or os.environ.get("LLM_MODEL", "claude-opus-5")
             try:
@@ -240,6 +271,8 @@ class LLMJudge(Judge):
                 d.update(extra(self.model))
         elif self.base_url:
             d["base_url"] = self.base_url
+        if self.extra_body:
+            d["extra_body"] = self.extra_body
         if self.effort:
             d["effort"] = self.effort
         return d
@@ -285,7 +318,7 @@ class LLMJudge(Judge):
         body = {"model": self.model, "temperature": TEMPERATURE,
                 "response_format": {"type": "json_object"},
                 "messages": [{"role": "system", "content": SYSTEM},
-                             {"role": "user", "content": user}]}
+                             {"role": "user", "content": user}], **self.extra_body}
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
@@ -319,6 +352,8 @@ class LLMJudge(Judge):
         text = data["choices"][0]["message"]["content"]
         self._served = {"model": data.get("model"),
                         "system_fingerprint": data.get("system_fingerprint")}
+        # A gateway may say which upstream served the request, in a "provider" field.
+        self._upstream = data.get("provider") if isinstance(data.get("provider"), str) else None
         usage = data.get("usage") or {}
         return text, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
 
@@ -326,6 +361,7 @@ class LLMJudge(Judge):
     def decide(self, state: str, questions: list[Question]) -> list[Judgment]:
         t0 = time.monotonic()
         self._served = {}
+        self._upstream = None
         text, in_tok, out_tok = self._call(_render(state, questions))
         served = served_of(self._served)
         latency = time.monotonic() - t0
@@ -344,7 +380,8 @@ class LLMJudge(Judge):
                 latency_s=latency / max(len(questions), 1),
                 cost_usd=cost / max(len(questions), 1) if cost is not None else None,
                 raw={"text": text, "usage": {"input_tokens": in_tok, "output_tokens": out_tok},
-                     "parsed": ans, "priced": priced, "served": served},
+                     "parsed": ans, "priced": priced, "served": served,
+                     **({"upstream_provider": self._upstream} if self._upstream else {})},
                 parse_status=status,
             ))
         return out
