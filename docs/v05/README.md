@@ -7,7 +7,7 @@ v0.4 fixed the instrument; its evidence is still synthetic (GT-1), small (200 an
 > **Can a judge's declared confidence decide what you automate?**
 > If you let a judge act alone whenever it says it is sure enough, how much of your traffic can it handle at an error rate you can live with, and can you prove that rate?
 
-Accuracy alone does not answer it, and neither does the average calibration error (ECE). v0.4's Arena already shows why. Under attack, Gemini 3 Flash had a higher point accuracy than Jev (97.0 % against 95.5 %, intervals overlapping) and an ECE the intervals did not separate from Jev's, yet **0 % of its decisions could be automated with no observed error, against 73 % of Jev's**: it said 1.0 on 125 of 200 emails and was wrong on 5 of them. Claude Sonnet 4.5 also scored 0 %, but its interval reaches 90.9 %, so Jev is not separated from it ([README § Arena](../../README.md), [arena-2026-09.md](../arena-2026-09.md); synthetic data, n = 200, one run per judge, no paired test).
+Accuracy alone does not answer it, and neither does the average calibration error (ECE). v0.4's Arena already shows why. Under attack, Gemini 3 Flash had a higher point accuracy than Jev (97.0 % against 95.5 %, intervals overlapping) and an ECE the intervals did not separate from Jev's, yet **0 % of its decisions could be automated with no observed error, against 73 % of Jev's** (retrospective: the threshold is picked on the same rows it is scored on, the objection [automation at risk](automation-at-risk.md) answers): it said 1.0 on 125 of 200 emails and was wrong on 5 of them. Claude Sonnet 4.5 also scored 0 %, but its interval reaches 90.9 %, so Jev is not separated from it ([README § Arena](../../README.md), [arena-2026-09.md](../arena-2026-09.md); synthetic data, n = 200, one run per judge, no paired test).
 
 ## What v0.5 adds
 
@@ -23,7 +23,7 @@ Accuracy alone does not answer it, and neither does the average calibration erro
 
 ## The two hypotheses (to be fixed in the pre-registration, #91)
 
-- **H1, primary, within model.** For the same model on the same rows, verbalized confidence supports less automation at risk ≤ r, and ranks errors worse (lower AUROC), than self-consistency (every chat model) and than token log-probability (models that expose it).
+- **H1, primary, within model.** For the same model on the same rows, verbalized confidence supports less automation at risk ≤ r, and ranks errors worse (lower AUROC), than self-consistency (every chat model) and than token log-probability (open-weight models run locally with MLX).
 - **H2, secondary.** Judgment models with a native probability (Jev, Laya) against each chat model's best confidence method, as a paired comparison.
 
 Everything else (prompt templates, repeats, the fine-tuned learning curve, deliberation) is exploratory. Results are published whether or not the predictions hold.

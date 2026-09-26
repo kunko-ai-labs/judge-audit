@@ -34,6 +34,6 @@ The guarantee has a price in rows. With zero errors, certifying an error rate of
 
 ## What a reader should take away
 
-Report "coverage at error ≤ X %" with its bound, AUROC with its interval, and ECE as a diagnostic. When two judges differ, compare them on the same rows ([paired tests](judgment-models-vs-llms.md)). The power analysis sizes the study: it states, before the runs, the smallest difference the data can resolve. The paired test then judges each observed difference, and one it does not resolve is reported as "not resolved", never as "no difference".
+Report "coverage at error ≤ X %" with its bound, AUROC with its interval, and ECE as a diagnostic. When two judges differ, compare them on the same rows ([paired tests](judgment-models-vs-llms.md)). The power analysis sizes the study: it states, before the runs, the smallest true difference the data detect with 80 % power. The paired test then judges each observed difference, and one it does not resolve is reported as "not resolved", never as "no difference".
 
 Sources: [reading list](reading-list.md) § Calibration and selective prediction.

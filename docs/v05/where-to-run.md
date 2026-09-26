@@ -6,7 +6,7 @@
 
 | Judge | What it is | Where it runs | Needs |
 |---|---|---|---|
-| `laya` | Laya, an open judgment model (421M-parameter encoder) | **your Mac** (CPU or Apple GPU); any Linux box that can download it | the `[laya]` extra (from source until v0.5 is on PyPI), `LAYA_REVISION` pinned |
+| `laya` | Laya, an open judgment model (421M-parameter ModernBERT-large encoder, per Laya's code at v0.3.20) | **your Mac** (CPU or Apple GPU); any Linux box that can download it | the `[laya]` extra (from source until v0.5 is on PyPI), `LAYA_REVISION` pinned |
 | `logprob` | An open chat model's own probability of each option (MLX) | **your Mac**; Linux CPU works but is slow | the `[mlx]` extra (from source until v0.5), `LOGPROB_MODEL`, `LOGPROB_REVISION` |
 | `llm` via a local server | An open chat model, verbalized or self-consistency | **your Mac** (a local OpenAI-compatible server such as Ollama) | `LLM_PROVIDER=openai-compatible`, `LLM_BASE_URL=http://localhost:11434/v1`, `LLM_MODEL` |
 | `finetuned` | Your own classifier trained on your labels (`scripts/train_classifier.py`) | **your Mac** (training and inference) | the `[nli]` extra, `FINETUNED_MODEL_DIR` |

@@ -5,7 +5,7 @@ judge-audit is a Python package (`kunko-judge-audit` on PyPI), a CLI, a GitHub A
 ## 1. On your own data, once (CLI)
 
 ```bash
-pip install kunko-judge-audit            # v0.4 on PyPI; extras [anthropic], [nli], [mcp]
+pip install "kunko-judge-audit[anthropic]" # v0.4 on PyPI; the llm judge's default provider needs [anthropic]; also [nli], [mcp]
 # from a clone of main, v0.5 extras too: pip install -e ".[laya]" or ".[mlx]"
 judge-audit run my-labels.jsonl --judge llm --json result.json
 ```
@@ -41,7 +41,7 @@ The Action in this repository audits a judge on a labelled file in CI. It commen
 
 Keys come from repository secrets, never from the file. Full inputs, and what to check before running third-party code in your CI: [integrations.md](../integrations.md). This is how a team catches a prompt edit or a model update that makes its judge less honest before it ships, provided the change moves ECE or accuracy past the thresholds it set.
 
-**Scheduled audits.** The same Action on a `schedule:` trigger re-audits a hosted judge every week against a frozen labelled set and a frozen baseline. That catches silent model updates: the served model version is recorded per decision.
+**Scheduled audits.** The same Action on a `schedule:` trigger re-audits a hosted judge every week against a frozen labelled set and a frozen baseline. It catches a silent model update only if the update moves ECE or accuracy past the thresholds. The served model version is recorded per decision, and a change in the reported version raises a warning, not a failure; an update under the same name, or through a provider that reports no version, is invisible to that warning.
 
 ## 3. Inside an agent's session (MCP)
 
