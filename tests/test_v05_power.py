@@ -129,9 +129,11 @@ def test_delong_by_hand():
 
 def test_delong_with_ties_by_hand():
     """Ties count one half. Right answers A = 3, 2, 2 and B = 0.9, 0.5, 0.1; wrong answers
-    A = 2, 1 and B = 0.5, 0.2. Placements: A right (1, 3/4, 3/4), B right (1, 3/4, 0);
-    A wrong (1/3, 0), B wrong (2/3, 1/3). AUROC A = 5/6, B = 7/12; s10 = 3/16 over right
-    answers, s01 = 1/72 over wrong."""
+    A = 2, 1 and B = 0.5, 0.2. A right answer's placement is the share of wrong answers
+    below it, a wrong answer's the share of right answers above it: A right (1, 3/4, 3/4),
+    B right (1, 3/4, 0); A wrong (2/3, 1), B wrong (1/2, 2/3). AUROC A = 5/6, B = 7/12;
+    the differences' variances (n - 1) are s10 = 3/16 over right answers and s01 = 1/72
+    over wrong."""
     comp = power.delong([3, 2, 2, 2, 1], [0.9, 0.5, 0.1, 0.5, 0.2],
                         [True, True, True, False, False])
     assert comp["auroc_a"] == pytest.approx(5 / 6) and comp["auroc_b"] == pytest.approx(7 / 12)
@@ -165,13 +167,40 @@ def test_population_auroc():
     from statistics import NormalDist
 
     mu = math.sqrt(2) * NormalDist().inv_cdf(0.7)
+    mu_b = math.sqrt(2) * NormalDist().inv_cdf(0.75)
     assert power.population_auroc(mu, 0.85, None) == pytest.approx(0.7)
     assert power.population_auroc(mu, 0.85, [1.0]) == pytest.approx(0.5)
+    # recomputed independently (erfc, Newton quantiles, 1 - P(neg > pos) - P(tie) / 2)
+    for m, acc, want in ((mu, 0.85, 0.687810), (mu_b, 0.85, 0.737178),
+                         (mu, 0.93, 0.688883), (mu_b, 0.93, 0.738489)):
+        assert power.population_auroc(m, acc, power.TIE_SHARES) == pytest.approx(want, abs=1e-5)
     rng = random.Random(5)
     ok = [rng.random() < 0.85 for _ in range(60000)]
     scores = power.levels([mu * o + rng.gauss(0, 1) for o in ok], power.TIE_SHARES)
     assert power.auroc(scores, ok) == pytest.approx(
         power.population_auroc(mu, 0.85, power.TIE_SHARES), abs=0.006)
+
+
+def test_the_mde_monte_carlo_error_matches_reseeded_samples():
+    """The delta-method SE of the paired SD, from one sample, matches the spread of that SD
+    over independent samples of the same size."""
+    import random
+    import statistics
+
+    rng = random.Random(7)
+    acc, n_sample, n = 0.85, 4000, 1900
+
+    def one():
+        ok = [rng.random() < acc for _ in range(n_sample)]
+        pairs = [power.normal_pair(rng, 0.5) for _ in range(n_sample)]
+        comp = power.delong([0.74 * o + a for o, (a, _) in zip(ok, pairs, strict=True)],
+                            [1.0 * o + b for o, (_, b) in zip(ok, pairs, strict=True)], ok)
+        return (power.paired_auroc_sd(comp, n, acc),
+                power.paired_auroc_sd_mc_se(comp, n, acc))
+
+    runs = [one() for _ in range(60)]
+    spread = statistics.stdev(sd for sd, _ in runs)
+    assert statistics.fmean(se for _, se in runs) == pytest.approx(spread, rel=0.3)
 
 
 def test_delong_matches_the_simulated_paired_sd():
@@ -209,9 +238,10 @@ def test_prose_ranges_are_computed_from_the_tables(monkeypatch):
     cells = [r for r in d["b_paired_auroc"]["rows"] if r["n"] == 3079]
     lo, hi = min(r["mde"] for r in cells), max(r["mde"] for r in cells)
     assert f"At n = 3,079 the MDE is {lo:.4f} to {hi:.4f}" in md
-    # B's verdict compares each cell's MDE with that cell's exact gap
+    # B's verdict compares each cell's MDE with that cell's exact gap: 0.0003 above a tied
+    # gap is still below the untied 0.05, so a single global gap would say 4 of 8
     for r in cells:
-        r["mde"] = r["gap"] + 0.001
+        r["mde"] = r["gap"] + 0.0003
     assert "is resolvable in 0 of 8 cells." in power.markdown(d)
     cells[0]["mde"] = cells[0]["gap"]
     assert "is resolvable in 1 of 8 cells: " in power.markdown(d)

@@ -14,7 +14,8 @@ Four questions, answered before any model is run so the pre-registration can fix
       (H1: same model, verbalized against another method): the smallest AUROC difference
       a paired test detects with 80 % power at alpha 0.05, per n, accuracy, correlation and
       ties. Its variance comes from DeLong's placement values on one large simulated
-      sample (100,000 rows); the gap it is compared with is computed exactly.
+      sample (100,000 rows), with that sample's Monte Carlo error printed; the gap
+      it is compared with is computed exactly.
   C.  Paired ECE (simulated). The same for the difference in ECE between two judges on the
       same rows, with its Monte Carlo standard error.
 
@@ -316,16 +317,25 @@ def _cov(x: list[float], y: list[float]) -> float:
     return math.fsum((a - mx) * (b - my) for a, b in zip(x, y, strict=True)) / (len(x) - 1)
 
 
+def _variance_of_variance(d: list[float], var: float) -> float:
+    """Sampling variance of a variance estimate: (fourth central moment - var^2) / n."""
+    m = math.fsum(d) / len(d)
+    return (math.fsum((x - m) ** 4 for x in d) / len(d) - var * var) / len(d)
+
+
 def delong(score_a: list[float], score_b: list[float], correct: list[bool]) -> dict:
     """AUROCs of two methods on the same rows and the per-row variance components of their
     difference: Var(AUROC_A - AUROC_B) = s10 / n_right + s01 / n_wrong (DeLong, DeLong &
-    Clarke-Pearson 1988)."""
+    Clarke-Pearson 1988). var_s10 and var_s01 are the sampling variances of those two
+    estimates, for the Monte Carlo error of anything computed from one sample."""
     a10, a01 = _placements(score_a, correct)
     b10, b01 = _placements(score_b, correct)
     d10 = [x - y for x, y in zip(a10, b10, strict=True)]
     d01 = [x - y for x, y in zip(a01, b01, strict=True)]
+    s10, s01 = _cov(d10, d10), _cov(d01, d01)
     return {"auroc_a": math.fsum(a10) / len(a10), "auroc_b": math.fsum(b10) / len(b10),
-            "s10": _cov(d10, d10), "s01": _cov(d01, d01)}
+            "s10": s10, "s01": s01, "var_s10": _variance_of_variance(d10, s10),
+            "var_s01": _variance_of_variance(d01, s01)}
 
 
 def population_auroc(mu: float, accuracy: float, shares: list[float] | None) -> float:
@@ -365,6 +375,14 @@ def paired_auroc_sd(components: dict, n: int, accuracy: float) -> float:
                      + components["s01"] / (n * (1 - accuracy)))
 
 
+def paired_auroc_sd_mc_se(components: dict, n: int, accuracy: float) -> float:
+    """Monte Carlo standard error of `paired_auroc_sd` when s10 and s01 come from one
+    simulated sample (delta method: SE(SD) = SE(Var) / 2 SD)."""
+    n1, n0 = n * accuracy, n * (1 - accuracy)
+    se_var = math.sqrt(components["var_s10"] / n1 ** 2 + components["var_s01"] / n0 ** 2)
+    return se_var / (2 * paired_auroc_sd(components, n, accuracy))
+
+
 def section_b(rng: random.Random) -> list[dict]:
     """One large sample per cell, common random numbers across cells."""
     base = [normal_pair(rng, 0.0) for _ in range(N_BIG)]
@@ -393,7 +411,9 @@ def section_b(rng: random.Random) -> list[dict]:
                                  "auroc_a": round(pop_a, 4), "auroc_b": round(pop_b, 4),
                                  "gap": round(pop_b - pop_a, 4),
                                  "sd_difference": round(s, 5),
-                                 "mde": round(MDE_FACTOR * s, 4)})
+                                 "mde": round(MDE_FACTOR * s, 4),
+                                 "mde_mc_se": round(
+                                     MDE_FACTOR * paired_auroc_sd_mc_se(comp, n, acc), 4)})
     return rows
 
 
@@ -612,15 +632,18 @@ def markdown(d: dict) -> str:
                "difference comes from DeLong's placement values on one sample of "
                f"{N_BIG:,} rows per cell, scaled to n; MDE = (z₀.₉₇₅ + z₀.₈) × SD, the "
                "smallest true difference a paired test at α = 0.05 detects with 80 % power. "
-               "The AUROC columns and their gap are exact population values after ties, "
-               "not sample estimates."), "",
+               "That one sample makes each MDE an estimate: the ± after it is its Monte "
+               "Carlo standard error (delta method from the fourth moments of the placement "
+               "differences). The AUROC columns and their gap are exact population values "
+               "after ties, not sample estimates."), "",
               "| ties | accuracy | ρ | n | errors | AUROC A | AUROC B | gap | SD(Δ) | MDE |",
               "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for r in b:
         lines.append(f"| {TIE_LABEL[r['ties']]} | {_share(r['accuracy'])} | {r['rho']} | "
                      f"{r['n']:,} | "
                      f"{r['errors_expected']:,} | {r['auroc_a']:.4f} | {r['auroc_b']:.4f} | "
-                     f"{r['gap']:.4f} | {r['sd_difference']:.5f} | **{r['mde']:.4f}** |")
+                     f"{r['gap']:.4f} | {r['sd_difference']:.5f} | **{r['mde']:.4f}** ± "
+                     f"{r['mde_mc_se']:.4f} |")
     for n in (big, clinc):
         cells = [r for r in b if r["n"] == n]
         ok = [r for r in cells if r["mde"] <= r["gap"]]
@@ -632,6 +655,13 @@ def markdown(d: dict) -> str:
                   + (": " + "; ".join(f"{TIE_LABEL[r['ties']]}, accuracy "
                                       f"{_share(r['accuracy'])}, ρ {r['rho']}" for r in ok)
                      if ok else "") + "."]
+        close = min(cells, key=lambda r: abs(r["mde"] - r["gap"]) / r["mde_mc_se"])
+        lines[-1] += (f" The closest call is {TIE_LABEL[close['ties']]}, accuracy "
+                      f"{_share(close['accuracy'])}, ρ {close['rho']}: MDE "
+                      f"{close['mde']:.4f} ± {close['mde_mc_se']:.4f} against a gap of "
+                      f"{close['gap']:.4f}, "
+                      f"{abs(close['mde'] - close['gap']) / close['mde_mc_se']:.1f} standard "
+                      "errors apart.")
     lines += ["", ("What drives it is the number of **errors**, not rows: at "
                f"{_share(ACCURACIES[-1])} accuracy {big:,} rows hold about "
                f"{round(big * (1 - ACCURACIES[-1])):,}."), "",
@@ -668,8 +698,9 @@ def markdown(d: dict) -> str:
               (f"- **Smallest differences stated before the runs**: paired AUROC "
                f"{_span(b_big)} on BANKING77 and {_span(b_clinc)} on CLINC150; ECE "
                f"{_span(c_big)} and {_span(c_clinc)} (80 % power, α = 0.05). The plan "
-               "states the MDE of the cell the pilot matches; a smaller observed difference "
-               "is reported as not resolved, not as no difference."),
+               "states the MDE of the cell the pilot matches. The MDE sizes the study; the "
+               "paired test judges each observed difference, and a difference it does not "
+               "resolve is reported as not resolved, not as no difference."),
               ("- **Caveat**: A2, B and C assume the shapes above; the pilot's estimates "
                "replace them before the plan is frozen."), ""]
     return "\n".join(lines)
