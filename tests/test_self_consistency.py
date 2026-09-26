@@ -382,3 +382,18 @@ def test_a_full_report_from_a_self_consistency_run(monkeypatch):
     assert d["n"] == 4 and d["accuracy"] == pytest.approx(0.75)
     assert sorted(r["confidence"] for r in result.records) == pytest.approx(
         [2 / 3, 2 / 3, 1.0, 1.0])
+
+
+def test_each_sample_keeps_the_upstream_a_pinned_gateway_reports(monkeypatch):
+    monkeypatch.setenv("LLM_EXTRA_BODY", '{"provider": {"order": ["vendor"]}}')
+
+    def fetch(req, deadline):
+        body = json.loads(req.data)
+        assert body["provider"] == {"order": ["vendor"]} and body["temperature"] == 1.0
+        return {"model": "m", "provider": "Vendor",
+                "choices": [{"message": {"content": reply("spam")}}], "usage": {}}
+
+    j, _ = judge(monkeypatch, [], samples="3", fetch=fetch)
+    (out,) = j.decide("x", [Q])
+    assert [s["upstream_provider"] for s in out.raw["samples"]] == ["Vendor"] * 3
+    assert j.describe()["extra_body"] == {"provider": {"order": ["vendor"]}}

@@ -222,6 +222,13 @@ def main() -> None:
         judge, tag = _judge(args.judge, rows)
         started = run_metadata(judge, args.labels, len(rows), dataset_meta)
         if -1 in done:
+            # The header is written once, by the first session; a resumed session must send
+            # the same routing fields, or the header would record a routing that no longer held.
+            was = (done[-1]["run"].get("judge") or {}).get("extra_body")
+            now = (started.get("judge") or {}).get("extra_body")
+            if was != now:
+                raise SystemExit(f"{ckpt} was started with LLM_EXTRA_BODY {was!r}, not {now!r}; "
+                                 "resume with the same routing or use a new checkpoint")
             same_method(ckpt, done[-1]["run"].get("judge") or {}, started["judge"])
     if subset:
         started["rows_subset"] = subset

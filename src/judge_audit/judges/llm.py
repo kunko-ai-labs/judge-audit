@@ -22,6 +22,8 @@ Providers:
 
 Environment: LLM_PROVIDER, LLM_MODEL, LLM_MODEL_LABEL (what reports show; defaults to LLM_MODEL),
 LLM_BASE_URL, LLM_API_KEY, LLM_EFFORT (anthropic only), LLM_PROVIDER_MODULE (custom only),
+LLM_EXTRA_BODY (openai-compatible only: a gateway's routing object, `provider` or
+`providerOptions`, merged into every request and recorded in the run's provenance),
 LLM_TEMPERATURE and LLM_SAMPLES (self-consistency, below).
 
 Self-consistency (#89): with LLM_SAMPLES=k > 1 the judge asks the same question k times at a
@@ -65,6 +67,67 @@ def _is_local_url(url: str) -> bool:
     except ValueError:
         return False
     return host in {"localhost", "127.0.0.1", "::1"}
+
+
+# The only top-level fields LLM_EXTRA_BODY may set: a gateway's routing object. Everything
+# else (the model, the messages, sampling, token limits, a fallback model list, prompt
+# transforms) is fixed by the adapter and recorded in provenance, and a server that reads
+# keys case-insensitively must not be handed a second "Temperature" behind it.
+ALLOWED_BODY_KEYS = ("provider", "providerOptions")
+UPSTREAM_MAX_LEN = 64
+
+
+def extra_body_of(raw: str) -> dict:
+    """LLM_EXTRA_BODY parsed: a gateway's routing object, such as
+    `{"provider": {"order": ["openai"], "allow_fallbacks": false}}`, which pins the
+    upstream that serves the model. Only `provider` and `providerOptions` are accepted, by
+    exact name. Empty string -> {}."""
+    if not raw.strip():
+        return {}
+    try:
+        body = json.loads(raw)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"LLM_EXTRA_BODY is not valid JSON: {e}") from e
+    if not isinstance(body, dict):
+        raise ValueError("LLM_EXTRA_BODY must be a JSON object")
+    refused = sorted(k for k in body if k not in ALLOWED_BODY_KEYS)
+    if refused:
+        raise ValueError(f"LLM_EXTRA_BODY may only set {list(ALLOWED_BODY_KEYS)}, not "
+                         f"{refused}: the judge's model, prompt and sampling are fixed by the "
+                         "adapter and recorded in provenance")
+    return body
+
+
+def pinned_upstreams(extra_body: dict) -> list[str]:
+    """The upstreams a routing object pins, lower-cased: `provider.order`/`provider.only`,
+    or `providerOptions.gateway.order`/`.only`. Empty when none is pinned."""
+    found: list[str] = []
+    for obj in (extra_body.get("provider"),
+                (extra_body.get("providerOptions") or {}).get("gateway")
+                if isinstance(extra_body.get("providerOptions"), dict) else None):
+        if isinstance(obj, dict):
+            for key in ("order", "only"):
+                vals = obj.get(key)
+                if isinstance(vals, list):
+                    found += [str(v).lower() for v in vals]
+    return found
+
+
+def checked_upstream(reported, extra_body: dict) -> str | None:
+    """The upstream a gateway says it used, kept only when it is one the run pinned.
+
+    Nothing is recorded without routing fields (so a plain OpenAI-compatible run is
+    unchanged) or without a pinned list (so no unvetted name reaches the checkpoint). A
+    reported upstream outside the pinned list fails the decision: the routing the
+    provenance records did not hold."""
+    pinned = pinned_upstreams(extra_body)
+    if not extra_body or not pinned or not isinstance(reported, str):
+        return None
+    name = reported.strip()
+    if name.lower() not in pinned or len(name) > UPSTREAM_MAX_LEN:
+        raise RuntimeError(f"the gateway served the request from an upstream outside the "
+                           f"pinned list {pinned}; the run's routing did not hold")
+    return name
 
 
 def _fetch_json(req: urllib.request.Request, deadline: float) -> dict:
@@ -273,6 +336,7 @@ def vote_replies(texts: list[str], questions: list[Question]
 class LLMJudge(Judge):
     _served: dict  # what the provider said it served on the last call (per decide())
     _custom_takes_temperature = False
+    _upstream: str | None = None  # which upstream a gateway routed the last call to
     name = "llm"
 
     def __init__(self, provider: str | None = None, model: str | None = None,
@@ -285,6 +349,9 @@ class LLMJudge(Judge):
         if self.samples > 1 and self.temperature == 0:
             raise ValueError("LLM_SAMPLES > 1 needs sampling: set LLM_TEMPERATURE to a number "
                              "above 0, or to 'default' for the provider's own")
+        self.extra_body = extra_body_of(os.environ.get("LLM_EXTRA_BODY", ""))
+        if self.extra_body and self.provider != "openai-compatible":
+            raise ValueError("LLM_EXTRA_BODY applies to LLM_PROVIDER=openai-compatible only")
         if self.provider == "anthropic":
             self.model = model or os.environ.get("LLM_MODEL", "claude-opus-5")
             try:
@@ -354,6 +421,8 @@ class LLMJudge(Judge):
                 d.update(owned)             # what this judge measures, not the module's say
         elif self.base_url:
             d["base_url"] = self.base_url
+        if self.extra_body:
+            d["extra_body"] = self.extra_body
         if self.effort:
             d["effort"] = self.effort
         return d
@@ -404,7 +473,7 @@ class LLMJudge(Judge):
         body: dict = {"model": self.model, "temperature": self.temperature,
                       "response_format": {"type": "json_object"},
                       "messages": [{"role": "system", "content": SYSTEM},
-                                   {"role": "user", "content": user}]}
+                                   {"role": "user", "content": user}], **self.extra_body}
         if self.temperature is None:
             del body["temperature"]
         headers = {"Content-Type": "application/json"}
@@ -440,6 +509,8 @@ class LLMJudge(Judge):
         text = data["choices"][0]["message"]["content"]
         self._served = {"model": data.get("model"),
                         "system_fingerprint": data.get("system_fingerprint")}
+        # A gateway may say which upstream served the request, in a "provider" field.
+        self._upstream = checked_upstream(data.get("provider"), self.extra_body)
         usage = data.get("usage") or {}
         return text, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
 
@@ -457,6 +528,7 @@ class LLMJudge(Judge):
             return self._decide_by_vote(state, questions)
         t0 = time.monotonic()
         self._served = {}
+        self._upstream = None
         text, in_tok, out_tok = self._call(_render(state, questions))
         served = served_of(self._served)
         latency = time.monotonic() - t0
@@ -470,7 +542,8 @@ class LLMJudge(Judge):
                 latency_s=latency / max(len(questions), 1),
                 cost_usd=cost / max(len(questions), 1) if cost is not None else None,
                 raw={"text": text, "usage": {"input_tokens": in_tok, "output_tokens": out_tok},
-                     "parsed": ans, "priced": priced, "served": served},
+                     "parsed": ans, "priced": priced, "served": served,
+                     **({"upstream_provider": self._upstream} if self._upstream else {})},
                 parse_status=status,
             ))
         return out
@@ -482,10 +555,12 @@ class LLMJudge(Judge):
         samples: list[dict] = []
         for _ in range(self.samples):
             self._served = {}
+            self._upstream = None
             text, in_tok, out_tok = self._call(user)
             samples.append({"text": text,
                             "usage": {"input_tokens": in_tok, "output_tokens": out_tok},
-                            "served": served_of(self._served)})
+                            "served": served_of(self._served),
+                            **({"upstream_provider": self._upstream} if self._upstream else {})})
         latency = time.monotonic() - t0
         in_all = sum(x["usage"]["input_tokens"] for x in samples)
         out_all = sum(x["usage"]["output_tokens"] for x in samples)

@@ -145,7 +145,7 @@ class MyJudge(Judge):
         ...  # return Judgment(question=q.name, decision="spam", confidence=0.93)
 ```
 
-Ships with five: `jev` (TypeSafe Jev — and, via `JEV_ENDPOINT`, any Jev-compatible server such as OpenJev), `llm` (any chat model with a confidence prompt: Claude through the official SDK, anything OpenAI-compatible — OpenAI, Gemini, Ollama, vLLM — or your own transport), `nli` (a local zero-shot encoder, the control), `finetuned` (your own classifier, trained on your labels with `scripts/train_classifier.py`) and `simulated`. Details in [docs/judges.md](docs/judges.md).
+Ships with six: `jev` (TypeSafe Jev — and, via `JEV_ENDPOINT`, any Jev-compatible server such as OpenJev), `llm` (any chat model with a confidence prompt: Claude through the official SDK, anything OpenAI-compatible — OpenAI, Gemini, Ollama, vLLM — or your own transport), `nli` (a local zero-shot encoder, the control), `finetuned` (your own classifier, trained on your labels with `scripts/train_classifier.py`), `logprob` (an open model's own probability of each option, run locally with MLX) and `simulated`. Details in [docs/judges.md](docs/judges.md).
 
 ## Why calibration, not accuracy
 
