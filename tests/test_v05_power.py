@@ -29,7 +29,7 @@ def test_zero_errors_need_the_textbook_row_counts():
     assert power.rows_to_certify(0.02, 0) == 149
     assert power.rows_to_certify(0.05, 0) == 59
     m = power.rows_to_certify(0.01, 1)
-    assert power.binom_cdf(1, m, 0.01) < 0.05 <= power.binom_cdf(1, m - 1, 0.01)
+    assert power.binom_cdf(1, m, 0.01) <= 0.05 < power.binom_cdf(1, m - 1, 0.01)
 
 
 def test_certifiable_errors_and_power():
@@ -62,3 +62,74 @@ def test_normal_pairs_have_the_asked_correlation():
     vx = sum((x - mx) ** 2 for x in xs) / len(xs)
     vy = sum((y - my) ** 2 for y in ys) / len(ys)
     assert cov / math.sqrt(vx * vy) == pytest.approx(0.7, abs=0.02)
+
+
+def test_the_power_window_skips_the_saw_tooth():
+    """At 1 % with a true 0.5 %, one fixed set first reaches 80 % power at 1,941 rows but
+    dips below it 105 times before 2,185; the window rule answers 2,185, a naive "first
+    crossing" would answer 1,941."""
+    assert power.rows_for_power(0.01, 0.005) == 2185
+    assert power.power_to_certify(1941, 0.01, 0.005) >= 0.8
+    dips = [m for m in range(1941, 2185) if power.power_to_certify(m, 0.01, 0.005) < 0.8]
+    assert len(dips) == 105 and dips[-1] == 2184
+
+
+def test_the_fast_walk_is_the_library_procedure():
+    """A2 simulates `coverage_at_risk` through a precomputed pass rule; on random data with
+    ties it must choose the same threshold as the library."""
+    import random
+
+    from judge_audit.metrics.selective import coverage_at_risk
+
+    rng = random.Random(7)
+    for r in (0.02, 0.05, 0.1):
+        kstar = power.certifiable_table(r, 700)
+        n_min = power.rows_to_certify(r, 0)
+        for _ in range(60):
+            n = rng.randint(50, 700)
+            conf = [round(rng.random(), rng.choice([1, 2, 3])) for _ in range(n)]
+            ok = [rng.random() > (0.3 * (1 - c)) for c in conf]
+            ours = power.fixed_sequence_threshold(conf, ok, kstar, n_min)
+            lib = coverage_at_risk(conf, ok, conf, ok, target_risk=r)["threshold"]
+            assert ours == lib
+
+
+def test_delong_matches_the_simulated_paired_sd():
+    """The asymptotic SD of the paired AUROC difference equals the spread of simulated
+    differences at a small n."""
+    import random
+
+    rng = random.Random(11)
+    acc, rho, n = 0.85, 0.5, 400
+    mu_a, mu_b = 0.74, 1.0
+
+    def sample(k):
+        ok = [rng.random() < acc for _ in range(k)]
+        pairs = [power.normal_pair(rng, rho) for _ in range(k)]
+        return ([mu_a * o + a for o, (a, _) in zip(ok, pairs, strict=True)],
+                [mu_b * o + b for o, (_, b) in zip(ok, pairs, strict=True)], ok)
+
+    comp = power.delong(*sample(40000))
+    predicted = power.paired_auroc_sd(comp, n, acc)
+    diffs = []
+    for _ in range(400):
+        a, b, ok = sample(n)
+        diffs.append(power.auroc(b, ok) - power.auroc(a, ok))
+    assert power.sd(diffs) == pytest.approx(predicted, rel=0.12)
+
+
+def test_prose_ranges_are_computed_from_the_tables(monkeypatch):
+    """Every range in the prose moves with the tables: change one MDE and the sentence
+    that quotes BANKING77's range changes too."""
+    monkeypatch.setattr(power, "REPS_A2", 20)
+    monkeypatch.setattr(power, "REPS_ECE", 8)
+    monkeypatch.setattr(power, "N_BIG", 3000)
+    d = power.compute()
+    md = power.markdown(d)
+    cells = [r for r in d["b_paired_auroc"]["rows"] if r["n"] == 3079]
+    lo, hi = min(r["mde"] for r in cells), max(r["mde"] for r in cells)
+    assert f"At n = 3,079 the MDE is {lo:.3f} to {hi:.3f}" in md
+    cells[0]["mde"] = 0.999
+    assert "to 0.999" in power.markdown(d)
+    first = d["a_certification"]["rows_to_certify"]["0.01"]["0"]
+    assert f"zero errors certify from {first:,} rows" in md
