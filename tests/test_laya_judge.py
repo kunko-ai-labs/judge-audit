@@ -157,14 +157,13 @@ def test_fit_problems_agrees_with_laya_build_sequence():
     common = pytest.importorskip("laya.common")
     import random
 
-    class Tok:
-        mask_token, mask_token_id, cls_token_id, sep_token_id = "[MASK]", 1, 2, 3
+    def tok(text, add_special_tokens=False, truncation=False, max_length=None):
+        """A word-per-token tokenizer with the special tokens Laya reads."""
+        ids = [10 + len(w) for w in text.split()]
+        return {"input_ids": ids[:max_length] if truncation else ids}
 
-        def __call__(self, text, add_special_tokens=False, truncation=False, max_length=None):
-            ids = [10 + len(w) for w in text.split()]
-            return {"input_ids": ids[:max_length] if truncation else ids}
-
-    tok, rng = Tok(), random.Random(0)
+    tok.mask_token, tok.mask_token_id, tok.cls_token_id, tok.sep_token_id = "[MASK]", 1, 2, 3
+    rng = random.Random(0)
     for _ in range(2000):
         k = rng.randint(2, 80)
         q = {"t": "choice", "ins": " ".join(["i"] * rng.randint(1, 40)),
