@@ -127,9 +127,51 @@ def test_delong_by_hand():
         math.sqrt((1 / 12) / 6 + (2 / 9) / 4))
 
 
-def test_a2_certification_probability_is_exact():
+def test_delong_with_ties_by_hand():
+    """Ties count one half. Right answers A = 3, 2, 2 and B = 0.9, 0.5, 0.1; wrong answers
+    A = 2, 1 and B = 0.5, 0.2. Placements: A right (1, 3/4, 3/4), B right (1, 3/4, 0);
+    A wrong (1/3, 0), B wrong (2/3, 1/3). AUROC A = 5/6, B = 7/12; s10 = 3/16 over right
+    answers, s01 = 1/72 over wrong."""
+    comp = power.delong([3, 2, 2, 2, 1], [0.9, 0.5, 0.1, 0.5, 0.2],
+                        [True, True, True, False, False])
+    assert comp["auroc_a"] == pytest.approx(5 / 6) and comp["auroc_b"] == pytest.approx(7 / 12)
+    assert comp["s10"] == pytest.approx(3 / 16) and comp["s01"] == pytest.approx(1 / 72)
+
+
+def test_max_safe_coverage():
     assert power.max_safe_coverage(0.01, 0.0) == pytest.approx(0.5 * 0.2 / 0.19)
     assert power.max_safe_coverage(0.01, 0.02) == 0.0
+
+
+def test_a2_certification_probability_is_exact(monkeypatch):
+    """With continuous confidences the first cut of the sequence holds exactly n_min rows,
+    all automatable, and passes only with no error: (1 - r')^n_min, and the simulation
+    agrees within its binomial error."""
+    import random
+
+    monkeypatch.setattr(power, "REPS_A2", 400)
+    r, r_true, n_min = 0.01, 0.0025, power.rows_to_certify(0.01, 0)
+    out = power.simulate_fixed_sequence(950, r, r_true, random.Random(3),
+                                        power.certifiable_table(r, 950), n_min)
+    exact = (1 - r_true) ** n_min
+    assert out["p_certify_exact"] == round(exact, 3) == 0.473
+    assert abs(out["p_certify_simulated"] - exact) < 3 * math.sqrt(exact * (1 - exact) / 400)
+
+
+def test_population_auroc():
+    """Without ties the binormal AUROC is Phi(mu / sqrt 2); cut into levels it is what a large
+    sample cut the same way gives; and one level for everything is a coin flip."""
+    import random
+    from statistics import NormalDist
+
+    mu = math.sqrt(2) * NormalDist().inv_cdf(0.7)
+    assert power.population_auroc(mu, 0.85, None) == pytest.approx(0.7)
+    assert power.population_auroc(mu, 0.85, [1.0]) == pytest.approx(0.5)
+    rng = random.Random(5)
+    ok = [rng.random() < 0.85 for _ in range(60000)]
+    scores = power.levels([mu * o + rng.gauss(0, 1) for o in ok], power.TIE_SHARES)
+    assert power.auroc(scores, ok) == pytest.approx(
+        power.population_auroc(mu, 0.85, power.TIE_SHARES), abs=0.006)
 
 
 def test_delong_matches_the_simulated_paired_sd():
@@ -166,17 +208,23 @@ def test_prose_ranges_are_computed_from_the_tables(monkeypatch):
     md = power.markdown(d)
     cells = [r for r in d["b_paired_auroc"]["rows"] if r["n"] == 3079]
     lo, hi = min(r["mde"] for r in cells), max(r["mde"] for r in cells)
-    assert f"At n = 3,079 the MDE is {lo:.3f} to {hi:.3f}" in md
-    cells[0]["mde"] = 0.999
-    assert "to 0.999" in power.markdown(d)
+    assert f"At n = 3,079 the MDE is {lo:.4f} to {hi:.4f}" in md
+    # B's verdict compares each cell's MDE with that cell's exact gap
+    for r in cells:
+        r["mde"] = r["gap"] + 0.001
+    assert "is resolvable in 0 of 8 cells." in power.markdown(d)
+    cells[0]["mde"] = cells[0]["gap"]
+    assert "is resolvable in 1 of 8 cells: " in power.markdown(d)
+    cells[1]["mde"] = 0.999
+    assert "to 0.9990" in power.markdown(d)
     first = d["a_certification"]["rows_to_certify"]["0.01"]["0"]
     assert f"zero errors certify from {first:,} rows" in md
     # the A2 verdicts follow their rows too
     a2 = d["a2_fixed_sequence"]["rows"]
-    assert "which stays within the 5 % allowed" in md
-    a2[0]["violation_rate"] = 0.09
+    assert "which is consistent with the 5 % allowed" in md
+    a2[0]["violation_rate"] = 0.20          # 20 runs here: 2 SE above 5 % is 14.7 %
     clean = next(r for r in a2 if r["true_rate"] == 0)
     clean["p_certify_exact"] = 0.9
     md2 = power.markdown(d)
-    assert "9.0 %, which **exceeds** the 5 % allowed" in md2
+    assert "20.0 %, which **exceeds** the 5 % allowed" in md2
     assert "certifies 90 % to 100 % of the time" in md2

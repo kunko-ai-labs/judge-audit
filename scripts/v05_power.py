@@ -5,7 +5,7 @@ Four questions, answered before any model is run so the pre-registration can fix
   A.  Certification at one cut (exact binomial). To state "error rate below r, with 95 %
       confidence" about a set of automated decisions, how many must it hold with 0, 1, 2 ...
       errors; and how many for an 80 % chance to certify one fixed set whose true error
-      rate is r' < r. One fixed cut is an upper bound on what the procedure in B achieves.
+      rate is r' < r. One fixed set's power is an upper bound on the procedure's in A2.
   A2. The procedure itself (simulated). `metrics.selective.coverage_at_risk` (#98) walks
       the calibration half from the most confident row down and stops at the first cut
       that fails. How often does it certify, and how much does it automate on the test
@@ -14,7 +14,7 @@ Four questions, answered before any model is run so the pre-registration can fix
       (H1: same model, verbalized against another method): the smallest AUROC difference
       a paired test detects with 80 % power at alpha 0.05, per n, accuracy, correlation and
       ties. Its variance comes from DeLong's placement values on one large simulated
-      sample, so it carries no Monte Carlo noise worth reporting.
+      sample (100,000 rows); the gap it is compared with is computed exactly.
   C.  Paired ECE (simulated). The same for the difference in ECE between two judges on the
       same rows, with its Monte Carlo standard error.
 
@@ -328,6 +328,38 @@ def delong(score_a: list[float], score_b: list[float], correct: list[bool]) -> d
             "s10": _cov(d10, d10), "s01": _cov(d01, d01)}
 
 
+def population_auroc(mu: float, accuracy: float, shares: list[float] | None) -> float:
+    """The exact AUROC of one method in B's model: right answers score N(mu, 1), wrong ones
+    N(0, 1). With ties, scores are cut at the quantiles of their mixture into levels with the
+    given shares (what `levels` does to a sample), and a tie counts one half."""
+    norm = NormalDist()
+    if shares is None:
+        return norm.cdf(mu / math.sqrt(2))
+
+    def mixture(x: float) -> float:
+        return accuracy * norm.cdf(x - mu) + (1 - accuracy) * norm.cdf(x)
+
+    cuts, total = [], 0.0
+    for share in shares[:-1]:
+        total += share
+        lo, hi = -12.0, 12.0 + mu
+        for _ in range(200):
+            mid = (lo + hi) / 2
+            lo, hi = (mid, hi) if mixture(mid) < total else (lo, mid)
+        cuts.append((lo + hi) / 2)
+    edges = [-math.inf, *cuts, math.inf]
+
+    def mass(shift: float, i: int) -> float:
+        return norm.cdf(edges[i + 1] - shift) - norm.cdf(edges[i] - shift)
+
+    auc, below = 0.0, 0.0
+    for i in range(len(shares)):
+        neg = mass(0.0, i)
+        auc += mass(mu, i) * (below + 0.5 * neg)
+        below += neg
+    return auc
+
+
 def paired_auroc_sd(components: dict, n: int, accuracy: float) -> float:
     return math.sqrt(components["s10"] / (n * accuracy)
                      + components["s01"] / (n * (1 - accuracy)))
@@ -351,14 +383,17 @@ def section_b(rng: random.Random) -> list[dict]:
                 if ties == "tied":
                     sa, sb = levels(sa, TIE_SHARES), levels(sb, TIE_SHARES)
                 comp = delong(sa, sb, correct)
+                shares = TIE_SHARES if ties == "tied" else None
+                pop_a = population_auroc(mu_a, acc, shares)
+                pop_b = population_auroc(mu_b, acc, shares)
                 for n in N_GRID:
                     s = paired_auroc_sd(comp, n, acc)
                     rows.append({"ties": ties, "accuracy": acc, "rho": rho, "n": n,
                                  "errors_expected": round(n * (1 - acc)),
-                                 "auroc_a": round(comp["auroc_a"], 3),
-                                 "auroc_b": round(comp["auroc_b"], 3),
-                                 "sd_difference": round(s, 4),
-                                 "mde": round(MDE_FACTOR * s, 3)})
+                                 "auroc_a": round(pop_a, 4), "auroc_b": round(pop_b, 4),
+                                 "gap": round(pop_b - pop_a, 4),
+                                 "sd_difference": round(s, 5),
+                                 "mde": round(MDE_FACTOR * s, 4)})
     return rows
 
 
@@ -406,7 +441,7 @@ def simulate_ece(n: int, rho: float, rng: random.Random) -> dict:
             "mean_ece_a": round(math.fsum(ea) / REPS_ECE, 4),
             "mean_ece_b": round(math.fsum(eb) / REPS_ECE, 4),
             "sd_difference": round(s, 4), "mde": round(MDE_FACTOR * s, 3),
-            "mde_mc_se": round(MDE_FACTOR * se_sd, 3)}
+            "mde_mc_se": round(MDE_FACTOR * se_sd, 4)}
 
 
 # --- report ---------------------------------------------------------------------------------
@@ -549,7 +584,9 @@ def markdown(d: dict) -> str:
         lo, hi = _share(min(vals)), _share(max(vals))
         return lo if lo == hi else f"{lo} to {hi}"
 
-    guarantee = ("stays within" if worst_violation <= DELTA else "**exceeds**")
+    se_violation = math.sqrt(DELTA * (1 - DELTA) / reps)
+    guarantee = ("is consistent with" if worst_violation <= DELTA + 2 * se_violation
+                 else "**exceeds**")
     lines += ["", ("**Read it this way.** With no error in the automatable slice the procedure "
                f"certifies {p_range(clean)} of the time and then automates "
                f"{cov_range(clean)} of a half (median). With a true error rate a quarter of "
@@ -559,7 +596,9 @@ def markdown(d: dict) -> str:
                f"could pass ({first:,} rows at {_pct(RISKS[0])}, where it must hold zero "
                "errors), and with continuous confidences one error among those rows ends the "
                "walk before any larger cut is tried. The largest violation rate in the table "
-               f"is {worst_violation * 100:.1f} %, which {guarantee} the {_pct(DELTA)} allowed. "
+               f"is {worst_violation * 100:.1f} %, which {guarantee} the {_pct(DELTA)} allowed "
+               f"(each rate is one simulated estimate, standard error about "
+               f"{se_violation * 100:.1f} points). "
                "Starting the sequence at a later, pre-registered cut keeps the guarantee and "
                "should certify more often when the slice is not error-free; that choice, and "
                "its effect in this simulation, belong in the plan."), "",
@@ -573,21 +612,23 @@ def markdown(d: dict) -> str:
                "difference comes from DeLong's placement values on one sample of "
                f"{N_BIG:,} rows per cell, scaled to n; MDE = (z₀.₉₇₅ + z₀.₈) × SD, the "
                "smallest true difference a paired test at α = 0.05 detects with 80 % power. "
-               "The AUROC columns are the large-sample values after ties."), "",
-              "| ties | accuracy | ρ | n | errors | AUROC A | AUROC B | SD(Δ) | MDE |",
-              "|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
+               "The AUROC columns and their gap are exact population values after ties, "
+               "not sample estimates."), "",
+              "| ties | accuracy | ρ | n | errors | AUROC A | AUROC B | gap | SD(Δ) | MDE |",
+              "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for r in b:
         lines.append(f"| {TIE_LABEL[r['ties']]} | {_share(r['accuracy'])} | {r['rho']} | "
                      f"{r['n']:,} | "
-                     f"{r['errors_expected']:,} | {r['auroc_a']:.3f} | {r['auroc_b']:.3f} | "
-                     f"{r['sd_difference']:.4f} | **{r['mde']:.3f}** |")
+                     f"{r['errors_expected']:,} | {r['auroc_a']:.4f} | {r['auroc_b']:.4f} | "
+                     f"{r['gap']:.4f} | {r['sd_difference']:.5f} | **{r['mde']:.4f}** |")
     for n in (big, clinc):
         cells = [r for r in b if r["n"] == n]
-        ok = [r for r in cells if r["mde"] <= round(r["auroc_b"] - r["auroc_a"], 3)]
-        gaps = [round(r["auroc_b"] - r["auroc_a"], 3) for r in cells]
-        lines += ["", f"At n = {n:,} the MDE is {_span([r['mde'] for r in cells])}; the gap "
-                  f"between the two methods (latent {round(AUROC_B - AUROC_A, 3)}, "
-                  f"{_span(gaps)} after ties) is resolvable in {len(ok)} of {len(cells)} cells"
+        ok = [r for r in cells if r["mde"] <= r["gap"]]
+        tied_gaps = [r["gap"] for r in cells if r["ties"] == "tied"]
+        lines += ["", f"At n = {n:,} the MDE is {_span([r['mde'] for r in cells], 4)}; the exact "
+                  f"gap between the two methods ({AUROC_B - AUROC_A:.4f} without ties, "
+                  f"{_span(tied_gaps, 4)} with 6 levels) is resolvable in {len(ok)} of "
+                  f"{len(cells)} cells"
                   + (": " + "; ".join(f"{TIE_LABEL[r['ties']]}, accuracy "
                                       f"{_share(r['accuracy'])}, ρ {r['rho']}" for r in ok)
                      if ok else "") + "."]
@@ -605,7 +646,7 @@ def markdown(d: dict) -> str:
     for r in c:
         lines.append(f"| {r['rho']} | {r['n']:,} | {r['true_ece_a']:.3f} | "
                      f"{r['mean_ece_a']:.4f} | {r['true_ece_b']:.3f} | {r['mean_ece_b']:.4f} "
-                     f"| {r['sd_difference']:.4f} | **{r['mde']:.3f}** ± {r['mde_mc_se']:.3f} |")
+                     f"| {r['sd_difference']:.4f} | **{r['mde']:.3f}** ± {r['mde_mc_se']:.4f} |")
     bias = [abs(r[f"mean_ece_{j}"] - r[f"true_ece_{j}"]) for r in c for j in ("a", "b")]
     lines += ["", (f"The binned ECE's bias against the true gap is at most {max(bias):.4f} "
                "here.")]

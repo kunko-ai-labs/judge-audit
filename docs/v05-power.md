@@ -53,50 +53,50 @@ Rows one **fixed** set needs for an 80 % chance to certify r when its true error
 | 5 % | 1.25 % | 1,540 | 48 % | 49 % | 55 % | 17 % | 0.8 % |
 | 5 % | 2.5 % | 1,540 | 22 % | 24 % | 6 % | 4 % | 0.6 % |
 
-**Read it this way.** With no error in the automatable slice the procedure certifies 100 % of the time and then automates 51 % to 62 % of a half (median). With a true error rate a quarter of the target it certifies 47 % to 48 % of the time, and at half the target 22 %; when it does certify there, it automates 6 % to 46 %. The reason is where the sequence starts: #98 starts at the smallest cut that could pass (299 rows at 1 %, where it must hold zero errors), and with continuous confidences one error among those rows ends the walk before any larger cut is tried. The largest violation rate in the table is 4.8 %, which stays within the 5 % allowed. Starting the sequence at a later, pre-registered cut keeps the guarantee and should certify more often when the slice is not error-free; that choice, and its effect in this simulation, belong in the plan.
+**Read it this way.** With no error in the automatable slice the procedure certifies 100 % of the time and then automates 51 % to 62 % of a half (median). With a true error rate a quarter of the target it certifies 47 % to 48 % of the time, and at half the target 22 %; when it does certify there, it automates 6 % to 46 %. The reason is where the sequence starts: #98 starts at the smallest cut that could pass (299 rows at 1 %, where it must hold zero errors), and with continuous confidences one error among those rows ends the walk before any larger cut is tried. The largest violation rate in the table is 4.8 %, which is consistent with the 5 % allowed (each rate is one simulated estimate, standard error about 1.0 points). Starting the sequence at a later, pre-registered cut keeps the guarantee and should certify more often when the slice is not error-free; that choice, and its effect in this simulation, belong in the plan.
 
 ## B. Paired AUROC: the smallest difference resolved
 
-Two confidence methods on the same decisions, latent AUROCs 0.7 and 0.75. Ties "none": continuous scores; "tied": each method says one of 6 values with shares [0.05, 0.05, 0.1, 0.15, 0.25, 0.4], lowest to highest (the top one like a verbalized 0.95 or a unanimous 5-sample vote). ρ is the latent correlation of the two methods' noise; the pilot measures the rank agreement of the two methods and ρ is set to reproduce it. The standard deviation of the paired difference comes from DeLong's placement values on one sample of 100,000 rows per cell, scaled to n; MDE = (z₀.₉₇₅ + z₀.₈) × SD, the smallest true difference a paired test at α = 0.05 detects with 80 % power. The AUROC columns are the large-sample values after ties.
+Two confidence methods on the same decisions, latent AUROCs 0.7 and 0.75. Ties "none": continuous scores; "tied": each method says one of 6 values with shares [0.05, 0.05, 0.1, 0.15, 0.25, 0.4], lowest to highest (the top one like a verbalized 0.95 or a unanimous 5-sample vote). ρ is the latent correlation of the two methods' noise; the pilot measures the rank agreement of the two methods and ρ is set to reproduce it. The standard deviation of the paired difference comes from DeLong's placement values on one sample of 100,000 rows per cell, scaled to n; MDE = (z₀.₉₇₅ + z₀.₈) × SD, the smallest true difference a paired test at α = 0.05 detects with 80 % power. The AUROC columns and their gap are exact population values after ties, not sample estimates.
 
-| ties | accuracy | ρ | n | errors | AUROC A | AUROC B | SD(Δ) | MDE |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| no ties | 85 % | 0.3 | 950 | 143 | 0.700 | 0.748 | 0.0271 | **0.076** |
-| no ties | 85 % | 0.3 | 1,540 | 231 | 0.700 | 0.748 | 0.0213 | **0.060** |
-| no ties | 85 % | 0.3 | 1,900 | 285 | 0.700 | 0.748 | 0.0192 | **0.054** |
-| no ties | 85 % | 0.3 | 3,079 | 462 | 0.700 | 0.748 | 0.0151 | **0.042** |
-| no ties | 85 % | 0.7 | 950 | 143 | 0.700 | 0.749 | 0.0184 | **0.051** |
-| no ties | 85 % | 0.7 | 1,540 | 231 | 0.700 | 0.749 | 0.0144 | **0.040** |
-| no ties | 85 % | 0.7 | 1,900 | 285 | 0.700 | 0.749 | 0.0130 | **0.036** |
-| no ties | 85 % | 0.7 | 3,079 | 462 | 0.700 | 0.749 | 0.0102 | **0.029** |
-| no ties | 93 % | 0.3 | 950 | 66 | 0.697 | 0.750 | 0.0378 | **0.106** |
-| no ties | 93 % | 0.3 | 1,540 | 108 | 0.697 | 0.750 | 0.0297 | **0.083** |
-| no ties | 93 % | 0.3 | 1,900 | 133 | 0.697 | 0.750 | 0.0268 | **0.075** |
-| no ties | 93 % | 0.3 | 3,079 | 216 | 0.697 | 0.750 | 0.0210 | **0.059** |
-| no ties | 93 % | 0.7 | 950 | 66 | 0.697 | 0.749 | 0.0257 | **0.072** |
-| no ties | 93 % | 0.7 | 1,540 | 108 | 0.697 | 0.749 | 0.0201 | **0.056** |
-| no ties | 93 % | 0.7 | 1,900 | 133 | 0.697 | 0.749 | 0.0181 | **0.051** |
-| no ties | 93 % | 0.7 | 3,079 | 216 | 0.697 | 0.749 | 0.0142 | **0.040** |
-| 6 levels | 85 % | 0.3 | 950 | 143 | 0.688 | 0.735 | 0.0282 | **0.079** |
-| 6 levels | 85 % | 0.3 | 1,540 | 231 | 0.688 | 0.735 | 0.0222 | **0.062** |
-| 6 levels | 85 % | 0.3 | 1,900 | 285 | 0.688 | 0.735 | 0.0200 | **0.056** |
-| 6 levels | 85 % | 0.3 | 3,079 | 462 | 0.688 | 0.735 | 0.0157 | **0.044** |
-| 6 levels | 85 % | 0.7 | 950 | 143 | 0.688 | 0.736 | 0.0200 | **0.056** |
-| 6 levels | 85 % | 0.7 | 1,540 | 231 | 0.688 | 0.736 | 0.0157 | **0.044** |
-| 6 levels | 85 % | 0.7 | 1,900 | 285 | 0.688 | 0.736 | 0.0141 | **0.040** |
-| 6 levels | 85 % | 0.7 | 3,079 | 462 | 0.688 | 0.736 | 0.0111 | **0.031** |
-| 6 levels | 93 % | 0.3 | 950 | 66 | 0.686 | 0.738 | 0.0394 | **0.110** |
-| 6 levels | 93 % | 0.3 | 1,540 | 108 | 0.686 | 0.738 | 0.0309 | **0.087** |
-| 6 levels | 93 % | 0.3 | 1,900 | 133 | 0.686 | 0.738 | 0.0279 | **0.078** |
-| 6 levels | 93 % | 0.3 | 3,079 | 216 | 0.686 | 0.738 | 0.0219 | **0.061** |
-| 6 levels | 93 % | 0.7 | 950 | 66 | 0.686 | 0.737 | 0.0280 | **0.078** |
-| 6 levels | 93 % | 0.7 | 1,540 | 108 | 0.686 | 0.737 | 0.0220 | **0.062** |
-| 6 levels | 93 % | 0.7 | 1,900 | 133 | 0.686 | 0.737 | 0.0198 | **0.055** |
-| 6 levels | 93 % | 0.7 | 3,079 | 216 | 0.686 | 0.737 | 0.0155 | **0.044** |
+| ties | accuracy | ρ | n | errors | AUROC A | AUROC B | gap | SD(Δ) | MDE |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| no ties | 85 % | 0.3 | 950 | 143 | 0.7000 | 0.7500 | 0.0500 | 0.02714 | **0.0760** |
+| no ties | 85 % | 0.3 | 1,540 | 231 | 0.7000 | 0.7500 | 0.0500 | 0.02131 | **0.0597** |
+| no ties | 85 % | 0.3 | 1,900 | 285 | 0.7000 | 0.7500 | 0.0500 | 0.01919 | **0.0538** |
+| no ties | 85 % | 0.3 | 3,079 | 462 | 0.7000 | 0.7500 | 0.0500 | 0.01507 | **0.0422** |
+| no ties | 85 % | 0.7 | 950 | 143 | 0.7000 | 0.7500 | 0.0500 | 0.01836 | **0.0514** |
+| no ties | 85 % | 0.7 | 1,540 | 231 | 0.7000 | 0.7500 | 0.0500 | 0.01442 | **0.0404** |
+| no ties | 85 % | 0.7 | 1,900 | 285 | 0.7000 | 0.7500 | 0.0500 | 0.01298 | **0.0364** |
+| no ties | 85 % | 0.7 | 3,079 | 462 | 0.7000 | 0.7500 | 0.0500 | 0.01020 | **0.0286** |
+| no ties | 93 % | 0.3 | 950 | 66 | 0.7000 | 0.7500 | 0.0500 | 0.03784 | **0.1060** |
+| no ties | 93 % | 0.3 | 1,540 | 108 | 0.7000 | 0.7500 | 0.0500 | 0.02972 | **0.0833** |
+| no ties | 93 % | 0.3 | 1,900 | 133 | 0.7000 | 0.7500 | 0.0500 | 0.02676 | **0.0750** |
+| no ties | 93 % | 0.3 | 3,079 | 216 | 0.7000 | 0.7500 | 0.0500 | 0.02102 | **0.0589** |
+| no ties | 93 % | 0.7 | 950 | 66 | 0.7000 | 0.7500 | 0.0500 | 0.02565 | **0.0719** |
+| no ties | 93 % | 0.7 | 1,540 | 108 | 0.7000 | 0.7500 | 0.0500 | 0.02015 | **0.0564** |
+| no ties | 93 % | 0.7 | 1,900 | 133 | 0.7000 | 0.7500 | 0.0500 | 0.01814 | **0.0508** |
+| no ties | 93 % | 0.7 | 3,079 | 216 | 0.7000 | 0.7500 | 0.0500 | 0.01425 | **0.0399** |
+| 6 levels | 85 % | 0.3 | 950 | 143 | 0.6878 | 0.7372 | 0.0494 | 0.02822 | **0.0791** |
+| 6 levels | 85 % | 0.3 | 1,540 | 231 | 0.6878 | 0.7372 | 0.0494 | 0.02216 | **0.0621** |
+| 6 levels | 85 % | 0.3 | 1,900 | 285 | 0.6878 | 0.7372 | 0.0494 | 0.01995 | **0.0559** |
+| 6 levels | 85 % | 0.3 | 3,079 | 462 | 0.6878 | 0.7372 | 0.0494 | 0.01568 | **0.0439** |
+| 6 levels | 85 % | 0.7 | 950 | 143 | 0.6878 | 0.7372 | 0.0494 | 0.01996 | **0.0559** |
+| 6 levels | 85 % | 0.7 | 1,540 | 231 | 0.6878 | 0.7372 | 0.0494 | 0.01568 | **0.0439** |
+| 6 levels | 85 % | 0.7 | 1,900 | 285 | 0.6878 | 0.7372 | 0.0494 | 0.01412 | **0.0396** |
+| 6 levels | 85 % | 0.7 | 3,079 | 462 | 0.6878 | 0.7372 | 0.0494 | 0.01109 | **0.0311** |
+| 6 levels | 93 % | 0.3 | 950 | 66 | 0.6889 | 0.7385 | 0.0496 | 0.03941 | **0.1104** |
+| 6 levels | 93 % | 0.3 | 1,540 | 108 | 0.6889 | 0.7385 | 0.0496 | 0.03095 | **0.0867** |
+| 6 levels | 93 % | 0.3 | 1,900 | 133 | 0.6889 | 0.7385 | 0.0496 | 0.02786 | **0.0781** |
+| 6 levels | 93 % | 0.3 | 3,079 | 216 | 0.6889 | 0.7385 | 0.0496 | 0.02189 | **0.0613** |
+| 6 levels | 93 % | 0.7 | 950 | 66 | 0.6889 | 0.7385 | 0.0496 | 0.02797 | **0.0784** |
+| 6 levels | 93 % | 0.7 | 1,540 | 108 | 0.6889 | 0.7385 | 0.0496 | 0.02197 | **0.0616** |
+| 6 levels | 93 % | 0.7 | 1,900 | 133 | 0.6889 | 0.7385 | 0.0496 | 0.01978 | **0.0554** |
+| 6 levels | 93 % | 0.7 | 3,079 | 216 | 0.6889 | 0.7385 | 0.0496 | 0.01554 | **0.0435** |
 
-At n = 3,079 the MDE is 0.029 to 0.061; the gap between the two methods (latent 0.05, 0.047 to 0.053 after ties) is resolvable in 6 of 8 cells: no ties, accuracy 85 %, ρ 0.3; no ties, accuracy 85 %, ρ 0.7; no ties, accuracy 93 %, ρ 0.7; 6 levels, accuracy 85 %, ρ 0.3; 6 levels, accuracy 85 %, ρ 0.7; 6 levels, accuracy 93 %, ρ 0.7.
+At n = 3,079 the MDE is 0.0286 to 0.0613; the exact gap between the two methods (0.0500 without ties, 0.0494 to 0.0496 with 6 levels) is resolvable in 6 of 8 cells: no ties, accuracy 85 %, ρ 0.3; no ties, accuracy 85 %, ρ 0.7; no ties, accuracy 93 %, ρ 0.7; 6 levels, accuracy 85 %, ρ 0.3; 6 levels, accuracy 85 %, ρ 0.7; 6 levels, accuracy 93 %, ρ 0.7.
 
-At n = 1,900 the MDE is 0.036 to 0.078; the gap between the two methods (latent 0.05, 0.047 to 0.053 after ties) is resolvable in 3 of 8 cells: no ties, accuracy 85 %, ρ 0.7; no ties, accuracy 93 %, ρ 0.7; 6 levels, accuracy 85 %, ρ 0.7.
+At n = 1,900 the MDE is 0.0364 to 0.0781; the exact gap between the two methods (0.0500 without ties, 0.0494 to 0.0496 with 6 levels) is resolvable in 2 of 8 cells: no ties, accuracy 85 %, ρ 0.7; 6 levels, accuracy 85 %, ρ 0.7.
 
 What drives it is the number of **errors**, not rows: at 93 % accuracy 3,079 rows hold about 216.
 
@@ -106,14 +106,14 @@ Two judges on the same rows, overconfident by 0.05 and 0.08. Each draws its conf
 
 | ρ | n | true ECE A | mean ECE A | true ECE B | mean ECE B | SD(Δ) | MDE |
 |---:|---:|---:|---:|---:|---:|---:|---:|
-| 0.3 | 950 | 0.050 | 0.0524 | 0.080 | 0.0814 | 0.0148 | **0.041** ± 0.001 |
-| 0.3 | 1,540 | 0.050 | 0.0513 | 0.080 | 0.0808 | 0.0118 | **0.033** ± 0.001 |
-| 0.3 | 1,900 | 0.050 | 0.0507 | 0.080 | 0.0799 | 0.0107 | **0.030** ± 0.001 |
-| 0.3 | 3,079 | 0.050 | 0.0503 | 0.080 | 0.0800 | 0.0085 | **0.024** ± 0.001 |
-| 0.7 | 950 | 0.050 | 0.0517 | 0.080 | 0.0820 | 0.0123 | **0.034** ± 0.001 |
-| 0.7 | 1,540 | 0.050 | 0.0514 | 0.080 | 0.0807 | 0.0103 | **0.029** ± 0.001 |
-| 0.7 | 1,900 | 0.050 | 0.0506 | 0.080 | 0.0800 | 0.0093 | **0.026** ± 0.001 |
-| 0.7 | 3,079 | 0.050 | 0.0509 | 0.080 | 0.0806 | 0.0068 | **0.019** ± 0.000 |
+| 0.3 | 950 | 0.050 | 0.0524 | 0.080 | 0.0814 | 0.0148 | **0.041** ± 0.0010 |
+| 0.3 | 1,540 | 0.050 | 0.0513 | 0.080 | 0.0808 | 0.0118 | **0.033** ± 0.0008 |
+| 0.3 | 1,900 | 0.050 | 0.0507 | 0.080 | 0.0799 | 0.0107 | **0.030** ± 0.0008 |
+| 0.3 | 3,079 | 0.050 | 0.0503 | 0.080 | 0.0800 | 0.0085 | **0.024** ± 0.0006 |
+| 0.7 | 950 | 0.050 | 0.0517 | 0.080 | 0.0820 | 0.0123 | **0.034** ± 0.0009 |
+| 0.7 | 1,540 | 0.050 | 0.0514 | 0.080 | 0.0807 | 0.0103 | **0.029** ± 0.0007 |
+| 0.7 | 1,900 | 0.050 | 0.0506 | 0.080 | 0.0800 | 0.0093 | **0.026** ± 0.0006 |
+| 0.7 | 3,079 | 0.050 | 0.0509 | 0.080 | 0.0806 | 0.0068 | **0.019** ± 0.0005 |
 
 The binned ECE's bias against the true gap is at most 0.0024 here.
 At n = 3,079 the ECE MDE is 0.019 to 0.024.
