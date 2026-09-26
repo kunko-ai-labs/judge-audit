@@ -15,3 +15,8 @@ docs/.frames/
 *.local.md
 auditoria*.md
 .mypy_cache/
+
+# The CLI's default outputs (judge-audit run/check from the repo root)
+/audit-judgments.jsonl
+/audit-report.md
+/audit-result.json
