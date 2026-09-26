@@ -30,7 +30,7 @@ This is every source a v0.5 design choice depends on, and what we took from each
 |---|---|
 | Schenker & Gentleman, [*On Judging the Significance of Differences by Examining the Overlap Between Confidence Intervals*](https://www.tandfonline.com/doi/abs/10.1198/000313001317097960), The American Statistician 2001 | Overlapping intervals are a conservative test, so v0.5 uses paired differences on the same rows |
 | McNemar, *Note on the sampling error of the difference between correlated proportions*, Psychometrika 1947 | The exact test of accuracy on discordant rows |
-| Hanley & McNeil, Radiology 1982; DeLong, DeLong & Clarke-Pearson, Biometrics 1988 | Standard errors and comparison of correlated ROC curves; v0.5 uses a clustered paired bootstrap instead, which also handles repeated texts |
+| Hanley & McNeil, Radiology 1982; DeLong, DeLong & Clarke-Pearson, Biometrics 1988 | Standard errors and comparison of correlated ROC curves. The power analysis uses DeLong's placement-value variance; the reports use a clustered paired bootstrap, which also handles repeated texts |
 | Zheng et al., [*Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena*](https://arxiv.org/abs/2306.05685), 2023; Zeng et al., [*LLMBar*](https://arxiv.org/abs/2310.07641), 2023 | LLM-as-judge practice and its biases; context for why confidence, not just agreement, is audited |
 | [Laya](https://huggingface.co/convaiinnovations/laya) (Convai Innovations), code at v0.3.20 and its README | The adapter follows Laya's own code; its caveats (near chance zero-shot, token budgets, clamped temperatures, act head without signal) are quoted from the README |
 | Public audit [Jev on BANKING77](https://github.com/simonmesmith/jev-banking77-experiment) | An existing accuracy audit on the same dataset, with no calibration; v0.5 adds the confidence side |
@@ -52,6 +52,6 @@ This is every source a v0.5 design choice depends on, and what we took from each
 | [Claude Messages API reference](https://platform.claude.com/docs/en/api/messages/create) | No log-probability parameter |
 | OpenAI developer forum on GPT-5 log-probabilities; a Google developer-forum thread on Gemini (community sources) | Reported absence of log-probabilities, checked per model with the smoke test before relying on it |
 | Ollama v0.12.11 release notes | Log-probabilities from local models through an OpenAI-compatible API |
-| Apple, [recommendedMaxWorkingSetSize](https://developer.apple.com/documentation/metal/mtldevice/recommendedmaxworkingsetsize) | How much unified memory the GPU can use, for sizing models on the Macs |
+| Apple, [recommendedMaxWorkingSetSize](https://developer.apple.com/documentation/metal/mtldevice/recommendedmaxworkingsetsize) | That the GPU's share of unified memory is capped and reported; the sizing table is a rule of thumb, not from this page |
 
-The full analysis behind these choices (a review of the v0.4 evidence, an external critique answered point by point, the plan with dates) is on the `docs/v05-analysis` branch.
+The full analysis behind these choices (a review of the v0.4 evidence, an external critique answered point by point, the plan with dates) is on the `docs/v05-analysis` branch, which is not merged.

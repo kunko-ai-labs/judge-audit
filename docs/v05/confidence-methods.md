@@ -7,7 +7,7 @@
 | Method | What is measured | Judge in this repository | Available for |
 |---|---|---|---|
 | **Verbalized** | The number the model writes next to its answer, asked for in the prompt | `llm` (default) | every chat model |
-| **Token log-probability** | The probability the model itself assigns to answering exactly each option: its tokens, then the end of its turn, normalised over the options | `logprob` (local, MLX) | only where the model's log-probabilities are reachable: open-weight models run locally, and hosted endpoints that return them (checked per endpoint with `scripts/logprob_smoke.py`) |
+| **Token log-probability** | The probability the model itself assigns to answering exactly each option: its tokens, then the end of its turn, normalised over the options | `logprob` (local, MLX) | open-weight models run locally. Hosted endpoints that return log-probabilities can be found with `scripts/logprob_smoke.py`, but no judge reads them yet |
 | **Self-consistency** | Ask the same question k times at a sampling temperature; the decision is the majority, the confidence is the share of samples that gave it | `llm` with `LLM_SAMPLES=k`, `LLM_TEMPERATURE` | every chat model (k times the cost) |
 
 Each method is its own row in every table (for self-consistency the judge is named `llm:<model>:sc<k>`); the three are **never averaged**. A model whose API returns no log-probabilities says so; the method is not imputed.
@@ -51,6 +51,6 @@ Comparing Jev's probability with Gemini's verbalized number mixes two things: th
 | Open-weight models run locally (MLX, llama.cpp, Ollama ≥ 0.12.11) | yes | a forward pass returns the logits; Ollama's release notes |
 | Open-weight models through a hosted OpenAI-compatible endpoint | depends on the endpoint | checked per model and endpoint with `scripts/logprob_smoke.py` before any run |
 
-So: verbalized and self-consistency for every chat model; token log-probability for open-weight models, locally or where an endpoint is shown to return them.
+So: verbalized and self-consistency for every chat model; token log-probability for open-weight models run locally. Reading log-probabilities from a hosted endpoint that returns them would need a new judge path; it is not implemented.
 
 Sources: [reading list](reading-list.md) § Confidence of language models.

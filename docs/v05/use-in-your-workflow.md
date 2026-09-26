@@ -1,11 +1,12 @@
 # Use it in your own workflow
 
-judge-audit is a Python package (`kunko-judge-audit` on PyPI), a CLI, a GitHub Action and an MCP server. The v0.5 methods ship through all four, so a team can audit its own judge on its own labelled rows, not only read our benchmark.
+judge-audit is a Python package (`kunko-judge-audit` on PyPI), a CLI, a GitHub Action and an MCP server. A team can audit its own judge on its own labelled rows, not only read our benchmark. The v0.5 pieces (new metrics, judges and extras) are on `main` and install from source (`pip install -e .` in a clone) until v0.5 is released on PyPI; the CLI, Action and MCP server do not print the new metrics yet.
 
 ## 1. On your own data, once (CLI)
 
 ```bash
-pip install kunko-judge-audit            # add [anthropic], [laya], [mlx], [nli] as needed
+pip install kunko-judge-audit            # v0.4 on PyPI; extras [anthropic], [nli], [mcp]
+# from a clone of main, v0.5 extras too: pip install -e ".[laya]" or ".[mlx]"
 judge-audit run my-labels.jsonl --judge llm --json result.json
 ```
 
@@ -29,11 +30,16 @@ The Action in this repository audits a judge on a labelled file in CI. It commen
   with:
     labels: evals/labels.jsonl
     judge: llm
+    extras: anthropic                 # the SDK the llm judge needs for Claude
     mode: check
     baseline: evals/baseline.json
+  env:
+    LLM_PROVIDER: anthropic
+    LLM_MODEL: <model id>
+    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 ```
 
-Keys come from repository secrets, never from the file. Full inputs, and what to check before running third-party code in your CI: [integrations.md](../integrations.md). This is how a team catches a prompt edit or a model update that makes its judge less honest before it ships.
+Keys come from repository secrets, never from the file. Full inputs, and what to check before running third-party code in your CI: [integrations.md](../integrations.md). This is how a team catches a prompt edit or a model update that makes its judge less honest before it ships, provided the change moves ECE or accuracy past the thresholds it set.
 
 **Scheduled audits.** The same Action on a `schedule:` trigger re-audits a hosted judge every week against a frozen labelled set and a frozen baseline. That catches silent model updates: the served model version is recorded per decision.
 
@@ -44,12 +50,7 @@ pip install "kunko-judge-audit[mcp]"
 claude mcp add judge-audit -- judge-audit-mcp
 ```
 
-The server exposes three tools: `run_audit`, `check_drift` and `list_judges`. An agent can then:
-- audit a judge before relying on it;
-- check drift after a change;
-- decide, from the audit, which confidence threshold to act on alone and when to escalate to a human.
-
-That last one is the v0.5 question applied at run time. The server makes no network calls of its own, only the ones the chosen judge makes.
+The server exposes three tools: `run_audit`, `check_drift` and `list_judges`. An agent can audit a judge before relying on it and check drift after a change. What it gets back today is the v0.4 report: accuracy, ECE, and the retrospective zero-error coverage. It does not yet choose a certified threshold for the agent; exposing the v0.5 "coverage at error ≤ X %" through the server is future work. The server makes no network calls of its own, only the ones the chosen judge makes.
 
 ## 4. As a library in your own pipeline
 

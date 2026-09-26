@@ -1,13 +1,13 @@
 # What runs where
 
-**Short version.** Local judges (Laya, the token log-probability judge, local chat models, the fine-tuned classifier) run on the maintainer's laptops, two Apple-silicon Macs with 16 GB and 24 GB. Hosted judges (Claude, Gemini, Jev, hosted open models) run from any machine that holds the keys. CI runs no model at all: it recomputes every published number from the committed checkpoints.
+**Short version.** Local judges (Laya, the token log-probability judge, local chat models, the fine-tuned classifier) run on the maintainer's laptops, two Apple-silicon Macs with 16 GB and 24 GB. Hosted judges (Claude, Gemini, Jev, hosted open models) run from any machine that holds the keys. CI runs no real model: it recomputes every published number from the committed checkpoints (its only model is a tiny random one that tests the MLX code path).
 
 ## The judges
 
 | Judge | What it is | Where it runs | Needs |
 |---|---|---|---|
-| `laya` | Laya, an open judgment model (421M-parameter encoder) | **your Mac** (CPU or Apple GPU); any Linux box that can download it | `pip install 'kunko-judge-audit[laya]'`, `LAYA_REVISION` pinned |
-| `logprob` | An open chat model's own probability of each option (MLX) | **your Mac**; Linux CPU works but is slow | `pip install 'kunko-judge-audit[mlx]'`, `LOGPROB_MODEL`, `LOGPROB_REVISION` |
+| `laya` | Laya, an open judgment model (421M-parameter encoder) | **your Mac** (CPU or Apple GPU); any Linux box that can download it | the `[laya]` extra (from source until v0.5 is on PyPI), `LAYA_REVISION` pinned |
+| `logprob` | An open chat model's own probability of each option (MLX) | **your Mac**; Linux CPU works but is slow | the `[mlx]` extra (from source until v0.5), `LOGPROB_MODEL`, `LOGPROB_REVISION` |
 | `llm` via a local server | An open chat model, verbalized or self-consistency | **your Mac** (a local OpenAI-compatible server such as Ollama) | `LLM_PROVIDER=openai-compatible`, `LLM_BASE_URL=http://localhost:11434/v1`, `LLM_MODEL` |
 | `finetuned` | Your own classifier trained on your labels (`scripts/train_classifier.py`) | **your Mac** (training and inference) | the `[nli]` extra, `FINETUNED_MODEL_DIR` |
 | `nli` | A small zero-shot encoder, the control | anywhere, CPU is enough | the `[nli]` extra |
@@ -19,7 +19,7 @@ So the answer to "what must I run on my Mac?" is: **Laya, the log-probability ju
 
 ## Sizing on the two Macs
 
-Apple silicon shares memory between CPU and GPU; macOS lets the GPU wire roughly two thirds to three quarters of it by default. As a rule of thumb for 4-bit models:
+Apple silicon shares memory between CPU and GPU, and macOS caps how much of it the GPU can use (Metal reports it as `recommendedMaxWorkingSetSize`). A rule of thumb, not a measurement, for 4-bit models:
 
 | Machine | Comfortable | Tight |
 |---|---|---|
@@ -30,7 +30,7 @@ Before any published `logprob` run, `python scripts/logprob_selfcheck.py <labels
 
 ## Long runs
 
-`scripts/audit_resumable.py` writes one checkpoint row per decision and resumes where it stopped. It refuses to resume a checkpoint recorded with a different model, confidence method, temperature, number of samples, prompt or gateway routing. Run it in the background and watch the row count. Checkpoints are committed; every published number is recomputed from them.
+`scripts/audit_resumable.py` writes one checkpoint row per decision and resumes where it stopped. It refuses to resume a checkpoint recorded with a different judge, row subset, gateway routing, model, confidence method, temperature, number of samples or prompt. Run it in the background and watch the row count. Checkpoints are committed; every published number is recomputed from them.
 
 ## What CI does, and does not
 

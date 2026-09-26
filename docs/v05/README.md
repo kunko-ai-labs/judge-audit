@@ -7,7 +7,7 @@ v0.4 fixed the instrument; its evidence is still synthetic (GT-1), small (200 an
 > **Can a judge's declared confidence decide what you automate?**
 > If you let a judge act alone whenever it says it is sure enough, how much of your traffic can it handle at an error rate you can live with, and can you prove that rate?
 
-Accuracy alone does not answer it, and neither does the average calibration error (ECE). v0.4's Arena already shows why: under attack, Claude Sonnet 4.5 and Gemini 3 Flash were *more accurate* than Jev and their ECE was not separated from Jev's, yet **0 % of their decisions could be automated with no observed error, against 73 % of Jev's**, because their confidence barely moved when they were wrong ([README § Arena](../../README.md), [arena-2026-09.md](../arena-2026-09.md); synthetic data, n = 200, one run per judge).
+Accuracy alone does not answer it, and neither does the average calibration error (ECE). v0.4's Arena already shows why. Under attack, Gemini 3 Flash had a higher point accuracy than Jev (97.0 % against 95.5 %, intervals overlapping) and an ECE the intervals did not separate from Jev's, yet **0 % of its decisions could be automated with no observed error, against 73 % of Jev's**: it said 1.0 on 125 of 200 emails and was wrong on 5 of them. Claude Sonnet 4.5 also scored 0 %, but its interval reaches 90.9 %, so Jev is not separated from it ([README § Arena](../../README.md), [arena-2026-09.md](../arena-2026-09.md); synthetic data, n = 200, one run per judge, no paired test).
 
 ## What v0.5 adds
 
@@ -32,16 +32,19 @@ Everything else (prompt templates, repeats, the fine-tuned learning curve, delib
 
 | Piece | Where | State |
 |---|---|---|
-| Metrics: AUROC, AURC, coverage at a target risk, paired differences, McNemar, MCE | [#98](https://github.com/kunko-ai-labs/judge-audit/pull/98) | merged |
-| BANKING77 and CLINC150, pinned by sha256; blind relabelling tool | [#99](https://github.com/kunko-ai-labs/judge-audit/pull/99) | in review |
-| Gateway routing fields, log-probability smoke test | [#100](https://github.com/kunko-ai-labs/judge-audit/pull/100) | in review |
-| Token log-probability judge (MLX, local) | [#102](https://github.com/kunko-ai-labs/judge-audit/pull/102) | in review |
-| Laya, a second judgment model (local) | [#101](https://github.com/kunko-ai-labs/judge-audit/pull/101) | in review |
-| Self-consistency for the `llm` judge | [#104](https://github.com/kunko-ai-labs/judge-audit/pull/104) | in review |
-| Power analysis | [#105](https://github.com/kunko-ai-labs/judge-audit/pull/105) | in review |
+| Metrics: AUROC, AURC, coverage at a target risk, paired differences, McNemar, MCE | [#98](https://github.com/kunko-ai-labs/judge-audit/pull/98) | on `main` |
+| BANKING77 and CLINC150, pinned by sha256; blind relabelling tool | [#99](https://github.com/kunko-ai-labs/judge-audit/pull/99) | on `main` |
+| Gateway routing fields, log-probability smoke test | [#100](https://github.com/kunko-ai-labs/judge-audit/pull/100) | on `main` |
+| Token log-probability judge (MLX, local) | [#102](https://github.com/kunko-ai-labs/judge-audit/pull/102) | on `main` |
+| Laya, a second judgment model (local) | [#101](https://github.com/kunko-ai-labs/judge-audit/pull/101) | on `main` |
+| Self-consistency for the `llm` judge | [#104](https://github.com/kunko-ai-labs/judge-audit/pull/104) | on `main` |
+| Power analysis | [#105](https://github.com/kunko-ai-labs/judge-audit/pull/105) | on `main` |
 | Pilot on the BANKING77 train sample | maintainer's machine | not started |
-| Label noise: two annotators on 500 rows per dataset | maintainer | not started |
+| Label noise: two annotators on 500 rows per dataset | maintainer ([#86](https://github.com/kunko-ai-labs/judge-audit/issues/86)) | not started |
+| A truly unseen held-out slice | [#106](https://github.com/kunko-ai-labs/judge-audit/issues/106) | not started |
 | Pre-registration `docs/v05-plan.md` | [#91](https://github.com/kunko-ai-labs/judge-audit/issues/91) | not started |
 | Runs, reports, release | — | not started |
 
-**No v0.5 number has been measured yet.** Every figure in this folder is either a v0.4 published result (with its link) or an exact computation from the power analysis.
+"On `main`" means available from source; the PyPI package is still v0.4.0 until v0.5 is released.
+
+**No v0.5 number has been measured yet.** The figures in this folder are of four kinds, each with its source next to it: v0.4 published results (recomputed from committed checkpoints), the power analysis (exact computations and stated simulations, regenerated in CI), figures quoted from a cited source (Laya's README, Ying & Thomas 2022), and rules of thumb, labelled as such.
