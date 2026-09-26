@@ -106,3 +106,28 @@ def test_heldout_run_judges_only_the_subset_and_resumes(tmp_path):
     # The same checkpoint cannot be continued on a different subset.
     p = run(args[:-1] + [f"{SPLIT}:train"], tmp_path)
     assert p.returncode != 0 and "different --rows subset" in p.stderr
+
+
+def test_a_checkpoint_is_not_resumed_with_another_confidence_method(tmp_path, monkeypatch):
+    """LLM_SAMPLES or LLM_TEMPERATURE changed between two sessions would mix two methods
+    under one header."""
+    from judge_audit.judges.llm import prompt_sha256
+
+    ckpt = tmp_path / "c.ckpt.jsonl"
+    judge = {"name": "llm:m", "provider": "openai-compatible", "model": "m",
+             "confidence_method": "verbalized (model-reported probability)",
+             "temperature": 0, "prompt_sha256": prompt_sha256()}
+    ckpt.write_text(json.dumps({"idx": -1, "run": {"judge": judge}}) + "\n")
+    for k, v in {"LLM_PROVIDER": "openai-compatible", "LLM_BASE_URL": "http://127.0.0.1:9",
+                 "LLM_MODEL": "m"}.items():
+        monkeypatch.setenv(k, v)
+    args = [str(LABELS), "--judge", "llm", "--checkpoint", str(ckpt),
+            "--out", str(tmp_path / "r.md"), "--json", str(tmp_path / "r.json")]
+    monkeypatch.setenv("LLM_SAMPLES", "5")
+    monkeypatch.setenv("LLM_TEMPERATURE", "1")
+    p = run(args, tmp_path)
+    assert p.returncode != 0 and "name='llm:m'" in p.stderr and "llm:m:sc5" in p.stderr
+    monkeypatch.delenv("LLM_SAMPLES")
+    monkeypatch.setenv("LLM_TEMPERATURE", "default")
+    p = run(args, tmp_path)
+    assert p.returncode != 0 and "temperature=0" in p.stderr and "provider default" in p.stderr

@@ -129,7 +129,7 @@ def temperature_of(raw: str) -> float | int | None:
         raise ValueError(f"LLM_TEMPERATURE={raw!r}: a number in [0, 2], or 'default'") from e
     if not 0 <= t <= 2:
         raise ValueError(f"LLM_TEMPERATURE={raw!r}: a number in [0, 2], or 'default'")
-    return t
+    return TEMPERATURE if t == 0 else t         # an explicit 0 is the default, sent the same
 
 
 def samples_of(raw: str) -> int:
@@ -225,17 +225,23 @@ def vote(parsed: list[dict[str, tuple]], questions: list[Question]
 
     The decision is the one most samples gave; a tie goes to the tied decision drawn first,
     which is random with respect to the option order. The confidence is its count over k:
-    a sample with no answer counts in k and votes for nothing, since it did not agree. A
-    decision outside the options votes like any other and is scored wrong. With no answer
-    in any sample, there is no decision. Pure, so a checkpoint can be re-voted offline."""
+    a sample with no answer (none, a blank or a null decision) counts in k and votes for
+    nothing, since it did not agree. A decision outside the options votes like any other,
+    case ignored as the scorer ignores it, under the spelling drawn first, and is scored
+    wrong. With no answer in any sample, there is no decision. Pure, so a checkpoint can be
+    re-voted offline."""
     k = len(parsed)
     out: dict[str, tuple[str, float | None, str, dict[str, int]]] = {}
     for q in questions:
         votes: dict[str, int] = {}                  # insertion order = order first drawn
+        spelling: dict[str, str] = {}
         for sample in parsed:
-            decision, _, _, status = sample[q.name]
-            if status != "no_answer":
-                votes[decision] = votes.get(decision, 0) + 1
+            decision, _, ans, status = sample[q.name]
+            if status == "no_answer" or (isinstance(ans, dict) and ans.get("decision") is None):
+                continue
+            key = decision.casefold()
+            spelling.setdefault(key, decision)
+            votes[spelling[key]] = votes.get(spelling[key], 0) + 1
         if not votes:
             out[q.name] = ("", None, "no_answer", votes)
             continue
@@ -243,6 +249,19 @@ def vote(parsed: list[dict[str, tuple]], questions: list[Question]
         winner = next(d for d, n in votes.items() if n == top)
         out[q.name] = (winner, top / k, "parsed", votes)
     return out
+
+
+def served_across(samples: list[dict]) -> dict:
+    """The version the provider served a self-consistency decision: the one every sample
+    reports, or, when they differ, none, with every distinct one listed (so the report
+    shows a mixed decision rather than the first sample's version)."""
+    distinct: list[dict] = []
+    for x in samples:
+        if x["served"] not in distinct:
+            distinct.append(x["served"])
+    if len(distinct) == 1:
+        return distinct[0]
+    return {"model": None, "system_fingerprint": None, "samples_served": distinct}
 
 
 def vote_replies(texts: list[str], questions: list[Question]
@@ -253,6 +272,7 @@ def vote_replies(texts: list[str], questions: list[Question]
 
 class LLMJudge(Judge):
     _served: dict  # what the provider said it served on the last call (per decide())
+    _custom_takes_temperature = False
     name = "llm"
 
     def __init__(self, provider: str | None = None, model: str | None = None,
@@ -294,7 +314,8 @@ class LLMJudge(Judge):
                 raise RuntimeError(f"{path} has no call(model, system, user)")
             params = inspect.signature(self._custom.call).parameters.values()
             self._custom_takes_temperature = any(
-                p.name == "temperature" or p.kind is p.VAR_KEYWORD for p in params)
+                (p.name == "temperature" and p.kind in (p.POSITIONAL_OR_KEYWORD, p.KEYWORD_ONLY))
+                or p.kind is p.VAR_KEYWORD for p in params)
             if self.temperature != TEMPERATURE and not self._custom_takes_temperature:
                 raise RuntimeError(f"{path}: call() takes no temperature keyword, so "
                                    "LLM_TEMPERATURE cannot reach the model")
@@ -311,7 +332,8 @@ class LLMJudge(Judge):
             raise ValueError(f"unknown provider '{self.provider}' "
                              "(anthropic | openai-compatible | custom)")
         self.label = os.environ.get("LLM_MODEL_LABEL") or self.model
-        self.name = f"llm:{self.label}"
+        # A self-consistency run is its own row, never merged with the verbalized one.
+        self.name = f"llm:{self.label}" + (f":sc{self.samples}" if self.samples > 1 else "")
 
     def describe(self) -> dict:
         d: dict = {"name": self.name, "provider": self.provider, "model": self.label,
@@ -326,7 +348,10 @@ class LLMJudge(Judge):
         if self.provider == "custom":
             extra = getattr(self._custom, "describe", None)
             if callable(extra):
+                owned = {k: d[k] for k in ("name", "confidence_method", "temperature",
+                                           "samples", "prompt_sha256") if k in d}
                 d.update(extra(self.model))
+                d.update(owned)             # what this judge measures, not the module's say
         elif self.base_url:
             d["base_url"] = self.base_url
         if self.effort:
@@ -345,8 +370,10 @@ class LLMJudge(Judge):
         if self.provider == "anthropic":
             return self._call_anthropic(user)
         if self.provider == "custom":
+            # A module that takes the keyword always gets it, 0 included, so what describe()
+            # records is what was sent; one that does not must use temperature 0 itself.
             kwargs = ({"temperature": self.temperature}
-                      if self.temperature != TEMPERATURE else {})
+                      if self._custom_takes_temperature else {})
             out = self._custom.call(self.model, SYSTEM, user, **kwargs)
             if len(out) > 3 and isinstance(out[3], dict):
                 self._served = out[3]
@@ -475,7 +502,7 @@ class LLMJudge(Judge):
                 raw={"samples": samples, "votes": votes,
                      "verbalized": [p[q.name][1] for p in parsed],
                      "usage": {"input_tokens": in_all, "output_tokens": out_all},
-                     "priced": priced, "served": samples[0]["served"]},
+                     "priced": priced, "served": served_across(samples)},
                 parse_status=status,
             ))
         return out

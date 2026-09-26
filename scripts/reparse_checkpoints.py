@@ -46,16 +46,18 @@ def reparse(ckpt: Path, rows: list[dict], dry_run: bool) -> int:
                 continue
             samples = raw.get("samples")
             if isinstance(samples, list) and samples:
-                decision, confidence, status, votes = vote_replies(
-                    [str(x.get("text") or "") for x in samples], qs)[j["question"]]
-                update = {"votes": votes}
+                texts = [str(x.get("text") or "") for x in samples]
+                decision, confidence, status, votes = vote_replies(texts, qs)[j["question"]]
+                update = {"votes": votes, "verbalized": [
+                    parse_reply(t, qs)[j["question"]][1] for t in texts]}
             elif raw.get("text"):
                 decision, confidence, ans, status = parse_reply(raw["text"], qs)[j["question"]]
                 update = {"parsed": ans}
             else:
                 continue
             if (decision, confidence, status) != (
-                    j["decision"], j["confidence"], j.get("parse_status", "parsed")):
+                    j["decision"], j["confidence"], j.get("parse_status", "parsed")) or any(
+                    k in raw and raw[k] != v for k, v in update.items() if k != "parsed"):
                 changed += 1
                 j["decision"], j["confidence"], j["parse_status"] = decision, confidence, status
                 raw.update(update)

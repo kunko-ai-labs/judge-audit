@@ -255,3 +255,130 @@ def test_reparse_revotes_a_self_consistency_checkpoint(tmp_path):
     assert (j["decision"], j["confidence"]) == ("spam", pytest.approx(2 / 3))
     assert j["raw"]["votes"] == {"spam": 2, "order": 1}
     assert mod.reparse(ckpt, [row], dry_run=True) == 0
+
+
+# --- review round: defaults, provenance, votes, resume --------------------------------------
+
+
+def test_the_default_request_body_is_main_s_byte_for_byte(monkeypatch):
+    from judge_audit.judges.llm import SYSTEM, _render
+
+    for temperature in (None, "0", "0.0"):
+        j, sent = judge(monkeypatch, [reply("spam")], samples=None, temperature=temperature)
+        j.decide("buy now", [Q])
+        assert json.dumps(sent[0]) == json.dumps({
+            "model": "local-model", "temperature": 0,
+            "response_format": {"type": "json_object"},
+            "messages": [{"role": "system", "content": SYSTEM},
+                         {"role": "user", "content": _render("buy now", [Q])}]})
+        assert j.describe()["temperature"] == 0 and j.name == "llm:local-model"
+
+
+def test_a_self_consistency_run_is_its_own_row(monkeypatch):
+    j, _ = judge(monkeypatch, [], samples="5")
+    assert j.name == "llm:local-model:sc5"
+
+
+def test_out_of_option_case_variants_are_one_vote_and_a_null_decision_none():
+    (d, c, _, votes), = vote(_parsed("spam", "Refund", "refund"), [Q]).values()
+    assert (d, c, votes) == ("Refund", pytest.approx(2 / 3), {"Refund": 2, "spam": 1})
+    texts = [json.dumps({"answers": {"category": {"decision": None, "confidence": 0.9}}})] * 2
+    ((d, c, _, votes),) = vote_replies(texts + [reply("spam")], [Q]).values()
+    assert (d, c, votes) == ("spam", pytest.approx(1 / 3), {"spam": 1})
+
+
+def test_samples_served_by_different_versions_are_all_reported(monkeypatch):
+    import judge_audit.judges.llm as llm_mod
+    from judge_audit.runner import served_versions
+
+    versions = iter(["m-2026-01", "m-2026-06", "m-2026-06"])
+
+    def fetch(req, deadline):
+        return {"model": next(versions), "choices": [{"message": {"content": reply("spam")}}],
+                "usage": {}}
+
+    j, _ = judge(monkeypatch, [], samples="3", fetch=fetch)
+    (out,) = j.decide("x", [Q])
+    assert out.raw["served"] == {"model": None, "system_fingerprint": None, "samples_served": [
+        {"model": "m-2026-01", "system_fingerprint": None},
+        {"model": "m-2026-06", "system_fingerprint": None}]}
+    summary = served_versions([{"raw": out.raw}])
+    assert summary["versions"][0]["samples_served"][1]["model"] == "m-2026-06"
+    monkeypatch.setattr(llm_mod, "_fetch_json", lambda req, deadline: {
+        "model": "m-2026-06", "choices": [{"message": {"content": reply("spam")}}]})
+    (same,) = j.decide("x", [Q])
+    assert same.raw["served"] == {"model": "m-2026-06", "system_fingerprint": None}
+
+
+def test_a_custom_module_with_the_keyword_always_gets_it_and_describe_says_what_was_sent(
+        monkeypatch, tmp_path):
+    src = ("SEEN = []\n"
+           "def call(model, system, user, temperature=None):\n"
+           "    SEEN.append(temperature)\n"
+           "    return '{\"answers\": {\"category\": {\"decision\": \"spam\", "
+           "\"confidence\": 0.5}}}', 1, 1\n"
+           "def describe(model):\n"
+           "    return {'provider': 'hosted-api', 'temperature': 0,\n"
+           "            'confidence_method': 'verbalized', 'samples': 1}\n")
+    j = _custom(monkeypatch, tmp_path, src, None, samples="1")
+    j.decide("x", [Q])
+    assert j._custom.SEEN == [0] and j.describe()["temperature"] == 0
+    j = _custom(monkeypatch, tmp_path, src, "1", samples="3")
+    j.decide("x", [Q])
+    d = j.describe()
+    assert j._custom.SEEN[-3:] == [1.0, 1.0, 1.0]
+    assert d["provider"] == "hosted-api"                             # the module's to say
+    assert d["temperature"] == 1.0 and d["samples"] == 3              # the judge's to say
+    assert d["confidence_method"].startswith("self-consistency")
+
+
+def test_a_positional_only_temperature_is_not_a_keyword(monkeypatch, tmp_path):
+    src = "def call(model, system, user, temperature, /):\n    return '{}', 1, 1\n"
+    with pytest.raises(RuntimeError, match="takes no temperature"):
+        _custom(monkeypatch, tmp_path, src, "1")
+
+
+def test_reparse_refreshes_stale_votes_even_when_the_decision_holds(tmp_path):
+    import importlib.util
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    spec = importlib.util.spec_from_file_location("reparse_checkpoints_2",
+                                                  root / "scripts" / "reparse_checkpoints.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    row = {"state": "x", "questions": [{"name": "category", "type": "choice",
+                                        "instructions": "classify",
+                                        "options": ["spam", "order", "support"]}],
+           "labels": {"category": "spam"}}
+    samples = [{"text": reply("spam", 0.9)}, {"text": reply("order", 0.4)},
+               {"text": reply("spam", 0.8)}]
+    stale = {"idx": 0, "judgments": [{"question": "category", "decision": "spam",
+                                      "confidence": 2 / 3, "parse_status": "parsed",
+                                      "raw": {"samples": samples, "votes": {"spam": 2},
+                                              "verbalized": [None, None, None]}}]}
+    ckpt = tmp_path / "c.ckpt.jsonl"
+    ckpt.write_text(json.dumps({"idx": -1, "run": {}}) + "\n" + json.dumps(stale) + "\n")
+    assert mod.reparse(ckpt, [row], dry_run=False) == 1
+    (j,) = json.loads(ckpt.read_text().splitlines()[1])["judgments"]
+    assert j["raw"]["votes"] == {"spam": 2, "order": 1}
+    assert j["raw"]["verbalized"] == [0.9, 0.4, 0.8]
+
+
+def test_a_full_report_from_a_self_consistency_run(monkeypatch):
+    from judge_audit.runner import run_audit
+
+    rows = [{"state": f"message {i}", "questions": [
+        {"name": "category", "type": "choice", "instructions": "classify",
+         "options": ["spam", "order", "support"]}], "labels": {"category": "spam"}}
+        for i in range(4)]
+    replies = [reply(d) for d in ("spam", "spam", "order",     # spam 2/3, right
+                                  "order", "order", "order",   # order 1, wrong
+                                  "spam", None, "spam",        # spam 2/3, right
+                                  "spam", "spam", "spam")]     # spam 1, right
+    j, _ = judge(monkeypatch, replies, samples="3")
+    result = run_audit(j, rows)
+    d = result.to_dict()
+    assert d["n"] == 4 and d["accuracy"] == pytest.approx(0.75)
+    assert sorted(r["confidence"] for r in result.records) == pytest.approx(
+        [2 / 3, 2 / 3, 1.0, 1.0])
