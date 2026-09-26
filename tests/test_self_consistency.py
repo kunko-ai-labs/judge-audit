@@ -20,7 +20,7 @@ def reply(decision: str | None, confidence=0.9) -> str:
 
 
 def judge(monkeypatch, replies: list[str], samples="5", temperature="1", fetch=None):
-    import judge_audit.judges.llm as llm_mod
+    from judge_audit.judges import llm as llm_mod
 
     monkeypatch.setenv("LLM_PROVIDER", "openai-compatible")
     monkeypatch.setenv("LLM_BASE_URL", "http://127.0.0.1:1/v1")
@@ -288,7 +288,7 @@ def test_out_of_option_case_variants_are_one_vote_and_a_null_decision_none():
 
 
 def test_samples_served_by_different_versions_are_all_reported(monkeypatch):
-    import judge_audit.judges.llm as llm_mod
+    from judge_audit.judges import llm as llm_mod
     from judge_audit.runner import served_versions
 
     versions = iter(["m-2026-01", "m-2026-06", "m-2026-06"])
