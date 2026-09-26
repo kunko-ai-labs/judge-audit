@@ -76,6 +76,20 @@ JUDGE_INFO: dict[str, dict[str, object]] = {
         "env": ["extra [nli] (transformers + torch)", "FINETUNED_MODEL_DIR (required)",
                 "FINETUNED_DEVICE, FINETUNED_MAX_LEN (optional)"],
     },
+    "logprob": {
+        "description": "An open-weight chat model run locally with MLX; confidence is its own "
+                       "token log-probability of each option (option then end of turn), "
+                       "normalised over the options. Nothing is sampled.",
+        "env": ["extra [mlx]", "LOGPROB_MODEL (required), LOGPROB_REVISION (recommended)",
+                "LOGPROB_LABEL, LOGPROB_CHAT_KWARGS (optional)"],
+    },
+    "laya": {
+        "description": "Laya, an open-weight judgment model run locally (encoder, one forward "
+                       "pass). Confidence is P(chosen option) after the checkpoint's softmax "
+                       "temperature, never its entropy-based confidence field.",
+        "env": ["extra [laya]", ("LAYA_MODEL, LAYA_REVISION (recommended), LAYA_DEVICE, "
+                                 "LAYA_MAX_LEN, LAYA_HEAD_MAX_LEN (optional)")],
+    },
     "simulated": {
         "description": "Seeded simulator to see the pipeline without a key. Not a real "
                        "vendor audit; every result is tagged SIMULATED.",
