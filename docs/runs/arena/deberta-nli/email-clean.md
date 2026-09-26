@@ -1,11 +1,11 @@
 # Audit report — nli
 
-**n=200** · accuracy **86.5%** [80.8, 91.6] · confidence known **200/200** · ECE **0.1765** [0.1244, 0.2416] · ECE (equal-mass) **0.1630** [0.1174, 0.2348] · Brier **0.1288** [0.0970, 0.1696]
-· cost **$0.0000** · p50 **0.321s** · p99 **0.768s**
+**n=200** · accuracy **86.5%** [80.8, 91.6] · confidence known **200/200** · ECE **0.1765** [0.1244, 0.2416] · ECE (equal-mass) **0.1630** [0.1174, 0.2348] · Brier **0.1288** [0.0970, 0.1696] · NLL **0.4021** [0.3247, 0.4969]
+· cost **$0.0000** · p50 **0.321s** · p99 **0.744s** · slowest **1.208s**
 
 _judge `nli:deberta-v3-base-zeroshot-v2.0` · model `deberta-v3-base-zeroshot-v2.0` · run 2026-09-20T18:50:38+00:00 · judge-audit 0.3.1_
 _dataset `examples/email-routing/labels.jsonl` · 200 rows · sha256 `c5b4c111290a…`_
-_regenerated 2026-09-23T18:32:04+00:00 from `docs/runs/arena/deberta-nli/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-09-24T15:48:07+00:00 from `docs/runs/arena/deberta-nli/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic: seeded templates with item and number fills, not real mail; the label is the template's category by design; no human checked it; 100 % here is the floor a judge must clear, not evidence of production routing accuracy**
 

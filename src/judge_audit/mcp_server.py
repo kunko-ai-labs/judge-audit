@@ -20,6 +20,7 @@ import os
 
 from .cli import JUDGES, _judge
 from .ground_truth import ground_truth_of
+from .judges.base import Judge
 from .judges.simulated import SIMULATED_TAG
 from .report import IncompatibleBaseline
 from .report import check_drift as _check_drift
@@ -103,7 +104,7 @@ def _load(labels_path: str) -> tuple[list[dict] | None, dict, dict | None]:
     return rows, dataset_meta, None
 
 
-def _make_judge(name: str, rows: list[dict]) -> tuple[object | None, str, dict | None]:
+def _make_judge(name: str, rows: list[dict]) -> tuple[Judge | None, str, dict | None]:
     if name not in JUDGES:
         return None, "", {"error": f"unknown judge '{name}' (available: {', '.join(JUDGES)})"}
     try:
@@ -117,11 +118,13 @@ def _make_judge(name: str, rows: list[dict]) -> tuple[object | None, str, dict |
     "Audit a judge in shadow mode against a labeled JSONL file "
     "({state, questions, labels} per line). Returns n, accuracy, ECE (equal-width bins), "
     "ece_equal_mass (equal-mass bins, ties never split), brier (Brier score, no bins), "
+    "nll (log loss, never clipped: null when infinite, with nll_infinite = the answers "
+    "declared certain and wrong), "
     "reliability bins, accuracy-coverage curve, zero-error coverage (calibration metrics use "
     "only the confidence.known rows out of confidence.total and are null when none are known; "
     "each headline number with a 95 % bootstrap interval: accuracy_ci / ece_ci / "
-    "ece_equal_mass_ci / brier_ci / zero_error_coverage_ci), total cost (null when an "
-    "unknown billable price prevents aggregation), p50/p99 latency, the run "
+    "ece_equal_mass_ci / brier_ci / nll_ci / zero_error_coverage_ci), total cost (null when "
+    "an unknown billable price prevents aggregation), p50/p99 and slowest latency, the run "
     "provenance (judge, model, backend, dataset sha256) and ground_truth: the dataset's "
     "provenance tier (GT-0 unknown … GT-6 production outcome; docs/ground-truth.md) that says "
     "what the accuracy is evidence of. judge: jev | llm | simulated "
@@ -130,11 +133,11 @@ def _make_judge(name: str, rows: list[dict]) -> tuple[object | None, str, dict |
 def run_audit(labels_path: str, judge: str = "simulated",
               judgments_path: str | None = None) -> dict:
     rows, dataset_meta, err = _load(labels_path)
-    if err:
-        return err
+    if err or rows is None:
+        return err or {"error": "internal: no rows or judge"}
     j, tag, err = _make_judge(judge, rows)
-    if err:
-        return err
+    if err or j is None:
+        return err or {"error": "internal: no rows or judge"}
     try:
         result = _run_audit(j, rows, labels_path=os.path.abspath(labels_path),
                             dataset_meta=dataset_meta)
@@ -164,14 +167,14 @@ def check_drift(labels_path: str, baseline_path: str, judge: str = "simulated",
                 max_ece_drift: float = 0.02, max_acc_drop: float = 0.01,
                 allow_incompatible: bool = False) -> dict:
     rows, dataset_meta, err = _load(labels_path)
-    if err:
-        return err
+    if err or rows is None:
+        return err or {"error": "internal: no rows or judge"}
     baseline = _resolve(baseline_path)
     if baseline is None:
         return {"error": f"baseline file not found: {baseline_path} (cwd {os.getcwd()})"}
     j, tag, err = _make_judge(judge, rows)
-    if err:
-        return err
+    if err or j is None:
+        return err or {"error": "internal: no rows or judge"}
     try:
         result = _run_audit(j, rows, labels_path=os.path.abspath(labels_path),
                             dataset_meta=dataset_meta)

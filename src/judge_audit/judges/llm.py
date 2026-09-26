@@ -180,6 +180,7 @@ def parse_reply(
 
 
 class LLMJudge(Judge):
+    _served: dict  # what the provider said it served on the last call (per decide())
     name = "llm"
 
     def __init__(self, provider: str | None = None, model: str | None = None,
@@ -208,6 +209,8 @@ class LLMJudge(Judge):
             if not self.model:
                 raise RuntimeError("LLM_MODEL is not set")
             spec = importlib.util.spec_from_file_location("judge_audit_custom_provider", path)
+            if spec is None or spec.loader is None:
+                raise RuntimeError(f"{path} cannot be imported as a Python module")
             self._custom = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(self._custom)
             if not callable(getattr(self._custom, "call", None)):
@@ -322,7 +325,7 @@ class LLMJudge(Judge):
     # ---------------------------------------------------------------- judge
     def decide(self, state: str, questions: list[Question]) -> list[Judgment]:
         t0 = time.monotonic()
-        self._served: dict = {}
+        self._served = {}
         text, in_tok, out_tok = self._call(_render(state, questions))
         served = served_of(self._served)
         latency = time.monotonic() - t0

@@ -157,6 +157,25 @@ def fmt_cost(value: float | None, bold: tuple[str, str] = ("**", "**")) -> str:
     return f"{b0}${value:.4f}{b1}" if value is not None else f"{b0}unknown{b1}"
 
 
+def slowest(d: dict, bold=("**", "**")) -> str:
+    """` · slowest **x s**` when the result carries it (older JSON does not)."""
+    if d.get("max_latency_s") is None:
+        return ""
+    return f" · slowest {bold[0]}{d['max_latency_s']}s{bold[1]}"
+
+
+def completeness_line(d: dict, bold=("**", "**")) -> str:
+    """Expected decisions vs answered ones, for a live run; "" for a checkpoint rebuild.
+    Only integers go into it, so it needs no escaping in HTML."""
+    c = d.get("completeness")
+    if not c:
+        return ""
+    b0, b1 = bold
+    return (f"answered {b0}{int(c['answered'])}/{int(c['expected'])}{b1} expected decisions · "
+            f"{int(c['missing'])} skipped (counted wrong, confidence unknown) · "
+            f"{int(c['unexpected'])} answers to questions not asked (dropped)")
+
+
 def confidence_coverage(d: dict) -> dict:
     """Normalise the JSON coverage field, including reports written before it existed."""
     value = d.get("confidence")
@@ -175,12 +194,19 @@ def zero_error_sentence(d: dict, zec_ci: str = "") -> str:
 
 
 def calibration_numbers(d: dict, bold: tuple[str, str] = ("**", "**")) -> str:
-    """`ECE (equal-mass) **y** [ci] · Brier **z** [ci]` — the two numbers that need no
-    fixed bins, printed right after the equal-width ECE they qualify."""
+    """`ECE (equal-mass) **y** [ci] · Brier **z** [ci] · NLL **w** [ci]` — the numbers
+    that need no fixed bins, printed right after the equal-width ECE they qualify. NLL
+    appears only in results that carry it (reports rebuilt from older JSON do not)."""
     b0, b1 = bold
-    return (f" · ECE (equal-mass) {b0}{fmt4(d.get('ece_equal_mass'))}{b1}"
-            f"{interval_of(d, 'ece_equal_mass_ci')}"
-            f" · Brier {b0}{fmt4(d.get('brier'))}{b1}{interval_of(d, 'brier_ci')}")
+    out = (f" · ECE (equal-mass) {b0}{fmt4(d.get('ece_equal_mass'))}{b1}"
+           f"{interval_of(d, 'ece_equal_mass_ci')}"
+           f" · Brier {b0}{fmt4(d.get('brier'))}{b1}{interval_of(d, 'brier_ci')}")
+    if "nll" in d:
+        inf = d.get("nll_infinite") or 0
+        out += (f" · NLL {b0}∞{b1} ({inf} answer{'s' if inf != 1 else ''} declared certain "
+                "and wrong)" if inf else
+                f" · NLL {b0}{fmt4(d.get('nll'))}{b1}{interval_of(d, 'nll_ci')}")
+    return out
 
 
 def render_markdown(result: AuditResult) -> str:
@@ -189,6 +215,7 @@ def render_markdown(result: AuditResult) -> str:
     ece_ci = interval_of(d, "ece_ci")
     zec_ci = interval_of(d, "zero_error_coverage_ci", pct=True)
     confidence = confidence_coverage(d)
+    complete = completeness_line(d)
     lines = [
         f"# Audit report — {d['judge']}",
         "",
@@ -196,7 +223,8 @@ def render_markdown(result: AuditResult) -> str:
         f"confidence known **{confidence['known']}/{confidence['total']}** · "
         f"ECE **{fmt4(d.get('ece'))}**{ece_ci}" + calibration_numbers(d),
         f"· cost {fmt_cost(d.get('total_cost_usd'))} · p50 **{d['p50_latency_s']}s** · "
-        f"p99 **{d['p99_latency_s']}s**",
+        f"p99 **{d['p99_latency_s']}s**{slowest(d)}",
+        *([complete] if complete else []),
         "",
         *provenance_lines(d.get("run", {})),
         *regeneration_lines(d),
@@ -238,7 +266,8 @@ def ci_lines(d: dict) -> list[str]:
     if not b:
         return []
     marks = "".join(interval_of(d, k) for k in ("accuracy_ci", "ece_ci", "ece_equal_mass_ci",
-                                                "brier_ci", "zero_error_coverage_ci"))
+                                                "brier_ci", "nll_ci",
+                                                "zero_error_coverage_ci"))
     return ["", f"_Brackets are {b['level']:.0%} percentile-bootstrap intervals over the dataset's "
                 f"distinct texts ({b['n_boot']:,} resamples, seed {b['seed']}): how far the number "
                 f"would move on another sample of n={d['n']} drawn the same way._",
@@ -289,7 +318,8 @@ h2{{margin-top:2.5rem}}.prov{{color:#666;font-size:.9rem}}</style></head><body>
 {banner}
 <h1>Audit report — {judge}</h1>
 <p class="metric"><b>{d['n']}</b> decisions · accuracy <b>{d['accuracy']:.1%}</b>{acc_ci} · confidence known <b>{confidence['known']}/{confidence['total']}</b> · ECE <b>{fmt4(d.get('ece'))}</b>{ece_ci}{calibration_numbers(d, ("<b>", "</b>"))}<br>
-cost {fmt_cost(d.get('total_cost_usd'), ("<b>", "</b>"))} · p50 <b>{d['p50_latency_s']}s</b> · p99 <b>{d['p99_latency_s']}s</b></p>
+cost {fmt_cost(d.get('total_cost_usd'), ("<b>", "</b>"))} · p50 <b>{d['p50_latency_s']}s</b> · p99 <b>{d['p99_latency_s']}s</b>{slowest(d, ("<b>", "</b>"))}</p>
+{f'<p class="complete">{completeness_line(d, ("<b>", "</b>"))}</p>' if d.get("completeness") else ""}
 <p class="prov">{prov}</p>
 <p class="gt"><b>{gt}</b></p>
 {ci_note}

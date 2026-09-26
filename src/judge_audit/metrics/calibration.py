@@ -94,10 +94,36 @@ def brier_score(confidences: list[float], correct: list[bool]) -> float:
                      ) / len(confidences)
 
 
+def negative_log_likelihood(confidences: list[float], correct: list[bool]) -> float:
+    """Top-label negative log-likelihood (log loss): mean of −ln p(outcome), where p is the
+    stated confidence when right and 1 − confidence when wrong. Nothing is clipped: a judge
+    that states 1.0 and is wrong (or 0.0 and is right) has an infinite loss, and this
+    returns `math.inf` rather than a number built on a confidence it never gave.
+
+    The other proper scoring rule next to Brier; it punishes confident mistakes far harder
+    (a wrong 0.99 costs 4.6, a wrong 0.6 costs 0.92). A mean of no rows raises."""
+    if len(confidences) != len(correct):
+        raise ValueError(f"{len(confidences)} confidences for {len(correct)} outcomes")
+    if not confidences:
+        raise ValueError("negative_log_likelihood of no rows is undefined")
+    _require_finite(confidences)
+    if nll_infinite(confidences, correct):
+        return math.inf
+    return math.fsum(-math.log(c if ok else 1.0 - c)
+                     for c, ok in zip(confidences, correct, strict=True)) / len(confidences)
+
+
+def nll_infinite(confidences: Sequence[float], correct: Sequence[bool]) -> int:
+    """Rows whose declared confidence gives the outcome probability 0: stated certain, wrong."""
+    _require_finite(confidences)
+    return sum(1 for c, ok in zip(confidences, correct, strict=True)
+               if (c if ok else 1.0 - c) <= 0.0)
+
+
 def reliability_bins(confidences: list[float], correct: list[bool],
                      n_bins: int = 10) -> list[dict]:
     """Per-bin (avg confidence, accuracy, count) for the reliability diagram."""
-    out = []
+    out: list[dict] = []
     for i in range(n_bins):
         lo, hi = i / n_bins, (i + 1) / n_bins
         idx = [j for j, c in enumerate(confidences) if lo <= c < hi or (hi == 1.0 and c == 1.0)]
@@ -181,7 +207,7 @@ def zero_error_coverage(confidences: list[float], correct: list[bool]) -> dict:
     if not confidences:
         return {"coverage": 0.0, "n": 0, "threshold": None}
     order = sorted(range(len(confidences)), key=lambda j: confidences[j], reverse=True)
-    k, threshold = 0, None
+    k, threshold = 0, None  # type: tuple[int, float | None]
     i, n = 0, len(order)
     while i < n:
         c = confidences[order[i]]
@@ -193,7 +219,7 @@ def zero_error_coverage(confidences: list[float], correct: list[bool]) -> dict:
             break
         k, threshold, i = end, c, end
     return {"coverage": round(k / n, 4), "n": k,
-            "threshold": round(threshold, 4) if k else None}
+            "threshold": round(threshold, 4) if k and threshold is not None else None}
 
 
 # --- uncertainty: percentile bootstrap over rows or over groups of rows ----------------
@@ -224,6 +250,8 @@ class Interval(tuple):
     extra `.method` (and the derived `.degenerate`) only lets a table mark the
     interval whose meaning differs from the bootstrap default.
     """
+
+    method: str
 
     def __new__(cls, lo: float, hi: float, method: str) -> Interval:
         obj = super().__new__(cls, (round(lo, 4), round(hi, 4)))
@@ -316,9 +344,9 @@ def clopper_pearson(successes: int, n: int, alpha: float = 0.05) -> Interval:
     return Interval(lo, hi, EXACT)
 
 
-def _percentile(sorted_values: list[float], q: float) -> float:
-    """q-th quantile (0..1) by linear interpolation between order statistics — the
-    same cut as `statistics.quantiles(method="inclusive")`."""
+def interpolated_quantile(sorted_values: list[float], q: float) -> float:
+    """q-th quantile (0..1) by linear interpolation between order statistics —
+    Hyndman–Fan type 7, numpy's default and `statistics.quantiles(method="inclusive")`."""
     pos = q * (len(sorted_values) - 1)
     i = int(pos)
     if i + 1 >= len(sorted_values):
@@ -355,7 +383,8 @@ def bootstrap_ci(values: Sequence[T], statistic: Callable[[list[T]], float],
     stats = sorted(statistic([v for i in rng.choices(idx, k=len(units)) for v in units[i]])
                    for _ in range(n_boot))
     tail = (1 - level) / 2
-    return round(_percentile(stats, tail), 4), round(_percentile(stats, 1 - tail), 4)
+    return (round(interpolated_quantile(stats, tail), 4),
+            round(interpolated_quantile(stats, 1 - tail), 4))
 
 
 def proportion_ci(successes: int, values: Sequence[T], statistic: Callable[[list[T]], float],
@@ -398,7 +427,7 @@ def ci_fields(name: str, ci: Interval | None, point: float | None = None) -> dic
         # A zero-width 95 % interval is not a narrow interval, it is no interval:
         # every resample returned the same value. Say that instead of publishing [x, x].
         return {f"{name}_ci": None, f"{name}_ci_method": "degenerate-" + ci.method}
-    out = {f"{name}_ci": [ci[0], ci[1]], f"{name}_ci_method": ci.method}
+    out: dict = {f"{name}_ci": [ci[0], ci[1]], f"{name}_ci_method": ci.method}
     if point is not None and not ci[0] <= round(point, 4) <= ci[1]:
         out[f"{name}_ci_point_outside"] = True
     return out
@@ -437,6 +466,20 @@ def brier_ci(confidences: Sequence[float], correct: Sequence[bool],
     zero-width result stays a bootstrap and is flagged `.degenerate`."""
     rows = list(zip(confidences, correct, strict=True))
     ci = bootstrap_ci(rows, lambda rs: brier_score([c for c, _ in rs], [ok for _, ok in rs]),
+                      n_boot, seed, groups=groups)
+    return None if ci is None else Interval(ci[0], ci[1], BOOTSTRAP)
+
+
+def nll_ci(confidences: Sequence[float], correct: Sequence[bool],
+           n_boot: int = N_BOOT, seed: int = 0,
+           groups: Sequence[Hashable] | None = None) -> Interval | None:
+    """95 % interval of `negative_log_likelihood`, by the same clustered bootstrap as Brier;
+    None when a row makes it infinite (every resample that keeps the row is infinite)."""
+    if nll_infinite(confidences, correct):
+        return None
+    rows = list(zip(confidences, correct, strict=True))
+    ci = bootstrap_ci(rows, lambda rs: negative_log_likelihood([c for c, _ in rs],
+                                                               [ok for _, ok in rs]),
                       n_boot, seed, groups=groups)
     return None if ci is None else Interval(ci[0], ci[1], BOOTSTRAP)
 

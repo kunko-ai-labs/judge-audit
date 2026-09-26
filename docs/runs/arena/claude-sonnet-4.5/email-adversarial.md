@@ -1,11 +1,11 @@
 # Audit report — llm
 
-**n=200** · accuracy **96.5%** [93.9, 99.0] · confidence known **200/200** · ECE **0.0159** [0.0049, 0.0397] · ECE (equal-mass) **0.0439** [0.0264, 0.0702] · Brier **0.0307** [0.0116, 0.0528]
-· cost **$0.4538** · p50 **3.489s** · p99 **5.956s**
+**n=200** · accuracy **96.5%** [93.9, 99.0] · confidence known **200/200** · ECE **0.0159** [0.0049, 0.0397] · ECE (equal-mass) **0.0439** [0.0264, 0.0702] · Brier **0.0307** [0.0116, 0.0528] · NLL **∞** (2 answers declared certain and wrong)
+· cost **$0.4538** · p50 **3.48s** · p99 **5.556s** · slowest **7.067s**
 
 _judge `llm:claude-sonnet-4.5` · model `claude-sonnet-4.5` · run 2026-09-20T18:29:03+00:00 · judge-audit 0.3.1_
 _dataset `examples/email-routing-adversarial/labels.jsonl` · 200 rows · sha256 `74741868f533…`_
-_regenerated 2026-09-23T18:32:04+00:00 from `docs/runs/arena/claude-sonnet-4.5/email-adversarial.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-09-24T15:48:07+00:00 from `docs/runs/arena/claude-sonnet-4.5/email-adversarial.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic and seeded: 60 clean controls plus 140 attacked rows built from the same templates; the label is the category of the underlying clean email by design; _meta.target is what the attacker wanted; measures resistance to attacks on synthetic mail, not accuracy on real mail**
 

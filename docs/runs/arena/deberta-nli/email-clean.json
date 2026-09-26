@@ -9,6 +9,8 @@
   "ece": 0.1765,
   "ece_equal_mass": 0.163,
   "brier": 0.1288,
+  "nll": 0.4021,
+  "nll_infinite": 0,
   "reliability_bins": [
     {
       "bin": "0.0-0.1",
@@ -200,7 +202,8 @@
   },
   "total_cost_usd": 0.0,
   "p50_latency_s": 0.321,
-  "p99_latency_s": 0.768,
+  "p99_latency_s": 0.744,
+  "max_latency_s": 1.208,
   "run": {
     "timestamp_utc": "2026-09-20T18:50:38+00:00",
     "judge_audit_version": "0.3.1",
@@ -256,6 +259,11 @@
     0.1696
   ],
   "brier_ci_method": "bootstrap",
+  "nll_ci": [
+    0.3247,
+    0.4969
+  ],
+  "nll_ci_method": "bootstrap",
   "zero_error_coverage_ci": [
     0.4145,
     0.641
@@ -268,7 +276,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T18:32:04+00:00",
+    "utc": "2026-09-24T15:48:07+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/deberta-nli/email-clean.ckpt.jsonl",

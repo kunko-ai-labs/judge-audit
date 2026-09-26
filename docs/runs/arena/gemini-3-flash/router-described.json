@@ -9,6 +9,8 @@
   "ece": 0.0121,
   "ece_equal_mass": 0.0071,
   "brier": 0.0124,
+  "nll": 0.0496,
+  "nll_infinite": 0,
   "reliability_bins": [
     {
       "bin": "0.0-0.1",
@@ -98,7 +100,8 @@
   },
   "total_cost_usd": 0.018538,
   "p50_latency_s": 2.452,
-  "p99_latency_s": 21.669,
+  "p99_latency_s": 20.593,
+  "max_latency_s": 32.725,
   "run": {
     "timestamp_utc": "2026-09-21T11:06:43+00:00",
     "judge_audit_version": "0.3.2",
@@ -153,6 +156,11 @@
     0.033
   ],
   "brier_ci_method": "bootstrap",
+  "nll_ci": [
+    0.0119,
+    0.1157
+  ],
+  "nll_ci_method": "bootstrap",
   "zero_error_coverage_ci": [
     0.6063,
     1.0
@@ -165,7 +173,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T18:32:04+00:00",
+    "utc": "2026-09-24T15:48:07+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/gemini-3-flash/router-described.ckpt.jsonl",

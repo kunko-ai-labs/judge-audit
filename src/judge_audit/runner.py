@@ -25,6 +25,10 @@ from .metrics.calibration import (
     ci_fields,
     ece_ci,
     expected_calibration_error,
+    interpolated_quantile,
+    negative_log_likelihood,
+    nll_ci,
+    nll_infinite,
     reliability_bins,
     zero_error_coverage,
     zero_error_coverage_ci,
@@ -49,6 +53,8 @@ class AuditResult:
     total_cost_usd: float | None = 0.0
     p50_latency_s: float = 0.0
     p99_latency_s: float = 0.0
+    # The slowest call, printed next to the p99: with n=200 a p99 hides one or two stalls.
+    max_latency_s: float = 0.0
     run: dict = field(default_factory=dict)
     # When a committed report was rebuilt from its checkpoint by a later version: its own
     # time, version and script. Kept apart from `run`, which is what the run itself said.
@@ -67,18 +73,28 @@ class AuditResult:
     ece_equal_mass_ci: Interval | None = None
     brier_ci: Interval | None = None
     confidence: dict = field(default_factory=dict)
+    # Log loss (top-label, never clipped; docs/judges.md): None when infinite, and
+    # `nll_infinite` counts the answers declared certain and wrong that make it so.
+    nll: float | None = None
+    nll_ci: Interval | None = None
+    nll_infinite: int = 0
+    # Expected (row, question) pairs vs what the judge answered; empty for a report rebuilt
+    # from a checkpoint, where `scripts/audit_resumable.py` enforces the same rule.
+    completeness: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         d = {
             "judge": self.judge, "n": self.n, "accuracy": self.accuracy,
             "confidence": self.confidence,
             "ece": self.ece, "ece_equal_mass": self.ece_equal_mass, "brier": self.brier,
+            "nll": self.nll, "nll_infinite": self.nll_infinite,
             "reliability_bins": self.reliability,
             "accuracy_coverage": self.curve, "zero_error_coverage": self.zero_error,
             "total_cost_usd": (round(self.total_cost_usd, 6)
                                if self.total_cost_usd is not None else None),
             "p50_latency_s": round(self.p50_latency_s, 3),
             "p99_latency_s": round(self.p99_latency_s, 3),
+            "max_latency_s": round(self.max_latency_s, 3),
             "run": self.run,
         }
         if self.accuracy_ci is not None:
@@ -86,19 +102,24 @@ class AuditResult:
                      **ci_fields("ece", self.ece_ci, self.ece),
                      **ci_fields("ece_equal_mass", self.ece_equal_mass_ci, self.ece_equal_mass),
                      **ci_fields("brier", self.brier_ci, self.brier),
+                     **ci_fields("nll", self.nll_ci, self.nll),
                      **ci_fields("zero_error_coverage", self.zero_error_coverage_ci,
                                  self.zero_error.get("coverage")),
                      bootstrap=dict(BOOTSTRAP))
+        if self.completeness:
+            d["completeness"] = self.completeness
         if self.regenerated:
             d["regenerated"] = self.regenerated
         return d
 
 
 def _percentile(xs: list[float], p: float) -> float:
+    """p-th percentile (0..100) of the latencies: linear interpolation between order
+    statistics (Hyndman–Fan type 7 — numpy's default, `statistics.quantiles` inclusive),
+    the same rule as the bootstrap's interval cut. 0.0 for no rows."""
     if not xs:
         return 0.0
-    s = sorted(xs)
-    return s[min(int(p / 100 * len(s)), len(s) - 1)]
+    return interpolated_quantile(sorted(xs), p / 100)
 
 
 def questions_of(row: dict) -> list[Question]:
@@ -300,14 +321,16 @@ def summarize(judge_name: str, records: list[dict], run: dict | None = None,
     cluster, which overstates precision on a dataset with repeated texts."""
     total = len(records)
     hits = sum(bool(r["correct"]) for r in records)
-    known_idx = [i for i, r in enumerate(records)
-                 if clamp_confidence(r.get("confidence")) is not None]
-    confidences = [clamp_confidence(records[i]["confidence"]) for i in known_idx]
+    declared = [clamp_confidence(r.get("confidence")) for r in records]
+    known_idx = [i for i, c in enumerate(declared) if c is not None]
+    confidences: list[float] = [c for c in declared if c is not None]
     correct = [bool(records[i]["correct"]) for i in known_idx]
     known_groups = [groups[i] for i in known_idx] if groups is not None else None
-    latencies = [r.get("latency_s", 0.0) for r in records]
+    # a skipped question has no latency (None): it is left out, not counted as instant
+    latencies = [lat for lat in (r.get("latency_s", 0.0) for r in records) if lat is not None]
     costs = [r.get("cost_usd") for r in records]
-    total_cost = None if any(cost is None for cost in costs) else math.fsum(costs)
+    total_cost = (None if any(cost is None for cost in costs)
+                  else math.fsum(cost for cost in costs if cost is not None))
     known = len(confidences)
     if ci is None:
         ci = bootstrap_enabled()
@@ -323,6 +346,7 @@ def summarize(judge_name: str, records: list[dict], run: dict | None = None,
         total_cost_usd=total_cost,
         p50_latency_s=_percentile(latencies, 50),
         p99_latency_s=_percentile(latencies, 99),
+        max_latency_s=max(latencies, default=0.0),
         run=run or {},
         accuracy_ci=accuracy_ci([bool(r["correct"]) for r in records], groups=groups)
         if ci and total else None,
@@ -337,6 +361,10 @@ def summarize(judge_name: str, records: list[dict], run: dict | None = None,
         ece_equal_mass_ci=(ece_ci(confidences, correct, groups=known_groups,
                                   binning=EQUAL_MASS) if ci and known else None),
         brier_ci=brier_ci(confidences, correct, groups=known_groups) if ci and known else None,
+        nll=(round(negative_log_likelihood(confidences, correct), 4)
+             if known and not nll_infinite(confidences, correct) else None),
+        nll_ci=nll_ci(confidences, correct, groups=known_groups) if ci and known else None,
+        nll_infinite=nll_infinite(confidences, correct),
     )
 
 
@@ -345,7 +373,7 @@ def served_versions(records: list[dict]) -> dict | None:
     distinct {model, system_fingerprint} and how many decisions it answered, plus how many
     came back without one. None when the adapter records nothing (older checkpoints,
     local judges), so a report rebuilt from them is unchanged."""
-    raws = [r.get("raw") if isinstance(r.get("raw"), dict) else {} for r in records]
+    raws: list[dict] = [r["raw"] if isinstance(r.get("raw"), dict) else {} for r in records]
     if not any("served" in raw for raw in raws):
         return None
     seen: dict[str, int] = {}
@@ -387,22 +415,100 @@ def record_of(idx: int, row: dict, judgment, expected: str) -> dict:
     }
 
 
+class IncompleteAnswers(ValueError):
+    """The judge broke the answer contract (two answers to one question), or the dataset
+    labels a question it never asks. Either way the audit would not mean what it says."""
+
+
+def answer_gaps(row: dict, answered: list[str]) -> dict:
+    """What a row's answers lack or add against its labels: {missing, duplicate, unexpected,
+    orphan_labels}, each a sorted list of question names. Shared by the live runner and the
+    checkpoint check, so a report built either way counts the same decisions."""
+    labels = set(row.get("labels", {}))
+    asked = {q["name"] for q in row["questions"]}
+    seen = [q for q in answered if q in asked]
+    blank = sorted(q for q, v in row.get("labels", {}).items()
+                   if v is None or not str(v).strip())
+    return {"missing": sorted(labels - set(seen)),
+            "duplicate": sorted({q for q in seen if seen.count(q) > 1}),
+            "unexpected": sorted(q for q in answered if q not in asked),
+            "orphan_labels": sorted(labels - asked),
+            "blank_labels": blank}
+
+
+def dataset_gaps(idx: int, row: dict) -> None:
+    """A label naming no question, or a blank / null label, is a dataset error: raise before
+    anyone pays for a call. (A blank label would score a skipped question as correct.)"""
+    g = answer_gaps(row, [])
+    if g["orphan_labels"]:
+        raise IncompleteAnswers(
+            f"row {idx}: label(s) {g['orphan_labels']} name no question in the row")
+    if g["blank_labels"]:
+        raise IncompleteAnswers(f"row {idx}: label(s) {g['blank_labels']} are blank or null")
+
+
+def missing_answer(question: str, returned: list) -> dict:
+    """The checkpoint judgment written for a labelled question the judge did not answer.
+
+    Latency unknown (None, left out of the percentiles: a silent judge must not look fast).
+    Cost 0.0 — the row's call is already paid by the answers it returned — unless nothing
+    came back with a known cost, in which case it is unknown too."""
+    costs = [getattr(j, "cost_usd", None) if not isinstance(j, dict) else j.get("cost_usd")
+             for j in returned]
+    known = bool(costs) and all(c is not None for c in costs)
+    return {"question": question, "decision": "", "confidence": None, "latency_s": None,
+            "cost_usd": 0.0 if known else None, "raw": {"missing": True},
+            "parse_status": "no_answer"}
+
+
+def reconcile(idx: int, row: dict, judgments, counts: dict) -> list[dict]:
+    """One record per labelled question, answered or not.
+
+    A labelled question the judge skipped is a no-answer record — wrong, confidence unknown —
+    so it stays in `n`: a judge cannot raise its score by staying silent. An answer to a
+    question the row does not ask is counted and dropped; a second answer to the same
+    question, or a label with no question, raises `IncompleteAnswers`."""
+    labels: dict = row.get("labels", {})
+    asked = {q["name"] for q in row["questions"]}
+    dataset_gaps(idx, row)
+    judgments = list(judgments)
+    answered: dict = {}
+    for judgment in judgments:
+        if judgment.question not in asked:
+            counts["unexpected"] += 1
+            continue
+        if judgment.question in answered:
+            raise IncompleteAnswers(
+                f"row {idx}: the judge answered {judgment.question!r} twice")
+        answered[judgment.question] = judgment
+    records = []
+    for name, expected in labels.items():
+        counts["expected"] += 1
+        judgment = answered.get(name)
+        if judgment is None:
+            counts["missing"] += 1
+            records.append(checkpoint_record(idx, row, missing_answer(name, judgments), expected))
+        else:
+            counts["answered"] += 1
+            records.append(record_of(idx, row, judgment, expected))
+    return records
+
+
 def run_audit(judge: Judge, rows: list[dict], labels_path: str | None = None,
               dataset_meta: dict | None = None, ci: bool | None = None) -> AuditResult:
     """rows: [{state, questions: [{name, type, instructions, options?, descriptions?}],
               labels: {name: expected}}]; dataset_meta: the header from `load_dataset`;
     ci: bootstrap intervals (None: unless `JUDGE_AUDIT_BOOTSTRAP=0`)."""
     records: list[dict] = []
+    counts = {"expected": 0, "answered": 0, "missing": 0, "unexpected": 0}
+    for idx, row in enumerate(rows):  # every row, before the first (paid) call
+        dataset_gaps(idx, row)
     for idx, row in enumerate(rows):
-        labels: dict = row.get("labels", {})
-        for judgment in judge.decide(row["state"], questions_of(row)):
-            expected = labels.get(judgment.question)
-            if expected is None:
-                continue
-            records.append(record_of(idx, row, judgment, expected))
+        records += reconcile(idx, row, judge.decide(row["state"], questions_of(row)), counts)
     result = summarize(judge.name, records,
                        run_metadata(judge, labels_path, len(rows), dataset_meta), ci=ci,
                        groups=groups_of(records, rows))
+    result.completeness = counts
     served = served_versions(records)
     if served:
         result.run["served"] = served
@@ -449,7 +555,7 @@ def read_dataset_header(path: str) -> dict:
         obj = json.loads(first) if first.strip() else None
     except ValueError:
         return {}
-    return _validate_header(obj, path) if _is_header(obj) else {}
+    return _validate_header(obj, path) if isinstance(obj, dict) and _is_header(obj) else {}
 
 
 def load_dataset(path: str) -> tuple[list[dict], dict]:

@@ -25,6 +25,8 @@ jobs:
         run: pip install -e ".[dev]"
       - name: Lint (ruff)
         run: ruff check src/ tests/ scripts/ examples/
+      - name: Types (mypy, the package)
+        run: mypy
       - name: Test (pytest)
         run: pytest -q
       - name: Smoke — audit with the simulated judge, no key needed
@@ -62,10 +64,17 @@ jobs:
         run: |
           python scripts/analyze_adversarial.py
           git diff --exit-code -- docs/audit-jev-adversarial.md docs/audit-jev-adversarial.json
+      - name: Router audits recompute from their checkpoints
+        run: |
+          python scripts/audit_router.py examples/task-routing/labels.jsonl --checkpoint docs/runs/audit-jev-router.ckpt.jsonl --out docs/audit-jev-router.md --json docs/audit-jev-router.json
+          python scripts/audit_router.py examples/task-routing/labels-described.jsonl --checkpoint docs/runs/audit-jev-router-described.ckpt.jsonl --out docs/audit-jev-router-described.md --json docs/audit-jev-router-described.json
+          git diff --exit-code -- docs/audit-jev-router.md docs/audit-jev-router.json docs/audit-jev-router-described.md docs/audit-jev-router-described.json
       - name: Held-out report recomputes from the same checkpoints on the pre-registered split
         run: |
           python scripts/heldout_report.py
           git diff --exit-code -- docs/finetuned-baseline-2026-09.md docs/finetuned-baseline-2026-09.json
+      - name: Every checkpoint answers every labelled question once (no shrunken denominator)
+        run: python scripts/check_complete.py
       - name: Checkpoint decisions match the current parser (no silent re-parse debt)
         run: python scripts/reparse_checkpoints.py --dry-run | tee /tmp/reparse.txt && grep -q '^0 judgment' /tmp/reparse.txt
       - name: Consensus and jury tables recompute from their checkpoints

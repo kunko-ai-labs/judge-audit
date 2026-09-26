@@ -6,13 +6,13 @@ import random
 import pytest
 
 from judge_audit.metrics.calibration import (
-    _percentile,
     accuracy_ci,
     accuracy_coverage,
     bootstrap_ci,
     clopper_pearson,
     ece_ci,
     expected_calibration_error,
+    interpolated_quantile,
     reliability_bins,
     zero_error_coverage,
     zero_error_coverage_ci,
@@ -265,12 +265,12 @@ def test_percentile_matches_statistics_quantiles_inclusive():
     import random
     import statistics
 
-    assert _percentile([1, 2, 3, 4], 0.025) == pytest.approx(1.075)
-    assert _percentile([1, 2, 3, 4], 0.975) == pytest.approx(3.925)
+    assert interpolated_quantile([1, 2, 3, 4], 0.025) == pytest.approx(1.075)
+    assert interpolated_quantile([1, 2, 3, 4], 0.975) == pytest.approx(3.925)
     xs = sorted(random.Random(3).random() for _ in range(2000))
     cuts = statistics.quantiles(xs, n=40, method="inclusive")   # 2.5 %, 5 %, …, 97.5 %
-    assert _percentile(xs, 0.025) == pytest.approx(cuts[0])
-    assert _percentile(xs, 0.975) == pytest.approx(cuts[-1])
+    assert interpolated_quantile(xs, 0.025) == pytest.approx(cuts[0])
+    assert interpolated_quantile(xs, 0.975) == pytest.approx(cuts[-1])
 
 
 def test_cluster_bootstrap_resamples_groups_not_rows():
@@ -367,3 +367,87 @@ def test_a_proportion_that_can_still_move_keeps_its_clustered_bootstrap():
     ok = [False] + [True] * 5
     ci = zero_error_coverage_ci(conf, ok, groups=[f"t{i}" for i in range(6)])
     assert ci[0] == 0.0 < ci[1] and ci.method == "bootstrap"
+
+
+def test_latency_percentiles_are_type_7_and_agree_with_numpy_default():
+    from judge_audit.runner import _percentile
+
+    xs = [0.2, 0.9, 0.4, 7.5, 0.3, 8.2, 0.5, 0.6, 0.7, 0.8]
+    s = sorted(xs)
+    # type 7: position p * (n - 1) between order statistics
+    assert _percentile(xs, 50) == pytest.approx((s[4] + s[5]) / 2)
+    assert _percentile(xs, 99) == pytest.approx(s[8] + 0.91 * (s[9] - s[8]))
+    assert _percentile([], 99) == 0.0
+    np = pytest.importorskip("numpy")
+    assert _percentile(xs, 99) == pytest.approx(float(np.percentile(xs, 99)))
+
+
+def test_nll_is_the_mean_log_loss_and_never_clips_a_declared_certainty():
+    import math
+
+    from judge_audit.metrics.calibration import negative_log_likelihood, nll_ci, nll_infinite
+
+    assert negative_log_likelihood([0.9, 0.6], [True, False]) == pytest.approx(
+        (-math.log(0.9) - math.log(0.4)) / 2)
+    # a stated 1.0 that is wrong: infinite, and counted — not clipped to 0.9999
+    assert negative_log_likelihood([1.0, 0.9], [False, True]) == math.inf
+    assert nll_infinite([1.0, 1.0, 0.0, 0.9], [False, True, True, False]) == 2
+    assert nll_ci([1.0, 0.9, 0.8], [False, True, True]) is None
+    lo, hi = nll_ci([0.9, 0.8, 0.7, 0.6] * 5, [True, False, True, True] * 5)
+    assert lo <= hi
+    with pytest.raises(ValueError):
+        negative_log_likelihood([], [])
+
+
+def test_the_report_prints_infinity_with_its_count_not_a_number():
+    from judge_audit.report import calibration_numbers
+
+    assert "NLL **∞** (3 answers declared certain and wrong)" in calibration_numbers(
+        {"ece_equal_mass": 0.1, "brier": 0.1, "nll": None, "nll_infinite": 3})
+    assert "NLL **0.1234**" in calibration_numbers(
+        {"ece_equal_mass": 0.1, "brier": 0.1, "nll": 0.1234, "nll_infinite": 0})
+
+
+def test_nll_in_a_run_uses_only_the_rows_with_known_confidence():
+    import math
+
+    from judge_audit.runner import summarize
+
+    recs = [{"confidence": 0.9, "correct": True}, {"confidence": None, "correct": False},
+            {"confidence": 0.6, "correct": False}, {"confidence": "abc", "correct": True},
+            {"confidence": 0.8, "correct": True}]
+    r = summarize("x", recs, ci=False)
+    want = (-math.log(0.9) - math.log(0.4) - math.log(0.8)) / 3
+    assert r.nll == pytest.approx(round(want, 4)) and r.nll_infinite == 0
+    assert r.confidence == {"known": 3, "total": 5}
+
+
+def test_nll_infinite_refuses_a_nan_like_every_other_metric():
+    from judge_audit.metrics.calibration import nll_infinite
+
+    with pytest.raises(ValueError):
+        nll_infinite([float("nan")], [True])
+
+
+def test_the_slowest_call_is_reported_next_to_the_p99():
+    from judge_audit.report import render_markdown
+    from judge_audit.runner import summarize
+
+    recs = [{"confidence": 0.9, "correct": True, "latency_s": x} for x in [1.0] * 199 + [60.0]]
+    r = summarize("x", recs, ci=False)
+    assert r.max_latency_s == 60.0 and r.p99_latency_s < 60.0
+    assert "slowest **60.0s**" in render_markdown(r)
+
+
+def test_nll_interval_resamples_the_known_rows_with_their_own_groups():
+    from judge_audit.runner import summarize
+
+    recs = [{"confidence": c, "correct": ok} for c, ok in
+            [(0.9, True), (None, False), (0.6, False), (0.8, True), (0.7, True), (0.95, True)]]
+    # unknown row in the middle: groups must stay aligned with the known rows
+    r = summarize("x", recs, ci=True, groups=["a", "b", "c", "c", "d", "e"])
+    from judge_audit.metrics.calibration import nll_ci
+
+    # the known rows keep their own groups: a, c, c, d, e (the unknown row's "b" drops out)
+    assert r.nll_ci == nll_ci([0.9, 0.6, 0.8, 0.7, 0.95], [True, False, True, True, True],
+                              groups=["a", "c", "c", "d", "e"])

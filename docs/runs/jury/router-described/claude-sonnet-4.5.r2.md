@@ -1,11 +1,11 @@
 # Audit report — llm
 
-**n=120** · accuracy **95.0%** [90.3, 98.5] · confidence known **120/120** · ECE **0.0484** [0.0313, 0.0893] · ECE (equal-mass) **0.0467** [0.0308, 0.0914] · Brier **0.0371** [0.0140, 0.0672]
-· cost **$0.7224** · p50 **7.711s** · p99 **10.232s**
+**n=120** · accuracy **95.0%** [90.3, 98.5] · confidence known **120/120** · ECE **0.0484** [0.0313, 0.0893] · ECE (equal-mass) **0.0467** [0.0308, 0.0914] · Brier **0.0371** [0.0140, 0.0672] · NLL **0.1331** [0.0734, 0.2119]
+· cost **$0.7224** · p50 **7.706s** · p99 **10.196s** · slowest **10.713s**
 
 _judge `llm:claude-sonnet-4.5` · model `claude-sonnet-4.5` · run 2026-09-21T19:21:35+00:00 · judge-audit 0.3.2_
 _dataset `docs/runs/jury/router-described/claude-sonnet-4.5.r2.input.jsonl` · 120 rows · sha256 `159c8bc820fe…`_
-_regenerated 2026-09-23T18:32:04+00:00 from `docs/runs/jury/router-described/claude-sonnet-4.5.r2.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-09-24T15:48:07+00:00 from `docs/runs/jury/router-described/claude-sonnet-4.5.r2.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome; downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified; 40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted**
 

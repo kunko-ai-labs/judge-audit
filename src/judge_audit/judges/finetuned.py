@@ -108,7 +108,7 @@ class FinetunedJudge(Judge):
             raise RuntimeError("set FINETUNED_MODEL_DIR to a directory written by "
                                "scripts/train_classifier.py")
         self.device = _pick_device(device or os.environ.get("FINETUNED_DEVICE", "auto"))
-        self.max_len = int(max_len or os.environ.get("FINETUNED_MAX_LEN", DEFAULT_MAX_LEN))
+        self.max_len = int(max_len or os.environ.get("FINETUNED_MAX_LEN") or DEFAULT_MAX_LEN)
         if predict is None:
             labels, sidecar = read_model_dir(self.model_dir)
             predict = build_predict(self.model_dir, self.device, self.max_len)

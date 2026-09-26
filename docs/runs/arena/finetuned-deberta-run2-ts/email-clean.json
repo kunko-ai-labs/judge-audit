@@ -9,6 +9,8 @@
   "ece": 0.0,
   "ece_equal_mass": 0.0,
   "brier": 0.0,
+  "nll": 0.0,
+  "nll_infinite": 0,
   "reliability_bins": [
     {
       "bin": "0.0-0.1",
@@ -199,8 +201,9 @@
     "threshold": 1.0
   },
   "total_cost_usd": 0.0,
-  "p50_latency_s": 0.018,
-  "p99_latency_s": 0.173,
+  "p50_latency_s": 0.017,
+  "p99_latency_s": 0.057,
+  "max_latency_s": 0.173,
   "run": {
     "timestamp_utc": "2026-09-22T08:17:21+00:00",
     "judge_audit_version": "0.3.2",
@@ -292,6 +295,8 @@
   "ece_equal_mass_ci_method": "degenerate-bootstrap",
   "brier_ci": null,
   "brier_ci_method": "degenerate-bootstrap",
+  "nll_ci": null,
+  "nll_ci_method": "degenerate-bootstrap",
   "zero_error_coverage_ci": [
     0.9638,
     1.0
@@ -304,7 +309,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T18:32:04+00:00",
+    "utc": "2026-09-24T15:48:07+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/finetuned-deberta-run2-ts/email-clean.ckpt.jsonl",

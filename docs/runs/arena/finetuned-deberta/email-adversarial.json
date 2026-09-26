@@ -9,6 +9,8 @@
   "ece": 0.4961,
   "ece_equal_mass": 0.4961,
   "brier": 0.2798,
+  "nll": 0.7629,
+  "nll_infinite": 0,
   "reliability_bins": [
     {
       "bin": "0.0-0.1",
@@ -200,7 +202,8 @@
   },
   "total_cost_usd": 0.0,
   "p50_latency_s": 0.017,
-  "p99_latency_s": 0.155,
+  "p99_latency_s": 0.144,
+  "max_latency_s": 0.185,
   "run": {
     "timestamp_utc": "2026-09-22T03:13:44+00:00",
     "judge_audit_version": "0.3.2",
@@ -282,6 +285,11 @@
     0.3033
   ],
   "brier_ci_method": "bootstrap",
+  "nll_ci": [
+    0.712,
+    0.8157
+  ],
+  "nll_ci_method": "bootstrap",
   "zero_error_coverage_ci": [
     0.9444,
     0.9902
@@ -294,7 +302,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T18:32:04+00:00",
+    "utc": "2026-09-24T15:48:07+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/finetuned-deberta/email-adversarial.ckpt.jsonl",

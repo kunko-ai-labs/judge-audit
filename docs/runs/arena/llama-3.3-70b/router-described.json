@@ -9,6 +9,8 @@
   "ece": 0.0433,
   "ece_equal_mass": 0.1933,
   "brier": 0.1347,
+  "nll": null,
+  "nll_infinite": 13,
   "reliability_bins": [
     {
       "bin": "0.0-0.1",
@@ -97,8 +99,9 @@
     "threshold": null
   },
   "total_cost_usd": 0.031402,
-  "p50_latency_s": 0.809,
-  "p99_latency_s": 0.997,
+  "p50_latency_s": 0.808,
+  "p99_latency_s": 0.994,
+  "max_latency_s": 2.281,
   "run": {
     "timestamp_utc": "2026-09-20T19:09:23+00:00",
     "judge_audit_version": "0.3.1",
@@ -156,6 +159,8 @@
     0.2109
   ],
   "brier_ci_method": "bootstrap",
+  "nll_ci": null,
+  "nll_ci_method": null,
   "zero_error_coverage_ci": [
     0.0,
     0.0303
@@ -168,7 +173,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T18:32:04+00:00",
+    "utc": "2026-09-24T15:48:07+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/llama-3.3-70b/router-described.ckpt.jsonl",

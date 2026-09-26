@@ -1,11 +1,11 @@
 # Audit report — llm
 
-**n=120** · accuracy **93.3%** [87.4, 97.6] · confidence known **120/120** · ECE **0.0266** [0.0035, 0.0827] · ECE (equal-mass) **0.0836** [0.0461, 0.1412] · Brier **0.0581** [0.0222, 0.1085]
-· cost **$0.0000** · p50 **20.327s** · p99 **53.809s**
+**n=120** · accuracy **93.3%** [87.4, 97.6] · confidence known **120/120** · ECE **0.0266** [0.0035, 0.0827] · ECE (equal-mass) **0.0836** [0.0461, 0.1412] · Brier **0.0581** [0.0222, 0.1085] · NLL **∞** (1 answer declared certain and wrong)
+· cost **$0.0000** · p50 **20.298s** · p99 **53.378s** · slowest **67.776s**
 
 _judge `llm:gemma4:e4b` · model `gemma4:e4b` · run 2026-09-21T19:29:07+00:00 · judge-audit 0.3.2_
 _dataset `docs/runs/jury/router-described/gemma4.r2.input.jsonl` · 120 rows · sha256 `ab827da374f3…`_
-_regenerated 2026-09-23T18:32:04+00:00 from `docs/runs/jury/router-described/gemma4.r2.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-09-24T15:48:07+00:00 from `docs/runs/jury/router-described/gemma4.r2.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome; downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified; 40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted**
 

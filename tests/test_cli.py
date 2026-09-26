@@ -20,7 +20,9 @@ def test_run_simulated_writes_report_json_and_judgments(labels_path, tmp_path):
     res = json.loads((tmp_path / "audit-result.json").read_text())
     assert res["n"] == 12 and res["run"]["judge"]["name"] == "simulated"
     assert res["confidence"] == {"known": 12, "total": 12}
-    assert "confidence_known=12/12" in r.stdout
+    assert "confidence_known=12/12" in r.stdout and "answered=12/12" in r.stdout
+    assert res["completeness"] == {"expected": 12, "answered": 12, "missing": 0,
+                                   "unexpected": 0}
     # the summary line is what gets copied: a simulated result must say so on it
     assert r.stdout.startswith("SIMULATED — not a real vendor audit · judge=simulated")
     assert (tmp_path / "audit-judgments.jsonl").read_text().count("\n") == 12

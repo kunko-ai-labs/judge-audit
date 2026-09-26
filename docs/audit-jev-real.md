@@ -4,14 +4,14 @@
 > Raw per-row responses: [`runs/audit-jev-real.ckpt.jsonl`](runs/audit-jev-real.ckpt.jsonl) · metrics: [`audit-jev-real.json`](audit-jev-real.json) · dataset: [`examples/email-routing/labels.jsonl`](../examples/email-routing/labels.jsonl) (seed 42).
 > Recompute: `python scripts/verify_published.py`.
 
-**n=200** · accuracy **100.0 %** · ECE **0.0036** · cost **$0.0037** · p50 **0.86 s** · p99 **7.5 s**
+**n=200** · accuracy **100.0 %** · ECE **0.0036** · cost **$0.0037** · p50 **0.86 s** · p99 **1.6 s**
 
 ## Read this first
 
 - **The dataset is easy by construction.** 24 templates × item/number fills produce 200 rows (161 distinct texts) across 10 categories in English and German. Every template contains the vocabulary of its category ("quote", "invoice … wrong", "return"). A 100 % here is the floor a judge must clear, not evidence of production accuracy.
 - **With accuracy at 100 %, ECE degenerates.** When nothing is wrong, ECE equals `1 − mean confidence`. The 0.0036 says the judge reports ~0.996 confidence and is always right — consistent, but it does not test whether confidence *falls* when the judge is wrong. The adversarial audit does.
 - Only two reliability bins are populated (198 rows in 0.9–1.0, 2 in 0.8–0.9). Nothing can be said about calibration below 0.8 from this run.
-- p99 of 7.5 s is a gateway tail, not a model property: one row waited on a rate-limit window. p50 is 0.86 s.
+- The latency tail is the gateway's, not the model's: the two slowest rows (7.5 s and 8.2 s) waited on a rate-limit window. With 200 rows the p99 (1.6 s, interpolated between order statistics, Hyndman–Fan type 7) sits just below them, so read the tail from those two rows, not from the p99. p50 is 0.86 s.
 
 ## What it does show
 

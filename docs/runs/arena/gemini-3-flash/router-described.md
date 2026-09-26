@@ -1,11 +1,11 @@
 # Audit report — llm
 
-**n=120** · accuracy **98.3%** [95.5, 100.0] · confidence known **120/120** · ECE **0.0121** [0.0013, 0.0335] · ECE (equal-mass) **0.0071** [0.0019, 0.0298] · Brier **0.0124** [0.0006, 0.0330]
-· cost **$0.0185** · p50 **2.452s** · p99 **21.669s**
+**n=120** · accuracy **98.3%** [95.5, 100.0] · confidence known **120/120** · ECE **0.0121** [0.0013, 0.0335] · ECE (equal-mass) **0.0071** [0.0019, 0.0298] · Brier **0.0124** [0.0006, 0.0330] · NLL **0.0496** [0.0119, 0.1157]
+· cost **$0.0185** · p50 **2.452s** · p99 **20.593s** · slowest **32.725s**
 
 _judge `llm:gemini-3-flash-preview` · model `gemini-3-flash-preview` · run 2026-09-21T11:06:43+00:00 · judge-audit 0.3.2_
 _dataset `examples/task-routing/labels-described.jsonl` · 120 rows · sha256 `4571c9661a0c…`_
-_regenerated 2026-09-23T18:32:04+00:00 from `docs/runs/arena/gemini-3-flash/router-described.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-09-24T15:48:07+00:00 from `docs/runs/arena/gemini-3-flash/router-described.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome; downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified; 40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted**
 

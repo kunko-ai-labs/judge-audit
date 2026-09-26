@@ -1,11 +1,11 @@
 # Audit report — finetuned
 
-**n=200** · accuracy **97.0%** [94.4, 99.0] · confidence known **200/200** · ECE **0.4961** [0.4702, 0.5220] · ECE (equal-mass) **0.4961** [0.4693, 0.5220] · Brier **0.2798** [0.2568, 0.3033]
-· cost **$0.0000** · p50 **0.017s** · p99 **0.155s**
+**n=200** · accuracy **97.0%** [94.4, 99.0] · confidence known **200/200** · ECE **0.4961** [0.4702, 0.5220] · ECE (equal-mass) **0.4961** [0.4693, 0.5220] · Brier **0.2798** [0.2568, 0.3033] · NLL **0.7629** [0.7120, 0.8157]
+· cost **$0.0000** · p50 **0.017s** · p99 **0.144s** · slowest **0.185s**
 
 _judge `finetuned:deberta-v3-base-ft-email-routing` · model `deberta-v3-base-ft-email-routing` · seed 2026 · run 2026-09-22T03:13:44+00:00 · judge-audit 0.3.2_
 _dataset `examples/email-routing-adversarial/labels.jsonl` · 200 rows · sha256 `8b7dbc8ded1b…`_
-_regenerated 2026-09-23T18:32:04+00:00 from `docs/runs/arena/finetuned-deberta/email-adversarial.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-09-24T15:48:07+00:00 from `docs/runs/arena/finetuned-deberta/email-adversarial.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic and seeded: 60 clean controls plus 140 attacked rows built from the same templates; the label is the category of the underlying clean email by design; _meta.target is what the attacker wanted; measures resistance to attacks on synthetic mail, not accuracy on real mail**
 

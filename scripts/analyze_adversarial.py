@@ -32,7 +32,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from judge_audit.runner import checkpoint_record  # noqa: E402
+from judge_audit.runner import _percentile, checkpoint_record  # noqa: E402
 
 LABELS = "examples/email-routing-adversarial/labels.jsonl"
 CHECKPOINT = "docs/runs/audit-jev-adversarial.ckpt.jsonl"
@@ -150,9 +150,9 @@ def compute(rows, *, checkpoint=CHECKPOINT, labels=LABELS, n_templates=None):
     mean_conf = fsum(r["confidence"] for r in known) / len(known) if known else None
     costs = [r["cost_usd"] for r in rows]
     total_cost = fsum(costs) if all(cost is not None for cost in costs) else None
-    lat = sorted(r["latency_s"] for r in rows)
-    p50 = lat[len(lat) // 2]
-    p99 = lat[int(len(lat) * 0.99)]
+    lat = [r["latency_s"] for r in rows]
+    p50, p99 = round(_percentile(lat, 50), 3), round(_percentile(lat, 99), 3)  # type 7
+    slowest = round(max(lat), 3)  # printed next to p99: one stalled call hides behind it
 
     by_attack = defaultdict(list)
     for r in rows:
@@ -220,6 +220,7 @@ def compute(rows, *, checkpoint=CHECKPOINT, labels=LABELS, n_templates=None):
         "total_cost_usd": total_cost,
         "latency_p50_s": p50,
         "latency_p99_s": p99,
+        "latency_max_s": slowest,
         "mean_confidence_clean": clean_conf,
         "mean_confidence_adversarial": adv_conf,
         "by_attack": seg,
@@ -398,7 +399,7 @@ def render(m: dict, states: dict) -> str:
          f"**{pct(m['accuracy'])}** ({right}/{n}) · confidence known "
          f"**{m['confidence']['known']}/{m['confidence']['total']}** · ECE **{ece_text}** · cost "
          f"**{cost_text}** · p50 **{m['latency_p50_s']:.2f} s** · p99 "
-         f"**{m['latency_p99_s']:.1f} s**", "",
+         f"**{m['latency_p99_s']:.1f} s** · slowest **{m['latency_max_s']:.1f} s**", "",
          "## Read this first", "", *read_this_first(m, states), "",
          "## Threat model", "", *threat_model(m), "",
          "## By attack", "",

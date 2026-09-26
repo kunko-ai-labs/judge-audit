@@ -9,6 +9,8 @@
   "ece": 0.2816,
   "ece_equal_mass": 0.2816,
   "brier": 0.2856,
+  "nll": 0.8253,
+  "nll_infinite": 0,
   "reliability_bins": [
     {
       "bin": "0.0-0.1",
@@ -104,7 +106,8 @@
   },
   "total_cost_usd": 0.0,
   "p50_latency_s": 1.014,
-  "p99_latency_s": 1.326,
+  "p99_latency_s": 1.324,
+  "max_latency_s": 3.615,
   "run": {
     "timestamp_utc": "2026-09-21T19:27:02+00:00",
     "judge_audit_version": "0.3.2",
@@ -159,6 +162,11 @@
     0.376
   ],
   "brier_ci_method": "bootstrap",
+  "nll_ci": [
+    0.588,
+    1.0692
+  ],
+  "nll_ci_method": "bootstrap",
   "zero_error_coverage_ci": [
     0.0,
     0.0308
@@ -171,7 +179,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T18:32:04+00:00",
+    "utc": "2026-09-24T15:48:07+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/jury/router-bare/llama32.r2.ckpt.jsonl",

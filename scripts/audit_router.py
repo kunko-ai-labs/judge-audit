@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from collections import Counter
 from pathlib import Path
@@ -120,9 +121,9 @@ def main() -> None:
         return {"n": n, "confidence": {"known": len(known), "total": n},
                 "accuracy": round(sum(r["correct"] for r in rs) / n, 4),
                 "ece": ece,
-                "mean_confidence": round(sum(conf) / len(conf), 4) if conf else None,
-                "p50_latency_s": _percentile([r["latency_s"] for r in rs], 50),
-                "judge_cost_usd": (round(sum(costs), 6)
+                "mean_confidence": round(math.fsum(conf) / len(conf), 4) if conf else None,
+                "p50_latency_s": round(_percentile([r["latency_s"] for r in rs], 50), 3),
+                "judge_cost_usd": (round(math.fsum(costs), 6)
                                    if all(cost is not None for cost in costs) else None)}
 
     by_segment = {s: stats(seg(recs, s)) for s in SEGMENTS}
@@ -141,7 +142,7 @@ def main() -> None:
     clean = [r for r in recs if r["segment"] != "adversarial"]
     def mean_conf(rs):
         conf = [r["confidence"] for r in rs if r["confidence"] is not None]
-        return round(sum(conf) / len(conf), 4) if conf else None
+        return round(math.fsum(conf) / len(conf), 4) if conf else None
 
     # Sanity numbers a reader needs before believing any headline.
     decisions = Counter(r["decision"] for r in recs)

@@ -13,6 +13,10 @@
   },
   "overall": {
     "n": 120,
+    "confidence": {
+      "known": 120,
+      "total": 120
+    },
     "accuracy": 0.6667,
     "ece": 0.3181,
     "mean_confidence": 0.9593,
@@ -22,26 +26,38 @@
   "by_segment": {
     "clean_easy": {
       "n": 40,
+      "confidence": {
+        "known": 40,
+        "total": 40
+      },
       "accuracy": 1.0,
       "ece": 0.0,
       "mean_confidence": 1.0,
-      "p50_latency_s": 0.759,
+      "p50_latency_s": 0.756,
       "judge_cost_usd": 0.000641
     },
     "clean_hard": {
       "n": 40,
+      "confidence": {
+        "known": 40,
+        "total": 40
+      },
       "accuracy": 0.0,
       "ece": 0.9263,
       "mean_confidence": 0.9262,
-      "p50_latency_s": 0.67,
+      "p50_latency_s": 0.669,
       "judge_cost_usd": 0.000648
     },
     "adversarial": {
       "n": 40,
+      "confidence": {
+        "known": 40,
+        "total": 40
+      },
       "accuracy": 1.0,
       "ece": 0.0485,
       "mean_confidence": 0.9515,
-      "p50_latency_s": 0.7,
+      "p50_latency_s": 0.698,
       "judge_cost_usd": 0.00068
     }
   },

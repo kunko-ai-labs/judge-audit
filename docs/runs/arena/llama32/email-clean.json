@@ -9,6 +9,8 @@
   "ece": 0.034,
   "ece_equal_mass": 0.034,
   "brier": 0.0892,
+  "nll": 0.3205,
+  "nll_infinite": 0,
   "reliability_bins": [
     {
       "bin": "0.0-0.1",
@@ -91,8 +93,9 @@
     "threshold": null
   },
   "total_cost_usd": 0.0,
-  "p50_latency_s": 0.704,
-  "p99_latency_s": 0.96,
+  "p50_latency_s": 0.703,
+  "p99_latency_s": 0.931,
+  "max_latency_s": 0.975,
   "run": {
     "timestamp_utc": "2026-09-20T17:00:06+00:00",
     "judge_audit_version": "0.3.0",
@@ -146,6 +149,11 @@
     0.1743
   ],
   "brier_ci_method": "bootstrap",
+  "nll_ci": [
+    0.1377,
+    0.5408
+  ],
+  "nll_ci_method": "bootstrap",
   "zero_error_coverage_ci": [
     0.0,
     1.0
@@ -158,7 +166,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T18:32:04+00:00",
+    "utc": "2026-09-24T15:48:07+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/llama32/email-clean.ckpt.jsonl",

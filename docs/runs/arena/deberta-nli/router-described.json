@@ -9,6 +9,8 @@
   "ece": 0.1952,
   "ece_equal_mass": 0.2131,
   "brier": 0.3238,
+  "nll": 0.8796,
+  "nll_infinite": 0,
   "reliability_bins": [
     {
       "bin": "0.0-0.1",
@@ -200,7 +202,8 @@
   },
   "total_cost_usd": 0.0,
   "p50_latency_s": 0.105,
-  "p99_latency_s": 1.024,
+  "p99_latency_s": 0.897,
+  "max_latency_s": 1.348,
   "run": {
     "timestamp_utc": "2026-09-20T18:53:38+00:00",
     "judge_audit_version": "0.3.1",
@@ -258,6 +261,11 @@
     0.3803
   ],
   "brier_ci_method": "bootstrap",
+  "nll_ci": [
+    0.7616,
+    1.0161
+  ],
+  "nll_ci_method": "bootstrap",
   "zero_error_coverage_ci": [
     0.0,
     0.0303
@@ -270,7 +278,7 @@
     "seed": 0
   },
   "regenerated": {
-    "utc": "2026-09-23T18:32:04+00:00",
+    "utc": "2026-09-24T15:48:07+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/deberta-nli/router-described.ckpt.jsonl",
