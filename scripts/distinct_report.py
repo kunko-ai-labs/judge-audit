@@ -96,6 +96,9 @@ def collect() -> dict:
         out[ds] = {"rows": len(rows), "distinct_texts": len(keep), "judges": {}}
         out[ds]["mix"] = {"all": mix(ds, rows, range(len(rows))),
                           "distinct": mix(ds, rows, sorted(keep))}
+        if ds == "email-adversarial":  # the headline's dataset: its categories as well
+            out[ds]["category_mix"] = {"all": mix("email-clean", rows, range(len(rows))),
+                                       "distinct": mix("email-clean", rows, sorted(keep))}
         recs, _ = records(labels, ROOT / JEV[ds], q)
         out[ds]["judges"]["jev"] = both(recs, ds, rows)
         for d in sorted(p for p in ARENA.iterdir() if p.is_dir()):
@@ -162,7 +165,9 @@ def render(data: dict) -> str:
         "is mostly the injected segment, and its accuracy moves because the *question mix* "
         "changes, not only because repeats are gone. The emails change mix as well: the "
         f"clean emails lose most of their repeated categories ({shifts(data['email-clean']['mix'])}), "
-        f"the emails under attack the least ({shifts(data['email-adversarial']['mix'])}). "
+        f"the emails under attack the least — by attack "
+        f"({shifts(data['email-adversarial']['mix'])}) and by category "
+        f"({shifts(data['email-adversarial']['category_mix'])}). "
         "Read every distinct-text column as a slightly different dataset, not only as the "
         "same one without repeats.",
         "",

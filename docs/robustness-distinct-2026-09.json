@@ -779,6 +779,32 @@
         "prompt_injection": 40,
         "social_engineering": 15
       }
+    },
+    "category_mix": {
+      "all": {
+        "contract": 15,
+        "delivery_status": 16,
+        "invoice_dispute": 23,
+        "order": 15,
+        "partnership": 22,
+        "payment_reminder": 20,
+        "quote_request": 17,
+        "return_request": 18,
+        "spam": 31,
+        "support": 23
+      },
+      "distinct": {
+        "contract": 15,
+        "delivery_status": 16,
+        "invoice_dispute": 23,
+        "order": 15,
+        "partnership": 21,
+        "payment_reminder": 20,
+        "quote_request": 17,
+        "return_request": 18,
+        "spam": 22,
+        "support": 22
+      }
     }
   },
   "router-bare": {
