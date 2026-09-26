@@ -8,6 +8,7 @@ no judge, no API call — and CI diffs them like every other report:
   docs/runs/arena/<slug>/<dataset>.{json,md}        (labels: examples/<dataset>/…)
   docs/runs/jury/<dataset>/<slug>.r2.{json,md}      (labels: the sibling .r2.input.jsonl;
                                                      clusters: the original dataset's texts)
+  docs/runs/repeats/<slug>/<dataset>.r<k>.{json,md} (repeat runs, same labels as the Arena)
   docs/audit-jev-real.json                          (Jev, clean emails; its .md is prose)
 
   python scripts/runs_report.py               # rewrite them all
@@ -87,6 +88,12 @@ def targets() -> list[dict]:
         out.append({"labels": str(js.with_name(stem + ".input.jsonl").relative_to(ROOT)),
                     "cluster_labels": ARENA_DATASETS[js.parent.name],
                     "family": "jury", **_siblings(js, stem)})
+    # Repeat runs (docs/repeat-runs-plan.md): <dataset>.r<k>, same labels as the Arena.
+    for ck in sorted((ROOT / "docs" / "runs" / "repeats").glob("*/*.r[0-9].ckpt.jsonl")):
+        js = ck.with_name(ck.name.removesuffix(".ckpt.jsonl") + ".json")
+        stem = js.name.removesuffix(".json")
+        out.append({"labels": ARENA_DATASETS[stem.rsplit(".", 1)[0]], "cluster_labels": None,
+                    "family": "repeats", **_siblings(js, stem)})
     out.append({**JEV_REAL, "cluster_labels": None, "family": "audit-jev-real",
                 "pinned_run": JEV_REAL_RUN})
     return out

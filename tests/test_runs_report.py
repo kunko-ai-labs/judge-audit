@@ -22,7 +22,7 @@ def test_every_checkpoint_under_docs_runs_yields_a_job():
     jobs = {t["ckpt"] for t in runs_report.targets()}
     ckpts = {p.relative_to(ROOT).as_posix()
              for p in (ROOT / "docs" / "runs").glob("*/*/*.ckpt.jsonl")}
-    assert len(ckpts) == 54 and ckpts <= jobs, sorted(ckpts - jobs)
+    assert len(ckpts) == 63 and ckpts <= jobs, sorted(ckpts - jobs)
 
 
 def test_a_checkpoint_without_its_report_fails_instead_of_being_skipped(tmp_path):

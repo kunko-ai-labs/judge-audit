@@ -122,7 +122,8 @@ def render(data: dict) -> str:
         "every Arena statistic is recomputed on the **first row of each distinct text** (file "
         "order), so a reader can see which numbers lean on the repeats. Same judges, same "
         "rules as the Arena table (full-dataset runs only); same 95 % intervals over distinct "
-        "texts (exact binomial where the bootstrap cannot move, marked †).",
+        "texts (the exact Clopper–Pearson binomial interval where the bootstrap cannot move, "
+        "marked †).",
         "",
         f"**The README headline {verdict} on distinct texts.** Under attack, on "
         f"{data['email-adversarial']['distinct_texts']} distinct texts, Gemini 3 Flash's "

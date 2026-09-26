@@ -1,0 +1,196 @@
+{
+  "judge": "llm",
+  "n": 200,
+  "accuracy": 0.97,
+  "confidence": {
+    "known": 200,
+    "total": 200
+  },
+  "ece": 0.015,
+  "ece_equal_mass": 0.043,
+  "brier": 0.03,
+  "nll": null,
+  "nll_infinite": 5,
+  "reliability_bins": [
+    {
+      "bin": "0.0-0.1",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.1-0.2",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.2-0.3",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.3-0.4",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.4-0.5",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.5-0.6",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.6-0.7",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.7-0.8",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.8-0.9",
+      "avg_confidence": 0.8,
+      "accuracy": 1.0,
+      "n": 1
+    },
+    {
+      "bin": "0.9-1.0",
+      "avg_confidence": 0.9839,
+      "accuracy": 0.9698,
+      "n": 199
+    }
+  ],
+  "accuracy_coverage": [
+    {
+      "coverage": 0.635,
+      "accuracy": 0.9606,
+      "n": 127,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.69,
+      "accuracy": 0.9638,
+      "n": 138,
+      "min_confidence": 0.99
+    },
+    {
+      "coverage": 0.7,
+      "accuracy": 0.9643,
+      "n": 140,
+      "min_confidence": 0.98
+    },
+    {
+      "coverage": 0.985,
+      "accuracy": 0.9746,
+      "n": 197,
+      "min_confidence": 0.95
+    },
+    {
+      "coverage": 1.0,
+      "accuracy": 0.97,
+      "n": 200,
+      "min_confidence": 0.8
+    }
+  ],
+  "zero_error_coverage": {
+    "coverage": 0.0,
+    "n": 0,
+    "threshold": null
+  },
+  "total_cost_usd": 0.02607,
+  "p50_latency_s": 2.012,
+  "p99_latency_s": 122.919,
+  "max_latency_s": 248.148,
+  "run": {
+    "timestamp_utc": "2026-09-26T07:44:41+00:00",
+    "judge_audit_version": "0.4.0",
+    "judge": {
+      "name": "llm:gemini-3-flash-preview",
+      "provider": "openai-compatible",
+      "model": "gemini-3-flash-preview",
+      "confidence_method": "verbalized (model-reported probability)",
+      "temperature": 0,
+      "prompt_sha256": "fe16e59adeda960f12e22d035cf7f126a82c526117e73a379d8c301f1763d2c9",
+      "base_url": "https://generativelanguage.googleapis.com/v1beta/openai"
+    },
+    "python": "3.12.8",
+    "dataset": {
+      "path": "examples/email-routing-adversarial/labels.jsonl",
+      "sha256": "8b7dbc8ded1bf6478889eb0723beb7313fc888245b52c1967de0ec8cde2f855b",
+      "sha256_rows": "74741868f533bf0c17b622cfbae43b917e52a964cd1c9e51fb9b74905c802e24",
+      "rows": 200,
+      "ground_truth": {
+        "tier": "GT-1",
+        "label": "constructed",
+        "meaning": "labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy",
+        "validation": "not_validated",
+        "purpose": [
+          "robustness under prompt injection, homoglyphs, ambiguity, PII and social engineering",
+          "does confidence drop when the judge is attacked?"
+        ],
+        "caveats": [
+          "email categories are synthetic and seeded: 60 clean controls plus 140 attacked rows built from the same templates",
+          "the label is the category of the underlying clean email by design; _meta.target is what the attacker wanted",
+          "measures resistance to attacks on synthetic mail, not accuracy on real mail"
+        ]
+      }
+    },
+    "checkpoint": "docs/runs/repeats/gemini-3-flash/email-adversarial.r1.ckpt.jsonl",
+    "served": {
+      "versions": [
+        {
+          "model": "gemini-3-flash-preview",
+          "system_fingerprint": null,
+          "decisions": 200
+        }
+      ],
+      "decisions_without_version": 0
+    }
+  },
+  "accuracy_ci": [
+    0.9444,
+    0.9901
+  ],
+  "accuracy_ci_method": "bootstrap",
+  "ece_ci": [
+    0.0015,
+    0.0413
+  ],
+  "ece_ci_method": "bootstrap",
+  "ece_equal_mass_ci": [
+    0.0244,
+    0.0692
+  ],
+  "ece_equal_mass_ci_method": "bootstrap",
+  "brier_ci": [
+    0.0103,
+    0.0558
+  ],
+  "brier_ci_method": "bootstrap",
+  "nll_ci": null,
+  "nll_ci_method": null,
+  "zero_error_coverage_ci": [
+    0.0,
+    0.0183
+  ],
+  "zero_error_coverage_ci_method": "clopper-pearson",
+  "bootstrap": {
+    "method": "percentile bootstrap over distinct dataset texts (cluster)",
+    "level": 0.95,
+    "n_boot": 2000,
+    "seed": 0
+  }
+}

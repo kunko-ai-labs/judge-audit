@@ -438,9 +438,21 @@ def check_headline(ck: Checker, md: str, attack: dict) -> None:
                            f"not below Jev's lower bound {j_lo}, so the gap is not separated")
 
 
+def check_robustness(ck: Checker, md: str) -> None:
+    """The caption's two robustness claims must match the reports they link."""
+    if "it holds in each of three pre-registered repeat runs" in md:
+        rep = load("repeats-2026-09.json")
+        sep = rep["predictions"][2]
+        ck.eq("robustness / headline separated in every repeat", sep["held"], True)
+    if "and on one row per distinct text" in md:
+        ck.eq("robustness / headline separated on distinct texts",
+              load("robustness-distinct-2026-09.json")["headline"]["separated"], True)
+
+
 def check(md: str) -> Checker:
     ck, all_tables = Checker(), tables(md)
     check_hero(ck, md)
+    check_robustness(ck, md)
     check_jev_audits(ck, all_tables)
     check_arena(ck, all_tables)
     check_consensus(ck, all_tables)

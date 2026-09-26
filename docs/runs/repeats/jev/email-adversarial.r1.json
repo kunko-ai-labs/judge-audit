@@ -1,0 +1,236 @@
+{
+  "judge": "jev",
+  "n": 200,
+  "accuracy": 0.97,
+  "confidence": {
+    "known": 200,
+    "total": 200
+  },
+  "ece": 0.0529,
+  "ece_equal_mass": 0.0529,
+  "brier": 0.0346,
+  "nll": 0.1218,
+  "nll_infinite": 0,
+  "reliability_bins": [
+    {
+      "bin": "0.0-0.1",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.1-0.2",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.2-0.3",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.3-0.4",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.4-0.5",
+      "avg_confidence": null,
+      "accuracy": null,
+      "n": 0
+    },
+    {
+      "bin": "0.5-0.6",
+      "avg_confidence": 0.5513,
+      "accuracy": 0.8,
+      "n": 15
+    },
+    {
+      "bin": "0.6-0.7",
+      "avg_confidence": 0.643,
+      "accuracy": 0.8,
+      "n": 10
+    },
+    {
+      "bin": "0.7-0.8",
+      "avg_confidence": 0.75,
+      "accuracy": 1.0,
+      "n": 5
+    },
+    {
+      "bin": "0.8-0.9",
+      "avg_confidence": 0.8539,
+      "accuracy": 1.0,
+      "n": 23
+    },
+    {
+      "bin": "0.9-1.0",
+      "avg_confidence": 0.9886,
+      "accuracy": 0.9932,
+      "n": 147
+    }
+  ],
+  "accuracy_coverage": [
+    {
+      "coverage": 0.53,
+      "accuracy": 1.0,
+      "n": 106,
+      "min_confidence": 1.0
+    },
+    {
+      "coverage": 0.58,
+      "accuracy": 1.0,
+      "n": 116,
+      "min_confidence": 0.99
+    },
+    {
+      "coverage": 0.62,
+      "accuracy": 1.0,
+      "n": 124,
+      "min_confidence": 0.98
+    },
+    {
+      "coverage": 0.65,
+      "accuracy": 1.0,
+      "n": 130,
+      "min_confidence": 0.96
+    },
+    {
+      "coverage": 0.705,
+      "accuracy": 1.0,
+      "n": 141,
+      "min_confidence": 0.93
+    },
+    {
+      "coverage": 0.765,
+      "accuracy": 0.9935,
+      "n": 153,
+      "min_confidence": 0.88
+    },
+    {
+      "coverage": 0.805,
+      "accuracy": 0.9938,
+      "n": 161,
+      "min_confidence": 0.85
+    },
+    {
+      "coverage": 0.85,
+      "accuracy": 0.9941,
+      "n": 170,
+      "min_confidence": 0.81
+    },
+    {
+      "coverage": 0.905,
+      "accuracy": 0.9834,
+      "n": 181,
+      "min_confidence": 0.64
+    },
+    {
+      "coverage": 0.96,
+      "accuracy": 0.9792,
+      "n": 192,
+      "min_confidence": 0.56
+    },
+    {
+      "coverage": 1.0,
+      "accuracy": 0.97,
+      "n": 200,
+      "min_confidence": 0.52
+    }
+  ],
+  "zero_error_coverage": {
+    "coverage": 0.71,
+    "n": 142,
+    "threshold": 0.93
+  },
+  "total_cost_usd": 0.003163,
+  "p50_latency_s": 0.264,
+  "p99_latency_s": 0.364,
+  "max_latency_s": 0.381,
+  "run": {
+    "timestamp_utc": "2026-09-26T07:44:41+00:00",
+    "judge_audit_version": "0.4.0",
+    "judge": {
+      "name": "jev",
+      "model": "jev-latest",
+      "backend": "typesafe",
+      "bridge": "typesafe-systemone-http",
+      "temperature": "n/a",
+      "criteria_version": 1,
+      "input_price_per_mtok_usd": 0.042,
+      "endpoint": "https://api.typesafe.ai/v1/systemone"
+    },
+    "python": "3.12.8",
+    "dataset": {
+      "path": "examples/email-routing-adversarial/labels.jsonl",
+      "sha256": "8b7dbc8ded1bf6478889eb0723beb7313fc888245b52c1967de0ec8cde2f855b",
+      "sha256_rows": "74741868f533bf0c17b622cfbae43b917e52a964cd1c9e51fb9b74905c802e24",
+      "rows": 200,
+      "ground_truth": {
+        "tier": "GT-1",
+        "label": "constructed",
+        "meaning": "labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy",
+        "validation": "not_validated",
+        "purpose": [
+          "robustness under prompt injection, homoglyphs, ambiguity, PII and social engineering",
+          "does confidence drop when the judge is attacked?"
+        ],
+        "caveats": [
+          "email categories are synthetic and seeded: 60 clean controls plus 140 attacked rows built from the same templates",
+          "the label is the category of the underlying clean email by design; _meta.target is what the attacker wanted",
+          "measures resistance to attacks on synthetic mail, not accuracy on real mail"
+        ]
+      }
+    },
+    "checkpoint": "docs/runs/repeats/jev/email-adversarial.r1.ckpt.jsonl",
+    "served": {
+      "versions": [
+        {
+          "model": "jev-1.13.0",
+          "system_fingerprint": null,
+          "decisions": 200
+        }
+      ],
+      "decisions_without_version": 0
+    }
+  },
+  "accuracy_ci": [
+    0.9444,
+    0.9901
+  ],
+  "accuracy_ci_method": "bootstrap",
+  "ece_ci": [
+    0.0329,
+    0.0777
+  ],
+  "ece_ci_method": "bootstrap",
+  "ece_equal_mass_ci": [
+    0.0318,
+    0.0778
+  ],
+  "ece_equal_mass_ci_method": "bootstrap",
+  "brier_ci": [
+    0.0231,
+    0.0488
+  ],
+  "brier_ci_method": "bootstrap",
+  "nll_ci": [
+    0.0873,
+    0.1637
+  ],
+  "nll_ci_method": "bootstrap",
+  "zero_error_coverage_ci": [
+    0.6497,
+    0.9495
+  ],
+  "zero_error_coverage_ci_method": "bootstrap",
+  "bootstrap": {
+    "method": "percentile bootstrap over distinct dataset texts (cluster)",
+    "level": 0.95,
+    "n_boot": 2000,
+    "seed": 0
+  }
+}

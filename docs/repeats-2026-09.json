@@ -1,0 +1,410 @@
+{
+  "dataset": "examples/email-routing-adversarial/labels.jsonl",
+  "rows": 200,
+  "judges": {
+    "gemini-3-flash": {
+      "arena": {
+        "n": 200,
+        "accuracy": 0.97,
+        "accuracy_ci": [
+          0.9447,
+          0.9902
+        ],
+        "accuracy_ci_method": "bootstrap",
+        "zero_error_coverage": 0.0,
+        "zero_error_coverage_ci": [
+          0.0,
+          0.0183
+        ],
+        "zero_error_coverage_ci_method": "clopper-pearson",
+        "mean_conf_correct": 0.982,
+        "mean_conf_wrong": 0.983,
+        "nll_infinite": 5,
+        "config": {
+          "model": "gemini-3-flash-preview",
+          "provider": "openai-compatible"
+        }
+      },
+      "repeats": {
+        "r1": {
+          "n": 200,
+          "accuracy": 0.97,
+          "accuracy_ci": [
+            0.9444,
+            0.9901
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0183
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.983,
+          "mean_conf_wrong": 0.983,
+          "nll_infinite": 5,
+          "config": {
+            "model": "gemini-3-flash-preview",
+            "provider": "openai-compatible"
+          }
+        },
+        "r2": {
+          "n": 200,
+          "accuracy": 0.97,
+          "accuracy_ci": [
+            0.9444,
+            0.9901
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0183
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.98,
+          "mean_conf_wrong": 0.983,
+          "nll_infinite": 5,
+          "config": {
+            "model": "gemini-3-flash-preview",
+            "provider": "openai-compatible"
+          }
+        },
+        "r3": {
+          "n": 200,
+          "accuracy": 0.97,
+          "accuracy_ci": [
+            0.9444,
+            0.9901
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.0183
+          ],
+          "zero_error_coverage_ci_method": "clopper-pearson",
+          "mean_conf_correct": 0.981,
+          "mean_conf_wrong": 0.983,
+          "nll_infinite": 5,
+          "config": {
+            "model": "gemini-3-flash-preview",
+            "provider": "openai-compatible"
+          }
+        }
+      },
+      "spread": {
+        "accuracy": {
+          "min": 0.97,
+          "max": 0.97,
+          "sd": 0.0
+        },
+        "zero_error_coverage": {
+          "min": 0.0,
+          "max": 0.0,
+          "sd": 0.0
+        },
+        "mean_conf_correct": {
+          "min": 0.98,
+          "max": 0.983,
+          "sd": 0.0013
+        },
+        "mean_conf_wrong": {
+          "min": 0.983,
+          "max": 0.983,
+          "sd": 0.0
+        }
+      },
+      "spread_over": "Arena run + r1\u2013r3"
+    },
+    "claude-sonnet-4.5": {
+      "arena": {
+        "n": 200,
+        "accuracy": 0.965,
+        "accuracy_ci": [
+          0.9391,
+          0.9898
+        ],
+        "accuracy_ci_method": "bootstrap",
+        "zero_error_coverage": 0.0,
+        "zero_error_coverage_ci": [
+          0.0,
+          0.9086
+        ],
+        "zero_error_coverage_ci_method": "bootstrap",
+        "mean_conf_correct": 0.957,
+        "mean_conf_wrong": 0.877,
+        "nll_infinite": 2,
+        "config": {
+          "model": "claude-sonnet-4.5",
+          "provider": "hosted-api"
+        }
+      },
+      "repeats": {
+        "r1": {
+          "n": 200,
+          "accuracy": 0.965,
+          "accuracy_ci": [
+            0.9391,
+            0.9898
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.335
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.957,
+          "mean_conf_wrong": 0.881,
+          "nll_infinite": 2,
+          "config": {
+            "model": "claude-sonnet-4.5",
+            "provider": "hosted-api"
+          }
+        },
+        "r2": {
+          "n": 200,
+          "accuracy": 0.965,
+          "accuracy_ci": [
+            0.9391,
+            0.9898
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.335
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.958,
+          "mean_conf_wrong": 0.886,
+          "nll_infinite": 2,
+          "config": {
+            "model": "claude-sonnet-4.5",
+            "provider": "hosted-api"
+          }
+        },
+        "r3": {
+          "n": 200,
+          "accuracy": 0.965,
+          "accuracy_ci": [
+            0.9391,
+            0.9898
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.0,
+          "zero_error_coverage_ci": [
+            0.0,
+            0.9086
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.957,
+          "mean_conf_wrong": 0.877,
+          "nll_infinite": 2,
+          "config": {
+            "model": "claude-sonnet-4.5",
+            "provider": "hosted-api"
+          }
+        }
+      },
+      "spread": {
+        "accuracy": {
+          "min": 0.965,
+          "max": 0.965,
+          "sd": 0.0
+        },
+        "zero_error_coverage": {
+          "min": 0.0,
+          "max": 0.0,
+          "sd": 0.0
+        },
+        "mean_conf_correct": {
+          "min": 0.957,
+          "max": 0.958,
+          "sd": 0.0005
+        },
+        "mean_conf_wrong": {
+          "min": 0.877,
+          "max": 0.886,
+          "sd": 0.0043
+        }
+      },
+      "spread_over": "Arena run + r1\u2013r3"
+    },
+    "jev": {
+      "arena": {
+        "n": 200,
+        "accuracy": 0.955,
+        "accuracy_ci": [
+          0.925,
+          0.9802
+        ],
+        "accuracy_ci_method": "bootstrap",
+        "zero_error_coverage": 0.73,
+        "zero_error_coverage_ci": [
+          0.6701,
+          0.94
+        ],
+        "zero_error_coverage_ci_method": "bootstrap",
+        "mean_conf_correct": 0.933,
+        "mean_conf_wrong": 0.597,
+        "nll_infinite": 0,
+        "config": {}
+      },
+      "repeats": {
+        "r1": {
+          "n": 200,
+          "accuracy": 0.97,
+          "accuracy_ci": [
+            0.9444,
+            0.9901
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.71,
+          "zero_error_coverage_ci": [
+            0.6497,
+            0.9495
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.926,
+          "mean_conf_wrong": 0.642,
+          "nll_infinite": 0,
+          "config": {
+            "model": "jev-latest",
+            "backend": "typesafe"
+          }
+        },
+        "r2": {
+          "n": 200,
+          "accuracy": 0.97,
+          "accuracy_ci": [
+            0.9442,
+            0.9901
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.705,
+          "zero_error_coverage_ci": [
+            0.645,
+            0.9436
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.925,
+          "mean_conf_wrong": 0.647,
+          "nll_infinite": 0,
+          "config": {
+            "model": "jev-latest",
+            "backend": "typesafe"
+          }
+        },
+        "r3": {
+          "n": 200,
+          "accuracy": 0.96,
+          "accuracy_ci": [
+            0.9303,
+            0.9849
+          ],
+          "accuracy_ci_method": "bootstrap",
+          "zero_error_coverage": 0.685,
+          "zero_error_coverage_ci": [
+            0.6224,
+            0.9554
+          ],
+          "zero_error_coverage_ci_method": "bootstrap",
+          "mean_conf_correct": 0.931,
+          "mean_conf_wrong": 0.599,
+          "nll_infinite": 0,
+          "config": {
+            "model": "jev-latest",
+            "backend": "typesafe"
+          }
+        }
+      },
+      "spread": {
+        "accuracy": {
+          "min": 0.96,
+          "max": 0.97,
+          "sd": 0.0058
+        },
+        "zero_error_coverage": {
+          "min": 0.685,
+          "max": 0.71,
+          "sd": 0.0132
+        },
+        "mean_conf_correct": {
+          "min": 0.925,
+          "max": 0.931,
+          "sd": 0.0032
+        },
+        "mean_conf_wrong": {
+          "min": 0.599,
+          "max": 0.647,
+          "sd": 0.0264
+        }
+      },
+      "spread_over": "r1\u2013r3"
+    }
+  },
+  "predictions": [
+    {
+      "prediction": "Gemini 3 Flash's zero-error coverage is 0 % in each repeat",
+      "per_run": {
+        "r1": true,
+        "r2": true,
+        "r3": true
+      },
+      "held": true
+    },
+    {
+      "prediction": "Jev's zero-error coverage is at least 50 % in each repeat",
+      "per_run": {
+        "r1": true,
+        "r2": true,
+        "r3": true
+      },
+      "held": true
+    },
+    {
+      "prediction": "Gemini's 95 % upper bound lies below Jev's 95 % lower bound in each repeat",
+      "per_run": {
+        "r1": true,
+        "r2": true,
+        "r3": true
+      },
+      "held": true
+    },
+    {
+      "prediction": "Claude Sonnet 4.5's zero-error coverage stays below Jev's in each repeat",
+      "per_run": {
+        "r1": true,
+        "r2": true,
+        "r3": true
+      },
+      "held": true
+    },
+    {
+      "prediction": "Each judge's accuracy in each repeat lies inside its Arena 95 % interval",
+      "per_run": {
+        "gemini-3-flash r1": true,
+        "gemini-3-flash r2": true,
+        "gemini-3-flash r3": true,
+        "claude-sonnet-4.5 r1": true,
+        "claude-sonnet-4.5 r2": true,
+        "claude-sonnet-4.5 r3": true,
+        "jev r1": true,
+        "jev r2": true,
+        "jev r3": true
+      },
+      "held": true
+    },
+    {
+      "prediction": "nll_infinite \u2265 1 for Gemini and Sonnet and 0 for Jev, in each repeat",
+      "per_run": {
+        "r1": true,
+        "r2": true,
+        "r3": true
+      },
+      "held": true
+    }
+  ]
+}
