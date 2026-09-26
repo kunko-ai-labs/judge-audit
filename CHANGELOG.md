@@ -3,6 +3,11 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
+## [0.5.0] — unreleased (dated when tagged)
+
+### Added
+- **`--judge logprob`: an open model's own probability of each option** (US-005-004, #89). For open-weight chat models run locally with MLX (`pip install 'kunko-judge-audit[mlx]'`, `LOGPROB_MODEL`): the prompt runs once into a cache, each option's tokens extend it and are trimmed back, and an option scores the sum of its tokens' log-probabilities plus the log-probability of ending there, normalised over the options; the share of probability the model put on the options is kept (`raw.option_mass`). Nothing is sampled; thinking is switched off in the chat template. The cached scores equal an independent full forward pass on a tiny random model (`tests/test_logprob_mlx.py`, run where mlx is installed); `scripts/logprob_selfcheck.py` repeats that check on the real model and measures throughput before a run.
+
 ## [0.4.0] — 2026-09-26
 
 ### Added

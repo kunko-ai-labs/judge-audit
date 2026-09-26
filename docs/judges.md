@@ -1,6 +1,6 @@
 # Judges: what plugs in and how
 
-judge-audit audits anything that maps `(state, questions) -> (decision, confidence)`. Five adapters ship; writing a sixth is ~30 lines.
+judge-audit audits anything that maps `(state, questions) -> (decision, confidence)`. Six adapters ship; writing a seventh is ~30 lines.
 
 | `--judge` | What it audits | Confidence comes from | Needs |
 |---|---|---|---|
@@ -9,6 +9,7 @@ judge-audit audits anything that maps `(state, questions) -> (decision, confiden
 | `llm` | a chat model with a "classify and say how sure you are" prompt — what most production judges actually are | **verbalized**: the model writes a number | Anthropic: `pip install 'judge-audit[anthropic]'` + `ANTHROPIC_API_KEY` · OpenAI-compatible (OpenAI, Ollama, vLLM, LM Studio): `LLM_PROVIDER=openai-compatible LLM_BASE_URL=… LLM_MODEL=…` |
 | `nli` | a small zero-shot encoder (DeBERTa-class cross-encoder) — the **control** row: small, instruction-immune, real softmax confidence; not a competitor | **NLI entailment softmax** over the options: a real probability, computed locally | `pip install 'kunko-judge-audit[nli]'`; optional `NLI_MODEL`, `NLI_HYPOTHESIS`, `NLI_DEVICE` |
 | `finetuned` | **your own classifier**: a DeBERTa-class encoder fine-tuned on your labelled rows (`scripts/train_classifier.py`) — the "isn't a judgment model just a classifier?" row | **softmax probability of the chosen option** from the classification head; reads only the state text | `pip install 'kunko-judge-audit[nli]'` + `FINETUNED_MODEL_DIR`; optional `FINETUNED_DEVICE`, `FINETUNED_MAX_LEN` |
+| `logprob` | an open-weight chat model run locally with MLX (Apple silicon, or Linux CPU), asked to answer with an option's name | **token log-probability**: the model's own probability of answering each option (its tokens, then the end of turn), normalised over the options; nothing is sampled | `pip install 'kunko-judge-audit[mlx]'` + `LOGPROB_MODEL`; `LOGPROB_REVISION` recommended; optional `LOGPROB_LABEL`, `LOGPROB_CHAT_KWARGS` |
 | `simulated` | nothing real — a seeded simulator to see the pipeline | drawn from a distribution | nothing; output is stamped SIMULATED |
 
 ## Same dataset, several judges = the Arena
@@ -36,6 +37,12 @@ LLM_PROVIDER=openai-compatible LLM_BASE_URL=http://localhost:11434/v1 LLM_MODEL=
 ```
 
 Compare `ece`, `zero_error_coverage` and the prompt-injection confidence drop across the JSON files. The Judge Arena (roadmap v0.5) is this table, published and continuously updated.
+
+## Token log-probability: an open model's own option probabilities
+
+`logprob` is the token log-probability method of [#89](https://github.com/kunko-ai-labs/judge-audit/issues/89) for open-weight models run locally with MLX. It gives the model the state, the question and the options, asks for the option's name only, and reads the probability the model assigns to answering each option: the prompt runs once, each option's tokens extend that cached prefix, and an option's log-probability is the sum over its tokens plus the log-probability that the answer ends right there (any end-of-turn token of the tokenizer). The end term keeps the options prefix-free, so `top_up` is not credited with the mass of `top_up_failed`. The probabilities are normalised over the options; `raw.option_mass`, the share the model put on the options before normalising, is kept, because a small one means the normalisation made the answer confident, not the model. The decision is the most probable option (the first listed on a tie) and the confidence its normalised probability: the same kind of object a judgment model returns, so a comparison with Jev or Laya no longer mixes the model with how its confidence is read.
+
+Nothing is sampled (`temperature` "n/a"). Thinking is off in the chat template unless `LOGPROB_CHAT_KWARGS` says otherwise, because mlx-lm switches it on for models that support it: the probability read is that of a direct answer. The trimmed-cache scores are checked against an independent full forward pass in `tests/test_logprob_mlx.py` (a tiny random model; the test runs where mlx is installed). Before a published run, `python scripts/logprob_selfcheck.py <labels.jsonl> --model <id>` repeats that check on the real model and measures rows per minute: mlx-lm has an open report of prompt caching returning different logits for repeated prompts.
 
 ## Why an NLI control
 

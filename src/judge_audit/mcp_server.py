@@ -76,6 +76,13 @@ JUDGE_INFO: dict[str, dict[str, object]] = {
         "env": ["extra [nli] (transformers + torch)", "FINETUNED_MODEL_DIR (required)",
                 "FINETUNED_DEVICE, FINETUNED_MAX_LEN (optional)"],
     },
+    "logprob": {
+        "description": "An open-weight chat model run locally with MLX; confidence is its own "
+                       "token log-probability of each option (option then end of turn), "
+                       "normalised over the options. Nothing is sampled.",
+        "env": ["extra [mlx]", "LOGPROB_MODEL (required), LOGPROB_REVISION (recommended)",
+                "LOGPROB_LABEL, LOGPROB_CHAT_KWARGS (optional)"],
+    },
     "simulated": {
         "description": "Seeded simulator to see the pipeline without a key. Not a real "
                        "vendor audit; every result is tagged SIMULATED.",
