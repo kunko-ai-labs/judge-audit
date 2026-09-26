@@ -30,6 +30,13 @@ by the generator, email categories are synthetic and seeded, and downstream task
 quality (does the cheap model really solve the "easy" tasks?) is not measured.
 Their caveats say so in every report that uses them.
 
+The human-labelled datasets added for v0.5 ([#86](https://github.com/kunko-ai-labs/judge-audit/issues/86))
+are **GT-3**: BANKING77 (`examples/banking77/`) and CLINC150 (`examples/clinc150/`) are real
+customer and assistant queries, each labelled once by the dataset's authors or crowd
+workers, with no inter-annotator agreement published. A relabelled random sample
+(`scripts/relabel.py`, 500 rows per dataset, two annotators blind to the label) measures
+their label noise; the adjudicated sample is what can be reported as GT-4.
+
 ## What each tier lets you claim
 
 The same accuracy number is evidence of different things depending on the tier. This

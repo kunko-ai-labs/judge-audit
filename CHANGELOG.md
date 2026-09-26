@@ -3,6 +3,12 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
+## [0.5.0] — unreleased (dated when tagged)
+
+### Added
+- **Human-labelled public datasets for the v0.5 benchmark** (US-005-001, #86, first part). `scripts/fetch_real_datasets.py` fetches each dataset from its official repository at a pinned commit, checks every upstream file against a recorded sha256, and writes deterministic labels files whose header declares tier GT-3, the caveats, the source, licence and citation; CI reruns it with `--check`. BANKING77 (CC BY 4.0): `examples/banking77/labels-test.jsonl`, the 3,080-query test split (77 intents, every text distinct; 7 also appear in train and are marked `_meta.text_in_train`), and `labels-pilot.jsonl`, 4 train queries per intent for the pilot, never scored. CLINC150 (CC BY 3.0): `examples/clinc150/labels-test-banking-credit.jsonl`, the `banking` and `credit_cards` domains (900 queries, 30 intents) plus the 1,000 out-of-scope test queries as `out_of_scope`, a draft subset until the pre-registration fixes it. Licences, attribution and the changes made are in `docs/runs/README.md` and each dataset's `README.md`.
+- **Measured label noise** (`scripts/relabel.py`): a random sample stratified by label in proportion to its share (500 rows per dataset, seed 2026, indices committed before anyone labels them in `examples/*/relabel-sample.json`), a blind annotation sheet in a seeded random order with no dataset label, and a score of two annotators' sheets: their agreement and Cohen's kappa, each one's agreement with the dataset, the rows both label differently from the dataset, and the rows to adjudicate.
+
 ## [0.4.0] — 2026-09-26
 
 ### Added
