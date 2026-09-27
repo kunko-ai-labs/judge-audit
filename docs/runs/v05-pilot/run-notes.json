@@ -1,0 +1,14 @@
+{
+ "_about": "What the maintainer states about the pilot runs that the checkpoints cannot record. scripts/v05_pilot.py prints each entry as the maintainer's note, never as a measurement.",
+ "runs": {
+  "llm-gemini-3.6-flash": {
+   "stopped": "provider quota",
+   "detail": "the run stopped at 21 of 308 rows on a provider quota error; the checkpoint is kept at this path so the driver can resume it"
+  },
+  "llm-gemini-3.6-flash-sc5": {
+   "stopped": "not started",
+   "detail": "queued to start once the verbalized run reached 308 rows; that run stopped on the provider quota, so this one never started (it had first been held back on cost, and the ceiling was raised to $5 the same day, docs/v05-pilot.md §3)"
+  }
+ },
+ "billing_console_usd": null
+}

@@ -525,6 +525,30 @@ def tie_values() -> str:
             f"method B one of {len(TIE_SHARES_B)} with shares {TIE_SHARES_B}")
 
 
+SC_SAMPLES = 5                    # method B: self-consistency, a vote over k samples (design)
+
+
+def coarsening() -> str:
+    """B's prose: what the vote's levels do to its observed AUROC."""
+    return (f"Method B's levels are those of a {SC_SAMPLES}-sample vote; with "
+            f"{_share(TIE_SHARES_B[-1])} at its top level (unanimous), that coarsening caps "
+            "its observed AUROC below what its latent AUROC alone would give. ")
+
+
+def tied_gap_finding(b: list[dict]) -> str:
+    """The plan bullet's finding about the tied cells, computed from B's table: said only
+    when every tied cell's exact gap is negative."""
+    tied = [r for r in b if r["ties"] == "tied"]
+    if not tied or any(r["gap"] >= 0 for r in tied):
+        return ""
+    below = sum(abs(r["gap"]) < r["mde"] for r in tied)
+    return (f" At the pilot's ties, in every tied cell the exact gap is negative "
+            f"({_span([r['gap'] for r in tied], 4)}), its size smaller than the MDE in {below} "
+            f"of {len(tied)}: the {SC_SAMPLES}-sample vote coarsens self-consistency so much "
+            f"that its latent advantage of +{AUROC_B - AUROC_A:.2f} becomes an observed "
+            "deficit.")
+
+
 # The two limits of the power model that the pilot does not remove (docs/v05-pilot.md §5),
 # printed next to the tables they qualify.
 LIMIT_B = ("Part B scores both methods on one shared set of decisions; in the study each "
@@ -658,8 +682,7 @@ def markdown(d: dict) -> str:
               "## B. Paired AUROC: the smallest difference resolved", "",
               (f"Two confidence methods on the same decisions, latent AUROCs {AUROC_A} and "
                f"{AUROC_B}. Ties \"none\": continuous scores; \"tied\": {tie_values()}, "
-               "lowest to highest (the top one like a "
-               "verbalized 0.95 or a unanimous 5-sample vote). ρ is the latent correlation of "
+               f"lowest to highest. {coarsening()}ρ is the latent correlation of "
                "the two methods' noise; the pilot measures the rank agreement of the two "
                "methods and ρ is set to reproduce it. The standard deviation of the paired "
                "difference comes from DeLong's placement values on one sample of "
@@ -679,7 +702,7 @@ def markdown(d: dict) -> str:
                      f"{r['mde_mc_se']:.4f} |")
     for n in (big, clinc):
         cells = [r for r in b if r["n"] == n]
-        ok = [r for r in cells if r["mde"] <= r["gap"]]
+        ok = [r for r in cells if r["mde"] <= abs(r["gap"])]      # the test is two-sided
         tied_gaps = [r["gap"] for r in cells if r["ties"] == "tied"]
         lines += ["", f"At n = {n:,} the MDE is {_span([r['mde'] for r in cells], 4)}; the exact "
                   f"gap between the two methods ({AUROC_B - AUROC_A:.4f} without ties, "
@@ -688,12 +711,12 @@ def markdown(d: dict) -> str:
                   + (": " + "; ".join(f"{tie_label_of(r['ties'])}, accuracy "
                                       f"{_share(r['accuracy'])}, ρ {r['rho']}" for r in ok)
                      if ok else "") + "."]
-        close = min(cells, key=lambda r: abs(r["mde"] - r["gap"]) / r["mde_mc_se"])
+        close = min(cells, key=lambda r: abs(r["mde"] - abs(r["gap"])) / r["mde_mc_se"])
         lines[-1] += (f" The closest call is {tie_label_of(close['ties'])}, accuracy "
                       f"{_share(close['accuracy'])}, ρ {close['rho']}: MDE "
                       f"{close['mde']:.4f} ± {close['mde_mc_se']:.4f} against a gap of "
                       f"{close['gap']:.4f}, "
-                      f"{abs(close['mde'] - close['gap']) / close['mde_mc_se']:.1f} standard "
+                      f"{abs(close['mde'] - abs(close['gap'])) / close['mde_mc_se']:.1f} standard "
                       "errors apart.")
     lines += ["", ("What drives it is the number of **errors**, not rows: at "
                f"{_share(ACCURACIES[-1])} accuracy {big:,} rows hold about "
@@ -732,14 +755,17 @@ def markdown(d: dict) -> str:
                "fixed sequence starts."),
               (f"- **Smallest differences stated before the runs**: paired AUROC "
                f"{_span(b_big)} on BANKING77 and {_span(b_clinc)} on CLINC150; ECE "
-               f"{_span(c_big)} and {_span(c_clinc)} (80 % power, α = 0.05). The plan "
+               f"{_span(c_big)} and {_span(c_clinc)} (80 % power, α = 0.05)."
+               + tied_gap_finding(b) + " The plan "
                "states the MDE of the cell the pilot matches. The MDE sizes the study; the "
                "paired test judges each observed difference, and a difference it does not "
                "resolve is reported as not resolved, not as no difference."),
-              ("- **Caveat**: A2, B and C assume the shapes above. B and C take their "
-               "accuracy, ρ, AUROC level and ties from a 308-row pilot on train queries with "
-               "one open model (Qwen3-8B, 4-bit), not from the judges or the test split the "
-               "study scores; A2's slice and the ECE design gaps are not pilot estimates."), ""]
+              ("- **Caveat**: A2, B and C assume the shapes above. B takes its accuracy, ρ, "
+               "AUROC level and ties, and C takes only its confidence distribution, from a "
+               "308-row pilot on train queries with one open model (Qwen3-8B, 4-bit), not from "
+               "the judges or the test split the study scores; C's ρ (`RHOS_C`) and "
+               "overconfidence gaps, and A2's slice, are design values, not pilot "
+               "estimates."), ""]
     return "\n".join(lines)
 
 

@@ -11,7 +11,8 @@
   "llm-qwen3-8b-sc5": "docs/runs/v05-pilot/llm-qwen3-8b-sc5.ckpt.jsonl",
   "logprob-qwen3-8b": "docs/runs/v05-pilot/logprob-qwen3-8b.ckpt.jsonl",
   "laya": "docs/runs/v05-pilot/laya.ckpt.jsonl",
-  "jev": "docs/runs/v05-pilot/jev.ckpt.jsonl"
+  "jev": "docs/runs/v05-pilot/jev.ckpt.jsonl",
+  "llm-gemini-3.6-flash": "docs/runs/v05-pilot/llm-gemini-3.6-flash.ckpt.jsonl"
  },
  "runs": {
   "llm-qwen3-8b": {
@@ -80,6 +81,51 @@
     "calls": 308,
     "input_tokens_per_call": 718.31,
     "output_tokens_per_call": 24.32
+   },
+   "top_slices": {
+    "n": 308,
+    "top_level": {
+     "value": 1.0,
+     "rows": 71,
+     "errors": 12,
+     "error_rate": 0.169,
+     "clopper_pearson_95": [
+      0.0905,
+      0.2766
+     ]
+    },
+    "slices": [
+     {
+      "share": 0.1,
+      "rows": 71,
+      "errors": 12,
+      "error_rate": 0.169,
+      "clopper_pearson_95": [
+       0.0905,
+       0.2766
+      ]
+     },
+     {
+      "share": 0.2,
+      "rows": 71,
+      "errors": 12,
+      "error_rate": 0.169,
+      "clopper_pearson_95": [
+       0.0905,
+       0.2766
+      ]
+     },
+     {
+      "share": 0.3,
+      "rows": 255,
+      "errors": 87,
+      "error_rate": 0.3412,
+      "clopper_pearson_95": [
+       0.2832,
+       0.4029
+      ]
+     }
+    ]
    }
   },
   "llm-qwen3-8b-sc5": {
@@ -153,6 +199,51 @@
     "calls": 1540,
     "input_tokens_per_call": 718.31,
     "output_tokens_per_call": 25.39
+   },
+   "top_slices": {
+    "n": 308,
+    "top_level": {
+     "value": 1.0,
+     "rows": 253,
+     "errors": 80,
+     "error_rate": 0.3162,
+     "clopper_pearson_95": [
+      0.2594,
+      0.3774
+     ]
+    },
+    "slices": [
+     {
+      "share": 0.1,
+      "rows": 253,
+      "errors": 80,
+      "error_rate": 0.3162,
+      "clopper_pearson_95": [
+       0.2594,
+       0.3774
+      ]
+     },
+     {
+      "share": 0.2,
+      "rows": 253,
+      "errors": 80,
+      "error_rate": 0.3162,
+      "clopper_pearson_95": [
+       0.2594,
+       0.3774
+      ]
+     },
+     {
+      "share": 0.3,
+      "rows": 253,
+      "errors": 80,
+      "error_rate": 0.3162,
+      "clopper_pearson_95": [
+       0.2594,
+       0.3774
+      ]
+     }
+    ]
    }
   },
   "logprob-qwen3-8b": {
@@ -821,6 +912,51 @@
     "calls": null,
     "input_tokens_per_call": null,
     "output_tokens_per_call": null
+   },
+   "top_slices": {
+    "n": 308,
+    "top_level": {
+     "value": 1.0,
+     "rows": 146,
+     "errors": 20,
+     "error_rate": 0.137,
+     "clopper_pearson_95": [
+      0.0857,
+      0.2036
+     ]
+    },
+    "slices": [
+     {
+      "share": 0.1,
+      "rows": 146,
+      "errors": 20,
+      "error_rate": 0.137,
+      "clopper_pearson_95": [
+       0.0857,
+       0.2036
+      ]
+     },
+     {
+      "share": 0.2,
+      "rows": 146,
+      "errors": 20,
+      "error_rate": 0.137,
+      "clopper_pearson_95": [
+       0.0857,
+       0.2036
+      ]
+     },
+     {
+      "share": 0.3,
+      "rows": 146,
+      "errors": 20,
+      "error_rate": 0.137,
+      "clopper_pearson_95": [
+       0.0857,
+       0.2036
+      ]
+     }
+    ]
    }
   },
   "laya": {
@@ -1934,6 +2070,51 @@
     "calls": null,
     "input_tokens_per_call": null,
     "output_tokens_per_call": null
+   },
+   "top_slices": {
+    "n": 308,
+    "top_level": {
+     "value": 1.0,
+     "rows": 65,
+     "errors": 17,
+     "error_rate": 0.2615,
+     "clopper_pearson_95": [
+      0.1603,
+      0.3854
+     ]
+    },
+    "slices": [
+     {
+      "share": 0.1,
+      "rows": 65,
+      "errors": 17,
+      "error_rate": 0.2615,
+      "clopper_pearson_95": [
+       0.1603,
+       0.3854
+      ]
+     },
+     {
+      "share": 0.2,
+      "rows": 65,
+      "errors": 17,
+      "error_rate": 0.2615,
+      "clopper_pearson_95": [
+       0.1603,
+       0.3854
+      ]
+     },
+     {
+      "share": 0.3,
+      "rows": 93,
+      "errors": 27,
+      "error_rate": 0.2903,
+      "clopper_pearson_95": [
+       0.2008,
+       0.3936
+      ]
+     }
+    ]
    }
   }
  },
@@ -2205,7 +2386,11 @@
   "latent": 0.674874,
   "rounded": 0.65,
   "auroc_a": 0.65,
-  "capped": false
+  "capped": false,
+  "rounding_edge": [
+   0.675,
+   0.000126
+  ]
  },
  "proposed_constants": {
   "ACCURACIES": {
@@ -2289,6 +2474,90 @@
   "AUROC_B": {
    "value": 0.7,
    "rule": "AUROC_A + 0.05 (the design gap)"
+  }
+ },
+ "rho_seed_check": {
+  "seeds": [
+   2027,
+   2028,
+   2029,
+   2030,
+   2031
+  ],
+  "normal_pairs": 100000,
+  "main_seed": 2026,
+  "main": {
+   "llm-qwen3-8b|llm-qwen3-8b-sc5": 0.4108,
+   "llm-qwen3-8b|logprob-qwen3-8b": 0.4729
+  },
+  "rows": [
+   {
+    "seed": 2027,
+    "rho": {
+     "llm-qwen3-8b|llm-qwen3-8b-sc5": 0.419,
+     "llm-qwen3-8b|logprob-qwen3-8b": 0.4799
+    }
+   },
+   {
+    "seed": 2028,
+    "rho": {
+     "llm-qwen3-8b|llm-qwen3-8b-sc5": 0.4212,
+     "llm-qwen3-8b|logprob-qwen3-8b": 0.4782
+    }
+   },
+   {
+    "seed": 2029,
+    "rho": {
+     "llm-qwen3-8b|llm-qwen3-8b-sc5": 0.4098,
+     "llm-qwen3-8b|logprob-qwen3-8b": 0.4737
+    }
+   },
+   {
+    "seed": 2030,
+    "rho": {
+     "llm-qwen3-8b|llm-qwen3-8b-sc5": 0.4177,
+     "llm-qwen3-8b|logprob-qwen3-8b": 0.4762
+    }
+   },
+   {
+    "seed": 2031,
+    "rho": {
+     "llm-qwen3-8b|llm-qwen3-8b-sc5": 0.4191,
+     "llm-qwen3-8b|logprob-qwen3-8b": 0.4725
+    }
+   }
+  ],
+  "round_differently": {
+   "llm-qwen3-8b|llm-qwen3-8b-sc5": 0,
+   "llm-qwen3-8b|logprob-qwen3-8b": 3
+  }
+ },
+ "low_option_mass": {
+  "threshold": 0.5,
+  "n": 8,
+  "lowest": {
+   "idx": 104,
+   "option_mass": 1.1488152781896983e-09
+  },
+  "confidence_range": [
+   0.847499,
+   1.0
+  ]
+ },
+ "llm_provenance": {
+  "llm-qwen3-8b": {
+   "weights_revision": null,
+   "enable_thinking": null,
+   "system_fingerprints": [
+    "0.31.3-0.32.2-macOS-26.6.2-arm64-arm-64bit-applegpu_g16g"
+   ]
+  },
+  "llm-qwen3-8b-sc5": {
+   "weights_revision": null,
+   "enable_thinking": null,
+   "system_fingerprints": [
+    "0.31.3-0.32.2-macOS-26.6.2-arm64-arm-64bit-applegpu_g16g"
+   ]
   }
  },
  "hosted": {
@@ -2625,6 +2894,51 @@
     "input_tokens_per_call": 1030.22,
     "output_tokens_per_call": 828.15
    },
+   "top_slices": {
+    "n": 308,
+    "top_level": {
+     "value": 1.0,
+     "rows": 142,
+     "errors": 8,
+     "error_rate": 0.0563,
+     "clopper_pearson_95": [
+      0.0246,
+      0.108
+     ]
+    },
+    "slices": [
+     {
+      "share": 0.1,
+      "rows": 142,
+      "errors": 8,
+      "error_rate": 0.0563,
+      "clopper_pearson_95": [
+       0.0246,
+       0.108
+      ]
+     },
+     {
+      "share": 0.2,
+      "rows": 142,
+      "errors": 8,
+      "error_rate": 0.0563,
+      "clopper_pearson_95": [
+       0.0246,
+       0.108
+      ]
+     },
+     {
+      "share": 0.3,
+      "rows": 142,
+      "errors": 8,
+      "error_rate": 0.0563,
+      "clopper_pearson_95": [
+       0.0246,
+       0.108
+      ]
+     }
+    ]
+   },
    "agreement_with": "llm-qwen3-8b",
    "same_decision": 223,
    "same_correctness": 252,
@@ -2635,10 +2949,66 @@
    }
   },
   "llm-gemini-3.6-flash": {
-   "status": "not run"
+   "status": "incomplete",
+   "rows": 21,
+   "of": 308,
+   "reason": "provider quota"
   },
   "llm-gemini-3.6-flash-sc5": {
-   "status": "not run"
+   "status": "not run",
+   "reason": "not started"
   }
+ },
+ "run_log": {
+  "selfcheck": {
+   "file": "docs/runs/v05-pilot/logprob-selfcheck.txt",
+   "text": "# scripts/logprob_selfcheck.py examples/banking77/labels-pilot.jsonl --rows 5\n# LOGPROB_MODEL=mlx-community/Qwen3-8B-4bit LOGPROB_REVISION=545dc4251c05440727734bcd94334791f6ab0192 HF_HUB_OFFLINE=1\nmodel mlx-community/Qwen3-8B-4bit · 5 rows · largest probability difference 3.89e-07 · decisions changed 0 · cached path 6.1 rows/min · labels tokenised alone 0\nreal\t38m40,337s\nexit 0\n# an earlier --rows 20 attempt was stopped after about 70 minutes (12 GB resident, swapping) before printing anything; see docs/v05-pilot.md §4.1\n",
+   "exit": 0
+  },
+  "stop_rules": {
+   "llm-qwen3-8b": {
+    "unit": "rows",
+    "judged_on": 40,
+    "checked": 40,
+    "failed": 0,
+    "limit": 2,
+    "stopped": false
+   },
+   "llm-qwen3-8b-sc5": {
+    "unit": "samples",
+    "judged_on": 200,
+    "checked": 200,
+    "failed": 1,
+    "limit": 10,
+    "stopped": false
+   },
+   "llm-gemini-3.6-flash": {
+    "unit": "rows",
+    "judged_on": 40,
+    "checked": 21,
+    "failed": 0,
+    "limit": 2,
+    "stopped": false
+   }
+  },
+  "hosted": {
+   "jev": {
+    "status": "complete",
+    "rows": 308,
+    "of": 308
+   },
+   "llm-gemini-3.6-flash": {
+    "status": "incomplete",
+    "rows": 21,
+    "of": 308,
+    "reason": "provider quota"
+   },
+   "llm-gemini-3.6-flash-sc5": {
+    "status": "not run",
+    "reason": "not started"
+   }
+  },
+  "billing_console": "not yet reported by the maintainer",
+  "notes_file": "docs/runs/v05-pilot/run-notes.json"
  }
 }
