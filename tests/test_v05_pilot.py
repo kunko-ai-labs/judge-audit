@@ -501,6 +501,21 @@ def test_fixture_flags_the_saturated_pair(d):
     assert vs["spearman_max"] < vs["spearman"] and vs["saturated"] is True
     vl = pair(d["rank_agreement"], VERB, LP)
     assert vl["saturated"] is False
+    # each end of the interval is flagged by its own Spearman bound against the ceiling
+    for r in d["rank_agreement"]:
+        if r["spearman_95"] is None:
+            assert r["saturated_low"] is False and r["saturated_high"] is False
+            continue
+        assert r["saturated_low"] == (r["spearman_95"][0] >= r["spearman_max"])
+        assert r["saturated_high"] == (r["spearman_95"][1] >= r["spearman_max"])
+    assert vs["saturated_high"] is True and vl["saturated_low"] is False
+
+
+def test_a_saturated_interval_end_reads_as_a_bound(d):
+    text = pilot.markdown(d).split("## Rank agreement")[1].split("## AUROC")[0]
+    row = next(line for line in text.splitlines()
+               if line.startswith(f"| {pilot.NAMES[VERB]} – {pilot.NAMES[SC]} |"))
+    assert "≥ 0.999 (saturated)" in row and "0.9990" not in row
 
 
 def test_a_parsed_row_without_a_valid_confidence_counts_wrong_and_crashes_nothing(tmp_path):

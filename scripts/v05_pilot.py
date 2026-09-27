@@ -304,7 +304,8 @@ def rank_agreement(runs: dict, keys: list, a: str, b: str, base: list, n_boot: i
     rho_s = spearman(xs, ys)
     out = {"pair": [a, b], "both_right": len(both), "levels": [None, None], "spearman": None,
            "spearman_95": None, "undefined_resamples": None, "rho_at_zero": None, "rho": None,
-           "rho_95": None, "spearman_max": None, "saturated": False, "both_wrong": len(wrong),
+           "rho_95": None, "spearman_max": None, "saturated": False, "saturated_low": False,
+           "saturated_high": False, "both_wrong": len(wrong),
            "spearman_both_wrong": _r4(spearman(
                [ra[k]["confidence"] for k in wrong if scored(ra[k]) and scored(rb[k])],
                [rb[k]["confidence"] for k in wrong if scored(ra[k]) and scored(rb[k])]))}
@@ -327,6 +328,10 @@ def rank_agreement(runs: dict, keys: list, a: str, b: str, base: list, n_boot: i
     if boot.ci is not None:
         out["spearman_95"] = list(boot.ci)
         out["rho_95"] = [_r4(latent_rho(boot.ci[0], f)), _r4(latent_rho(boot.ci[1], f))]
+        # an interval end whose Spearman bound reaches the ceiling maps to the top of the
+        # range: it is a bound ("at least"), not a value
+        out["saturated_low"] = boot.ci[0] >= top
+        out["saturated_high"] = boot.ci[1] >= top
     return out
 
 
@@ -739,6 +744,19 @@ def _iv(iv: list | None, digits: int = 4) -> str:
     return "—" if not iv or iv[0] is None else f"[{iv[0]:.{digits}f}, {iv[1]:.{digits}f}]"
 
 
+def _rho_text(r: dict) -> str:
+    """A latent rho and its interval; a value whose Spearman reaches the map's ceiling is
+    printed as the bound it is, "≥ 0.999 (saturated)", never as a bare 0.9990."""
+    def one(value: float | None, saturated: bool) -> str:
+        return f"≥ {RHO_TOP:g} (saturated)" if saturated else _num(value)
+
+    point = f"**{one(r['rho'], True)}**" if r["saturated"] else _num(r["rho"])
+    if not r["rho_95"] or r["rho_95"][0] is None:
+        return f"{point} —"
+    return (f"{point} [{one(r['rho_95'][0], r['saturated_low'])}, "
+            f"{one(r['rho_95'][1], r['saturated_high'])}]")
+
+
 def _levels_text(levels: list) -> str:
     if not levels:
         return "no rows with a confidence"
@@ -840,11 +858,10 @@ def markdown(d: dict) -> str:
     for r in d["rank_agreement"]:
         lv = " / ".join("no ties on these rows" if x is None else str(x) for x in r["levels"])
         und = (f", {r['undefined_resamples']} undefined" if r["undefined_resamples"] else "")
-        sat = " **saturated**" if r["saturated"] else ""
         lines.append(f"| {NAMES[r['pair'][0]]} – {NAMES[r['pair'][1]]} | {r['both_right']:,} | "
                      f"{lv if r['both_right'] else '—'} | {_num(r['spearman'])} "
                      f"{_iv(r['spearman_95'])}{und} | {_num(r['rho_at_zero'])} | "
-                     f"{_num(r['spearman_max'])} | {_num(r['rho'])}{sat} {_iv(r['rho_95'])} | "
+                     f"{_num(r['spearman_max'])} | {_rho_text(r)} | "
                      f"{r['both_wrong']:,} ({_num(r['spearman_both_wrong'])}) |")
     la = d["latent_auroc_a"]
     lines += ["", "## AUROC", "",
