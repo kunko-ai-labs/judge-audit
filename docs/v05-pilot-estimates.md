@@ -38,7 +38,7 @@ exit 0
 | Qwen3-8B self-consistency (k = 5) | samples | 200 | 200 | 1 | 10 | no |
 | gemini-3.6-flash verbalized | rows | 40 | 21 | 0 | 2 | no |
 
-**Hosted runs**: Jev: complete (308/308); gemini-3.6-flash verbalized: stopped at 21/308 (provider quota, the maintainer's note), not analysed; gemini-3.6-flash self-consistency (k = 5): not run (paused on cost, the maintainer's note). Billing console total: not yet reported by the maintainer.
+**Hosted runs**: Jev: complete (308/308); gemini-3.6-flash verbalized: stopped at 21/308 (provider quota, the maintainer's note), not analysed; gemini-3.6-flash self-consistency (k = 5): not run (not started, the maintainer's note). Billing console total: not yet reported by the maintainer.
 
 **Provenance of the served chat model.** The `llm` checkpoints' headers record neither the weights revision nor `enable_thinking`: the pin rests on the protocol's offline `refs/main` check (docs/v05-pilot.md §3), and the server's `system_fingerprint` `0.31.3-0.32.2-macOS-26.6.2-arm64-arm-64bit-applegpu_g16g` records software and platform versions, not the weights.
 
@@ -151,7 +151,7 @@ Jev and gemini-3.6-flash on the same rows (docs/v05-pilot.md §3), under the sam
 |---|---|---:|---:|---:|---:|---|---:|---|---|---:|
 | Jev | `jev` | 308 | 308 | 0 | 0 | 231 = 75.0 % [0.699, 0.795] | +0.1435 (308) | 0.8618 [0.8104, 0.9131] | 223 / 252 of 308 | $0.0133 |
 | gemini-3.6-flash verbalized | — | stopped at 21/308 (provider quota, the maintainer's note), not analysed |  |  |  |  |  |  |  |  |
-| gemini-3.6-flash self-consistency (k = 5) | — | not run (paused on cost, the maintainer's note) |  |  |  |  |  |  |  |  |
+| gemini-3.6-flash self-consistency (k = 5) | — | not run (not started, the maintainer's note) |  |  |  |  |  |  |  |  |
 
 - **Jev** tie shares (n = 308): 57 distinct values (all in the JSON); the most frequent, 1, holds 46.1 % (142).
 
