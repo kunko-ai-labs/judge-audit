@@ -1,0 +1,7 @@
+{"idx": -1, "run": {"judge_audit_version": "0.4.0", "judge": {"name": "logprob:qwen3-8b-4bit", "model": "qwen3-8b-4bit", "temperature": "n/a"}, "dataset": {"path": "tests/fixtures/v05_pilot/labels.jsonl", "sha256": "c670fa952138ce8083d5748df63abc13e7b7f8bca06627b0b46875e9247047e2", "rows": 6}}}
+{"idx": 0, "judgments": [{"question": "intent", "decision": "a", "confidence": 0.97, "latency_s": 1.5, "cost_usd": 0.0, "raw": {"probabilities": {"a": 0.97}, "option_mass": 0.99}, "parse_status": "parsed"}]}
+{"idx": 1, "judgments": [{"question": "intent", "decision": "b", "confidence": 0.55, "latency_s": 1.5, "cost_usd": 0.0, "raw": {"probabilities": {"b": 0.55}, "option_mass": 0.9}, "parse_status": "parsed"}]}
+{"idx": 2, "judgments": [{"question": "intent", "decision": "c", "confidence": 0.71, "latency_s": 1.5, "cost_usd": 0.0, "raw": {"probabilities": {"c": 0.71}, "option_mass": 0.95}, "parse_status": "parsed"}]}
+{"idx": 3, "judgments": [{"question": "intent", "decision": "b", "confidence": 0.62, "latency_s": 1.5, "cost_usd": 0.0, "raw": {"probabilities": {"b": 0.62}, "option_mass": 0.8}, "parse_status": "parsed"}]}
+{"idx": 4, "judgments": [{"question": "intent", "decision": "b", "confidence": 0.88, "latency_s": 1.5, "cost_usd": 0.0, "raw": {"probabilities": {"b": 0.88}, "option_mass": 0.97}, "parse_status": "parsed"}]}
+{"idx": 5, "judgments": [{"question": "intent", "decision": "c", "confidence": 0.93, "latency_s": 1.5, "cost_usd": 0.0, "raw": {"probabilities": {"c": 0.93}, "option_mass": 0.85}, "parse_status": "parsed"}]}
