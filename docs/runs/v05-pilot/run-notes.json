@@ -3,7 +3,8 @@
  "runs": {
   "llm-gemini-3.6-flash": {
    "stopped": "provider quota",
-   "detail": "the run stopped at 21 of 308 rows on a provider quota error; the checkpoint is kept at this path so the driver can resume it"
+   "detail": "the run stopped at 21 of 308 rows on a provider quota error; the checkpoint is kept at this path so the driver can resume it",
+   "rows": 21
   },
   "llm-gemini-3.6-flash-sc5": {
    "stopped": "not started",

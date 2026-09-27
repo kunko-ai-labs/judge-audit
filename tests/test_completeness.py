@@ -208,8 +208,14 @@ def test_a_run_declared_stopped_may_miss_only_its_tail(tmp_path, monkeypatch):
 
     write([0, 1])
     assert check_complete.gaps(ckpt) == [f"{ckpt}: row 2 missing", f"{ckpt}: row 3 missing"]
-    (tmp_path / "run-notes.json").write_text(json.dumps(
-        {"runs": {"slug": {"stopped": "provider quota"}}}))
+    notes = tmp_path / "run-notes.json"
+    # a note without the rows it stopped at, or with another count, silences nothing: the
+    # maintainer states where the run stopped and the checkpoint must agree
+    notes.write_text(json.dumps({"runs": {"slug": {"stopped": "provider quota"}}}))
+    assert check_complete.gaps(ckpt) == [f"{ckpt}: row 2 missing", f"{ckpt}: row 3 missing"]
+    notes.write_text(json.dumps({"runs": {"slug": {"stopped": "provider quota", "rows": 3}}}))
+    assert check_complete.gaps(ckpt) == [f"{ckpt}: row 2 missing", f"{ckpt}: row 3 missing"]
+    notes.write_text(json.dumps({"runs": {"slug": {"stopped": "provider quota", "rows": 2}}}))
     assert check_complete.gaps(ckpt) == []
     write([0, 2])                                   # a hole before the tail is still a gap
     assert check_complete.gaps(ckpt) == [f"{ckpt}: row 1 missing"]

@@ -911,7 +911,8 @@ def compute(runs_dir: Path = RUNS_DIR, labels: Path = LABELS, n_sim: int | None 
         "stop_rules": stop_rules,
         "hosted": {s: {k: v for k, v in d["hosted"][s].items()
                        if k in ("status", "rows", "of", "reason")} for s in HOSTED},
-        "billing_console": (f"${billing}" if billing is not None
+        "billing_console": (f"${billing} (the maintainer's note, not a checkpoint figure)"
+                            if billing is not None
                             else "not yet reported by the maintainer"),
         "notes_file": _shown(Path(runs_dir) / "run-notes.json") if notes else None}
     for s in HOSTED:
