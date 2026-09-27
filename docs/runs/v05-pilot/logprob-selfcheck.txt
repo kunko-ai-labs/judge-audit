@@ -1,0 +1,6 @@
+# scripts/logprob_selfcheck.py examples/banking77/labels-pilot.jsonl --rows 5
+# LOGPROB_MODEL=mlx-community/Qwen3-8B-4bit LOGPROB_REVISION=545dc4251c05440727734bcd94334791f6ab0192 HF_HUB_OFFLINE=1
+model mlx-community/Qwen3-8B-4bit · 5 rows · largest probability difference 3.89e-07 · decisions changed 0 · cached path 6.1 rows/min · labels tokenised alone 0
+real	38m40,337s
+exit 0
+# an earlier --rows 20 attempt was stopped after about 70 minutes (12 GB resident, swapping) before printing anything; see docs/v05-pilot.md §4.1
