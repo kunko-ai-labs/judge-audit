@@ -166,19 +166,20 @@ def test_population_auroc():
     import random
     from statistics import NormalDist
 
-    mu = math.sqrt(2) * NormalDist().inv_cdf(0.7)
+    shares = [0.05, 0.05, 0.10, 0.15, 0.25, 0.40]   # the design values, fixed here: the
+    mu = math.sqrt(2) * NormalDist().inv_cdf(0.7)     # pilot will change the constants
     mu_b = math.sqrt(2) * NormalDist().inv_cdf(0.75)
     assert power.population_auroc(mu, 0.85, None) == pytest.approx(0.7)
     assert power.population_auroc(mu, 0.85, [1.0]) == pytest.approx(0.5)
     # recomputed independently (erfc, Newton quantiles, 1 - P(neg > pos) - P(tie) / 2)
     for m, acc, want in ((mu, 0.85, 0.687810), (mu_b, 0.85, 0.737178),
                          (mu, 0.93, 0.688883), (mu_b, 0.93, 0.738489)):
-        assert power.population_auroc(m, acc, power.TIE_SHARES) == pytest.approx(want, abs=1e-5)
+        assert power.population_auroc(m, acc, shares) == pytest.approx(want, abs=1e-5)
     rng = random.Random(5)
     ok = [rng.random() < 0.85 for _ in range(60000)]
-    scores = power.levels([mu * o + rng.gauss(0, 1) for o in ok], power.TIE_SHARES)
+    scores = power.levels([mu * o + rng.gauss(0, 1) for o in ok], shares)
     assert power.auroc(scores, ok) == pytest.approx(
-        power.population_auroc(mu, 0.85, power.TIE_SHARES), abs=0.006)
+        power.population_auroc(mu, 0.85, shares), abs=0.006)
 
 
 def test_the_mde_monte_carlo_error_matches_reseeded_samples():
@@ -258,3 +259,48 @@ def test_prose_ranges_are_computed_from_the_tables(monkeypatch):
     md2 = power.markdown(d)
     assert "20.0 %, which **exceeds** the 5 % allowed" in md2
     assert "certifies 90 % to 100 % of the time" in md2
+
+
+def test_levels_wording_follows_each_methods_shares(monkeypatch):
+    """B's "levels" wording comes from the lengths of the two methods' tie shares."""
+    monkeypatch.setattr(power, "TIE_SHARES_A", [0.05, 0.05, 0.10, 0.15, 0.25, 0.40])
+    monkeypatch.setattr(power, "TIE_SHARES_B", [0.05, 0.05, 0.10, 0.15, 0.25, 0.40])
+    assert power.tie_label() == "6 levels" and power.tie_label_of("none") == "no ties"
+    assert power.tie_values().startswith("each method says one of 6 values with shares")
+    monkeypatch.setattr(power, "TIE_SHARES_B", [0.4, 0.2, 0.4])
+    assert power.tie_label() == "6 and 3 levels"
+    assert "method B one of 3 with shares [0.4, 0.2, 0.4]" in power.tie_values()
+
+
+def test_b_cuts_each_method_by_its_own_shares_and_c_uses_rhos_c(monkeypatch):
+    """One level for method B makes its tied AUROC a coin flip while A's is untouched; part
+    C iterates over RHOS_C, not B's RHOS."""
+    import random
+
+    monkeypatch.setattr(power, "N_BIG", 2000)
+    monkeypatch.setattr(power, "ACCURACIES", [0.85])
+    monkeypatch.setattr(power, "RHOS", [0.5])
+    monkeypatch.setattr(power, "TIE_SHARES_A", [0.05, 0.05, 0.10, 0.15, 0.25, 0.40])
+    monkeypatch.setattr(power, "TIE_SHARES_B", [1.0])
+    tied = [r for r in power.section_b(random.Random(1)) if r["ties"] == "tied"]
+    assert all(r["auroc_b"] == 0.5 for r in tied)
+    assert all(r["auroc_a"] == pytest.approx(0.6878, abs=1e-4) for r in tied)
+    monkeypatch.setattr(power, "RHOS_C", [0.2])
+    monkeypatch.setattr(power, "REPS_A2", 5)
+    monkeypatch.setattr(power, "REPS_ECE", 3)
+    monkeypatch.setattr(power, "N_GRID", [950])
+    d = power.compute()
+    assert [r["rho"] for r in d["c_paired_ece"]["rows"]] == [0.2]
+    assert [r["rho"] for r in d["b_paired_auroc"]["rows"]] == [0.5, 0.5]
+    assert d["b_paired_auroc"]["assumptions"]["tie_shares_b"] == [1.0]
+
+
+def test_the_model_limits_are_printed_next_to_their_tables(monkeypatch):
+    monkeypatch.setattr(power, "REPS_A2", 5)
+    monkeypatch.setattr(power, "REPS_ECE", 3)
+    monkeypatch.setattr(power, "N_BIG", 2000)
+    md = power.markdown(power.compute())
+    b, c = md.index("## B."), md.index("## C.")
+    assert b < md.index(power.LIMIT_B) < c < md.index(power.LIMIT_C)
+    assert "one shared set of decisions" in power.LIMIT_B
+    assert "independently" in power.LIMIT_C
