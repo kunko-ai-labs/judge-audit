@@ -63,12 +63,18 @@ HALVES = [950, 1540]
 
 # PILOT: replaced by the pilot's estimates before the plan is frozen.
 ACCURACIES = [0.85, 0.93]
-RHOS = [0.3, 0.7]                 # latent correlation of the two methods' noise
+RHOS = [0.3, 0.7]                 # B: latent correlation of the two methods' noise
 AUROC_A, AUROC_B = 0.70, 0.75     # latent (continuous) AUROCs of the two methods
-TIE_SHARES = [0.05, 0.05, 0.10, 0.15, 0.25, 0.40]   # 6 values, the top one for 40 %
+# B's tied cells, per method (A: verbalized, B: self-consistency, the primary H1 pair),
+# lowest value to highest; the report's "levels" wording is derived from their lengths
+TIE_SHARES_A = [0.05, 0.05, 0.10, 0.15, 0.25, 0.40]
+TIE_SHARES_B = [0.05, 0.05, 0.10, 0.15, 0.25, 0.40]
 CONF_VALUES = [0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0]
 CONF_WEIGHTS = [0.03, 0.05, 0.10, 0.12, 0.25, 0.30, 0.15]
 GAP_A, GAP_B = 0.05, 0.08         # judge A 5 points overconfident, judge B 8
+# Design choices, not pilot estimates (docs/v05-pilot.md §5): C's copula links the outcomes
+# of two different judges (H2), a different quantity from B's within-model RHOS.
+RHOS_C = [0.3, 0.7]
 AUTOMATABLE = 0.5                 # A2: share of rows in the automatable slice
 REST_ERROR = 0.20                 # A2: error rate of the other rows
 
@@ -399,11 +405,11 @@ def section_b(rng: random.Random) -> list[dict]:
                 sb = [mu_b * ok + rho * z1 + w * z2
                       for ok, (z1, z2) in zip(correct, base, strict=True)]
                 if ties == "tied":
-                    sa, sb = levels(sa, TIE_SHARES), levels(sb, TIE_SHARES)
+                    sa, sb = levels(sa, TIE_SHARES_A), levels(sb, TIE_SHARES_B)
                 comp = delong(sa, sb, correct)
-                shares = TIE_SHARES if ties == "tied" else None
-                pop_a = population_auroc(mu_a, acc, shares)
-                pop_b = population_auroc(mu_b, acc, shares)
+                tied = ties == "tied"
+                pop_a = population_auroc(mu_a, acc, TIE_SHARES_A if tied else None)
+                pop_b = population_auroc(mu_b, acc, TIE_SHARES_B if tied else None)
                 for n in N_GRID:
                     s = paired_auroc_sd(comp, n, acc)
                     rows.append({"ties": ties, "accuracy": acc, "rho": rho, "n": n,
@@ -476,18 +482,20 @@ def compute() -> dict:
                 "reps": REPS_A2, "confidences": "continuous, uniform on [0, 1]"},
                 "rows": section_a2(rng)},
             "b_paired_auroc": {"assumptions": {
-                "latent_auroc": [AUROC_A, AUROC_B], "tie_shares": TIE_SHARES,
-                "rows_in_large_sample": N_BIG,
+                "latent_auroc": [AUROC_A, AUROC_B], "tie_shares_a": TIE_SHARES_A,
+                "tie_shares_b": TIE_SHARES_B, "rows_in_large_sample": N_BIG,
                 "model": "binormal latent score per method, errors N(0,1), right answers "
                          "N(mu,1); the two methods' noise correlated rho; ties: cut into "
-                         "6 levels; variance from DeLong placement values"},
+                         f"{tie_label()}; variance from DeLong placement values",
+                "limit": LIMIT_B},
                 "rows": section_b(rng)},
             "c_paired_ece": {"assumptions": {
                 "confidence_values": CONF_VALUES, "weights": CONF_WEIGHTS,
                 "gaps": [GAP_A, GAP_B], "bins": 10, "reps": REPS_ECE,
                 "model": "each judge draws its confidence independently; P(right) = "
-                         "confidence - gap; outcomes linked by a Gaussian copula rho"},
-                "rows": [simulate_ece(n, rho, rng) for rho in RHOS for n in N_GRID]}}
+                         "confidence - gap; outcomes linked by a Gaussian copula rho",
+                "limit": LIMIT_C},
+                "rows": [simulate_ece(n, rho, rng) for rho in RHOS_C for n in N_GRID]}}
 
 
 def _pct(x: float) -> str:
@@ -499,7 +507,31 @@ def _share(x: float) -> str:
     return f"{round(x * 100)} %"
 
 
-TIE_LABEL = {"none": "no ties", "tied": "6 levels"}
+def tie_label() -> str:
+    """'6 levels' when both methods say one of 6 values, '6 and 4 levels' otherwise."""
+    a, b = len(TIE_SHARES_A), len(TIE_SHARES_B)
+    return f"{a} levels" if a == b else f"{a} and {b} levels"
+
+
+def tie_label_of(ties: str) -> str:
+    return "no ties" if ties == "none" else tie_label()
+
+
+def tie_values() -> str:
+    """How B's tied methods are described: one sentence when both share their shares."""
+    if TIE_SHARES_A == TIE_SHARES_B:
+        return f"each method says one of {len(TIE_SHARES_A)} values with shares {TIE_SHARES_A}"
+    return (f"method A says one of {len(TIE_SHARES_A)} values with shares {TIE_SHARES_A}, "
+            f"method B one of {len(TIE_SHARES_B)} with shares {TIE_SHARES_B}")
+
+
+# The two limits of the power model that the pilot does not remove (docs/v05-pilot.md §5),
+# printed next to the tables they qualify.
+LIMIT_B = ("Part B scores both methods on one shared set of decisions; in the study each "
+           "read-out makes its own decisions, and the pilot's decision agreement says how far "
+           "apart they are")
+LIMIT_C = ("Part C draws each judge's confidence independently of the other's; only their "
+           "outcomes are linked")
 
 
 def _span(values: list[float], digits: int = 3) -> str:
@@ -624,8 +656,8 @@ def markdown(d: dict) -> str:
                "its effect in this simulation, belong in the plan."), "",
               "## B. Paired AUROC: the smallest difference resolved", "",
               (f"Two confidence methods on the same decisions, latent AUROCs {AUROC_A} and "
-               f"{AUROC_B}. Ties \"none\": continuous scores; \"tied\": each method says one of "
-               f"6 values with shares {TIE_SHARES}, lowest to highest (the top one like a "
+               f"{AUROC_B}. Ties \"none\": continuous scores; \"tied\": {tie_values()}, "
+               "lowest to highest (the top one like a "
                "verbalized 0.95 or a unanimous 5-sample vote). ρ is the latent correlation of "
                "the two methods' noise; the pilot measures the rank agreement of the two "
                "methods and ρ is set to reproduce it. The standard deviation of the paired "
@@ -639,7 +671,7 @@ def markdown(d: dict) -> str:
               "| ties | accuracy | ρ | n | errors | AUROC A | AUROC B | gap | SD(Δ) | MDE |",
               "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for r in b:
-        lines.append(f"| {TIE_LABEL[r['ties']]} | {_share(r['accuracy'])} | {r['rho']} | "
+        lines.append(f"| {tie_label_of(r['ties'])} | {_share(r['accuracy'])} | {r['rho']} | "
                      f"{r['n']:,} | "
                      f"{r['errors_expected']:,} | {r['auroc_a']:.4f} | {r['auroc_b']:.4f} | "
                      f"{r['gap']:.4f} | {r['sd_difference']:.5f} | **{r['mde']:.4f}** ± "
@@ -650,13 +682,13 @@ def markdown(d: dict) -> str:
         tied_gaps = [r["gap"] for r in cells if r["ties"] == "tied"]
         lines += ["", f"At n = {n:,} the MDE is {_span([r['mde'] for r in cells], 4)}; the exact "
                   f"gap between the two methods ({AUROC_B - AUROC_A:.4f} without ties, "
-                  f"{_span(tied_gaps, 4)} with 6 levels) is resolvable in {len(ok)} of "
+                  f"{_span(tied_gaps, 4)} with {tie_label()}) is resolvable in {len(ok)} of "
                   f"{len(cells)} cells"
-                  + (": " + "; ".join(f"{TIE_LABEL[r['ties']]}, accuracy "
+                  + (": " + "; ".join(f"{tie_label_of(r['ties'])}, accuracy "
                                       f"{_share(r['accuracy'])}, ρ {r['rho']}" for r in ok)
                      if ok else "") + "."]
         close = min(cells, key=lambda r: abs(r["mde"] - r["gap"]) / r["mde_mc_se"])
-        lines[-1] += (f" The closest call is {TIE_LABEL[close['ties']]}, accuracy "
+        lines[-1] += (f" The closest call is {tie_label_of(close['ties'])}, accuracy "
                       f"{_share(close['accuracy'])}, ρ {close['rho']}: MDE "
                       f"{close['mde']:.4f} ± {close['mde_mc_se']:.4f} against a gap of "
                       f"{close['gap']:.4f}, "
@@ -665,6 +697,7 @@ def markdown(d: dict) -> str:
     lines += ["", ("What drives it is the number of **errors**, not rows: at "
                f"{_share(ACCURACIES[-1])} accuracy {big:,} rows hold about "
                f"{round(big * (1 - ACCURACIES[-1])):,}."), "",
+              f"**Limit of this model.** {LIMIT_B}.", "",
               "## C. Paired ECE: the smallest difference resolved", "",
               (f"Two judges on the same rows, overconfident by {GAP_A} and {GAP_B}. Each draws "
                f"its confidence independently from {CONF_VALUES} with weights "
@@ -683,6 +716,7 @@ def markdown(d: dict) -> str:
     for n in (big, clinc):
         cells = [r for r in c if r["n"] == n]
         lines.append(f"At n = {n:,} the ECE MDE is {_span([r['mde'] for r in cells])}.")
+    lines += ["", f"**Limit of this model.** {LIMIT_C}."]
     b_big = [r["mde"] for r in b if r["n"] == big]
     b_clinc = [r["mde"] for r in b if r["n"] == clinc]
     c_big = [r["mde"] for r in c if r["n"] == big]

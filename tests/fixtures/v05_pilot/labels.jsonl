@@ -1,0 +1,6 @@
+{"state": "message 0", "questions": [{"name": "intent", "type": "choice", "instructions": "Which intent?", "options": ["a", "b", "c"]}], "labels": {"intent": "a"}}
+{"state": "message 1", "questions": [{"name": "intent", "type": "choice", "instructions": "Which intent?", "options": ["a", "b", "c"]}], "labels": {"intent": "b"}}
+{"state": "message 2", "questions": [{"name": "intent", "type": "choice", "instructions": "Which intent?", "options": ["a", "b", "c"]}], "labels": {"intent": "c"}}
+{"state": "message 3", "questions": [{"name": "intent", "type": "choice", "instructions": "Which intent?", "options": ["a", "b", "c"]}], "labels": {"intent": "a"}}
+{"state": "message 4", "questions": [{"name": "intent", "type": "choice", "instructions": "Which intent?", "options": ["a", "b", "c"]}], "labels": {"intent": "b"}}
+{"state": "message 5", "questions": [{"name": "intent", "type": "choice", "instructions": "Which intent?", "options": ["a", "b", "c"]}], "labels": {"intent": "c"}}

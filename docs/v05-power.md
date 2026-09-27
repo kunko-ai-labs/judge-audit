@@ -100,6 +100,8 @@ At n = 1,900 the MDE is 0.0364 to 0.0781; the exact gap between the two methods 
 
 What drives it is the number of **errors**, not rows: at 93 % accuracy 3,079 rows hold about 216.
 
+**Limit of this model.** Part B scores both methods on one shared set of decisions; in the study each read-out makes its own decisions, and the pilot's decision agreement says how far apart they are.
+
 ## C. Paired ECE: the smallest difference resolved
 
 Two judges on the same rows, overconfident by 0.05 and 0.08. Each draws its confidence independently from [0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0] with weights [0.03, 0.05, 0.1, 0.12, 0.25, 0.3, 0.15]; 10 equal-width bins; outcomes linked by a Gaussian copula ρ. 800 simulated datasets per cell; the ± is the Monte Carlo standard error of the MDE.
@@ -118,6 +120,8 @@ Two judges on the same rows, overconfident by 0.05 and 0.08. Each draws its conf
 The binned ECE's bias against the true gap is at most 0.0024 here.
 At n = 3,079 the ECE MDE is 0.019 to 0.024.
 At n = 1,900 the ECE MDE is 0.026 to 0.030.
+
+**Limit of this model.** Part C draws each judge's confidence independently of the other's; only their outcomes are linked.
 
 ## What the plan takes from this (proposals for `docs/v05-plan.md`)
 
