@@ -56,16 +56,26 @@ N_BOOT = 2000              # bootstrap resamples of the both-right rows
 RHO_TOP, RHO_STEPS = 0.999, 40
 MU_TOP, MU_STEPS = 8.0, 60
 AUROC_CAP, DESIGN_GAP = 0.90, 0.05
+RHO_CAP = 0.95                     # a proposed rho never reaches 1: the map tops out at 0.999
 POOL_BELOW = Fraction(1, 100)      # a verbalized level under 1 % of rows is pooled
 
 VERB, SC, LP, LAYA = "llm-qwen3-8b", "llm-qwen3-8b-sc5", "logprob-qwen3-8b", "laya"
 ORDER = [VERB, SC, LP, LAYA]
+# Hosted runs (docs/v05-pilot.md §3): optional context, never an input to the constants. Any
+# of them may be absent (the Gemini self-consistency run may never be made).
+JEV, GEM, GEM_SC = "jev", "llm-gemini-3.6-flash", "llm-gemini-3.6-flash-sc5"
+HOSTED = [JEV, GEM, GEM_SC]
+VOTING = {SC, GEM_SC}              # self-consistency slots: samples > 1
+SINGLE = {VERB, GEM}               # verbalized slots: one call per row
 QWEN = [VERB, SC, LP]
 PAIRS = [[VERB, SC], [VERB, LP], [SC, LP]]
 H1_PAIRS = PAIRS[:2]               # verbalized against self-consistency and log-probability
 NAMES = {VERB: "Qwen3-8B verbalized", SC: "Qwen3-8B self-consistency (k = 5)",
-         LP: "Qwen3-8B token log-probability", LAYA: "Laya"}
-ADAPTER = {VERB: "llm", SC: "llm", LP: "logprob", LAYA: "laya"}
+         LP: "Qwen3-8B token log-probability", LAYA: "Laya",
+         JEV: "Jev", GEM: "gemini-3.6-flash verbalized",
+         GEM_SC: "gemini-3.6-flash self-consistency (k = 5)"}
+ADAPTER = {VERB: "llm", SC: "llm", LP: "logprob", LAYA: "laya", JEV: "jev", GEM: "llm",
+           GEM_SC: "llm"}
 
 
 class MissingCheckpoints(Exception):
@@ -83,13 +93,14 @@ def load_run(slug: str, path: Path, rows: list[dict], labels_sha: str) -> dict:
         raise SystemExit(f"{path}: no header line: cannot tell which judge or labels it holds")
     judge = done[-1]["run"].get("judge") or {}
     adapter = str(judge.get("name", "")).split(":")[0]
-    if adapter != ADAPTER[slug]:
+    # Jev pointed at a compatible endpoint records itself as `jev-compatible`
+    if adapter != ADAPTER[slug] and not (slug == JEV and adapter.startswith("jev")):
         raise SystemExit(f"{path}: judge {judge.get('name')!r}, expected the {ADAPTER[slug]} "
                          "adapter")
     samples = int(judge.get("samples") or 1)
-    if slug == SC and samples < 2:
+    if slug in VOTING and samples < 2:
         raise SystemExit(f"{path}: not a self-consistency run (samples {samples})")
-    if slug == VERB and samples != 1:
+    if slug in SINGLE and samples != 1:
         raise SystemExit(f"{path}: a self-consistency run where the verbalized one belongs")
     recorded = (done[-1]["run"].get("dataset") or {}).get("sha256")
     if recorded != labels_sha:
@@ -105,14 +116,26 @@ def load_run(slug: str, path: Path, rows: list[dict], labels_sha: str) -> dict:
     return {"header": done[-1]["run"], "records": records}
 
 
-def right(rec: dict | None) -> bool:
-    """§5: a row with no answer, or whose decision carries no confidence, counts wrong."""
-    return rec is not None and rec["parse_status"] == "parsed" and rec["correct"]
-
-
 def scored(rec: dict | None) -> bool:
-    """A row that enters tie shares, Spearman and AUROC: parsed, with a confidence."""
+    """A row that enters tie shares, Spearman and AUROC: parsed, with a valid confidence
+    (`checkpoint_record` leaves a number outside [0, 1] as None while the parse status of
+    an old checkpoint may still say "parsed")."""
     return rec is not None and rec["parse_status"] == "parsed" and rec["confidence"] is not None
+
+
+def right(rec: dict | None) -> bool:
+    """§5: a row with no answer, or whose decision carries no (valid) confidence, counts
+    wrong; so a right row is always a scored one."""
+    return scored(rec) and bool(rec["correct"])
+
+
+def status(rec: dict | None) -> str:
+    """missing, no_answer, no_confidence (none or an invalid one) or scored."""
+    if rec is None:
+        return "missing"
+    if rec["parse_status"] == "no_answer":
+        return "no_answer"
+    return "scored" if scored(rec) else "no_confidence"
 
 
 def tie_key(c: float) -> float:
@@ -281,7 +304,7 @@ def rank_agreement(runs: dict, keys: list, a: str, b: str, base: list, n_boot: i
     rho_s = spearman(xs, ys)
     out = {"pair": [a, b], "both_right": len(both), "levels": [None, None], "spearman": None,
            "spearman_95": None, "undefined_resamples": None, "rho_at_zero": None, "rho": None,
-           "rho_95": None, "both_wrong": len(wrong),
+           "rho_95": None, "spearman_max": None, "saturated": False, "both_wrong": len(wrong),
            "spearman_both_wrong": _r4(spearman(
                [ra[k]["confidence"] for k in wrong if scored(ra[k]) and scored(rb[k])],
                [rb[k]["confidence"] for k in wrong if scored(ra[k]) and scored(rb[k])]))}
@@ -295,8 +318,12 @@ def rank_agreement(runs: dict, keys: list, a: str, b: str, base: list, n_boot: i
     boot = bootstrap_defined(list(zip(xs, ys, strict=True)),
                              lambda rs: spearman([x for x, _ in rs], [y for _, y in rs]),
                              n_boot=n_boot, seed=SEED)
+    # The ties cap the rank correlation the map can produce: an observed value at or above
+    # its value at the top of the range inverts to that top, and says so.
+    top = f(RHO_TOP)
     out.update({"spearman": _r4(rho_s), "rho_at_zero": _r4(f(0.0)),
-                "rho": _r4(latent_rho(rho_s, f)), "undefined_resamples": boot.undefined})
+                "rho": _r4(latent_rho(rho_s, f)), "undefined_resamples": boot.undefined,
+                "spearman_max": _r4(top), "saturated": rho_s >= top})
     if boot.ci is not None:
         out["spearman_95"] = list(boot.ci)
         out["rho_95"] = [_r4(latent_rho(boot.ci[0], f)), _r4(latent_rho(boot.ci[1], f))]
@@ -412,10 +439,11 @@ def accuracy_of(recs: list) -> dict:
     return {"right": k, "n": n, "value": round(k / n, 4), "wilson_95": [round(lo, 4), round(hi, 4)]}
 
 
-def throughput(slug: str, recs: list) -> dict:
+def throughput(recs: list) -> dict:
     """Rows per minute from the judges' own latency fields (a row without one, a missing
-    answer, is left out), and tokens per call where the checkpoint records them (the chat
-    read-outs; a self-consistency row is k calls)."""
+    answer, is left out), and tokens per call where the checkpoint records them (a
+    self-consistency row is its k samples' calls; the local token-probability judges record
+    no tokens)."""
     timed = [r["latency_s"] for r in recs if r is not None and r.get("latency_s") is not None]
     secs = math.fsum(timed)
     out = {"rows_timed": len(timed),
@@ -425,14 +453,15 @@ def throughput(slug: str, recs: list) -> dict:
     usages = []
     for r in recs:
         raw = (r or {}).get("raw") or {}
-        if slug == SC:
-            usages += [s.get("usage") or {} for s in raw.get("samples") or []]
-        elif slug == VERB and isinstance(raw.get("usage"), dict):
+        if raw.get("samples"):
+            usages += [x.get("usage") or {} for x in raw["samples"]]
+        elif isinstance(raw.get("usage"), dict):
             usages.append(raw["usage"])
     if usages:
         out["calls"] = len(usages)
         for side in ("input", "output"):
-            vals = [u.get(f"{side}_tokens") for u in usages if u.get(f"{side}_tokens") is not None]
+            vals = [u.get(f"{side}_tokens", u.get(f"{side}Tokens")) for u in usages]
+            vals = [v for v in vals if isinstance(v, (int, float))]
             out[f"{side}_tokens_per_call"] = (round(math.fsum(vals) / len(vals), 2)
                                               if vals else None)
     return out
@@ -454,15 +483,43 @@ def run_summary(slug: str, run: dict) -> dict:
         "judge": judge.get("name"), "model": judge.get("model"),
         "decisions": len(recs), "in_checkpoint": sum(r is not None for r in recs),
         "missing": sum(r is None for r in recs),
-        "no_answer": sum(r is not None and r["parse_status"] == "no_answer" for r in recs),
-        "no_confidence": sum(r is not None and r["parse_status"] == "no_confidence"
-                             for r in recs),
-        "no_confidence_decision_right": sum(r is not None and r["parse_status"] == "no_confidence"
-                                            and r["correct"] for r in recs),
+        "no_answer": sum(status(r) == "no_answer" for r in recs),
+        "no_confidence": sum(status(r) == "no_confidence" for r in recs),
+        "no_confidence_decision_right": sum(status(r) == "no_confidence" and bool(r["correct"])
+                                            for r in recs),
         "accuracy": accuracy_of(recs), "overconfidence": over,
         "tie_shares": {"n": len(confs), "levels": [[v, c, round(c / len(confs), 6)]
                                                    for v, c in lv]},
-        "auroc": auroc_delong(confs, ok), "throughput": throughput(slug, recs)}
+        "auroc": auroc_delong(confs, ok), "throughput": throughput(recs)}
+
+
+def agreement(ra: dict, rb: dict, keys: list) -> tuple[int, int]:
+    """(same decision, same correctness) over `keys`: a decision matches only a decision
+    (case and outer spaces ignored); correctness is §5's (no confidence counts wrong)."""
+    same = sum(bool(ra[k] is not None and rb[k] is not None and ra[k]["decision"].strip()
+                    and ra[k]["decision"].strip().casefold()
+                    == rb[k]["decision"].strip().casefold()) for k in keys)
+    return same, sum(right(ra[k]) == right(rb[k]) for k in keys)
+
+
+def cost_of(recs: list) -> dict:
+    """Known cost of a hosted run (`checkpoint_cost`), and how many decisions lack one."""
+    have = [r for r in recs if r is not None]
+    priced = [r["cost_usd"] for r in have if r.get("cost_usd") is not None]
+    return {"usd": round(math.fsum(priced), 6), "decisions_priced": len(priced),
+            "decisions_unpriced": len(have) - len(priced)}
+
+
+def hosted_summary(slug: str, run: dict, verbalized: dict, keys: list) -> dict:
+    """Context only (§3): the run's own figures and its agreement with the Qwen3
+    verbalized run. Nothing here reaches `proposed`."""
+    same, same_ok = agreement(run["records"], verbalized["records"], keys)
+    out = {"status": "run", **run_summary(slug, run), "agreement_with": VERB,
+           "same_decision": same, "same_correctness": same_ok,
+           "cost": cost_of(list(run["records"].values()))}
+    if slug in VOTING:
+        out["self_consistency_samples"] = sc_samples(run)
+    return out
 
 
 def sc_samples(run: dict) -> dict:
@@ -508,6 +565,17 @@ def _to(x: float, step: float) -> float:
     return round(round(x / step) * step, 2)
 
 
+def ceil_to(x: float, step: float) -> float:
+    """x rounded up to a multiple of step: a conservative upper bound never moves down
+    (the quotient is taken to 1e-6 first, so 0.97 / 0.01 = 96.99999999999999 stays 97)."""
+    return round(math.ceil(round(x / step, 6)) * step, 2)
+
+
+def floor_to(x: float, step: float) -> float:
+    """x rounded down to a multiple of step: a conservative lower bound never moves up."""
+    return round(math.floor(round(x / step, 6)) * step, 2)
+
+
 def tie_shares_constant(levels: list) -> list[float] | None:
     """A run's tie shares as a PILOT constant: to 0.001 (§5 fixes no precision for them;
     the rule of the verbalized weights is used), the remainder on the largest."""
@@ -520,13 +588,17 @@ def proposed(d: dict) -> dict:
 
     accs = [runs[s]["accuracy"] for s in QWEN]
     best = max(accs, key=lambda a: a["right"] / a["n"])
-    values = sorted({_to(a["right"] / a["n"], 0.01) for a in accs} | {_to(best["wilson_95"][1],
-                                                                          0.01)})
+    upper = wilson_interval(best["right"], best["n"])[1]          # unrounded
+    values = sorted({_to(a["right"] / a["n"], 0.01) for a in accs} | {ceil_to(upper, 0.01)})
     clipped = sorted({min(0.99, max(0.01, v)) for v in values})
     out["ACCURACIES"] = {
         "value": clipped,
         "rule": "the distinct accuracies of the three Qwen3 read-outs to 0.01, plus the "
-                "Wilson upper bound of the highest",
+                "Wilson upper bound of the highest rounded up to 0.01",
+        # §5 counts a decision without a confidence as wrong; the power model's accuracy is
+        # that of the rows it ranks, so both are shown
+        "scored_accuracy": {s: (round(runs[s]["auroc"]["right"] / runs[s]["auroc"]["n"], 4)
+                                if runs[s]["auroc"]["n"] else None) for s in QWEN},
         "note": ("" if clipped == values else
                  "clipped to [0.01, 0.99]: the power model needs right and wrong answers")}
 
@@ -546,18 +618,22 @@ def proposed(d: dict) -> dict:
 
     h1 = [r for r in d["rank_agreement"] if r["pair"] in H1_PAIRS]
     points = [r for r in h1 if r["rho"] is not None]
-    rhos = {_to(r["rho"], 0.05) for r in points}
+    raw = [_to(r["rho"], 0.05) for r in points]
     note = [f"{r['pair'][0]}–{r['pair'][1]}: not estimable" for r in h1 if r["rho"] is None]
+    note += [f"{r['pair'][0]}–{r['pair'][1]}: saturated (Spearman {r['spearman']} at or above "
+             f"the map's maximum {r['spearman_max']})" for r in points if r["saturated"]]
     if points:
         smaller = min(points, key=lambda r: r["rho"])
         if smaller["rho_95"] is not None and smaller["rho_95"][0] is not None:
-            rhos.add(_to(smaller["rho_95"][0], 0.05))
+            raw.append(floor_to(smaller["rho_95"][0], 0.05))
         else:
             note.append("no interval for the smaller point estimate")
-    out["RHOS"] = {"value": sorted(rhos),
+    if any(x > RHO_CAP for x in raw):
+        note.append(f"capped at {RHO_CAP}: a latent rho of 1 would make the two methods one")
+    out["RHOS"] = {"value": sorted({min(RHO_CAP, x) for x in raw}),
                    "rule": "the latent rho of verbalized–self-consistency and "
                            "verbalized–log-probability to 0.05, plus the lower interval bound "
-                           "of the smaller",
+                           f"of the smaller rounded down to 0.05; each at most {RHO_CAP}",
                    "note": "; ".join(note)}
 
     la = d["latent_auroc_a"]
@@ -594,11 +670,7 @@ def compute(runs_dir: Path = RUNS_DIR, labels: Path = LABELS, n_sim: int | None 
 
     agree = []
     for a, b in PAIRS:
-        ra, rb = runs[a]["records"], runs[b]["records"]
-        same = sum(bool(ra[k] is not None and rb[k] is not None and ra[k]["decision"].strip()
-                        and ra[k]["decision"].strip().casefold()
-                        == rb[k]["decision"].strip().casefold()) for k in keys)
-        same_ok = sum(right(ra[k]) == right(rb[k]) for k in keys)
+        same, same_ok = agreement(runs[a]["records"], runs[b]["records"], keys)
         agree.append({"pair": [a, b], "n": len(keys), "same_decision": same,
                       "same_decision_share": round(same / len(keys), 4),
                       "same_correctness": same_ok,
@@ -632,6 +704,16 @@ def compute(runs_dir: Path = RUNS_DIR, labels: Path = LABELS, n_sim: int | None 
     acc_scored = v["auroc"]["right"] / v["auroc"]["n"] if v["auroc"]["n"] else 0.0
     d["latent_auroc_a"] = latent_auroc(v["auroc"]["value"], acc_scored, shares_a)
     d["proposed_constants"] = proposed(d)
+
+    # Hosted runs last, after the constants are fixed: context only, and optional.
+    d["hosted"] = {}
+    for s in HOSTED:
+        path = Path(runs_dir) / f"{s}.ckpt.jsonl"
+        if path.exists():
+            d["checkpoints"][s] = _shown(path)
+            d["hosted"][s] = hosted_summary(s, load_run(s, path, rows, sha), runs[VERB], keys)
+        else:
+            d["hosted"][s] = {"status": "not run"}
     return d
 
 
@@ -681,8 +763,10 @@ def markdown(d: dict) -> str:
          "public since 2020 and probably in the judges' pretraining data, with about 14 % "
          "possibly mislabelled (Ying & Thomas 2022; not measured here). The accuracies are "
          "planning inputs for `scripts/v05_power.py`, not scores; nothing here tests H1 or "
-         "H2. Laya runs with budgets raised beyond what its checkpoint shipped with and is "
-         "near chance zero-shot by its own README: its row measures that configuration."), "",
+         "H2. Laya runs with budgets raised beyond what its checkpoint shipped with; Laya's "
+         "own README calls its base checkpoints near chance on typed decisions zero-shot. Its "
+         "row measures this configuration; the table, not that claim, says how it did here."),
+        "",
         "## Runs", "",
         ("A row with no answer, or whose decision carries no confidence, counts as wrong in "
          "accuracy and is left out of the tie shares, the rank correlations and the AUROC; a "
@@ -740,22 +824,28 @@ def markdown(d: dict) -> str:
                "**both** got right. ρ is the latent correlation that reproduces it: one fixed "
                f"sample of {m['normal_pairs']:,} standard normal pairs (seed {d['seed']}), the "
                "second coordinate mixed as ρ·z₁ + √(1−ρ²)·z₂, each cut into its method's tie "
-               "shares on those same rows (a method with no ties is not cut), bisection on "
-               f"ρ ∈ [0, {m['rho_range'][1]}] for {m['bisection_steps']} steps; a correlation at "
-               "or below the ρ = 0 value maps to 0. Interval: the 2.5 % and 97.5 % percentiles "
+               "shares on those same rows (one with no ties on these rows is not cut), "
+               f"bisection on ρ ∈ [0, {m['rho_range'][1]}] for {m['bisection_steps']} steps; a "
+               "correlation at or below the ρ = 0 value maps to 0. The ties cap the rank "
+               "correlation the map can reach (\"map max\", its value at the top of the range): "
+               "an observed value at or above it is **saturated**, its ρ is only a lower bound, "
+               f"and a proposed ρ is capped at {RHO_CAP}. Interval: the 2.5 % and 97.5 % "
+               "percentiles "
                f"of {m['bootstrap_resamples']:,} bootstrap resamples (seed {d['seed']}) of those "
                "rows, each mapped the same way (resamples where the correlation is undefined "
                "are counted, not used). The rows both got wrong are reported, not used."), "",
-              "| pair | both right | levels | Spearman [95 %] | ρ at 0 | latent ρ [95 %] | "
-              "both wrong (Spearman) |", "|---|---:|---|---|---:|---|---:|"]
+              "| pair | both right | levels | Spearman [95 %] | ρ at 0 | map max | "
+              "latent ρ [95 %] | both wrong (Spearman) |",
+              "|---|---:|---|---|---:|---:|---|---:|"]
     for r in d["rank_agreement"]:
-        lv = " / ".join("continuous" if x is None else str(x) for x in r["levels"])
+        lv = " / ".join("no ties on these rows" if x is None else str(x) for x in r["levels"])
         und = (f", {r['undefined_resamples']} undefined" if r["undefined_resamples"] else "")
+        sat = " **saturated**" if r["saturated"] else ""
         lines.append(f"| {NAMES[r['pair'][0]]} – {NAMES[r['pair'][1]]} | {r['both_right']:,} | "
                      f"{lv if r['both_right'] else '—'} | {_num(r['spearman'])} "
                      f"{_iv(r['spearman_95'])}{und} | {_num(r['rho_at_zero'])} | "
-                     f"{_num(r['rho'])} {_iv(r['rho_95'])} | {r['both_wrong']:,} "
-                     f"({_num(r['spearman_both_wrong'])}) |")
+                     f"{_num(r['spearman_max'])} | {_num(r['rho'])}{sat} {_iv(r['rho_95'])} | "
+                     f"{r['both_wrong']:,} ({_num(r['spearman_both_wrong'])}) |")
     la = d["latent_auroc_a"]
     lines += ["", "## AUROC", "",
               ("AUROC of the confidence for a right answer (ties one half) on the rows with a "
@@ -782,7 +872,7 @@ def markdown(d: dict) -> str:
     lines += ["", "## Correctness correlation between Laya and each Qwen3 read-out", "",
               ("Tetrachoric correlation of right/wrong over every decision. **Not fed back**: "
                "part C's copula links two *different* judges and keeps its design values "
-               "(`RHOS_C`); Laya near chance zero-shot is not a stand-in for the judges the "
+               "(`RHOS_C`), and Laya in this configuration is not a stand-in for the judges the "
                "study compares."), "",
               "| pair | both right | Laya only | Qwen3 only | both wrong | tetrachoric |",
               "|---|---:|---:|---:|---:|---:|"]
@@ -819,8 +909,49 @@ def markdown(d: dict) -> str:
         lines.append(f"| {NAMES[sl]} | {tp['rows_timed']:,} | {_num(tp['seconds_per_row'], 3)} "
                      f"| {_num(tp['rows_per_minute'], 1)} | "
                      f"{tp['calls'] if tp['calls'] is not None else '—'} | {tok} |")
-    lines += ["", ("Latency is each judge's own per-decision field on one Apple M4 (16 GB), one "
-                   "model in memory at a time; it excludes loading.")]
+    lines += ["", ("Latency is each judge's own per-decision field, measured on the maintainer's "
+                   "machine (the checkpoints do not record the hardware); for the local runs it "
+                   "excludes loading the model.")]
+
+    h = d["hosted"]
+    lines += ["", "## Hosted runs (context only, not fed back)", "",
+              ("Jev and gemini-3.6-flash on the same rows (docs/v05-pilot.md §3), under the same "
+               "rules as above. They add hosted accuracies, tie shares and agreement with the "
+               "Qwen3 verbalized run for context; they never enter the proposed constants, and "
+               "a run that was not made reads \"not run\". Cost is what the checkpoint records "
+               "per decision."), "",
+              "| run | judge | n | in checkpoint | no answer (incl. missing) | no confidence | "
+              "accuracy [Wilson 95 %] | overconfidence (n) | AUROC [DeLong 95 %] | same decision "
+              "/ correctness as Qwen3 verbalized | cost |",
+              "|---|---|---:|---:|---:|---:|---|---:|---|---|---:|"]
+    for sl in HOSTED:
+        r = h[sl]
+        if r["status"] != "run":
+            lines.append(f"| {NAMES[sl]} | — | not run |  |  |  |  |  |  |  |  |")
+            continue
+        a, over, au, cost = r["accuracy"], r["overconfidence"], r["auroc"], r["cost"]
+        lines.append(
+            f"| {NAMES[sl]} | `{r['judge']}` | {a['n']:,} | {r['in_checkpoint']:,} | "
+            f"{r['no_answer'] + r['missing']:,}"
+            + (f" ({r['missing']:,} missing)" if r["missing"] else "")
+            + f" | {r['no_confidence']:,} | {a['right']:,} = {_pct(a['value'])} "
+            f"{_iv(a['wilson_95'], 3)} | "
+            + (f"{over['value']:+.4f} ({over['n']:,})" if over else "—")
+            + f" | {_num(au['value'])} {_iv(au['delong_95'])} | {r['same_decision']:,} / "
+            f"{r['same_correctness']:,} of {a['n']:,} | ${cost['usd']:.4f}"
+            + (f" ({cost['decisions_unpriced']:,} unpriced)" if cost["decisions_unpriced"]
+               else "") + " |")
+    ran = [sl for sl in HOSTED if h[sl]["status"] == "run"]
+    if ran:
+        lines.append("")
+    for sl in ran:
+        t = h[sl]["tie_shares"]
+        extra = ""
+        if "self_consistency_samples" in h[sl]:
+            ss = h[sl]["self_consistency_samples"]
+            extra = f" Samples: {ss['samples']:,} drawn, {ss['failed']:,} failed."
+        lines.append(f"- **{NAMES[sl]}** tie shares (n = {t['n']:,}): "
+                     f"{_levels_text(t['levels'])}.{extra}")
 
     c = d["proposed_constants"]
     lines += ["", "## Proposed PILOT constants", "",
@@ -839,6 +970,10 @@ def markdown(d: dict) -> str:
         extra = x.get("note") or ""
         if name.startswith("TIE_SHARES") and x.get("values"):
             extra = (f"values {x['values']}; {len(x['values'])} levels"
+                     + (f"; {extra}" if extra else ""))
+        if name == "ACCURACIES":
+            extra = ("accuracy on the rows with a confidence (the rows the power model ranks): "
+                     + ", ".join(f"{NAMES[s]} {_num(v)}" for s, v in x["scored_accuracy"].items())
                      + (f"; {extra}" if extra else ""))
         lines.append(f"| `{name}` | {x['rule']} | {extra or '—'} |")
     lines += ["", ("Two limits of the power model stay and are printed with its tables: part B "

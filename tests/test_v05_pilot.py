@@ -18,6 +18,7 @@ Latencies per row: 2 s, 10 s, 1.5 s, 0.5 s. Tokens per call: 700 in, 30 out (ver
 """
 from __future__ import annotations
 
+import functools
 import hashlib
 import importlib.util
 import json
@@ -38,7 +39,11 @@ sys.modules["v05_pilot"] = pilot
 spec.loader.exec_module(pilot)
 
 VERB, SC, LP, LAYA = "llm-qwen3-8b", "llm-qwen3-8b-sc5", "logprob-qwen3-8b", "laya"
-N_SIM = 20_000          # the report uses 100,000; the fixtures do not need them
+JEV, GEM, GEM_SC = "jev", "llm-gemini-3.6-flash", "llm-gemini-3.6-flash-sc5"
+# The fixture's three pairs need about 360 evaluations of the rank map: at the report's
+# 100,000 pairs that is a minute per compute(), so the fixture uses 20,000. The tests of the
+# mapping itself (RankMap, latent_rho) run at the production size.
+N_SIM = 20_000
 N_BOOT = 300
 
 
@@ -178,15 +183,21 @@ def test_rank_agreement_on_the_both_right_rows(d):
     assert 0.0 <= vs["rho"] <= 0.999
 
 
-def _base(n: int = N_SIM) -> list[tuple[float, float]]:
+@functools.lru_cache(maxsize=1)
+def _base() -> list[tuple[float, float]]:
+    """The report's own fixed sample: pilot.N_SIM pairs, seed 2026."""
     rng = random.Random(pilot.SEED)
-    return [pilot.normal_pair(rng, 0.0) for _ in range(n)]
+    return [pilot.normal_pair(rng, 0.0) for _ in range(pilot.N_SIM)]
+
+
+def test_the_base_sample_is_the_production_one():
+    assert len(_base()) == 100_000
 
 
 def test_rho_zero_and_anything_below_it_maps_to_zero():
     f = pilot.RankMap(_base(), [0.2, 0.3, 0.5], None)
     at_zero = f(0.0)
-    assert abs(at_zero) < 0.03
+    assert abs(at_zero) < 0.01
     assert pilot.latent_rho(at_zero, f) == 0.0
     assert pilot.latent_rho(at_zero - 0.2, f) == 0.0
     assert pilot.latent_rho(-1.0, f) == 0.0
@@ -369,11 +380,12 @@ def test_proposed_constants_follow_the_rules(d):
     assert c["CONF_WEIGHTS"]["value"] == [0.2, 0.2, 0.4, 0.2]
     # verbalized AUROC 1.0 is beyond any tied binormal: the latent one is capped at 0.90
     assert c["AUROC_A"]["value"] == 0.9 and c["AUROC_B"]["value"] == 0.95
-    rhos = c["RHOS"]["value"]
-    assert rhos == sorted(set(rhos)) and all(round(r * 20) == r * 20 for r in rhos)
-    # the smaller H1 point estimate is verbalized-log-probability (Spearman 0): its lower
-    # bound maps to 0
-    assert rhos[0] == 0.0
+    # verbalized-self-consistency saturates the map (its latent rho reaches 0.999, which
+    # would round to 1.0) and is capped at 0.95; the smaller H1 point estimate,
+    # verbalized-log-probability (Spearman 0), has a lower bound that maps to 0
+    assert c["RHOS"]["value"] == [0.0, 0.95] and "capped at 0.95" in c["RHOS"]["note"]
+    # the accuracies on the rows with a confidence travel next to ACCURACIES
+    assert c["ACCURACIES"]["scored_accuracy"] == {VERB: 0.8, SC: 0.8, LP: 0.8333}
 
 
 def test_accuracies_are_capped_below_one(tmp_path):
@@ -470,16 +482,134 @@ def test_check_mode_and_determinism(tmp_path, monkeypatch):
     assert "train" in text and "not a result about any judge" in text
 
 
+# --- review fixes: saturation, invalid confidences, outward rounding, hosted runs ------------
+
+
+def test_the_map_saturates_where_the_ties_cap_the_rank_correlation():
+    """A method cut in two halves against a continuous one cannot reach a Spearman of 1: at
+    rho = 0.999 it tops out near sqrt(3/4). An observed value above that maximum inverts to
+    the top of the range and is flagged."""
+    f = pilot.RankMap(_base(), [0.5, 0.5], None)
+    top = f(pilot.RHO_TOP)
+    assert top == pytest.approx(math.sqrt(3) / 2, abs=0.01)
+    assert pilot.latent_rho(top + 0.05, f) == pytest.approx(pilot.RHO_TOP, abs=1e-9)
+
+
+def test_fixture_flags_the_saturated_pair(d):
+    vs = pair(d["rank_agreement"], VERB, SC)
+    # verbalized cut 1/3 : 2/3 against no ties: the map's maximum is about 0.82 < 0.866
+    assert vs["spearman_max"] < vs["spearman"] and vs["saturated"] is True
+    vl = pair(d["rank_agreement"], VERB, LP)
+    assert vl["saturated"] is False
+
+
+def test_a_parsed_row_without_a_valid_confidence_counts_wrong_and_crashes_nothing(tmp_path):
+    """1.0000001 is not a probability: the record keeps parse status "parsed" but no
+    confidence. §5: no confidence, so wrong in accuracy and out of every rank statistic."""
+    verb = [("a", 1.0000001), ("b", 0.9), ("c", 0.8), ("a", 0.7), ("b", 0.6), ("c", 0.5)]
+    runs = _synthetic(tmp_path, verbalized=verb)
+    d = pilot.compute(runs, runs / "labels.jsonl", n_sim=2000, n_boot=50)
+    v = d["runs"][VERB]
+    assert v["no_confidence"] == 1 and v["no_confidence_decision_right"] == 1
+    assert v["accuracy"]["right"] == 5 and v["tie_shares"]["n"] == 5
+    assert pair(d["rank_agreement"], VERB, SC)["both_right"] == 5
+    assert pilot.right({"parse_status": "parsed", "correct": True, "confidence": None}) is False
+
+
+def test_conservative_bounds_round_outward():
+    assert pilot.ceil_to(0.9601, 0.01) == 0.97 and pilot.ceil_to(0.97, 0.01) == 0.97
+    assert pilot.ceil_to(0.96995, 0.01) == 0.97
+    assert pilot.floor_to(0.349, 0.05) == 0.3 and pilot.floor_to(0.35, 0.05) == 0.35
+    assert pilot.floor_to(0.0, 0.05) == 0.0
+
+
+def test_the_wilson_bound_rounds_up():
+    """Qwen3 accuracies 4/6, 4/6 and 5/6 again, but the best one's Wilson upper bound,
+    0.96995, must never round down: 0.97; and 4/6's 0.9032 (were it the best) gives 0.91."""
+    assert pilot.ceil_to(0.9032285888942195, 0.01) == 0.91
+
+
+def test_hosted_runs_are_optional_context(d):
+    for slug in (JEV, GEM, GEM_SC):
+        assert d["hosted"][slug] == {"status": "not run"}
+    text = pilot.markdown(d)
+    assert "## Hosted runs (context only, not fed back)" in text
+    assert text.count("not run") >= 3
+
+
+def test_hosted_runs_are_summarised_and_never_move_the_constants(tmp_path, d):
+    """Jev right on 0, 1, 2, 4 (row 3 wrong at 0.65, row 5 missing), $0.001 a row; Gemini
+    verbalized agrees with Qwen3 verbalized on rows 0-4; the Gemini self-consistency run
+    is absent (paused on cost) and reads "not run"."""
+    runs = _synthetic(tmp_path, verbalized=[r for r in _FIXTURE_VERB], hosted={
+        JEV: [("a", 0.9), ("b", 0.8), ("c", 0.7), ("b", 0.65), ("b", 0.6)],
+        GEM: [("a", 0.9), ("b", 0.9), ("a", 0.6), ("a", 0.8), ("b", 0.95), ("a", 0.9)]})
+    shutil.copy(FIXTURE / "llm-qwen3-8b-sc5.ckpt.jsonl", runs)
+    shutil.copy(FIXTURE / "logprob-qwen3-8b.ckpt.jsonl", runs)
+    shutil.copy(FIXTURE / "laya.ckpt.jsonl", runs)
+    _rewrite_sha(runs)
+    h = pilot.compute(runs, runs / "labels.jsonl", n_sim=N_SIM, n_boot=N_BOOT)
+    jev = h["hosted"][JEV]
+    assert jev["status"] == "run" and jev["missing"] == 1
+    assert jev["accuracy"]["right"] == 4 and jev["accuracy"]["n"] == 6
+    assert jev["cost"] == {"usd": 0.005, "decisions_priced": 5, "decisions_unpriced": 0}
+    assert jev["auroc"]["value"] == pytest.approx(0.75)       # 3 of 4 right above 0.65
+    assert jev["agreement_with"] == VERB
+    # decisions a b c b b - against a b a a b c; correctness T T T F T F against T T F T T F
+    assert (jev["same_decision"], jev["same_correctness"]) == (3, 4)
+    gem = h["hosted"][GEM]
+    assert gem["accuracy"]["right"] == 4 and gem["same_decision"] == 5
+    assert gem["tie_shares"]["levels"][0] == [0.6, 1, 0.166667]
+    assert h["hosted"][GEM_SC] == {"status": "not run"}
+    assert h["proposed_constants"] == d["proposed_constants"]
+    assert "gemini-3.6-flash" in pilot.markdown(h)
+
+
+def test_a_hosted_checkpoint_in_the_wrong_slot_is_refused(tmp_path):
+    runs = _synthetic(tmp_path, hosted={GEM_SC: [("a", 0.9)] * 6})
+    header = json.loads((runs / f"{GEM_SC}.ckpt.jsonl").read_text().splitlines()[0])
+    assert header["run"]["judge"]["samples"] == 5
+    lines = (runs / f"{GEM_SC}.ckpt.jsonl").read_text().splitlines()
+    head = json.loads(lines[0])
+    head["run"]["judge"].pop("samples")
+    (runs / f"{GEM_SC}.ckpt.jsonl").write_text("\n".join([json.dumps(head), *lines[1:]]) + "\n")
+    with pytest.raises(SystemExit, match="self-consistency"):
+        pilot.compute(runs, runs / "labels.jsonl", n_sim=2000, n_boot=50)
+
+
+def test_the_prose_quotes_laya_and_names_no_machine(d):
+    text = pilot.markdown(d)
+    assert "Apple" not in text and "M4" not in text
+    assert "near chance" in text and "Laya's own README" in text
+    assert "continuous" not in text.split("## Rank agreement")[1].split("## AUROC")[0]
+    assert "no ties on these rows" in text
+
+
 # --- helpers ---------------------------------------------------------------------------------
+
+
+_FIXTURE_VERB = [("a", 0.9), ("b", 0.9), ("a", 0.6), ("a", 0.8), ("b", 0.95), ("c", None)]
+
+
+def _rewrite_sha(runs: Path) -> None:
+    """Point every checkpoint header in `runs` at the labels file there."""
+    sha = hashlib.sha256((runs / "labels.jsonl").read_bytes()).hexdigest()
+    for p in runs.glob("*.ckpt.jsonl"):
+        lines = p.read_text(encoding="utf-8").splitlines()
+        head = json.loads(lines[0])
+        head["run"].setdefault("dataset", {})["sha256"] = sha
+        p.write_text("\n".join([json.dumps(head), *lines[1:]]) + "\n", encoding="utf-8")
 
 
 LABELS = ["a", "b", "c", "a", "b", "c"]
 
 
-def _synthetic(tmp_path: Path, verbalized=None, sc=None, logprob=None, laya=None) -> Path:
+def _synthetic(tmp_path: Path, verbalized=None, sc=None, logprob=None, laya=None,
+               hosted: dict | None = None) -> Path:
     """Four checkpoints over the fixture's six labels from (decision, confidence) lists; a
     None confidence is a no-confidence row (no answer when the decision is blank). The
-    self-consistency votes are the confidence times 5, the rest failed samples."""
+    self-consistency votes are the confidence times 5, the rest failed samples. `hosted`
+    adds optional runs by slug ($0.001 a row); a list shorter than 6 leaves rows missing."""
     runs = tmp_path / "runs"
     runs.mkdir()
     labels = runs / "labels.jsonl"
@@ -487,20 +617,26 @@ def _synthetic(tmp_path: Path, verbalized=None, sc=None, logprob=None, laya=None
     sha = hashlib.sha256(labels.read_bytes()).hexdigest()
     base = [(x, 0.8) for x in LABELS]
     judges = {VERB: {"name": "llm:q"}, SC: {"name": "llm:q:sc5", "samples": 5},
-              LP: {"name": "logprob:q"}, LAYA: {"name": "laya:laya"}}
-    for slug, spec_rows in ((VERB, verbalized), (SC, sc), (LP, logprob), (LAYA, laya)):
+              LP: {"name": "logprob:q"}, LAYA: {"name": "laya:laya"},
+              JEV: {"name": "jev", "model": "jev-latest"},
+              GEM: {"name": "llm:gemini-3.6-flash", "model": "gemini-3.6-flash"},
+              GEM_SC: {"name": "llm:gemini-3.6-flash:sc5", "samples": 5}}
+    specs = [(VERB, verbalized), (SC, sc), (LP, logprob), (LAYA, laya)]
+    specs += list((hosted or {}).items())
+    for slug, spec_rows in specs:
         lines = [{"idx": -1, "run": {"judge": judges[slug],
                                      "dataset": {"sha256": sha, "rows": 6}}}]
+        cost = 0.001 if slug in (JEV, GEM, GEM_SC) else 0.0
         for i, (dec, conf) in enumerate(spec_rows or base):
             status = "parsed" if conf is not None else ("no_confidence" if dec else "no_answer")
             raw: dict = {"option_mass": 0.9}
-            if slug == SC:
+            if slug in (SC, GEM_SC):
                 k = round((conf or 0) * 5)
                 raw = {"samples": [{"usage": {"input_tokens": 1, "output_tokens": 1}}] * 5,
                        "votes": {dec: k} if k else {}}
             lines.append({"idx": i, "judgments": [{
                 "question": "intent", "decision": dec, "confidence": conf, "latency_s": 1.0,
-                "cost_usd": 0.0, "raw": raw, "parse_status": status}]})
+                "cost_usd": cost, "raw": raw, "parse_status": status}]})
         (runs / f"{slug}.ckpt.jsonl").write_text(
             "".join(json.dumps(x) + "\n" for x in lines), encoding="utf-8")
     return runs
