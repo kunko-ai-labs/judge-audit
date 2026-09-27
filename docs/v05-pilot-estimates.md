@@ -182,3 +182,21 @@ CONF_WEIGHTS = [0.032, 0.14, 0.597, 0.231]
 | `AUROC_B` | AUROC_A + 0.05 (the design gap) | — |
 
 Two limits of the power model stay and are printed with its tables: part B scores both methods on one shared set of decisions (here each read-out decides for itself; the decision agreement above says by how much), and part C draws each judge's confidence independently.
+
+## Sensitivity, not fed back — deviation from the protocol's rounding rule, found after the constants were set
+
+§5 compares confidences rounded to 1e-6, and that rounding merges distinct declared values into ties the judge never declared (Qwen3-8B token log-probability: 205 rows with 205 distinct declared values in [0.7772996226082793, 0.9999999999999976] merged into 21 levels, the largest 1 with 146 rows), which moves every rank statistic that involves them. The tables below compare the declared values exactly; a method with no exact tie on the rows is not cut. The registered estimates and the proposed constants above follow the protocol and are unchanged.
+
+**Rank agreement and latent ρ, confidences compared exactly:**
+
+| pair | both right | levels | Spearman [95 %] | ρ at 0 | map max | latent ρ [95 %] | both wrong (Spearman) |
+|---|---:|---|---|---:|---:|---|---:|
+| Qwen3-8B verbalized – Qwen3-8B self-consistency (k = 5) | 189 | 4 / 4 | 0.2050 [0.0273, 0.3570] | 0.0050 | 0.5303 | 0.4108 [0.0475, 0.7382] | 116 (0.2097) |
+| Qwen3-8B verbalized – Qwen3-8B token log-probability | 175 | 4 / no ties on these rows | 0.3137 [0.1695, 0.4478] | 0.0048 | 0.8892 | 0.3617 [0.1934, 0.5161] | 96 (0.4033) |
+| Qwen3-8B self-consistency (k = 5) – Qwen3-8B token log-probability | 174 | 4 / no ties on these rows | 0.1140 [-0.0278, 0.2502] | 0.0038 | 0.4711 | 0.2076 [0.0000, 0.4722] | 96 (0.2077) |
+
+**Errors among the most confident rows of the log-probability run, exact tie levels:**
+
+| run | n | top level: errors / rows | top 10 %: errors / rows | top 20 %: errors / rows | top 30 %: errors / rows |
+|---|---:|---|---|---|---|
+| Qwen3-8B token log-probability | 308 | 0.9999999999999976: 0/1 = 0.0 % [0.000, 0.975] | 2/31 = 6.5 % [0.008, 0.214] | 6/62 = 9.7 % [0.036, 0.199] | 11/93 = 11.8 % [0.060, 0.202] |

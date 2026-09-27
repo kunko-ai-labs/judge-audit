@@ -144,19 +144,36 @@ def status(rec: dict | None) -> str:
     return "scored" if scored(rec) else "no_confidence"
 
 
-def tie_key(c: float) -> float:
-    return round(float(c), 6)
+def tie_key(c: float, exact: bool = False) -> float:
+    """The value confidences are compared at: §5's rounding to 1e-6, or, for the
+    sensitivity analysis only (`exact`), the declared value itself."""
+    return float(c) if exact else round(float(c), 6)
 
 
 # --- tie shares and the verbalized distribution ----------------------------------------------
 
 
-def tie_levels(confidences: list[float]) -> list[tuple[float, int]]:
-    """(value, rows) per distinct confidence rounded to 1e-6, lowest to highest."""
+def tie_levels(confidences: list[float], exact: bool = False) -> list[tuple[float, int]]:
+    """(value, rows) per distinct confidence rounded to 1e-6 (or exact), lowest to highest."""
     counts: dict[float, int] = {}
     for c in confidences:
-        counts[tie_key(c)] = counts.get(tie_key(c), 0) + 1
+        counts[tie_key(c, exact)] = counts.get(tie_key(c, exact), 0) + 1
     return sorted(counts.items())
+
+
+def merged_levels(confidences: list[float]) -> dict:
+    """The rows whose distinct declared values the 1e-6 rounding merges into a shared level:
+    ties the judge never declared."""
+    by_key: dict[float, set[float]] = {}
+    for c in confidences:
+        by_key.setdefault(tie_key(c), set()).add(float(c))
+    merged = {k for k, vals in by_key.items() if len(vals) > 1}
+    raw = [float(c) for c in confidences if tie_key(c) in merged]
+    sizes = {k: sum(1 for c in confidences if tie_key(c) == k) for k in merged}
+    big = max(sorted(sizes), key=lambda k: sizes[k]) if sizes else None
+    return {"rows": len(raw), "distinct_values": len(set(raw)), "levels": len(merged),
+            "range": [min(raw), max(raw)] if raw else None,
+            "largest": {"value": big, "rows": sizes[big]} if sizes else None}
 
 
 def milli(counts: list[int]) -> list[int]:
@@ -228,10 +245,11 @@ def _pearson(x: list[float], y: list[float]) -> float | None:
         sxx * syy)
 
 
-def spearman(x: list[float], y: list[float]) -> float | None:
+def spearman(x: list[float], y: list[float], exact: bool = False) -> float | None:
     """Spearman correlation with average ranks for ties (values compared at 1e-6). None
     with fewer than two rows or when either side holds one value only."""
-    return _pearson(_avg_ranks([tie_key(v) for v in x]), _avg_ranks([tie_key(v) for v in y]))
+    return _pearson(_avg_ranks([tie_key(v, exact) for v in x]),
+                    _avg_ranks([tie_key(v, exact) for v in y]))
 
 
 def _level_ranks(values: list[float], shares: list[float] | None) -> list[float]:
@@ -289,41 +307,44 @@ def latent_rho(observed: float | None, f: RankMap) -> float | None:
     return (lo + hi) / 2
 
 
-def shares_of(values: list[float]) -> list[float] | None:
+def shares_of(values: list[float], exact: bool = False) -> list[float] | None:
     """Exact tie shares of `values`, or None when no two are equal. §5 does not cut "a
     continuous method"; the test is made on the rows themselves, so a coordinate is cut
     exactly when the observed ranks it is matched to hold ties (the log-probability read-out
     is not cut unless its rows tie, a tied read-out without a tie on these rows is not either:
     its observed ranks are then those of a continuous score)."""
-    lv = tie_levels(values)
+    lv = tie_levels(values, exact)
     if all(c == 1 for _, c in lv):
         return None
     return [c / len(values) for _, c in lv]
 
 
-def rank_agreement(runs: dict, keys: list, a: str, b: str, base: list, n_boot: int) -> dict:
+def rank_agreement(runs: dict, keys: list, a: str, b: str, base: list, n_boot: int,
+                   exact: bool = False) -> dict:
     ra, rb = runs[a]["records"], runs[b]["records"]
     both = [k for k in keys if right(ra[k]) and right(rb[k])]
     wrong = [k for k in keys if not right(ra[k]) and not right(rb[k])]
     xs = [ra[k]["confidence"] for k in both]
     ys = [rb[k]["confidence"] for k in both]
-    rho_s = spearman(xs, ys)
+    rho_s = spearman(xs, ys, exact)
     out = {"pair": [a, b], "both_right": len(both), "levels": [None, None], "spearman": None,
            "spearman_95": None, "undefined_resamples": None, "rho_at_zero": None, "rho": None,
            "rho_95": None, "spearman_max": None, "saturated": False, "saturated_low": False,
            "saturated_high": False, "both_wrong": len(wrong),
            "spearman_both_wrong": _r4(spearman(
                [ra[k]["confidence"] for k in wrong if scored(ra[k]) and scored(rb[k])],
-               [rb[k]["confidence"] for k in wrong if scored(ra[k]) and scored(rb[k])]))}
+               [rb[k]["confidence"] for k in wrong if scored(ra[k]) and scored(rb[k])],
+               exact))}
     if not both:
         return out
-    sx, sy = shares_of(xs), shares_of(ys)
+    sx, sy = shares_of(xs, exact), shares_of(ys, exact)
     out["levels"] = [len(sx) if sx else None, len(sy) if sy else None]
     if rho_s is None:
         return out
     f = RankMap(base, sx, sy)
     boot = bootstrap_defined(list(zip(xs, ys, strict=True)),
-                             lambda rs: spearman([x for x, _ in rs], [y for _, y in rs]),
+                             lambda rs: spearman([x for x, _ in rs], [y for _, y in rs],
+                                                 exact),
                              n_boot=n_boot, seed=SEED)
     # The ties cap the rank correlation the map can produce: an observed value at or above
     # its value at the top of the range inverts to that top, and says so.
@@ -513,7 +534,7 @@ def _errors_in(rows: int, errors: int) -> dict:
             "clopper_pearson_95": list(clopper_pearson(errors, rows))}
 
 
-def top_slices(confidences: list[float], correct: list[bool]) -> dict:
+def top_slices(confidences: list[float], correct: list[bool], exact: bool = False) -> dict:
     """Errors among the most confident rows (also reported, not fed back): the top
     confidence level, and for each share in TOP_SHARES the smallest set of whole tie levels,
     from the top, that holds at least that share of the rows. Ties are never broken, so a
@@ -521,7 +542,7 @@ def top_slices(confidences: list[float], correct: list[bool]) -> dict:
     Clopper-Pearson intervals on each error rate."""
     levels_desc: dict[float, list[int]] = {}
     for c, ok in zip(confidences, correct, strict=True):
-        slot = levels_desc.setdefault(tie_key(c), [0, 0])
+        slot = levels_desc.setdefault(tie_key(c, exact), [0, 0])
         slot[0] += 1
         slot[1] += 0 if ok else 1
     order = sorted(levels_desc.items(), key=lambda kv: -kv[0])
@@ -850,6 +871,19 @@ def compute(runs_dir: Path = RUNS_DIR, labels: Path = LABELS, n_sim: int | None 
          if scored(r) and isinstance((r.get("raw") or {}).get("option_mass"), (int, float))])
     d["llm_provenance"] = {s: llm_provenance(runs[s]) for s in (VERB, SC)}
 
+    # Sensitivity, not fed back: a deviation from §5's rounding rule, found after the
+    # constants were set. Rounding to 1e-6 merges distinct declared values (the
+    # log-probability run's near-1 ones) into ties the judge never declared; here they are
+    # compared exactly. The registered estimates and constants above are unchanged.
+    d["sensitivity_exact"] = {
+        "merged_levels": {s: merged_levels([r["confidence"] for r in runs[s]["records"].values()
+                                            if scored(r)]) for s in ORDER},
+        "rank_agreement": [rank_agreement(runs, keys, a, b, base, n_boot, exact=True)
+                           for a, b in PAIRS],
+        "top_slices": {LP: top_slices(
+            [r["confidence"] for r in runs[LP]["records"].values() if scored(r)],
+            [r["correct"] for r in runs[LP]["records"].values() if scored(r)], exact=True)}}
+
     # Hosted runs last, after the constants are fixed: context only, and optional. An
     # incomplete one (a run that stopped) is not analysed: its missing rows are not answers.
     notes = read_notes(runs_dir)
@@ -1143,14 +1177,7 @@ def markdown(d: dict) -> str:
               "| pair | both right | levels | Spearman [95 %] | ρ at 0 | map max | "
               "latent ρ [95 %] | both wrong (Spearman) |",
               "|---|---:|---|---|---:|---:|---|---:|"]
-    for r in d["rank_agreement"]:
-        lv = " / ".join("no ties on these rows" if x is None else str(x) for x in r["levels"])
-        und = (f", {r['undefined_resamples']} undefined" if r["undefined_resamples"] else "")
-        lines.append(f"| {NAMES[r['pair'][0]]} – {NAMES[r['pair'][1]]} | {r['both_right']:,} | "
-                     f"{lv if r['both_right'] else '—'} | {_num(r['spearman'])} "
-                     f"{_iv(r['spearman_95'])}{und} | {_num(r['rho_at_zero'])} | "
-                     f"{_num(r['spearman_max'])} | {_rho_text(r)} | "
-                     f"{r['both_wrong']:,} ({_num(r['spearman_both_wrong'])}) |")
+    lines += [_rank_row(r) for r in d["rank_agreement"]]
     chk = d["rho_seed_check"]
     names = list(chk["main"])
     lines += ["", (f"**Seed check (a check, not fed back).** The H1 pairs' latent ρ on five other "
@@ -1313,7 +1340,56 @@ def markdown(d: dict) -> str:
                    "scores both methods on one shared set of decisions (here each read-out "
                    "decides for itself; the decision agreement above says by how much), and "
                    "part C draws each judge's confidence independently."), ""]
+    lines += sensitivity_lines(d)
     return "\n".join(lines)
+
+
+RANK_HEADER = ["| pair | both right | levels | Spearman [95 %] | ρ at 0 | map max | "
+               "latent ρ [95 %] | both wrong (Spearman) |",
+               "|---|---:|---|---|---:|---:|---|---:|"]
+
+
+def _rank_row(r: dict) -> str:
+    lv = " / ".join("no ties on these rows" if x is None else str(x) for x in r["levels"])
+    und = (f", {r['undefined_resamples']} undefined" if r["undefined_resamples"] else "")
+    return (f"| {NAMES[r['pair'][0]]} – {NAMES[r['pair'][1]]} | {r['both_right']:,} | "
+            f"{lv if r['both_right'] else '—'} | {_num(r['spearman'])} "
+            f"{_iv(r['spearman_95'])}{und} | {_num(r['rho_at_zero'])} | "
+            f"{_num(r['spearman_max'])} | {_rho_text(r)} | "
+            f"{r['both_wrong']:,} ({_num(r['spearman_both_wrong'])}) |")
+
+
+def sensitivity_lines(d: dict) -> list[str]:
+    s = d.get("sensitivity_exact")
+    if not s:
+        return []
+    m = s["merged_levels"]
+    merged = [f"{NAMES[k]}: {v['rows']:,} rows with {v['distinct_values']:,} distinct declared "
+              f"values in [{v['range'][0]!r}, {v['range'][1]!r}] merged into {v['levels']:,} "
+              f"levels, the largest {v['largest']['value']:g} with {v['largest']['rows']:,} "
+              "rows" for k, v in m.items() if v["rows"]]
+    out = ["## Sensitivity, not fed back — deviation from the protocol's rounding rule, found "
+           "after the constants were set", "",
+           ("§5 compares confidences rounded to 1e-6, and that rounding merges distinct declared "
+            "values into ties the judge never declared ("
+            + ("; ".join(merged) if merged else "none here")
+            + "), which moves every rank statistic that involves them. The tables below compare "
+              "the declared values exactly; a method with no exact tie on the rows is not cut. "
+              "The registered estimates and the proposed constants above follow the protocol "
+              "and are unchanged."), "",
+           "**Rank agreement and latent ρ, confidences compared exactly:**", "", *RANK_HEADER]
+    out += [_rank_row(r) for r in s["rank_agreement"]]
+    t = s["top_slices"][LP]
+    out += ["", ("**Errors among the most confident rows of the log-probability run, exact tie "
+                 "levels:**"), "",
+            "| run | n | top level: errors / rows | "
+            + " | ".join(f"top {round(100 * x)} %: errors / rows" for x in TOP_SHARES) + " |",
+            "|---|---:|---|" + "---|" * len(TOP_SHARES)]
+    if t["top_level"] is not None:
+        out.append(f"| {NAMES[LP]} | {t['n']:,} | {t['top_level']['value']!r}: "
+                   f"{_slice_text(t['top_level'])} | "
+                   + " | ".join(_slice_text(x) for x in t["slices"]) + " |")
+    return out + [""]
 
 
 def main(argv: list[str] | None = None) -> int:
