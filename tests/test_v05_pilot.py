@@ -759,3 +759,45 @@ def test_llm_provenance_gaps_are_stated(d):
     p = d["llm_provenance"]
     assert p[VERB]["weights_revision"] is None and p[VERB]["enable_thinking"] is None
     assert "record neither the weights revision nor `enable_thinking`" in pilot.markdown(d)
+
+
+# --- sensitivity: confidences compared exactly (not the protocol's 1e-6 rounding) ------------
+
+NEAR_ONE = [0.9999996, 0.9999999, 0.99999999, 0.9999997, 0.99999995, 0.9]
+
+
+def test_rounding_to_a_millionth_merges_near_one_values_exact_comparison_does_not():
+    assert pilot.tie_levels(NEAR_ONE) == [(0.9, 1), (1.0, 5)]
+    assert len(pilot.tie_levels(NEAR_ONE, exact=True)) == 6
+    x = [1, 2, 3]
+    y = [0.9999996, 0.9999999, 0.99999999]
+    assert pilot.spearman(x, y) is None                       # one level once rounded
+    assert pilot.spearman(x, y, exact=True) == pytest.approx(1.0)
+    assert pilot.shares_of(y) == [1.0] and pilot.shares_of(y, exact=True) is None
+    ok = [True] * 6
+    assert pilot.top_slices(NEAR_ONE, ok)["top_level"]["rows"] == 5
+    top = pilot.top_slices(NEAR_ONE, ok, exact=True)["top_level"]
+    assert (top["value"], top["rows"]) == (0.99999999, 1)
+
+
+def test_the_exact_sensitivity_is_reported_and_never_fed_back(tmp_path):
+    """Log-probability right on every row with five confidences within 5e-7 of 1: the
+    protocol's rounding makes them one level of 5 rows; compared exactly they are five."""
+    runs = _synthetic(tmp_path, verbalized=[(x, 0.5 + i / 10) for i, x in enumerate(LABELS)],
+                      logprob=[(x, c) for x, c in zip(LABELS, NEAR_ONE, strict=True)])
+    d = pilot.compute(runs, runs / "labels.jsonl", n_sim=2000, n_boot=50)
+    s = d["sensitivity_exact"]
+    main_vl = pair(d["rank_agreement"], VERB, LP)
+    exact_vl = pair(s["rank_agreement"], VERB, LP)
+    assert main_vl["levels"][1] == 2 and exact_vl["levels"][1] is None
+    assert main_vl["spearman"] != exact_vl["spearman"]
+    assert s["top_slices"][LP]["top_level"]["rows"] == 1
+    assert d["runs"][LP]["top_slices"]["top_level"]["rows"] == 5    # the registered table
+    merged = s["merged_levels"][LP]
+    assert (merged["rows"], merged["distinct_values"]) == (5, 5)
+    assert merged["range"] == [0.9999996, 0.99999999]
+    # the registered constants are the rounded ones: the sensitivity changes none of them
+    assert d["proposed_constants"] == pilot.proposed({**d, "sensitivity_exact": None})
+    text = pilot.markdown(d)
+    assert "sensitivity, not fed back" in text.lower()
+    assert "found after the constants were set" in text
