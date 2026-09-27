@@ -161,3 +161,23 @@ def test_html_report_carries_brier_and_equal_mass_ece(labels_path, tmp_path):
     page = (tmp_path / "r.html").read_text()
     assert f"ECE (equal-mass) <b>{res['ece_equal_mass']:.4f}</b>" in page
     assert f"Brier <b>{res['brier']:.4f}</b>" in page
+
+
+# What `judge-audit run` writes by default in the working directory. None of it may be
+# tracked: a run from the repository root would overwrite a committed file.
+CLI_DEFAULT_OUTPUTS = ["audit-judgments.jsonl", "audit-result.json", "audit-report.md",
+                       "audit-report.html"]
+
+
+def test_cli_default_outputs_are_neither_tracked_nor_committable():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    if not (root / ".git").exists():
+        pytest.skip("not a git checkout")
+    tracked = subprocess.run(["git", "ls-files", "--", *CLI_DEFAULT_OUTPUTS], cwd=root,
+                             capture_output=True, text=True, check=True).stdout.split()
+    assert tracked == []
+    ignored = subprocess.run(["git", "check-ignore", "--no-index", *CLI_DEFAULT_OUTPUTS],
+                             cwd=root, capture_output=True, text=True).stdout.split()
+    assert sorted(ignored) == sorted(CLI_DEFAULT_OUTPUTS)
