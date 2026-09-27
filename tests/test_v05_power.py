@@ -234,6 +234,9 @@ def test_prose_ranges_are_computed_from_the_tables(monkeypatch):
     monkeypatch.setattr(power, "REPS_A2", 20)
     monkeypatch.setattr(power, "REPS_ECE", 8)
     monkeypatch.setattr(power, "N_BIG", 3000)
+    # a fixed 2 x 2 grid (8 cells at each n), independent of the PILOT constants
+    monkeypatch.setattr(power, "ACCURACIES", [0.85, 0.93])
+    monkeypatch.setattr(power, "RHOS", [0.3, 0.7])
     d = power.compute()
     md = power.markdown(d)
     cells = [r for r in d["b_paired_auroc"]["rows"] if r["n"] == 3079]
@@ -280,6 +283,8 @@ def test_b_cuts_each_method_by_its_own_shares_and_c_uses_rhos_c(monkeypatch):
     monkeypatch.setattr(power, "N_BIG", 2000)
     monkeypatch.setattr(power, "ACCURACIES", [0.85])
     monkeypatch.setattr(power, "RHOS", [0.5])
+    monkeypatch.setattr(power, "AUROC_A", 0.70)
+    monkeypatch.setattr(power, "AUROC_B", 0.75)
     monkeypatch.setattr(power, "TIE_SHARES_A", [0.05, 0.05, 0.10, 0.15, 0.25, 0.40])
     monkeypatch.setattr(power, "TIE_SHARES_B", [1.0])
     tied = [r for r in power.section_b(random.Random(1)) if r["ties"] == "tied"]
