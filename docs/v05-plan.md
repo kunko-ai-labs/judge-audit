@@ -47,7 +47,7 @@ One primary run per judge and method; every confirmatory test uses it. Explorato
 
 **Confidences are compared exactly** as recorded in the checkpoints, never rounded: the pilot's 1e-6 rounding merged 205 distinct log-probability confidences into 21 levels, 146 of them into one tie at 1. **The statistic.** For methods A and B: AUROC(A) − AUROC(B), each the AUROC of that method's confidence for **its own** correctness (ties one half), on its usable rows. The read-outs make different decisions (in the pilot, Qwen3 verbalized and log-probability agree on 80 % of decisions and on correctness for 88 % of rows), so DeLong's shared-outcome variance does not apply.
 
-**The test.** A two-sided paired bootstrap clustered by text (`paired_difference_ci`: each resample draws texts once and scores both methods on them), 10,000 resamples, seed 2026, with a percentile p-value from the same resamples (twice the smaller share of differences at or below 0, and at or above 0). The p-value function is added with tests before the freeze (§12). **Holm** across every test in the table below at family-wise α = 0.05. A test is **resolved** when its Holm-adjusted p is below 0.05 and its difference has the predicted sign.
+**The test.** A two-sided paired bootstrap clustered by text (`paired_difference_ci`: each resample draws texts once and scores both methods on them), 10,000 resamples, seed 2026, with a percentile p-value from the same resamples: 2 × min(1 + #{Δ* ≤ 0}, 1 + #{Δ* ≥ 0}) / (B + 1), capped at 1, where B counts only the resamples in which both AUROCs are defined (the others are counted and reported, not used). The p-value function is added with tests before the freeze (§12). **Holm** across every test in the table below at family-wise α = 0.05. A test is **resolved** when its Holm-adjusted p is below 0.05 and its difference has the predicted sign.
 
 | id | comparison | dataset | predicted sign | counts as support for |
 |---|---|---|---|---|
@@ -68,7 +68,7 @@ One primary run per judge and method; every confirmatory test uses it. Explorato
 
 `coverage_at_risk_crossfit`: two halves split by text group, **seed 2026** (the spread over seeds 2027–2036 is reported as secondary); on each, the threshold is certified on one half with an exact one-sided 95 % bound and applied unchanged to the other, and the test halves are pooled.
 
-What the pilot suggests (train rows, planning only; the committed source is the top-slice table of [v05-pilot-estimates.md](v05-pilot-estimates.md)): no read-out's top confidence level erred below 5 %. Jev's top level (142 rows at 1.0) erred on 8 (5.6 %, two-sided 95 % interval 2.5–10.8 %); Qwen3 verbalized's top level (71 rows) on 12 (16.9 %); Qwen3 self-consistency's (253 unanimous rows) on 80 (31.6 %). Certifying 1 % or 2 % is therefore unlikely for any judge.
+What the pilot suggests (train rows, planning only; the committed source is the top-slice table of [v05-pilot-estimates.md](v05-pilot-estimates.md)): at the top of each ranking (the smallest set of whole tie levels holding at least 10 % of the rows) no read-out erred below 5 %. Jev: 8 of 142 (5.6 %, two-sided 95 % interval 2.5–10.8 %); Qwen3 log-probability, compared exactly: 2 of 31 (6.5 %, 0.8–21.4 %); Qwen3 verbalized: 12 of 71 (16.9 %); Qwen3 self-consistency: 80 of 253 (31.6 %). Certifying 1 % or 2 % is therefore unlikely for any judge.
 
 Rows one set must hold to certify, with 0 / 1 / 2 / 5 errors (exact, one-sided 95 %; `rows_to_certify` in `scripts/v05_power.py`): 1 %: 299 / 473 / 628 / 1,049 · 2 %: 149 / 236 / 313 / 523 · 5 %: 59 / 93 / 124 / 208 · 10 %: 29 / 46 / 61 / 103.
 
@@ -77,11 +77,11 @@ Rows one set must hold to certify, with 0 / 1 / 2 / 5 errors (exact, one-sided 9
 
 ## 8. Smallest detectable differences (declared before the runs)
 
-From [v05-power.md](v05-power.md) on the pilot's constants, 80 % power, α = 0.05 before Holm (Holm's stricter level makes each larger), one method pair per row. These come from DeLong's variance on one shared set of decisions; the confirmatory test (§6) scores each method on its own decisions, so they are approximations.
+From [v05-power.md](v05-power.md) on the pilot's constants, 80 % power, α = 0.05 before Holm, one method pair per row. **Holm makes each larger:** at its first step a test is judged at α/m, which multiplies every MDE by (z₁₋α/2m + z₀.₈) / (z₀.₉₇₅ + z₀.₈) = **1.28** with the 8 tests of §6 (1.31 with 11, if Claude is in); the worst H1-lp cell then goes from 0.040 to about 0.050 on BANKING77 and from 0.050 to about 0.064 on CLINC150, and H2's CLINC150 MDE to about 0.064. These come from DeLong's variance on one shared set of decisions; the confirmatory test (§6) scores each method on its own decisions, so they are approximations.
 
 | tests | pair and model cell | BANKING77 (n = 3,079) | CLINC150 (n = 1,900) |
 |---|---|---:|---:|
-| T1, T2 (H1-lp) | verbalized vs log-probability: no ties (the model has no tied-vs-continuous cell), accuracy 62–64 %. The registered latent ρ is 0.47 (→ 0.45); compared exactly, without the protocol's 1e-6 rounding, it is 0.36 [0.19, 0.52] (the estimates' sensitivity table, a deviation found after the constants were set). Declared: the ρ 0.40 cell, and the ρ 0 cell as the bound | 0.031 (ρ 0.40) to 0.039–0.040 (ρ 0) | 0.039–0.040 (ρ 0.40) to 0.050 (ρ 0) |
+| T1, T2 (H1-lp) | verbalized vs log-probability: no ties (the model has no tied-vs-continuous cell), accuracy 62–64 %. The registered latent ρ is 0.47 (→ 0.45); compared exactly, without the protocol's 1e-6 rounding, it is 0.36 [0.19, 0.52] (the estimates' sensitivity table, a deviation found after the constants were set). Declared: the ρ 0.40 cell, slightly optimistic against the exact 0.36 (interpolating the ρ 0.40 and 0.45 cells gives about 0.032 on BANKING77), and the ρ 0 cell as the bound | 0.031 (ρ 0.40) to 0.039–0.040 (ρ 0) | 0.039–0.040 (ρ 0.40) to 0.050 (ρ 0) |
 | T3–T6 (H1-sc) | verbalized vs self-consistency: 4 and 5 levels, accuracy 62–64 %, latent ρ 0.40 | 0.029 | 0.036–0.037 |
 | T7, T8 (H2) | different judges, ρ unknown: no ties, ρ 0 (the conservative cell), accuracy 62–64 % | — | 0.050 |
 | any, conservative | accuracy 69 % (Wilson upper bound), ρ 0 | 0.035 (tied) / 0.041 (no ties) | 0.045 / 0.052 |
@@ -125,7 +125,7 @@ Dated amendments, committed before the call they govern. None yet.
 
 | id | question | proposed default |
 |---|---|---|
-| D1 | self-consistency k, and what H1-sc predicts | Measure first: a k = 10 Qwen3 run on the 308 pilot rows (free, about 1.6 h), added to the pilot by amendment, to see whether the ties loosen (a beta-binomial fit to the k = 5 vote counts projects about 74 % unanimous at k = 10, against 82 %); then fix k and rerun power § B. If not measured: keep k = 5 and register T3–T6's prediction as "not resolved" |
+| D1 | self-consistency k, and what H1-sc predicts | Measure first: a k = 10 Qwen3 run on the 308 pilot rows (free, about 1.6 h), added to the pilot by amendment, to see whether the ties loosen (82 % of rows were unanimous at k = 5); then fix k and rerun power § B. If not measured: keep k = 5 and register T3–T6's prediction as "not resolved" |
 | D2 | certification targets | 1 %, 2 %, 5 % and 10 % in one table, each with its plain reading, none as the headline |
 | D3 | where the fixed sequence starts | at the 2-error cut, a new pre-registered parameter; A2 rerun before the freeze |
 | D4 | label noise before the runs | relabel the 500-row samples (#86) as a sensitivity analysis; the published labels stay primary |
