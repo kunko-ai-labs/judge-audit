@@ -45,7 +45,7 @@ One primary run per judge and method; every confirmatory test uses it. Explorato
 
 ## 6. Confirmatory tests
 
-**The statistic.** For methods A and B: AUROC(A) − AUROC(B), each the AUROC of that method's confidence for **its own** correctness (ties one half), on its usable rows. The read-outs make different decisions (in the pilot, Qwen3 verbalized and log-probability agree on 80 % of decisions and on correctness for 88 % of rows), so DeLong's shared-outcome variance does not apply.
+**Confidences are compared exactly** as recorded in the checkpoints, never rounded: the pilot's 1e-6 rounding merged 146 distinct log-probability confidences near 1 into one tie. **The statistic.** For methods A and B: AUROC(A) − AUROC(B), each the AUROC of that method's confidence for **its own** correctness (ties one half), on its usable rows. The read-outs make different decisions (in the pilot, Qwen3 verbalized and log-probability agree on 80 % of decisions and on correctness for 88 % of rows), so DeLong's shared-outcome variance does not apply.
 
 **The test.** A two-sided paired bootstrap clustered by text (`paired_difference_ci`: each resample draws texts once and scores both methods on them), 10,000 resamples, seed 2026, with a percentile p-value from the same resamples (twice the smaller share of differences at or below 0, and at or above 0). The p-value function is added with tests before the freeze (§12). **Holm** across every test in the table below at family-wise α = 0.05. A test is **resolved** when its Holm-adjusted p is below 0.05 and its difference has the predicted sign.
 
@@ -68,7 +68,7 @@ One primary run per judge and method; every confirmatory test uses it. Explorato
 
 `coverage_at_risk_crossfit`: two halves split by text group, **seed 2026** (the spread over seeds 2027–2036 is reported as secondary); on each, the threshold is certified on one half with an exact one-sided 95 % bound and applied unchanged to the other, and the test halves are pooled.
 
-What the pilot suggests (train rows, planning only; the committed source is the top-slice table of [v05-pilot-estimates.md](v05-pilot-estimates.md)): no read-out's top confidence level erred below 5 %. Jev's top level (142 rows at 1.0) erred on 8 (5.6 %, two-sided 95 % interval 2.5–10.8 %); Qwen3 verbalized's top level (71 rows) on 12 (16.9 %). Certifying 1 % or 2 % is therefore unlikely for any judge.
+What the pilot suggests (train rows, planning only; the committed source is the top-slice table of [v05-pilot-estimates.md](v05-pilot-estimates.md)): no read-out's top confidence level erred below 5 %. Jev's top level (142 rows at 1.0) erred on 8 (5.6 %, two-sided 95 % interval 2.5–10.8 %); Qwen3 verbalized's top level (71 rows) on 12 (16.9 %); Qwen3 self-consistency's (253 unanimous rows) on 80 (31.6 %). Certifying 1 % or 2 % is therefore unlikely for any judge.
 
 Rows one set must hold to certify, with 0 / 1 / 2 / 5 errors (exact, one-sided 95 %; `rows_to_certify` in `scripts/v05_power.py`): 1 %: 299 / 473 / 628 / 1,049 · 2 %: 149 / 236 / 313 / 523 · 5 %: 59 / 93 / 124 / 208 · 10 %: 29 / 46 / 61 / 103.
 
@@ -81,7 +81,7 @@ From [v05-power.md](v05-power.md) on the pilot's constants, 80 % power, α = 0.0
 
 | tests | pair and model cell | BANKING77 (n = 3,079) | CLINC150 (n = 1,900) |
 |---|---|---:|---:|
-| T1, T2 (H1-lp) | verbalized vs log-probability: no ties (the model has no tied-vs-continuous cell), accuracy 62–64 %, latent ρ 0.45 | 0.030 | 0.038 |
+| T1, T2 (H1-lp) | verbalized vs log-probability: no ties (the model has no tied-vs-continuous cell), accuracy 62–64 %, latent ρ 0.40–0.45 (0.45 is the registered estimate; comparing confidences without the protocol's 1e-6 rounding lowers the observed rank correlation, see the estimates' sensitivity table, so 0.40 is declared too) | 0.030–0.031 | 0.038–0.040 |
 | T3–T6 (H1-sc) | verbalized vs self-consistency: 4 and 5 levels, accuracy 62–64 %, latent ρ 0.40 | 0.029 | 0.036–0.037 |
 | T7, T8 (H2) | different judges, ρ unknown: no ties, ρ 0 (the conservative cell), accuracy 62–64 % | — | 0.050 |
 | any, conservative | accuracy 69 % (Wilson upper bound), ρ 0 | 0.035 (tied) / 0.041 (no ties) | 0.045 / 0.052 |
