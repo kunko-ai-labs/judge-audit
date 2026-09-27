@@ -15,6 +15,33 @@ A row with no answer, or whose decision carries no confidence, counts as wrong i
 | Qwen3-8B token log-probability | `logprob:qwen3-8b-4bit` | 308 | 308 | 0 | 0 | 196 = 63.6 % [0.581, 0.688] | +0.3290 (308) |
 | Laya | `laya:laya` | 308 | 308 | 0 | 0 | 132 = 42.9 % [0.374, 0.484] | +0.3822 (308) |
 
+## Run log
+
+From the committed files only: the checkpoints, the self-check's output and, for what a checkpoint cannot record, the maintainer's notes (`docs/runs/v05-pilot/run-notes.json`).
+
+**Log-probability self-check** (docs/v05-pilot.md §4.1): `docs/runs/v05-pilot/logprob-selfcheck.txt`, exit status 0:
+
+```
+# scripts/logprob_selfcheck.py examples/banking77/labels-pilot.jsonl --rows 5
+# LOGPROB_MODEL=mlx-community/Qwen3-8B-4bit LOGPROB_REVISION=545dc4251c05440727734bcd94334791f6ab0192 HF_HUB_OFFLINE=1
+model mlx-community/Qwen3-8B-4bit · 5 rows · largest probability difference 3.89e-07 · decisions changed 0 · cached path 6.1 rows/min · labels tokenised alone 0
+real	38m40,337s
+exit 0
+# an earlier --rows 20 attempt was stopped after about 70 minutes (12 GB resident, swapping) before printing anything; see docs/v05-pilot.md §4.1
+```
+
+**Stop rules** (§4.3), counted from each checkpoint in the order it was judged: an `llm` run stops when more than 5 % of its first 40 rows have no parsed answer; a self-consistency run, when more than 5 % of its first 200 samples failed.
+
+| run | unit | judged on | checked | failed | limit | stopped |
+|---|---|---:|---:|---:|---:|---|
+| Qwen3-8B verbalized | rows | 40 | 40 | 0 | 2 | no |
+| Qwen3-8B self-consistency (k = 5) | samples | 200 | 200 | 1 | 10 | no |
+| gemini-3.6-flash verbalized | rows | 40 | 21 | 0 | 2 | no |
+
+**Hosted runs**: Jev: complete (308/308); gemini-3.6-flash verbalized: stopped at 21/308 (provider quota, the maintainer's note), not analysed; gemini-3.6-flash self-consistency (k = 5): not run (paused on cost, the maintainer's note). Billing console total: not yet reported by the maintainer.
+
+**Provenance of the served chat model.** The `llm` checkpoints' headers record neither the weights revision nor `enable_thinking`: the pin rests on the protocol's offline `refs/main` check (docs/v05-pilot.md §3), and the server's `system_fingerprint` `0.31.3-0.32.2-macOS-26.6.2-arm64-arm-64bit-applegpu_g16g` records software and platform versions, not the weights.
+
 ## Decision agreement between the Qwen3 read-outs
 
 Share of the decisions on which two read-outs give the same decision (case ignored; a missing answer agrees with nothing) and the same correctness. Not fed back: it says how far the power model's one shared set of decisions (part B) is from this design, where each read-out decides for itself.
@@ -55,6 +82,19 @@ Spearman correlation (average ranks) of two read-outs' confidences on the rows *
 | Qwen3-8B verbalized – Qwen3-8B token log-probability | 175 | 4 / 39 | 0.3351 [0.1963, 0.4556] | 0.0037 | 0.6467 | 0.4729 [0.2785, 0.6438] | 96 (0.3975) |
 | Qwen3-8B self-consistency (k = 5) – Qwen3-8B token log-probability | 174 | 4 / 38 | 0.0563 [-0.1010, 0.2259] | 0.0041 | 0.5858 | 0.1177 [0.0000, 0.4307] | 96 (0.2039) |
 
+**Seed check (a check, not fed back).** The H1 pairs' latent ρ on five other fixed samples of 100,000 normal pairs (seeds 2027–2031), against the report's seed 2026; the last line counts the seeds whose ρ rounds to another multiple of 0.05 than the report's. The rounding edge is the nearest value at which the report's ρ would round differently.
+
+| seed | Qwen3-8B verbalized – Qwen3-8B self-consistency (k = 5) | Qwen3-8B verbalized – Qwen3-8B token log-probability |
+|---:|---:|---:|
+| 2026 (report) | 0.4108 | 0.4729 |
+| 2027 | 0.4190 | 0.4799 |
+| 2028 | 0.4212 | 0.4782 |
+| 2029 | 0.4098 | 0.4737 |
+| 2030 | 0.4177 | 0.4762 |
+| 2031 | 0.4191 | 0.4725 |
+| rounding edge (distance) | 0.425 (0.0142) | 0.475 (0.0021) |
+| seeds rounding differently | 0 of 5 | 3 of 5 |
+
 ## AUROC
 
 AUROC of the confidence for a right answer (ties one half) on the rows with a confidence, with DeLong's 95 % interval (it needs two right and two wrong answers).
@@ -66,7 +106,7 @@ AUROC of the confidence for a right answer (ties one half) on the rows with a co
 | Qwen3-8B token log-probability | 308 | 196 | 112 | 0.7970 [0.7454, 0.8486] |
 | Laya | 308 | 132 | 176 | 0.7414 [0.6858, 0.7970] |
 
-Latent AUROC of the verbalized run: the μ with `population_auroc(μ, 0.6201, TIE_SHARES_A)` (the accuracy of the rows with a confidence, where the AUROC and the tie shares are measured) equal to its observed 0.6393 is 0.6412, so Φ(μ/√2) = 0.6749, 0.65 to the nearest 0.05. The latent value is the one the power model cuts into ties itself, so the ties are not counted twice.
+Latent AUROC of the verbalized run: the μ with `population_auroc(μ, 0.6201, TIE_SHARES_A)` (the accuracy of the rows with a confidence, where the AUROC and the tie shares are measured) equal to its observed 0.6393 is 0.6412, so Φ(μ/√2) = 0.6749, 0.65 to the nearest 0.05 (the rounding edge, 0.675, is 0.00013 away). The latent value is the one the power model cuts into ties itself, so the ties are not counted twice.
 
 ## Correctness correlation between Laya and each Qwen3 read-out
 
@@ -81,7 +121,7 @@ Tetrachoric correlation of right/wrong over every decision. **Not fed back**: pa
 ## Also reported (not fed back)
 
 - **Self-consistency samples**: 1,540 drawn, 12 failed (no answer or a null decision: they count in k and vote for nothing), in 10 rows.
-- **`option_mass`** of the log-probability run (the probability the model put on the listed options before normalising; n = 308): minimum 0.0000, quartiles 1.0000 / 1.0000 / 1.0000, maximum 1.0000.
+- **`option_mass`** of the log-probability run (the probability the model put on the listed options before normalising; n = 308): minimum 0.0000, quartiles 1.0000 / 1.0000 / 1.0000, maximum 1.0000. 8 rows put under 0.5 on the options (the lowest, row 104, 1.1e-09); their normalised confidences run from 0.847499 to 1, resting on that little mass.
 - **Laya's softmax temperatures** clamped by the library: `choice:11+` shipped 0.1006, applied 0.5000 (the question has 77 options; device mps).
 
 | run | rows timed | s per row | rows per minute | calls | tokens per call (in / out) |
@@ -93,15 +133,25 @@ Tetrachoric correlation of right/wrong over every decision. **Not fed back**: pa
 
 Latency is each judge's own per-decision field, measured on the maintainer's machine (the checkpoints do not record the hardware); for the local runs it excludes loading the model.
 
+**Errors among the most confident rows** (also reported, not fed back), on the rows with a confidence: the top confidence level, and the most confident 10 %, 20 %, 30 % taken as whole tie levels from the top (the smallest set of levels holding at least that share; ties are never split, so a slice can hold more rows than its share, and the rows it holds are printed). Errors / rows = error rate, two-sided 95 % Clopper-Pearson interval. Train queries: not a certification of any judge.
+
+| run | n | top level: errors / rows | top 10 %: errors / rows | top 20 %: errors / rows | top 30 %: errors / rows |
+|---|---:|---|---|---|---|
+| Qwen3-8B verbalized | 308 | 1: 12/71 = 16.9 % [0.090, 0.277] | 12/71 = 16.9 % [0.090, 0.277] | 12/71 = 16.9 % [0.090, 0.277] | 87/255 = 34.1 % [0.283, 0.403] |
+| Qwen3-8B self-consistency (k = 5) | 308 | 1: 80/253 = 31.6 % [0.259, 0.377] | 80/253 = 31.6 % [0.259, 0.377] | 80/253 = 31.6 % [0.259, 0.377] | 80/253 = 31.6 % [0.259, 0.377] |
+| Qwen3-8B token log-probability | 308 | 1: 20/146 = 13.7 % [0.086, 0.204] | 20/146 = 13.7 % [0.086, 0.204] | 20/146 = 13.7 % [0.086, 0.204] | 20/146 = 13.7 % [0.086, 0.204] |
+| Laya | 308 | 1: 17/65 = 26.2 % [0.160, 0.385] | 17/65 = 26.2 % [0.160, 0.385] | 17/65 = 26.2 % [0.160, 0.385] | 27/93 = 29.0 % [0.201, 0.394] |
+| Jev | 308 | 1: 8/142 = 5.6 % [0.025, 0.108] | 8/142 = 5.6 % [0.025, 0.108] | 8/142 = 5.6 % [0.025, 0.108] | 8/142 = 5.6 % [0.025, 0.108] |
+
 ## Hosted runs (context only, not fed back)
 
-Jev and gemini-3.6-flash on the same rows (docs/v05-pilot.md §3), under the same rules as above. They add hosted accuracies, tie shares and agreement with the Qwen3 verbalized run for context; they never enter the proposed constants, and a run that was not made reads "not run". Cost is what the checkpoint records per decision.
+Jev and gemini-3.6-flash on the same rows (docs/v05-pilot.md §3), under the same rules as above. They add hosted accuracies, tie shares and agreement with the Qwen3 verbalized run for context; they never enter the proposed constants. A run that was not made reads "not run"; one that stopped before its last row is not analysed (its missing rows are not wrong answers). Cost is what the checkpoint records per decision.
 
 | run | judge | n | in checkpoint | no answer (incl. missing) | no confidence | accuracy [Wilson 95 %] | overconfidence (n) | AUROC [DeLong 95 %] | same decision / correctness as Qwen3 verbalized | cost |
 |---|---|---:|---:|---:|---:|---|---:|---|---|---:|
 | Jev | `jev` | 308 | 308 | 0 | 0 | 231 = 75.0 % [0.699, 0.795] | +0.1435 (308) | 0.8618 [0.8104, 0.9131] | 223 / 252 of 308 | $0.0133 |
-| gemini-3.6-flash verbalized | — | not run |  |  |  |  |  |  |  |  |
-| gemini-3.6-flash self-consistency (k = 5) | — | not run |  |  |  |  |  |  |  |  |
+| gemini-3.6-flash verbalized | — | stopped at 21/308 (provider quota, the maintainer's note), not analysed |  |  |  |  |  |  |  |  |
+| gemini-3.6-flash self-consistency (k = 5) | — | not run (paused on cost, the maintainer's note) |  |  |  |  |  |  |  |  |
 
 - **Jev** tie shares (n = 308): 57 distinct values (all in the JSON); the most frequent, 1, holds 46.1 % (142).
 
