@@ -178,6 +178,15 @@ def test_cli_default_outputs_are_neither_tracked_nor_committable():
     tracked = subprocess.run(["git", "ls-files", "--", *CLI_DEFAULT_OUTPUTS], cwd=root,
                              capture_output=True, text=True, check=True).stdout.split()
     assert tracked == []
-    ignored = subprocess.run(["git", "check-ignore", "--no-index", *CLI_DEFAULT_OUTPUTS],
-                             cwd=root, capture_output=True, text=True).stdout.split()
-    assert sorted(ignored) == sorted(CLI_DEFAULT_OUTPUTS)
+    # -v names the rule: it must be the repository's own .gitignore, anchored at the root,
+    # not a developer's global excludes file or an unanchored pattern
+    lines = subprocess.run(["git", "check-ignore", "-v", "--no-index", *CLI_DEFAULT_OUTPUTS],
+                           cwd=root, capture_output=True, text=True).stdout.splitlines()
+    rules = {}
+    for line in lines:
+        source_pattern, path = line.split("\t")
+        source, _, pattern = source_pattern.split(":", 2)
+        rules[path] = (source, pattern)
+    assert sorted(rules) == sorted(CLI_DEFAULT_OUTPUTS)
+    for path, (source, pattern) in rules.items():
+        assert source == ".gitignore" and pattern == f"/{path}", (path, source, pattern)
