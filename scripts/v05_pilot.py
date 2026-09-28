@@ -791,8 +791,8 @@ def markdown(d: dict) -> str:
          "row missing from a checkpoint counts as no answer. Accuracy with a Wilson 95 % "
          "interval over every labelled decision; overconfidence = mean confidence − accuracy "
          "on the rows with a confidence."), "",
-        "| run | judge | n | in checkpoint | no answer (incl. missing) | no confidence | "
-        "accuracy [Wilson 95 %] | overconfidence (n) |",
+        ("| run | judge | n | in checkpoint | no answer (incl. missing) | no confidence | "
+         "accuracy [Wilson 95 %] | overconfidence (n) |"),
         "|---|---|---:|---:|---:|---:|---|---:|"]
     for s in ORDER:
         r = runs[s]
@@ -819,8 +819,8 @@ def markdown(d: dict) -> str:
                      f"{r['same_decision']:,} = {_pct(r['same_decision_share'])} | "
                      f"{r['same_correctness']:,} = {_pct(r['same_correctness_share'])} |")
     lines += ["", "## Tie shares", "",
-              "Share of the rows with a confidence at each distinct value (to 1e-6), lowest to "
-              "highest.", ""]
+              ("Share of the rows with a confidence at each distinct value (to 1e-6), lowest to "
+               "highest."), ""]
     for s in ORDER:
         t = runs[s]["tie_shares"]
         lines.append(f"- **{NAMES[s]}** (n = {t['n']:,}): {_levels_text(t['levels'])}.")
@@ -852,8 +852,8 @@ def markdown(d: dict) -> str:
                f"of {m['bootstrap_resamples']:,} bootstrap resamples (seed {d['seed']}) of those "
                "rows, each mapped the same way (resamples where the correlation is undefined "
                "are counted, not used). The rows both got wrong are reported, not used."), "",
-              "| pair | both right | levels | Spearman [95 %] | ρ at 0 | map max | "
-              "latent ρ [95 %] | both wrong (Spearman) |",
+              ("| pair | both right | levels | Spearman [95 %] | ρ at 0 | map max | "
+               "latent ρ [95 %] | both wrong (Spearman) |"),
               "|---|---:|---|---|---:|---:|---|---:|"]
     for r in d["rank_agreement"]:
         lv = " / ".join("no ties on these rows" if x is None else str(x) for x in r["levels"])
@@ -937,9 +937,9 @@ def markdown(d: dict) -> str:
                "Qwen3 verbalized run for context; they never enter the proposed constants, and "
                "a run that was not made reads \"not run\". Cost is what the checkpoint records "
                "per decision."), "",
-              "| run | judge | n | in checkpoint | no answer (incl. missing) | no confidence | "
-              "accuracy [Wilson 95 %] | overconfidence (n) | AUROC [DeLong 95 %] | same decision "
-              "/ correctness as Qwen3 verbalized | cost |",
+              ("| run | judge | n | in checkpoint | no answer (incl. missing) | no confidence | "
+               "accuracy [Wilson 95 %] | overconfidence (n) | AUROC [DeLong 95 %] | same decision "
+               "/ correctness as Qwen3 verbalized | cost |"),
               "|---|---|---:|---:|---:|---:|---|---:|---|---|---:|"]
     for sl in HOSTED:
         r = h[sl]
