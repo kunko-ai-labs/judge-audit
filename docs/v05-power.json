@@ -240,7 +240,15 @@
     0.7,
     0.75
    ],
-   "tie_shares": [
+   "tie_shares_a": [
+    0.05,
+    0.05,
+    0.1,
+    0.15,
+    0.25,
+    0.4
+   ],
+   "tie_shares_b": [
     0.05,
     0.05,
     0.1,
@@ -249,7 +257,8 @@
     0.4
    ],
    "rows_in_large_sample": 100000,
-   "model": "binormal latent score per method, errors N(0,1), right answers N(mu,1); the two methods' noise correlated rho; ties: cut into 6 levels; variance from DeLong placement values"
+   "model": "binormal latent score per method, errors N(0,1), right answers N(mu,1); the two methods' noise correlated rho; ties: cut into 6 levels; variance from DeLong placement values",
+   "limit": "Part B scores both methods on one shared set of decisions; in the study each read-out makes its own decisions, and the pilot's decision agreement says how far apart they are"
   },
   "rows": [
    {
@@ -696,7 +705,8 @@
    ],
    "bins": 10,
    "reps": 800,
-   "model": "each judge draws its confidence independently; P(right) = confidence - gap; outcomes linked by a Gaussian copula rho"
+   "model": "each judge draws its confidence independently; P(right) = confidence - gap; outcomes linked by a Gaussian copula rho",
+   "limit": "Part C draws each judge's confidence independently of the other's; only their outcomes are linked"
   },
   "rows": [
    {
