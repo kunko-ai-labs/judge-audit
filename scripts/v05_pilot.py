@@ -1409,7 +1409,7 @@ def markdown(d: dict) -> str:
                   f"{s5['TIE_SHARES_B']['value']} and `RHOS` {s5['RHOS']['value']}."
                   if s5 != c else "")), "", "```python",
               "# PILOT: from docs/v05-pilot-estimates.json (docs/v05-pilot.md §5, §5b)",
-              f"SC_SAMPLES = {c['SC_K']['value']}"]
+              (f"SC_SAMPLES = {c['SC_K']['value']}")]
     for name in ("ACCURACIES", "RHOS"):
         lines.append(f"{name} = {c[name]['value']}")
     lines.append(f"AUROC_A, AUROC_B = {c['AUROC_A']['value']}, {c['AUROC_B']['value']}")
@@ -1446,8 +1446,8 @@ def k10_lines(d: dict) -> list[str]:
              "samples; estimated under the §5 rules with confidences compared exactly (the "
              "sensitivity rule: a 10-sample vote takes at most 10 values). Train queries, "
              "planning inputs, not a result."), "",
-            "| run | accuracy [Wilson 95 %] | AUROC [DeLong 95 %] | overconfidence (n) | top "
-            "level: share of rows |", "|---|---|---|---:|---|"]
+            ("| run | accuracy [Wilson 95 %] | AUROC [DeLong 95 %] | overconfidence (n) | top "
+            "level: share of rows |"), "|---|---|---|---:|---|"]
     for name, r, top in ((NAMES[SC10], s, dec["top_share_k10"]),
                          (NAMES[SC], k5, dec["top_share_k5"]),
                          (NAMES[VERB], verb, None)):
@@ -1459,8 +1459,8 @@ def k10_lines(d: dict) -> list[str]:
                    + (f"{over['value']:+.4f} ({over['n']:,})" if over else "—")
                    + f" | {top_txt} |")
     st, sm = k["stop_rule"], k["samples"]
-    out += ["", f"- **Tie shares** (n = {s['tie_shares']['n']:,}): "
-            f"{_levels_text(s['tie_shares']['levels'])}.",
+    out += ["", (f"- **Tie shares** (n = {s['tie_shares']['n']:,}): "
+            f"{_levels_text(s['tie_shares']['levels'])}."),
             (f"- **Decision agreement with the verbalized run**: same decision on "
              f"{k['same_decision']:,}, same correctness on {k['same_correctness']:,} of "
              f"{s['accuracy']['n']:,}."),
