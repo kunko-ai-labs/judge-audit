@@ -11,8 +11,10 @@
   "llm-qwen3-8b-sc5": "docs/runs/v05-pilot/llm-qwen3-8b-sc5.ckpt.jsonl",
   "logprob-qwen3-8b": "docs/runs/v05-pilot/logprob-qwen3-8b.ckpt.jsonl",
   "laya": "docs/runs/v05-pilot/laya.ckpt.jsonl",
+  "llm-qwen3-8b-sc10": "docs/runs/v05-pilot/llm-qwen3-8b-sc10.ckpt.jsonl",
   "jev": "docs/runs/v05-pilot/jev.ckpt.jsonl",
-  "llm-gemini-3.6-flash": "docs/runs/v05-pilot/llm-gemini-3.6-flash.ckpt.jsonl"
+  "llm-gemini-3.6-flash": "docs/runs/v05-pilot/llm-gemini-3.6-flash.ckpt.jsonl",
+  "llm-gemini-3.6-flash-sc5": "docs/runs/v05-pilot/llm-gemini-3.6-flash-sc5.ckpt.jsonl"
  },
  "runs": {
   "llm-qwen3-8b": {
@@ -2392,7 +2394,189 @@
    0.000126
   ]
  },
- "proposed_constants": {
+ "k10": {
+  "status": "run",
+  "summary": {
+   "judge": "llm:qwen3-8b-4bit:sc10",
+   "model": "qwen3-8b-4bit",
+   "decisions": 308,
+   "in_checkpoint": 308,
+   "missing": 0,
+   "no_answer": 0,
+   "no_confidence": 0,
+   "no_confidence_decision_right": 0,
+   "accuracy": {
+    "right": 190,
+    "n": 308,
+    "value": 0.6169,
+    "wilson_95": [
+     0.5615,
+     0.6694
+    ]
+   },
+   "overconfidence": {
+    "n": 308,
+    "mean_confidence": 0.9422,
+    "accuracy": 0.6169,
+    "value": 0.3253
+   },
+   "tie_shares": {
+    "n": 308,
+    "levels": [
+     [
+      0.4,
+      4,
+      0.012987
+     ],
+     [
+      0.5,
+      7,
+      0.022727
+     ],
+     [
+      0.6,
+      8,
+      0.025974
+     ],
+     [
+      0.7,
+      10,
+      0.032468
+     ],
+     [
+      0.8,
+      12,
+      0.038961
+     ],
+     [
+      0.9,
+      33,
+      0.107143
+     ],
+     [
+      1.0,
+      234,
+      0.75974
+     ]
+    ]
+   },
+   "auroc": {
+    "n": 308,
+    "right": 190,
+    "wrong": 118,
+    "value": 0.6311,
+    "delong_95": [
+     0.5793,
+     0.6829
+    ]
+   },
+   "throughput": {
+    "rows_timed": 308,
+    "seconds_per_row": 20.3368,
+    "rows_per_minute": 2.95,
+    "calls": 3080,
+    "input_tokens_per_call": 718.31,
+    "output_tokens_per_call": 25.39
+   },
+   "top_slices": {
+    "n": 308,
+    "top_level": {
+     "value": 1.0,
+     "rows": 234,
+     "errors": 72,
+     "error_rate": 0.3077,
+     "clopper_pearson_95": [
+      0.2492,
+      0.3711
+     ]
+    },
+    "slices": [
+     {
+      "share": 0.1,
+      "rows": 234,
+      "errors": 72,
+      "error_rate": 0.3077,
+      "clopper_pearson_95": [
+       0.2492,
+       0.3711
+      ]
+     },
+     {
+      "share": 0.2,
+      "rows": 234,
+      "errors": 72,
+      "error_rate": 0.3077,
+      "clopper_pearson_95": [
+       0.2492,
+       0.3711
+      ]
+     },
+     {
+      "share": 0.3,
+      "rows": 234,
+      "errors": 72,
+      "error_rate": 0.3077,
+      "clopper_pearson_95": [
+       0.2492,
+       0.3711
+      ]
+     }
+    ]
+   }
+  },
+  "agreement_with": "llm-qwen3-8b",
+  "same_decision": 302,
+  "same_correctness": 305,
+  "rank_agreement": {
+   "pair": [
+    "llm-qwen3-8b",
+    "llm-qwen3-8b-sc10"
+   ],
+   "both_right": 189,
+   "levels": [
+    4,
+    6
+   ],
+   "spearman": 0.2522,
+   "spearman_95": [
+    0.1154,
+    0.3766
+   ],
+   "undefined_resamples": 0,
+   "rho_at_zero": 0.002,
+   "rho": 0.4357,
+   "rho_95": [
+    0.1958,
+    0.6566
+   ],
+   "spearman_max": 0.6097,
+   "saturated": false,
+   "saturated_low": false,
+   "saturated_high": false,
+   "both_wrong": 116,
+   "spearman_both_wrong": 0.3944
+  },
+  "stop_rule": {
+   "unit": "samples",
+   "judged_on": 400,
+   "checked": 400,
+   "failed": 1,
+   "limit": 20,
+   "stopped": false
+  },
+  "samples": {
+   "samples": 3080,
+   "failed": 16,
+   "rows_with_a_failed_sample": 16
+  },
+  "decision": {
+   "top_share_k10": 0.7597,
+   "top_share_k5": 0.8214,
+   "top_value_k10": 1.0,
+   "adopted_k": 10
+  }
+ },
+ "proposed_constants_s5": {
   "ACCURACIES": {
    "value": [
     0.62,
@@ -2464,6 +2648,104 @@
     0.45
    ],
    "rule": "the latent rho of verbalized–self-consistency and verbalized–log-probability to 0.05, plus the lower interval bound of the smaller rounded down to 0.05; each at most 0.95",
+   "note": ""
+  },
+  "SC_K": {
+   "value": 5,
+   "rule": "§5b: k = 10 if the k = 10 run's share of rows at its top confidence level is below the k = 5 run's, else k = 5",
+   "note": "the k = 10 run is not committed"
+  },
+  "AUROC_A": {
+   "value": 0.65,
+   "rule": "the latent AUROC reproducing the verbalized run's observed AUROC with TIE_SHARES_A, to 0.05, capped at 0.90",
+   "note": ""
+  },
+  "AUROC_B": {
+   "value": 0.7,
+   "rule": "AUROC_A + 0.05 (the design gap)"
+  }
+ },
+ "proposed_constants": {
+  "ACCURACIES": {
+   "value": [
+    0.62,
+    0.64,
+    0.69
+   ],
+   "rule": "the distinct accuracies of the three Qwen3 read-outs to 0.01, plus the Wilson upper bound of the highest rounded up to 0.01",
+   "scored_accuracy": {
+    "llm-qwen3-8b": 0.6201,
+    "llm-qwen3-8b-sc5": 0.6169,
+    "logprob-qwen3-8b": 0.6364
+   },
+   "note": ""
+  },
+  "TIE_SHARES_A": {
+   "value": [
+    0.032,
+    0.14,
+    0.597,
+    0.231
+   ],
+   "values": [
+    0.8,
+    0.9,
+    0.95,
+    1.0
+   ],
+   "rule": "the shares of each distinct confidence of the Qwen3-8B verbalized run, lowest to highest, to 0.001 with the remainder on the largest"
+  },
+  "TIE_SHARES_B": {
+   "value": [
+    0.013,
+    0.023,
+    0.026,
+    0.032,
+    0.039,
+    0.107,
+    0.76
+   ],
+   "values": [
+    0.4,
+    0.5,
+    0.6,
+    0.7,
+    0.8,
+    0.9,
+    1.0
+   ],
+   "rule": "the shares of each distinct confidence of the Qwen3-8B self-consistency (k = 10) run, lowest to highest, to 0.001 with the remainder on the largest (§5b: the adopted k = 10 run, confidences compared exactly)"
+  },
+  "CONF_VALUES": {
+   "value": [
+    0.8,
+    0.9,
+    0.95,
+    1.0
+   ],
+   "rule": "the verbalized confidences to 0.05, levels under 1 % pooled into the nearest kept one (ties down)"
+  },
+  "CONF_WEIGHTS": {
+   "value": [
+    0.032,
+    0.14,
+    0.597,
+    0.231
+   ],
+   "rule": "their shares to 0.001, the remainder on the largest"
+  },
+  "RHOS": {
+   "value": [
+    0.0,
+    0.4,
+    0.45
+   ],
+   "rule": "the latent rho of verbalized–self-consistency and verbalized–log-probability to 0.05, plus the lower interval bound of the smaller rounded down to 0.05; plus (§5b) the adopted k = 10 run's latent rho against verbalized, confidences compared exactly, to 0.05; each at most 0.95",
+   "note": ""
+  },
+  "SC_K": {
+   "value": 10,
+   "rule": "§5b: k = 10 if the k = 10 run's share of rows at its top confidence level is below the k = 5 run's, else k = 5",
    "note": ""
   },
   "AUROC_A": {
@@ -3123,14 +3405,268 @@
    }
   },
   "llm-gemini-3.6-flash": {
-   "status": "incomplete",
-   "rows": 21,
-   "of": 308,
-   "reason": "provider quota"
+   "status": "run",
+   "judge": "llm:gemini-3.6-flash",
+   "model": "gemini-3.6-flash",
+   "decisions": 308,
+   "in_checkpoint": 308,
+   "missing": 0,
+   "no_answer": 0,
+   "no_confidence": 0,
+   "no_confidence_decision_right": 0,
+   "accuracy": {
+    "right": 241,
+    "n": 308,
+    "value": 0.7825,
+    "wilson_95": [
+     0.7331,
+     0.8249
+    ]
+   },
+   "overconfidence": {
+    "n": 308,
+    "mean_confidence": 0.9579,
+    "accuracy": 0.7825,
+    "value": 0.1754
+   },
+   "tie_shares": {
+    "n": 308,
+    "levels": [
+     [
+      0.65,
+      2,
+      0.006494
+     ],
+     [
+      0.8,
+      1,
+      0.003247
+     ],
+     [
+      0.85,
+      13,
+      0.042208
+     ],
+     [
+      0.9,
+      9,
+      0.029221
+     ],
+     [
+      0.95,
+      140,
+      0.454545
+     ],
+     [
+      0.98,
+      104,
+      0.337662
+     ],
+     [
+      0.99,
+      14,
+      0.045455
+     ],
+     [
+      1.0,
+      25,
+      0.081169
+     ]
+    ]
+   },
+   "auroc": {
+    "n": 308,
+    "right": 241,
+    "wrong": 67,
+    "value": 0.8068,
+    "delong_95": [
+     0.7626,
+     0.851
+    ]
+   },
+   "throughput": {
+    "rows_timed": 308,
+    "seconds_per_row": 3.3307,
+    "rows_per_minute": 18.01,
+    "calls": 308,
+    "input_tokens_per_call": 855.38,
+    "output_tokens_per_call": 27.14
+   },
+   "top_slices": {
+    "n": 308,
+    "top_level": {
+     "value": 1.0,
+     "rows": 25,
+     "errors": 0,
+     "error_rate": 0.0,
+     "clopper_pearson_95": [
+      0.0,
+      0.1372
+     ]
+    },
+    "slices": [
+     {
+      "share": 0.1,
+      "rows": 39,
+      "errors": 0,
+      "error_rate": 0.0,
+      "clopper_pearson_95": [
+       0.0,
+       0.0903
+      ]
+     },
+     {
+      "share": 0.2,
+      "rows": 143,
+      "errors": 4,
+      "error_rate": 0.028,
+      "clopper_pearson_95": [
+       0.0077,
+       0.0701
+      ]
+     },
+     {
+      "share": 0.3,
+      "rows": 143,
+      "errors": 4,
+      "error_rate": 0.028,
+      "clopper_pearson_95": [
+       0.0077,
+       0.0701
+      ]
+     }
+    ]
+   },
+   "agreement_with": "llm-qwen3-8b",
+   "same_decision": 208,
+   "same_correctness": 242,
+   "cost": {
+    "usd": 0.099935,
+    "decisions_priced": 308,
+    "decisions_unpriced": 0
+   }
   },
   "llm-gemini-3.6-flash-sc5": {
-   "status": "not run",
-   "reason": "not started"
+   "status": "run",
+   "judge": "llm:gemini-3.6-flash:sc5",
+   "model": "gemini-3.6-flash",
+   "decisions": 308,
+   "in_checkpoint": 308,
+   "missing": 0,
+   "no_answer": 0,
+   "no_confidence": 0,
+   "no_confidence_decision_right": 0,
+   "accuracy": {
+    "right": 245,
+    "n": 308,
+    "value": 0.7955,
+    "wilson_95": [
+     0.7469,
+     0.8367
+    ]
+   },
+   "overconfidence": {
+    "n": 308,
+    "mean_confidence": 0.9792,
+    "accuracy": 0.7955,
+    "value": 0.1838
+   },
+   "tie_shares": {
+    "n": 308,
+    "levels": [
+     [
+      0.6,
+      10,
+      0.032468
+     ],
+     [
+      0.8,
+      12,
+      0.038961
+     ],
+     [
+      1.0,
+      286,
+      0.928571
+     ]
+    ]
+   },
+   "auroc": {
+    "n": 308,
+    "right": 245,
+    "wrong": 63,
+    "value": 0.6346,
+    "delong_95": [
+     0.5778,
+     0.6913
+    ]
+   },
+   "throughput": {
+    "rows_timed": 308,
+    "seconds_per_row": 14.3713,
+    "rows_per_minute": 4.17,
+    "calls": 1540,
+    "input_tokens_per_call": 855.38,
+    "output_tokens_per_call": 26.83
+   },
+   "top_slices": {
+    "n": 308,
+    "top_level": {
+     "value": 1.0,
+     "rows": 286,
+     "errors": 45,
+     "error_rate": 0.1573,
+     "clopper_pearson_95": [
+      0.1171,
+      0.2048
+     ]
+    },
+    "slices": [
+     {
+      "share": 0.1,
+      "rows": 286,
+      "errors": 45,
+      "error_rate": 0.1573,
+      "clopper_pearson_95": [
+       0.1171,
+       0.2048
+      ]
+     },
+     {
+      "share": 0.2,
+      "rows": 286,
+      "errors": 45,
+      "error_rate": 0.1573,
+      "clopper_pearson_95": [
+       0.1171,
+       0.2048
+      ]
+     },
+     {
+      "share": 0.3,
+      "rows": 286,
+      "errors": 45,
+      "error_rate": 0.1573,
+      "clopper_pearson_95": [
+       0.1171,
+       0.2048
+      ]
+     }
+    ]
+   },
+   "agreement_with": "llm-qwen3-8b",
+   "same_decision": 209,
+   "same_correctness": 240,
+   "cost": {
+    "usd": 0.498467,
+    "decisions_priced": 308,
+    "decisions_unpriced": 0
+   },
+   "self_consistency_samples": {
+    "samples": 1540,
+    "failed": 0,
+    "rows_with_a_failed_sample": 0
+   }
   }
  },
  "run_log": {
@@ -3156,12 +3692,28 @@
     "limit": 10,
     "stopped": false
    },
+   "llm-qwen3-8b-sc10": {
+    "unit": "samples",
+    "judged_on": 400,
+    "checked": 400,
+    "failed": 1,
+    "limit": 20,
+    "stopped": false
+   },
    "llm-gemini-3.6-flash": {
     "unit": "rows",
     "judged_on": 40,
-    "checked": 21,
+    "checked": 40,
     "failed": 0,
     "limit": 2,
+    "stopped": false
+   },
+   "llm-gemini-3.6-flash-sc5": {
+    "unit": "samples",
+    "judged_on": 200,
+    "checked": 200,
+    "failed": 0,
+    "limit": 10,
     "stopped": false
    }
   },
@@ -3172,14 +3724,15 @@
     "of": 308
    },
    "llm-gemini-3.6-flash": {
-    "status": "incomplete",
-    "rows": 21,
+    "status": "complete",
+    "rows": 308,
     "of": 308,
-    "reason": "provider quota"
+    "resumed": "2026-09-29"
    },
    "llm-gemini-3.6-flash-sc5": {
-    "status": "not run",
-    "reason": "not started"
+    "status": "complete",
+    "rows": 308,
+    "of": 308
    }
   },
   "billing_console": "not yet reported by the maintainer",

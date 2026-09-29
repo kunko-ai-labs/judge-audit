@@ -30,15 +30,17 @@ exit 0
 # an earlier --rows 20 attempt was stopped after about 70 minutes (12 GB resident, swapping) before printing anything; see docs/v05-pilot.md §4.1
 ```
 
-**Stop rules** (§4.3), counted from each checkpoint in the order it was judged: an `llm` run stops when more than 5 % of its first 40 rows have no parsed answer; a self-consistency run, when more than 5 % of its first 200 samples failed.
+**Stop rules** (§4.3), counted from each checkpoint in the order it was judged: an `llm` run stops when more than 5 % of its first 40 rows have no parsed answer; a self-consistency run, when more than 5 % of the samples of its first 40 rows failed (200 at k = 5; 400 at k = 10, §5b).
 
 | run | unit | judged on | checked | failed | limit | stopped |
 |---|---|---:|---:|---:|---:|---|
 | Qwen3-8B verbalized | rows | 40 | 40 | 0 | 2 | no |
 | Qwen3-8B self-consistency (k = 5) | samples | 200 | 200 | 1 | 10 | no |
-| gemini-3.6-flash verbalized | rows | 40 | 21 | 0 | 2 | no |
+| Qwen3-8B self-consistency (k = 10) | samples | 400 | 400 | 1 | 20 | no |
+| gemini-3.6-flash verbalized | rows | 40 | 40 | 0 | 2 | no |
+| gemini-3.6-flash self-consistency (k = 5) | samples | 200 | 200 | 0 | 10 | no |
 
-**Hosted runs**: Jev: complete (308/308); gemini-3.6-flash verbalized: stopped at 21/308 (provider quota, the maintainer's note), not analysed; gemini-3.6-flash self-consistency (k = 5): not run (not started, the maintainer's note). Billing console total: not yet reported by the maintainer.
+**Hosted runs**: Jev: complete (308/308); gemini-3.6-flash verbalized: complete (308/308, resumed 2026-09-29, the maintainer's note); gemini-3.6-flash self-consistency (k = 5): complete (308/308). Billing console total: not yet reported by the maintainer.
 
 **Provenance of the served chat model.** The `llm` checkpoints' headers record neither the weights revision nor `enable_thinking`: the pin rests on the protocol's offline `refs/main` check (docs/v05-pilot.md §3), and the server's `system_fingerprint` `0.31.3-0.32.2-macOS-26.6.2-arm64-arm-64bit-applegpu_g16g` records software and platform versions, not the weights.
 
@@ -142,6 +144,8 @@ Latency is each judge's own per-decision field, measured on the maintainer's mac
 | Qwen3-8B token log-probability | 308 | 1: 20/146 = 13.7 % [0.086, 0.204] | 20/146 = 13.7 % [0.086, 0.204] | 20/146 = 13.7 % [0.086, 0.204] | 20/146 = 13.7 % [0.086, 0.204] |
 | Laya | 308 | 1: 17/65 = 26.2 % [0.160, 0.385] | 17/65 = 26.2 % [0.160, 0.385] | 17/65 = 26.2 % [0.160, 0.385] | 27/93 = 29.0 % [0.201, 0.394] |
 | Jev | 308 | 1: 8/142 = 5.6 % [0.025, 0.108] | 8/142 = 5.6 % [0.025, 0.108] | 8/142 = 5.6 % [0.025, 0.108] | 8/142 = 5.6 % [0.025, 0.108] |
+| gemini-3.6-flash verbalized | 308 | 1: 0/25 = 0.0 % [0.000, 0.137] | 0/39 = 0.0 % [0.000, 0.090] | 4/143 = 2.8 % [0.008, 0.070] | 4/143 = 2.8 % [0.008, 0.070] |
+| gemini-3.6-flash self-consistency (k = 5) | 308 | 1: 45/286 = 15.7 % [0.117, 0.205] | 45/286 = 15.7 % [0.117, 0.205] | 45/286 = 15.7 % [0.117, 0.205] | 45/286 = 15.7 % [0.117, 0.205] |
 
 ## Hosted runs (context only, not fed back)
 
@@ -150,22 +154,53 @@ Jev and gemini-3.6-flash on the same rows (docs/v05-pilot.md §3), under the sam
 | run | judge | n | in checkpoint | no answer (incl. missing) | no confidence | accuracy [Wilson 95 %] | overconfidence (n) | AUROC [DeLong 95 %] | same decision / correctness as Qwen3 verbalized | cost |
 |---|---|---:|---:|---:|---:|---|---:|---|---|---:|
 | Jev | `jev` | 308 | 308 | 0 | 0 | 231 = 75.0 % [0.699, 0.795] | +0.1435 (308) | 0.8618 [0.8104, 0.9131] | 223 / 252 of 308 | $0.0133 |
-| gemini-3.6-flash verbalized | — | stopped at 21/308 (provider quota, the maintainer's note), not analysed |  |  |  |  |  |  |  |  |
-| gemini-3.6-flash self-consistency (k = 5) | — | not run (not started, the maintainer's note) |  |  |  |  |  |  |  |  |
+| gemini-3.6-flash verbalized | `llm:gemini-3.6-flash` | 308 | 308 | 0 | 0 | 241 = 78.2 % [0.733, 0.825] | +0.1754 (308) | 0.8068 [0.7626, 0.8510] | 208 / 242 of 308 | $0.0999 |
+| gemini-3.6-flash self-consistency (k = 5) | `llm:gemini-3.6-flash:sc5` | 308 | 308 | 0 | 0 | 245 = 79.5 % [0.747, 0.837] | +0.1838 (308) | 0.6346 [0.5778, 0.6913] | 209 / 240 of 308 | $0.4985 |
 
 - **Jev** tie shares (n = 308): 57 distinct values (all in the JSON); the most frequent, 1, holds 46.1 % (142).
+- **gemini-3.6-flash verbalized** tie shares (n = 308): 0.65: 0.6 % (2), 0.8: 0.3 % (1), 0.85: 4.2 % (13), 0.9: 2.9 % (9), 0.95: 45.5 % (140), 0.98: 33.8 % (104), 0.99: 4.5 % (14), 1: 8.1 % (25).
+- **gemini-3.6-flash self-consistency (k = 5)** tie shares (n = 308): 0.6: 3.2 % (10), 0.8: 3.9 % (12), 1: 92.9 % (286). Samples: 1,540 drawn, 0 failed.
+
+## Self-consistency at k = 10 (§5b)
+
+The same checkpoint, server, prompt and settings as the k = 5 run, with 10 samples; estimated under the §5 rules with confidences compared exactly (the sensitivity rule: a 10-sample vote takes at most 10 values). Train queries, planning inputs, not a result.
+
+| run | accuracy [Wilson 95 %] | AUROC [DeLong 95 %] | overconfidence (n) | top level: share of rows |
+|---|---|---|---:|---|
+| Qwen3-8B self-consistency (k = 10) | 190 = 61.7 % [0.561, 0.669] | 0.6311 [0.5793, 0.6829] | +0.3253 (308) | 1: 76.0 % |
+| Qwen3-8B self-consistency (k = 5) | 190 = 61.7 % [0.561, 0.669] | 0.6203 [0.5730, 0.6677] | +0.3292 (308) | 1: 82.1 % |
+| Qwen3-8B verbalized | 191 = 62.0 % [0.565, 0.672] | 0.6393 [0.5855, 0.6931] | +0.3295 (308) | — |
+
+- **Tie shares** (n = 308): 0.4: 1.3 % (4), 0.5: 2.3 % (7), 0.6: 2.6 % (8), 0.7: 3.2 % (10), 0.8: 3.9 % (12), 0.9: 10.7 % (33), 1: 76.0 % (234).
+- **Decision agreement with the verbalized run**: same decision on 302, same correctness on 305 of 308.
+- **Samples**: 3,080 drawn, 16 failed, in 16 rows; stop rule: 1 failed of the first 400 (limit 20), not triggered.
+
+**Rank agreement with the verbalized run** (both-right rows, exact):
+
+| pair | both right | levels | Spearman [95 %] | ρ at 0 | map max | latent ρ [95 %] | both wrong (Spearman) |
+|---|---:|---|---|---:|---:|---|---:|
+| Qwen3-8B verbalized – Qwen3-8B self-consistency (k = 10) | 189 | 4 / 6 | 0.2522 [0.1154, 0.3766] | 0.0020 | 0.6097 | 0.4357 [0.1958, 0.6566] | 116 (0.3944) |
+
+**Decision rule (§5b), computed:** share of rows at the top confidence level, 76.0 % at k = 10 against 82.1 % at k = 5; k = 10 is adopted when it is lower. **adopted: k = 10**. Its tie shares replace `TIE_SHARES_B` and its latent ρ joins `RHOS` below; the k = 5 run's figures stay above as registered.
+
+Errors among the most confident rows of the k = 10 run (exact tie levels):
+
+| run | n | top level: errors / rows | top 10 %: errors / rows | top 20 %: errors / rows | top 30 %: errors / rows |
+|---|---:|---|---|---|---|
+| Qwen3-8B self-consistency (k = 10) | 308 | 1: 72/234 = 30.8 % [0.249, 0.371] | 72/234 = 30.8 % [0.249, 0.371] | 72/234 = 30.8 % [0.249, 0.371] | 72/234 = 30.8 % [0.249, 0.371] |
 
 ## Proposed PILOT constants
 
-The values §5 says to feed back into `scripts/v05_power.py`. They are changed there in one reviewed commit that cites this file; `GAP_A`, `GAP_B`, `RHOS_C`, `AUTOMATABLE`, `REST_ERROR` and the grid of n stay as they are (design choices, not pilot measurements).
+The values §5 and §5b say to feed back into `scripts/v05_power.py`. They are changed there in one reviewed commit that cites this file; `GAP_A`, `GAP_B`, `RHOS_C`, `AUTOMATABLE`, `REST_ERROR` and the grid of n stay as they are (design choices, not pilot measurements). Under §5 alone (before §5b) `TIE_SHARES_B` was [0.003, 0.013, 0.055, 0.107, 0.822] and `RHOS` [0.0, 0.4, 0.45].
 
 ```python
-# PILOT: from docs/v05-pilot-estimates.json (docs/v05-pilot.md §5)
+# PILOT: from docs/v05-pilot-estimates.json (docs/v05-pilot.md §5, §5b)
+SC_SAMPLES = 10
 ACCURACIES = [0.62, 0.64, 0.69]
 RHOS = [0.0, 0.4, 0.45]
 AUROC_A, AUROC_B = 0.65, 0.7
 TIE_SHARES_A = [0.032, 0.14, 0.597, 0.231]
-TIE_SHARES_B = [0.003, 0.013, 0.055, 0.107, 0.822]
+TIE_SHARES_B = [0.013, 0.023, 0.026, 0.032, 0.039, 0.107, 0.76]
 CONF_VALUES = [0.8, 0.9, 0.95, 1.0]
 CONF_WEIGHTS = [0.032, 0.14, 0.597, 0.231]
 ```
@@ -174,10 +209,11 @@ CONF_WEIGHTS = [0.032, 0.14, 0.597, 0.231]
 |---|---|---|
 | `ACCURACIES` | the distinct accuracies of the three Qwen3 read-outs to 0.01, plus the Wilson upper bound of the highest rounded up to 0.01 | accuracy on the rows with a confidence (the rows the power model ranks): Qwen3-8B verbalized 0.6201, Qwen3-8B self-consistency (k = 5) 0.6169, Qwen3-8B token log-probability 0.6364 |
 | `TIE_SHARES_A` | the shares of each distinct confidence of the Qwen3-8B verbalized run, lowest to highest, to 0.001 with the remainder on the largest | values [0.8, 0.9, 0.95, 1.0]; 4 levels |
-| `TIE_SHARES_B` | the shares of each distinct confidence of the Qwen3-8B self-consistency (k = 5) run, lowest to highest, to 0.001 with the remainder on the largest | values [0.2, 0.4, 0.6, 0.8, 1.0]; 5 levels |
+| `TIE_SHARES_B` | the shares of each distinct confidence of the Qwen3-8B self-consistency (k = 10) run, lowest to highest, to 0.001 with the remainder on the largest (§5b: the adopted k = 10 run, confidences compared exactly) | values [0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]; 7 levels |
 | `CONF_VALUES` | the verbalized confidences to 0.05, levels under 1 % pooled into the nearest kept one (ties down) | — |
 | `CONF_WEIGHTS` | their shares to 0.001, the remainder on the largest | — |
-| `RHOS` | the latent rho of verbalized–self-consistency and verbalized–log-probability to 0.05, plus the lower interval bound of the smaller rounded down to 0.05; each at most 0.95 | — |
+| `RHOS` | the latent rho of verbalized–self-consistency and verbalized–log-probability to 0.05, plus the lower interval bound of the smaller rounded down to 0.05; plus (§5b) the adopted k = 10 run's latent rho against verbalized, confidences compared exactly, to 0.05; each at most 0.95 | — |
+| `SC_K` | §5b: k = 10 if the k = 10 run's share of rows at its top confidence level is below the k = 5 run's, else k = 5 | — |
 | `AUROC_A` | the latent AUROC reproducing the verbalized run's observed AUROC with TIE_SHARES_A, to 0.05, capped at 0.90 | — |
 | `AUROC_B` | AUROC_A + 0.05 (the design gap) | — |
 

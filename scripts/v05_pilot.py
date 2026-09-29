@@ -68,7 +68,11 @@ ORDER = [VERB, SC, LP, LAYA]
 # of them may be absent (the Gemini self-consistency run may never be made).
 JEV, GEM, GEM_SC = "jev", "llm-gemini-3.6-flash", "llm-gemini-3.6-flash-sc5"
 HOSTED = [JEV, GEM, GEM_SC]
-VOTING = {SC, GEM_SC}              # self-consistency slots: samples > 1
+# §5b: self-consistency at k = 10 on Qwen3, estimated with confidences compared exactly; it
+# decides the study's k and, if adopted, replaces the k = 5 run in TIE_SHARES_B and RHOS.
+SC10 = "llm-qwen3-8b-sc10"
+VOTING = {SC, GEM_SC, SC10}        # self-consistency slots: samples > 1
+EXPECTED_SAMPLES = {SC: 5, GEM_SC: 5, SC10: 10}
 SINGLE = {VERB, GEM}               # verbalized slots: one call per row
 QWEN = [VERB, SC, LP]
 PAIRS = [[VERB, SC], [VERB, LP], [SC, LP]]
@@ -76,9 +80,10 @@ H1_PAIRS = PAIRS[:2]               # verbalized against self-consistency and log
 NAMES = {VERB: "Qwen3-8B verbalized", SC: "Qwen3-8B self-consistency (k = 5)",
          LP: "Qwen3-8B token log-probability", LAYA: "Laya",
          JEV: "Jev", GEM: "gemini-3.6-flash verbalized",
-         GEM_SC: "gemini-3.6-flash self-consistency (k = 5)"}
+         GEM_SC: "gemini-3.6-flash self-consistency (k = 5)",
+         SC10: "Qwen3-8B self-consistency (k = 10)"}
 ADAPTER = {VERB: "llm", SC: "llm", LP: "logprob", LAYA: "laya", JEV: "jev", GEM: "llm",
-           GEM_SC: "llm"}
+           GEM_SC: "llm", SC10: "llm"}
 
 
 class MissingCheckpoints(Exception):
@@ -103,6 +108,9 @@ def load_run(slug: str, path: Path, rows: list[dict], labels_sha: str) -> dict:
     samples = int(judge.get("samples") or 1)
     if slug in VOTING and samples < 2:
         raise SystemExit(f"{path}: not a self-consistency run (samples {samples})")
+    if slug in EXPECTED_SAMPLES and samples != EXPECTED_SAMPLES[slug]:
+        raise SystemExit(f"{path}: {samples} samples where {EXPECTED_SAMPLES[slug]} samples "
+                         "belong")
     if slug in SINGLE and samples != 1:
         raise SystemExit(f"{path}: a self-consistency run where the verbalized one belongs")
     recorded = (done[-1]["run"].get("dataset") or {}).get("sha256")
@@ -499,12 +507,12 @@ def throughput(recs: list) -> dict:
     return out
 
 
-def run_summary(slug: str, run: dict) -> dict:
+def run_summary(slug: str, run: dict, exact: bool = False) -> dict:
     recs = list(run["records"].values())
     have = [r for r in recs if scored(r)]
     confs = [r["confidence"] for r in have]
     ok = [r["correct"] for r in have]
-    lv = tie_levels(confs)
+    lv = tie_levels(confs, exact)
     judge = run["header"].get("judge") or {}
     over = None
     if have:
@@ -523,7 +531,7 @@ def run_summary(slug: str, run: dict) -> dict:
         "tie_shares": {"n": len(confs), "levels": [[v, c, round(c / len(confs), 6)]
                                                    for v, c in lv]},
         "auroc": auroc_delong(confs, ok), "throughput": throughput(recs),
-        "top_slices": top_slices(confs, ok)}
+        "top_slices": top_slices(confs, ok, exact)}
 
 
 TOP_SHARES = [0.1, 0.2, 0.3]
@@ -607,7 +615,7 @@ def sc_samples(run: dict) -> dict:
 
 # --- run log (§4), from committed files only -------------------------------------------------
 
-STOP_ROWS, STOP_SAMPLES = 40, 200      # §4.3: the first 40 rows; for a vote, the first 200 samples
+STOP_ROWS = 40                         # §4.3: the first 40 rows (for a vote, their samples)
 STOP_SHARE = Fraction(5, 100)          # stop when more than 5 % fail
 
 
@@ -633,7 +641,9 @@ def stop_rule_of(slug: str, run: dict) -> dict:
             # which of a row's samples failed is not recorded, only how many; 200 is 40 whole
             # rows of 5, so the count of the first 200 does not depend on it
             flags += [True] * miss + [False] * (k - miss)
-        return {"unit": "samples", **stop_rule(flags, STOP_SAMPLES)}
+        k_run = int((run["header"].get("judge") or {}).get("samples") or 5)
+        # §4.3's 200 samples are the first 40 rows at k = 5; §5b scales it: 400 at k = 10
+        return {"unit": "samples", **stop_rule(flags, STOP_ROWS * k_run)}
     flags = [status(by_idx.get(idx)) in ("no_answer", "missing") for idx in run["order"]]
     return {"unit": "rows", **stop_rule(flags, STOP_ROWS)}
 
@@ -758,12 +768,20 @@ def proposed(d: dict) -> dict:
         "note": ("" if clipped == values else
                  "clipped to [0.01, 0.99]: the power model needs right and wrong answers")}
 
+    # §5b: the k the decision rule adopts; with k = 10 its run replaces the k = 5 one in
+    # TIE_SHARES_B and its latent rho against verbalized joins RHOS
+    k10 = d.get("k10") or {"status": "not run"}
+    adopted = k10["decision"]["adopted_k"] if k10["status"] == "run" else 5
     for name, slug in (("TIE_SHARES_A", VERB), ("TIE_SHARES_B", SC)):
         lv = runs[slug]["tie_shares"]["levels"]
+        extra = ""
+        if name == "TIE_SHARES_B" and adopted == 10:
+            slug, lv = SC10, k10["summary"]["tie_shares"]["levels"]
+            extra = " (§5b: the adopted k = 10 run, confidences compared exactly)"
         out[name] = {"value": tie_shares_constant(lv),
                      "values": [v for v, _, _ in lv],
                      "rule": f"the shares of each distinct confidence of the {NAMES[slug]} run, "
-                             "lowest to highest, to 0.001 with the remainder on the largest"}
+                             f"lowest to highest, to 0.001 with the remainder on the largest{extra}"}
 
     v = d["verbalized_distribution"]
     out["CONF_VALUES"] = {"value": v["values"] or None,
@@ -784,13 +802,29 @@ def proposed(d: dict) -> dict:
             raw.append(floor_to(smaller["rho_95"][0], 0.05))
         else:
             note.append("no interval for the smaller point estimate")
+    rule_k10 = ""
+    if adopted == 10:
+        r10 = k10["rank_agreement"]
+        rule_k10 = ("; plus (§5b) the adopted k = 10 run's latent rho against verbalized, "
+                    "confidences compared exactly, to 0.05")
+        if r10["rho"] is None:
+            note.append(f"{VERB}–{SC10}: not estimable")
+        else:
+            raw.append(_to(r10["rho"], 0.05))
+            if r10["saturated"]:
+                note.append(f"{VERB}–{SC10}: saturated")
     if any(x > RHO_CAP for x in raw):
         note.append(f"capped at {RHO_CAP}: a latent rho of 1 would make the two methods one")
     out["RHOS"] = {"value": sorted({min(RHO_CAP, x) for x in raw}),
                    "rule": "the latent rho of verbalized–self-consistency and "
                            "verbalized–log-probability to 0.05, plus the lower interval bound "
-                           f"of the smaller rounded down to 0.05; each at most {RHO_CAP}",
+                           f"of the smaller rounded down to 0.05{rule_k10}; each at most "
+                           f"{RHO_CAP}",
                    "note": "; ".join(note)}
+    out["SC_K"] = {"value": adopted,
+                   "rule": "§5b: k = 10 if the k = 10 run's share of rows at its top confidence "
+                           "level is below the k = 5 run's, else k = 5",
+                   "note": "" if k10["status"] == "run" else "the k = 10 run is not committed"}
 
     la = d["latent_auroc_a"]
     a = la["auroc_a"] if la else None
@@ -862,6 +896,14 @@ def compute(runs_dir: Path = RUNS_DIR, labels: Path = LABELS, n_sim: int | None 
     if d["latent_auroc_a"]:
         d["latent_auroc_a"]["rounding_edge"] = list(
             rounding_edge(d["latent_auroc_a"]["latent"], 0.05))
+    # §5b: the k = 10 run, if committed, and its decision rule
+    d["k10"] = {"status": "not run"}
+    path10 = Path(runs_dir) / f"{SC10}.ckpt.jsonl"
+    if path10.exists():
+        runs[SC10] = load_run(SC10, path10, rows, sha)
+        d["checkpoints"][SC10] = _shown(path10)
+        d["k10"] = k10_estimates(d, runs, keys, base, n_boot)
+    d["proposed_constants_s5"] = proposed({**d, "k10": {"status": "not run"}})
     d["proposed_constants"] = proposed(d)
 
     # Checks, not fed back: the H1 rhos on five other fixed samples of normal pairs.
@@ -889,6 +931,8 @@ def compute(runs_dir: Path = RUNS_DIR, labels: Path = LABELS, n_sim: int | None 
     notes = read_notes(runs_dir)
     d["hosted"] = {}
     stop_rules = {s: stop_rule_of(s, runs[s]) for s in (VERB, SC)}
+    if d["k10"]["status"] == "run":
+        stop_rules[SC10] = d["k10"]["stop_rule"]
     for s in HOSTED:
         path = Path(runs_dir) / f"{s}.ckpt.jsonl"
         reason = ((notes.get("runs") or {}).get(s) or {}).get("stopped")
@@ -917,9 +961,37 @@ def compute(runs_dir: Path = RUNS_DIR, labels: Path = LABELS, n_sim: int | None 
         "notes_file": _shown(Path(runs_dir) / "run-notes.json") if notes else None}
     for s in HOSTED:
         if d["hosted"][s]["status"] == "run":
+            resumed = ((notes.get("runs") or {}).get(s) or {}).get("resumed")
             d["run_log"]["hosted"][s] = {"status": "complete", "rows": len(keys),
-                                         "of": len(keys)}
+                                         "of": len(keys),
+                                         **({"resumed": resumed} if resumed else {})}
     return d
+
+
+def top_share(levels: list) -> Fraction | None:
+    """The share of the rows at the highest confidence level."""
+    n = sum(c for _, c, _ in levels)
+    return Fraction(levels[-1][1], n) if n else None
+
+
+def k10_estimates(d: dict, runs: dict, keys: list, base: list, n_boot: int) -> dict:
+    """§5b: the k = 10 run under the §5 rules with confidences compared exactly, and the
+    decision rule: k = 10 when its top-level share is below the k = 5 run's."""
+    run = runs[SC10]
+    summary = run_summary(SC10, run, exact=True)
+    same, same_ok = agreement(run["records"], runs[VERB]["records"], keys)
+    share10 = top_share(summary["tie_shares"]["levels"])
+    share5 = top_share(d["runs"][SC]["tie_shares"]["levels"])
+    adopted = 10 if share10 is not None and share5 is not None and share10 < share5 else 5
+    return {"status": "run", "summary": summary, "agreement_with": VERB,
+            "same_decision": same, "same_correctness": same_ok,
+            "rank_agreement": rank_agreement(runs, keys, VERB, SC10, base, n_boot, exact=True),
+            "stop_rule": stop_rule_of(SC10, run), "samples": sc_samples(run),
+            "decision": {"top_share_k10": None if share10 is None else round(float(share10), 4),
+                         "top_share_k5": None if share5 is None else round(float(share5), 4),
+                         "top_value_k10": summary["tie_shares"]["levels"][-1][0]
+                         if summary["tie_shares"]["levels"] else None,
+                         "adopted_k": adopted}}
 
 
 def both_right(runs: dict, keys: list, a: str, b: str) -> tuple[list[float], list[float]]:
@@ -1048,7 +1120,8 @@ def _hosted_status(h: dict, name: str) -> str:
     if h["status"] == "incomplete":
         why = f" ({h['reason']}, the maintainer's note)" if h.get("reason") else ""
         return f"stopped at {h['rows']:,}/{h['of']:,}{why}, not analysed"
-    return f"complete ({h['rows']:,}/{h['of']:,})"
+    resumed = (f", resumed {h['resumed']}, the maintainer's note" if h.get("resumed") else "")
+    return f"complete ({h['rows']:,}/{h['of']:,}{resumed})"
 
 
 def run_log_lines(d: dict) -> list[str]:
@@ -1066,8 +1139,8 @@ def run_log_lines(d: dict) -> list[str]:
         out += ["", "```", sc["text"].rstrip("\n"), "```"]
     out += ["", ("**Stop rules** (§4.3), counted from each checkpoint in the order it was "
                  "judged: an `llm` run stops when more than 5 % of its first 40 rows have no "
-                 "parsed answer; a self-consistency run, when more than 5 % of its first 200 "
-                 "samples failed."), "",
+                 "parsed answer; a self-consistency run, when more than 5 % of the samples of "
+                 "its first 40 rows failed (200 at k = 5; 400 at k = 10, §5b)."), "",
             "| run | unit | judged on | checked | failed | limit | stopped |",
             "|---|---|---:|---:|---:|---:|---|"]
     for s, r in log["stop_rules"].items():
@@ -1314,13 +1387,19 @@ def markdown(d: dict) -> str:
         lines.append(f"- **{NAMES[sl]}** tie shares (n = {t['n']:,}): "
                      f"{_levels_text(t['levels'])}.{extra}")
 
+    lines += k10_lines(d)
     c = d["proposed_constants"]
+    s5 = d["proposed_constants_s5"]
     lines += ["", "## Proposed PILOT constants", "",
-              ("The values §5 says to feed back into `scripts/v05_power.py`. They are changed "
-               "there in one reviewed commit that cites this file; `GAP_A`, `GAP_B`, `RHOS_C`, "
-               "`AUTOMATABLE`, `REST_ERROR` and the grid of n stay as they are (design "
-               "choices, not pilot measurements)."), "", "```python",
-              "# PILOT: from docs/v05-pilot-estimates.json (docs/v05-pilot.md §5)"]
+              ("The values §5 and §5b say to feed back into `scripts/v05_power.py`. They are "
+               "changed there in one reviewed commit that cites this file; `GAP_A`, `GAP_B`, "
+               "`RHOS_C`, `AUTOMATABLE`, `REST_ERROR` and the grid of n stay as they are "
+               "(design choices, not pilot measurements)."
+               + (f" Under §5 alone (before §5b) `TIE_SHARES_B` was "
+                  f"{s5['TIE_SHARES_B']['value']} and `RHOS` {s5['RHOS']['value']}."
+                  if s5 != c else "")), "", "```python",
+              "# PILOT: from docs/v05-pilot-estimates.json (docs/v05-pilot.md §5, §5b)",
+              f"SC_SAMPLES = {c['SC_K']['value']}"]
     for name in ("ACCURACIES", "RHOS"):
         lines.append(f"{name} = {c[name]['value']}")
     lines.append(f"AUROC_A, AUROC_B = {c['AUROC_A']['value']}, {c['AUROC_B']['value']}")
@@ -1343,6 +1422,61 @@ def markdown(d: dict) -> str:
                    "part C draws each judge's confidence independently."), ""]
     lines += sensitivity_lines(d)
     return "\n".join(lines)
+
+
+def k10_lines(d: dict) -> list[str]:
+    k = d["k10"]
+    out = ["", "## Self-consistency at k = 10 (§5b)", ""]
+    if k["status"] != "run":
+        return out + ["The k = 10 run is not committed: the study keeps k = 5."]
+    s, dec = k["summary"], k["decision"]
+    k5 = d["runs"][SC]
+    verb = d["runs"][VERB]
+    out += [("The same checkpoint, server, prompt and settings as the k = 5 run, with 10 "
+             "samples; estimated under the §5 rules with confidences compared exactly (the "
+             "sensitivity rule: a 10-sample vote takes at most 10 values). Train queries, "
+             "planning inputs, not a result."), "",
+            "| run | accuracy [Wilson 95 %] | AUROC [DeLong 95 %] | overconfidence (n) | top "
+            "level: share of rows |", "|---|---|---|---:|---|"]
+    for name, r, top in ((NAMES[SC10], s, dec["top_share_k10"]),
+                         (NAMES[SC], k5, dec["top_share_k5"]),
+                         (NAMES[VERB], verb, None)):
+        acc, auc, over = r["accuracy"], r["auroc"], r["overconfidence"]
+        lv = r["tie_shares"]["levels"]
+        top_txt = (f"{lv[-1][0]:g}: {_pct(top)}" if top is not None else "—")
+        out.append(f"| {name} | {acc['right']:,} = {_pct(acc['value'])} "
+                   f"{_iv(acc['wilson_95'], 3)} | {_num(auc['value'])} {_iv(auc['delong_95'])} | "
+                   + (f"{over['value']:+.4f} ({over['n']:,})" if over else "—")
+                   + f" | {top_txt} |")
+    st, sm = k["stop_rule"], k["samples"]
+    out += ["", f"- **Tie shares** (n = {s['tie_shares']['n']:,}): "
+            f"{_levels_text(s['tie_shares']['levels'])}.",
+            (f"- **Decision agreement with the verbalized run**: same decision on "
+             f"{k['same_decision']:,}, same correctness on {k['same_correctness']:,} of "
+             f"{s['accuracy']['n']:,}."),
+            (f"- **Samples**: {sm['samples']:,} drawn, {sm['failed']:,} failed, in "
+             f"{sm['rows_with_a_failed_sample']:,} rows; stop rule: {st['failed']:,} failed of "
+             f"the first {st['checked']:,} (limit {st['limit']:,}), "
+             + ("**stopped**." if st["stopped"] else "not triggered.")),
+            "", "**Rank agreement with the verbalized run** (both-right rows, exact):", "",
+            *RANK_HEADER, _rank_row(k["rank_agreement"]), "",
+            (f"**Decision rule (§5b), computed:** share of rows at the top confidence level, "
+             f"{_pct(dec['top_share_k10'])} at k = 10 against {_pct(dec['top_share_k5'])} at "
+             f"k = 5; k = 10 is adopted when it is lower. **adopted: k = {dec['adopted_k']}**. "
+             + ("Its tie shares replace `TIE_SHARES_B` and its latent ρ joins `RHOS` below; the "
+                "k = 5 run's figures stay above as registered."
+                if dec["adopted_k"] == 10 else
+                "The k = 5 run's tie shares stay in `TIE_SHARES_B`.")),
+            "", "Errors among the most confident rows of the k = 10 run (exact tie levels):", "",
+            "| run | n | top level: errors / rows | "
+            + " | ".join(f"top {round(100 * x)} %: errors / rows" for x in TOP_SHARES) + " |",
+            "|---|---:|---|" + "---|" * len(TOP_SHARES)]
+    t = s["top_slices"]
+    if t["top_level"] is not None:
+        out.append(f"| {NAMES[SC10]} | {t['n']:,} | {t['top_level']['value']:g}: "
+                   f"{_slice_text(t['top_level'])} | "
+                   + " | ".join(_slice_text(x) for x in t["slices"]) + " |")
+    return out
 
 
 RANK_HEADER = [("| pair | both right | levels | Spearman [95 %] | ρ at 0 | map max | "
