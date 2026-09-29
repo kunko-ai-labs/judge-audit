@@ -56,6 +56,15 @@ Rows whose decision carries no confidence (`no_confidence`) or no answer are cou
 
 `GAP_A`, `GAP_B` (the ECE design gap), `RHOS_C`, `AUTOMATABLE`, `REST_ERROR` and the grid of n stay as they are: they are design choices, not quantities the pilot measures. Two known limits of the power model stay and are printed with its tables: part B scores both methods on one shared set of decisions (here they differ; the decision agreement above says by how much), and part C draws each judge's confidence independently. The plan names the power-analysis cell the pilot matches and states its MDE.
 
+## 5b. Amendment (2026-09-29): self-consistency at k = 10, before its first call
+
+The k = 5 run left 82.1 % of rows unanimous, so its confidence barely ranks the rows (the planning finding in [v05-power.md](v05-power.md) § B). The maintainer decided (plan decision D1) to measure k = 10 on the same rows before fixing k for the study. Committed before this run's first call; nothing in §3–§5 changes for the runs already made.
+
+- **Run** `llm-qwen3-8b-sc10`: the same checkpoint, server, prompt and settings as `llm-qwen3-8b-sc5` (§3), with `LLM_SAMPLES=10`, `LLM_TEMPERATURE=1`; 308 rows; checkpoint `docs/runs/v05-pilot/llm-qwen3-8b-sc10.ckpt.jsonl`.
+- **Stop rule** as §4.3, scaled: more than 5 % failed samples among the first 400 (the first 40 rows) stops it.
+- **Estimated as for the other runs** (§5 rules; confidences compared exactly, the sensitivity rule, since k = 10 votes take at most 10 values): accuracy, tie shares, AUROC, decision agreement with the verbalized run, Spearman and latent ρ against the verbalized run on the rows both got right.
+- **Decision rule, fixed now:** the study uses **k = 10 for Qwen3** if this run's share of rows at its top confidence level is below the k = 5 run's 82.1 %; otherwise it keeps k = 5. Hosted models keep k = 5 (cost). The adopted run's tie shares replace `TIE_SHARES_B`, and its latent ρ against verbalized joins `RHOS`, in one reviewed commit that regenerates [v05-power.md](v05-power.md); the other run's numbers are reported beside them.
+
 ## 6. What happens next
 
 The constants are changed in one reviewed commit that cites `docs/v05-pilot-estimates.json`, `docs/v05-power.md` is regenerated, and `docs/v05-plan.md` is drafted from it and reviewed before the study's first call. Estimates are published whether or not they are convenient: if ρ is low or accuracy high, the MDEs grow, and the plan says so.
