@@ -41,6 +41,10 @@ Comparing Jev's probability with Gemini's verbalized number mixes two things: th
 
 **Verbalized** is unchanged from v0.4 (temperature 0, one call).
 
+## Prompt templates: is it the method or the wording?
+
+A difference between two read-outs can also come from the prompt. The `llm` and `logprob` judges therefore take a second template, `v2` (`LLM_PROMPT_TEMPLATE`, `LOGPROB_PROMPT_TEMPLATE`). It keeps the task, the options, the reply format, the decision rule and the confidence definition, and changes only the wording, the role, the order and the option layout. In v0.5 it runs for Qwen3-8B verbalized and token log-probability and for Gemini verbalized, on BANKING77 only. Self-consistency keeps `v1`, the published prompt. Both templates, verbatim, and the reasons for the design: [prompt templates](prompt-templates.md).
+
 ## Which models expose log-probabilities
 
 | Model family or path | Token log-probabilities | Basis |

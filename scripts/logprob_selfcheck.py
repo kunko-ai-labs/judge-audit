@@ -9,6 +9,8 @@ different logits for repeated prompts; this is the check that it does not happen
   LOGPROB_MODEL=mlx-community/Qwen3-8B-4bit python scripts/logprob_selfcheck.py \\
       <labels.jsonl> --rows 20
 
+The prompt is the one the judge would send (LOGPROB_PROMPT_TEMPLATE, default v1).
+
 It also counts the labels whose first characters merge with the prompt's last token and
 are therefore tokenised alone after it (`MLXBackend.continuations`): not an error, but a
 number to know before a run.
@@ -27,12 +29,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from judge_audit.judges.logprob import (  # noqa: E402
-    SYSTEM,
-    LogprobJudge,
-    option_distribution,
-    render,
-)
+from judge_audit.judges.logprob import LogprobJudge, option_distribution  # noqa: E402
 from judge_audit.runner import load_jsonl, questions_of  # noqa: E402
 
 
@@ -49,7 +46,7 @@ def main(argv: list[str] | None = None) -> int:
     alone: set[str] = set()
     for row in load_jsonl(args.labels)[:args.rows]:
         for q in questions_of(row):
-            prompt = backend.prompt_text(SYSTEM, render(row["state"], q))
+            prompt = backend.prompt_text(judge.system, judge.render(row["state"], q))
             t0 = time.monotonic()
             cached, _ = option_distribution(backend.option_logprobs(prompt, q.options))
             seconds += time.monotonic() - t0
