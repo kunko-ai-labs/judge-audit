@@ -40,6 +40,7 @@ spec.loader.exec_module(pilot)
 
 VERB, SC, LP, LAYA = "llm-qwen3-8b", "llm-qwen3-8b-sc5", "logprob-qwen3-8b", "laya"
 JEV, GEM, GEM_SC = "jev", "llm-gemini-3.6-flash", "llm-gemini-3.6-flash-sc5"
+SC10 = "llm-qwen3-8b-sc10"
 # The fixture's three pairs need about 360 evaluations of the rank map: at the report's
 # 100,000 pairs that is a minute per compute(), so the fixture uses 20,000. The tests of the
 # mapping itself (RankMap, latent_rho) run at the production size.
@@ -635,7 +636,8 @@ def _synthetic(tmp_path: Path, verbalized=None, sc=None, logprob=None, laya=None
               LP: {"name": "logprob:q"}, LAYA: {"name": "laya:laya"},
               JEV: {"name": "jev", "model": "jev-latest"},
               GEM: {"name": "llm:gemini-3.6-flash", "model": "gemini-3.6-flash"},
-              GEM_SC: {"name": "llm:gemini-3.6-flash:sc5", "samples": 5}}
+              GEM_SC: {"name": "llm:gemini-3.6-flash:sc5", "samples": 5},
+              SC10: {"name": "llm:q:sc10", "samples": 10}}
     specs = [(VERB, verbalized), (SC, sc), (LP, logprob), (LAYA, laya)]
     specs += list((hosted or {}).items())
     for slug, spec_rows in specs:
@@ -645,10 +647,11 @@ def _synthetic(tmp_path: Path, verbalized=None, sc=None, logprob=None, laya=None
         for i, (dec, conf) in enumerate(spec_rows or base):
             status = "parsed" if conf is not None else ("no_confidence" if dec else "no_answer")
             raw: dict = {"option_mass": 0.9}
-            if slug in (SC, GEM_SC):
-                k = round((conf or 0) * 5)
-                raw = {"samples": [{"usage": {"input_tokens": 1, "output_tokens": 1}}] * 5,
-                       "votes": {dec: k} if k else {}}
+            if slug in (SC, GEM_SC, SC10):
+                n_samples = judges[slug]["samples"]
+                k = round((conf or 0) * n_samples)
+                raw = {"samples": [{"usage": {"input_tokens": 1, "output_tokens": 1}}]
+                       * n_samples, "votes": {dec: k} if k else {}}
             lines.append({"idx": i, "judgments": [{
                 "question": "intent", "decision": dec, "confidence": conf, "latency_s": 1.0,
                 "cost_usd": cost, "raw": raw, "parse_status": status}]})
@@ -801,3 +804,113 @@ def test_the_exact_sensitivity_is_reported_and_never_fed_back(tmp_path):
     text = pilot.markdown(d)
     assert "sensitivity, not fed back" in text.lower()
     assert "found after the constants were set" in text
+
+
+# --- §5b: self-consistency at k = 10 -----------------------------------------------------------
+
+K10_ROWS = [("a", 0.9), ("b", 0.7), ("c", 1.0), ("a", 0.8), ("b", 0.9), ("c", 0.6)]
+
+
+def _with_k10(tmp_path, rows=K10_ROWS) -> Path:
+    """The fixture's four runs plus a k = 10 run: right on every row; votes are the
+    confidence times 10, the rest failed samples (1 + 3 + 0 + 2 + 1 + 4 = 11 of 60)."""
+    runs = _synthetic(tmp_path, hosted={SC10: rows})
+    for slug in (VERB, SC, LP, LAYA):
+        shutil.copy(FIXTURE / f"{slug}.ckpt.jsonl", runs)
+    _rewrite_sha(runs)
+    return runs
+
+
+def test_without_the_k10_run_k5_stays(d):
+    assert d["k10"] == {"status": "not run"}
+    c = d["proposed_constants"]
+    assert c["SC_K"]["value"] == 5 and c["TIE_SHARES_B"]["value"] == [0.4, 0.2, 0.4]
+
+
+def test_the_k10_run_is_estimated_with_exact_confidences(tmp_path):
+    d = pilot.compute(_with_k10(tmp_path), tmp_path / "runs" / "labels.jsonl",
+                      n_sim=N_SIM, n_boot=N_BOOT)
+    k = d["k10"]
+    assert k["status"] == "run"
+    s = k["summary"]
+    assert s["accuracy"]["right"] == 6 and s["auroc"]["value"] is None       # no error
+    assert s["tie_shares"]["levels"] == [[0.6, 1, 0.166667], [0.7, 1, 0.166667],
+                                         [0.8, 1, 0.166667], [0.9, 2, 0.333333],
+                                         [1.0, 1, 0.166667]]
+    # decisions a b c a b c against verbalized a b a a b c; correctness all right against
+    # T T F T T F (row 5 has no confidence)
+    assert (k["same_decision"], k["same_correctness"]) == (5, 4)
+    # both right with verbalized on rows 0, 1, 3, 4: ranks (2.5, 2.5, 1, 4) and
+    # (3.5, 1, 2, 3.5): Spearman 2.25 / 4.5
+    assert k["rank_agreement"]["spearman"] == pytest.approx(0.5)
+    assert k["rank_agreement"]["pair"] == [VERB, SC10]
+    stop = k["stop_rule"]
+    assert (stop["unit"], stop["judged_on"], stop["checked"], stop["failed"]) == \
+        ("samples", 400, 60, 11)
+    assert k["samples"]["failed"] == 11
+    # decision: top level 1 of 6 at k = 10 against 2 of 5 at k = 5
+    dec = k["decision"]
+    assert dec["top_share_k10"] == pytest.approx(1 / 6, abs=1e-4)
+    assert dec["top_share_k5"] == pytest.approx(0.4)
+    assert dec["adopted_k"] == 10
+    c = d["proposed_constants"]
+    assert c["SC_K"]["value"] == 10
+    assert c["TIE_SHARES_B"]["value"] == [0.167, 0.167, 0.167, 0.332, 0.167]
+    rho10 = min(0.95, pilot._to(k["rank_agreement"]["rho"], 0.05))
+    assert rho10 in c["RHOS"]["value"]
+    # the registered §5 proposal is kept beside it, unchanged
+    assert d["proposed_constants_s5"]["TIE_SHARES_B"]["value"] == [0.4, 0.2, 0.4]
+    assert set(d["proposed_constants_s5"]["RHOS"]["value"]) <= set(c["RHOS"]["value"])
+    text = pilot.markdown(d)
+    assert "## Self-consistency at k = 10" in text and "adopted: k = 10" in text
+
+
+def test_a_k10_run_as_unanimous_as_k5_keeps_k5(tmp_path):
+    d = pilot.compute(_with_k10(tmp_path, [(x, 1.0) for x in LABELS]),
+                      tmp_path / "runs" / "labels.jsonl", n_sim=2000, n_boot=50)
+    assert d["k10"]["decision"]["adopted_k"] == 5
+    assert d["proposed_constants"]["TIE_SHARES_B"]["value"] == [0.4, 0.2, 0.4]
+    assert d["proposed_constants"]["SC_K"]["value"] == 5
+
+
+def test_a_k10_slot_with_five_samples_is_refused(tmp_path):
+    runs = _with_k10(tmp_path)
+    lines = (runs / f"{SC10}.ckpt.jsonl").read_text().splitlines()
+    head = json.loads(lines[0])
+    head["run"]["judge"]["samples"] = 5
+    (runs / f"{SC10}.ckpt.jsonl").write_text("\n".join([json.dumps(head), *lines[1:]]) + "\n")
+    with pytest.raises(SystemExit, match="10 samples"):
+        pilot.compute(runs, runs / "labels.jsonl", n_sim=2000, n_boot=50)
+
+
+def test_a_resumed_hosted_run_reads_complete(tmp_path):
+    runs = _synthetic(tmp_path, hosted={GEM: [(x, 0.9) for x in LABELS]})
+    (runs / "run-notes.json").write_text(json.dumps(
+        {"runs": {GEM: {"resumed": "2026-09-29"}}}), encoding="utf-8")
+    d = pilot.compute(runs, runs / "labels.jsonl", n_sim=2000, n_boot=50)
+    assert d["hosted"][GEM]["status"] == "run"
+    assert d["run_log"]["hosted"][GEM]["status"] == "complete"
+    assert "complete (6/6, resumed 2026-09-29, the maintainer's note)" in pilot.markdown(d)
+
+
+def test_the_k10_run_joins_the_seed_check_and_the_throughput_table(tmp_path):
+    """With the k = 10 run committed, the seed check covers its pair with verbalized
+    (compared exactly, as its estimate is) and the throughput table has one row per Qwen3
+    run present."""
+    d = pilot.compute(_with_k10(tmp_path), tmp_path / "runs" / "labels.jsonl",
+                      n_sim=N_SIM, n_boot=N_BOOT)
+    chk = d["rho_seed_check"]
+    key = f"{VERB}|{SC10}"
+    for r in chk["rows"]:
+        assert set(r["rho"]) == {f"{VERB}|{SC}", f"{VERB}|{LP}", key}
+    assert chk["main"][key] == d["k10"]["rank_agreement"]["rho"]
+    md = pilot.markdown(d)
+    table = md[md.index("| run | rows timed |"):].split("\n\n")[0].splitlines()[2:]
+    assert [line.split(" | ")[0].lstrip("| ") for line in table] == [
+        pilot.NAMES[s] for s in (VERB, SC, LP, LAYA, SC10)]
+
+
+def test_without_the_k10_run_the_tables_hold_the_four_runs(d):
+    md = pilot.markdown(d)
+    table = md[md.index("| run | rows timed |"):].split("\n\n")[0].splitlines()[2:]
+    assert len(table) == 4

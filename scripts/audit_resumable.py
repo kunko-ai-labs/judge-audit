@@ -151,8 +151,10 @@ def recorded_judge(done: dict[int, dict]) -> str | None:
 
 
 # What makes two runs of one adapter the same measurement: a checkpoint resumed with any of
-# these changed would mix two methods under one header (e.g. LLM_SAMPLES or LLM_TEMPERATURE).
-METHOD_KEYS = ("name", "model", "confidence_method", "temperature", "samples", "prompt_sha256")
+# these changed would mix two methods under one header (e.g. LLM_SAMPLES or LLM_TEMPERATURE),
+# or two endpoints (LLM_PROVIDER, LLM_BASE_URL).
+METHOD_KEYS = ("name", "provider", "model", "base_url", "confidence_method", "temperature",
+               "samples", "prompt_sha256")
 
 
 def same_method(ckpt: Path, recorded: dict, now: dict) -> None:
