@@ -25,7 +25,7 @@ import functools
 import math
 import random
 from collections.abc import Callable, Hashable, Mapping, Sequence
-from typing import NamedTuple, TypeVar
+from typing import Any, NamedTuple, TypeVar
 
 from .calibration import (
     BOOTSTRAP,
@@ -271,7 +271,7 @@ def _coverage_at_risk(cal_confidences: Sequence[float], cal_correct: Sequence[bo
                if threshold is not None and c >= threshold]
     t_covered, t_errors = len(covered), sum(1 for ok in covered if not ok)
     n_cal, n_test = len(cal_confidences), len(test_confidences)
-    result = {
+    result: dict[str, Any] = {
         "target_risk": target_risk, "delta": delta, "min_covered": n_min,
         "threshold": threshold,
         "calibration": {"n": n_cal, "covered": cal_covered, "errors": cal_errors,
