@@ -63,6 +63,14 @@ One primary run per judge and method; every confirmatory test uses it. Explorato
 - **Predictions.** T1, T2 and T7, T8: positive and resolved. T3–T6: **not resolved**, for reasons of resolution, not of the model. At Qwen3's k = 10 ties (76 % of pilot rows unanimous) the power model turns a latent advantage of 0.05 into an observed gap of +0.003 to +0.008 ([power § B](v05-power.md)), far below the MDE (§8): T3–T4. At k = 5 ties (82 % unanimous) the modelled gap was −0.014 to −0.019 (the power page before the k = 10 constants, [#110](https://github.com/kunko-ai-labs/judge-audit/pull/110)): T5–T6, Gemini. H1-sc is therefore predicted **not supported** for either model.
 - **Secondary, not confirmatory:** accuracy (Wilson; McNemar on discordant rows); ECE (10 equal-width bins) and MCE, paired by the same bootstrap; AURC; Brier; NLL (infinite counts printed); zero-error coverage; certified coverage at risk (§7) per judge and method, reported side by side without a test; cost and latency. No composite score. Everything not in the table above is exploratory and labelled so.
 
+## 6b. Exploratory studies registered here (not confirmatory)
+
+Pre-registered like the rest (what runs, what is reported), but outside the Holm family of §6 and never counted as support for H1 or H2. Every result is printed with "exploratory" next to it.
+
+**E1 — Prompt sensitivity (#92).** A second prompt template, `v2` ([docs/v05/prompt-templates.md](v05/prompt-templates.md), [#115](https://github.com/kunko-ai-labs/judge-audit/pull/115)): same task, options, reply format, decision rule and confidence definition, another wording and layout. Runs: **Qwen3-8B verbalized** (`llm`, `prompt_sha256` v1 `fe16e59a…`, v2 `b435f82d…`), **Qwen3-8B token log-probability** (`logprob`, v1 `e3f03049…`, v2 `3b739001…`) and **Gemini verbalized** (`llm`, same digests), on **BANKING77** only. Self-consistency and the other judges keep `v1`. Reported: every metric per template side by side; the paired difference v2 − v1 in AUROC per judge and method with its clustered bootstrap interval (§6's resampling, no Holm); and a sentence stating whether the order of the three runs' AUROC point estimates changes between templates.
+
+**E2 — v2 synthetic stress sets (#87).** `email-routing-v2` (1,000 rows, 10 options), `email-routing-adversarial-v2` (1,000, 10) and `task-routing-v2` (1,050, 2) ([#116](https://github.com/kunko-ai-labs/judge-audit/pull/116)), synthetic, ground truth by construction (GT-1). Runs: Jev, Laya, Qwen3-8B verbalized and log-probability (v1 templates), Gemini verbalized, on every row. Reported per dataset and separately for the development and held-out template halves of each file's committed split: accuracy, AUROC, ECE and MCE, zero-error coverage and certified coverage at the §7 targets. No v1 synthetic number is recomputed or replaced.
+
 ## 7. Certification
 
 `coverage_at_risk_crossfit`: two halves split by text group, **seed 2026** (the spread over seeds 2027–2036 is reported as secondary); on each, the threshold is certified on one half with an exact one-sided 95 % bound and applied unchanged to the other, and the test halves are pooled.
@@ -98,9 +106,12 @@ Per-call costs from committed checkpoints: Gemini, from its 21 pilot rows before
 | Gemini verbalized, both datasets | 4,980 | $1.58 |
 | Gemini self-consistency, k = 5 | 24,900 | $7.92 |
 | Jev, primary (4,980 rows) + 2 exploratory repeats on BANKING77 (6,160) | 11,140 | $0.48 |
+| E1: Gemini verbalized, `v2` template, BANKING77 | 3,080 | $0.98 |
+| E2: Gemini verbalized on the v2 synthetic sets (shorter prompts: an upper bound) | 3,050 | $0.97 |
+| E2: Jev on the v2 synthetic sets | 3,050 | $0.13 |
 
-- **D6 (decided) — ceiling: $30** (three times the $9.98 Gemini + Jev estimate, for unseen reasoning tokens). A run that would cross it stops; going on needs a dated amendment.
-- **Local time**, from the pilot's per-row latencies on the maintainer's 16 GB machine, sequential: verbalized ≈ 5.5 h, self-consistency k = 10 ≈ 28.1 h (20.3 s per row in its pilot checkpoint), log-probability ≈ 13.3 h, Laya ≈ 0.5 h, the two exploratory Qwen3 repeats ≈ 6.9 h: about 54 h. The log-probability self-check's uncached reference path needed about 12 GB and swapped on 16 GB ([v05-pilot.md](v05-pilot.md) §4.1); the check runs on 5 rows.
+- **D6 (decided) — ceiling: $30** (three times the $9.98 Gemini + Jev estimate of the confirmatory runs, for unseen reasoning tokens). With E1 and E2 the estimate is $12.06, and three times that is $36: **DECISION D7 — raise the ceiling to $40, or keep $30 and let E2's Gemini run go last and stop at the ceiling.** A run that would cross the ceiling stops; going on needs a dated amendment.
+- **Local time**, from the pilot's per-row latencies on the maintainer's 16 GB machine, sequential: verbalized ≈ 5.5 h, self-consistency k = 10 ≈ 28.1 h (20.3 s per row in its pilot checkpoint), log-probability ≈ 13.3 h, Laya ≈ 0.5 h, the two exploratory Qwen3 repeats ≈ 6.9 h: about 54 h. E1 adds Qwen3 verbalized and log-probability on 3,080 rows with `v2` (≈ 3.4 h + 8.2 h); E2 adds Laya and Qwen3 verbalized and log-probability on 3,050 rows (≈ 0.3 h + 3.4 h + 8.1 h at BANKING77's per-row rates, an upper bound: the synthetic prompts are shorter and have 2–10 options). About 77 h of the maintainer's machine in all, sequential for the Qwen3 runs; the hosted runs go in parallel. The log-probability self-check's uncached reference path needed about 12 GB and swapped on 16 GB ([v05-pilot.md](v05-pilot.md) §4.1); the check runs on 5 rows.
 
 ## 10. Execution and stopping rules
 
@@ -118,9 +129,10 @@ Dated amendments, committed before the call they govern. None yet.
 2. Code, with tests, reviewed: the percentile p-value from `paired_difference_ci`'s resamples and Holm (§6); D3's start parameter for `coverage_at_risk`, and power § A2 rerun on it (§7).
 3. ~~D1: the k = 10 pilot run, its estimates and constants~~ ([#113](https://github.com/kunko-ai-labs/judge-audit/pull/113); k = 10 adopted).
 4. Gemini's quota: the provider account must allow the ~29,900 calls (billing enabled); its billing-console figure for the pilot reported in `docs/runs/v05-pilot/run-notes.json`.
-5. An external human reviewer is sought. **None has read this plan yet**; if none does before the first study call, the published report says so.
+5. #115 (E1's templates) and #116 (E2's datasets) merged: the plan cites their digests and files.
+6. An external human reviewer is sought (the maintainer is arranging it). **None has read this plan yet**; if none does before the first study call, the published report says so.
 
-## Decisions (settled by the maintainer, 2026-09-29)
+## Decisions (settled by the maintainer, 2026-09-29; D7 open)
 
 | id | question | decision |
 |---|---|---|
@@ -130,3 +142,4 @@ Dated amendments, committed before the call they govern. None yet.
 | D4 | label noise | not measured before the runs; bounds stated as including it; the #86 relabel after the runs as a sensitivity analysis |
 | D5 | Claude | out of this study |
 | D6 | cost ceiling | $30 |
+| D7 | cost ceiling with the exploratory E1 and E2 | open: $40, or $30 with E2's Gemini run last |
