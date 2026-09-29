@@ -891,3 +891,26 @@ def test_a_resumed_hosted_run_reads_complete(tmp_path):
     assert d["hosted"][GEM]["status"] == "run"
     assert d["run_log"]["hosted"][GEM]["status"] == "complete"
     assert "complete (6/6, resumed 2026-09-29, the maintainer's note)" in pilot.markdown(d)
+
+
+def test_the_k10_run_joins_the_seed_check_and_the_throughput_table(tmp_path):
+    """With the k = 10 run committed, the seed check covers its pair with verbalized
+    (compared exactly, as its estimate is) and the throughput table has one row per Qwen3
+    run present."""
+    d = pilot.compute(_with_k10(tmp_path), tmp_path / "runs" / "labels.jsonl",
+                      n_sim=N_SIM, n_boot=N_BOOT)
+    chk = d["rho_seed_check"]
+    key = f"{VERB}|{SC10}"
+    for r in chk["rows"]:
+        assert set(r["rho"]) == {f"{VERB}|{SC}", f"{VERB}|{LP}", key}
+    assert chk["main"][key] == d["k10"]["rank_agreement"]["rho"]
+    md = pilot.markdown(d)
+    table = md[md.index("| run | rows timed |"):].split("\n\n")[0].splitlines()[2:]
+    assert [line.split(" | ")[0].lstrip("| ") for line in table] == [
+        pilot.NAMES[s] for s in (VERB, SC, LP, LAYA, SC10)]
+
+
+def test_without_the_k10_run_the_tables_hold_the_four_runs(d):
+    md = pilot.markdown(d)
+    table = md[md.index("| run | rows timed |"):].split("\n\n")[0].splitlines()[2:]
+    assert len(table) == 4

@@ -2770,48 +2770,55 @@
   "main_seed": 2026,
   "main": {
    "llm-qwen3-8b|llm-qwen3-8b-sc5": 0.4108,
-   "llm-qwen3-8b|logprob-qwen3-8b": 0.4729
+   "llm-qwen3-8b|logprob-qwen3-8b": 0.4729,
+   "llm-qwen3-8b|llm-qwen3-8b-sc10": 0.4357
   },
   "rows": [
    {
     "seed": 2027,
     "rho": {
      "llm-qwen3-8b|llm-qwen3-8b-sc5": 0.419,
-     "llm-qwen3-8b|logprob-qwen3-8b": 0.4799
+     "llm-qwen3-8b|logprob-qwen3-8b": 0.4799,
+     "llm-qwen3-8b|llm-qwen3-8b-sc10": 0.4442
     }
    },
    {
     "seed": 2028,
     "rho": {
      "llm-qwen3-8b|llm-qwen3-8b-sc5": 0.4212,
-     "llm-qwen3-8b|logprob-qwen3-8b": 0.4782
+     "llm-qwen3-8b|logprob-qwen3-8b": 0.4782,
+     "llm-qwen3-8b|llm-qwen3-8b-sc10": 0.4405
     }
    },
    {
     "seed": 2029,
     "rho": {
      "llm-qwen3-8b|llm-qwen3-8b-sc5": 0.4098,
-     "llm-qwen3-8b|logprob-qwen3-8b": 0.4737
+     "llm-qwen3-8b|logprob-qwen3-8b": 0.4737,
+     "llm-qwen3-8b|llm-qwen3-8b-sc10": 0.437
     }
    },
    {
     "seed": 2030,
     "rho": {
      "llm-qwen3-8b|llm-qwen3-8b-sc5": 0.4177,
-     "llm-qwen3-8b|logprob-qwen3-8b": 0.4762
+     "llm-qwen3-8b|logprob-qwen3-8b": 0.4762,
+     "llm-qwen3-8b|llm-qwen3-8b-sc10": 0.4387
     }
    },
    {
     "seed": 2031,
     "rho": {
      "llm-qwen3-8b|llm-qwen3-8b-sc5": 0.4191,
-     "llm-qwen3-8b|logprob-qwen3-8b": 0.4725
+     "llm-qwen3-8b|logprob-qwen3-8b": 0.4725,
+     "llm-qwen3-8b|llm-qwen3-8b-sc10": 0.4351
     }
    }
   ],
   "round_differently": {
    "llm-qwen3-8b|llm-qwen3-8b-sc5": 0,
-   "llm-qwen3-8b|logprob-qwen3-8b": 3
+   "llm-qwen3-8b|logprob-qwen3-8b": 3,
+   "llm-qwen3-8b|llm-qwen3-8b-sc10": 0
   }
  },
  "low_option_mass": {

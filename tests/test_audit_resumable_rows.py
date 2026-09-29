@@ -132,7 +132,8 @@ def test_a_checkpoint_is_not_resumed_with_another_confidence_method(tmp_path, mo
     ckpt = tmp_path / "c.ckpt.jsonl"
     judge = {"name": "llm:m", "provider": "openai-compatible", "model": "m",
              "confidence_method": "verbalized (model-reported probability)",
-             "temperature": 0, "prompt_sha256": prompt_sha256()}
+             "temperature": 0, "prompt_sha256": prompt_sha256(),
+             "base_url": "http://127.0.0.1:9"}
     ckpt.write_text(json.dumps({"idx": -1, "run": {"judge": judge}}) + "\n")
     for k, v in {"LLM_PROVIDER": "openai-compatible", "LLM_BASE_URL": "http://127.0.0.1:9",
                  "LLM_MODEL": "m"}.items():
@@ -147,3 +148,23 @@ def test_a_checkpoint_is_not_resumed_with_another_confidence_method(tmp_path, mo
     monkeypatch.setenv("LLM_TEMPERATURE", "default")
     p = run(args, tmp_path)
     assert p.returncode != 0 and "temperature=0" in p.stderr and "provider default" in p.stderr
+
+
+def test_a_checkpoint_is_not_resumed_against_another_endpoint(tmp_path, monkeypatch):
+    """Same model and method, another LLM_BASE_URL (or provider): a resumed run would claim
+    one endpoint in its header while its later rows came from another."""
+    from judge_audit.judges.llm import prompt_sha256
+
+    ckpt = tmp_path / "c.ckpt.jsonl"
+    judge = {"name": "llm:m", "provider": "openai-compatible", "model": "m",
+             "confidence_method": "verbalized (model-reported probability)",
+             "temperature": 0, "prompt_sha256": prompt_sha256(),
+             "base_url": "http://127.0.0.1:8"}
+    ckpt.write_text(json.dumps({"idx": -1, "run": {"judge": judge}}) + "\n")
+    for k, v in {"LLM_PROVIDER": "openai-compatible", "LLM_BASE_URL": "http://127.0.0.1:9",
+                 "LLM_MODEL": "m"}.items():
+        monkeypatch.setenv(k, v)
+    args = [str(LABELS), "--judge", "llm", "--checkpoint", str(ckpt),
+            "--out", str(tmp_path / "r.md"), "--json", str(tmp_path / "r.json")]
+    p = run(args, tmp_path)
+    assert p.returncode != 0 and "base_url='http://127.0.0.1:8'" in p.stderr

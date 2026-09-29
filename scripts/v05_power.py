@@ -549,14 +549,15 @@ def tied_gap_finding(b: list[dict]) -> str:
     if all(r["gap"] > 0 for r in tied) and below == len(tied):
         return (f" At the pilot's ties, in every tied cell the exact gap is "
                 f"{_span([r['gap'] for r in tied], 4)}, below the MDE in {below} of "
-                f"{len(tied)}: the {SC_SAMPLES}-sample vote's coarsening shrinks the latent "
-                f"advantage of +{AUROC_B - AUROC_A:.2f} to less than the study can resolve.")
+                f"{len(tied)}: the {SC_SAMPLES}-sample vote's coarsening shrinks the assumed "
+                f"latent advantage of +{AUROC_B - AUROC_A:.2f} (a design value, not a "
+                "measurement) to less than the study can resolve.")
     if any(r["gap"] >= 0 for r in tied):
         return ""
     return (f" At the pilot's ties, in every tied cell the exact gap is negative "
             f"({_span([r['gap'] for r in tied], 4)}), its size smaller than the MDE in {below} "
             f"of {len(tied)}: the {SC_SAMPLES}-sample vote coarsens self-consistency so much "
-            f"that its latent advantage of +{AUROC_B - AUROC_A:.2f} becomes an observed "
+            f"that its assumed latent advantage of +{AUROC_B - AUROC_A:.2f} becomes an observed "
             "deficit.")
 
 
