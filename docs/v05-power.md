@@ -11,6 +11,7 @@ One-sided 95 % Clopper-Pearson bound, the rule `metrics.selective` applies. Rows
 | 1 % | 299 | 473 | 628 | 1,049 | 1,693 |
 | 2 % | 149 | 236 | 313 | 523 | 845 |
 | 5 % | 59 | 93 | 124 | 208 | 336 |
+| 10 % | 29 | 46 | 61 | 103 | 167 |
 
 At 1 %, zero errors certify from 299 rows, and each further error costs about 129–174 more rows.
 
@@ -27,10 +28,13 @@ Rows one **fixed** set needs for an 80 % chance to certify r when its true error
 | 5 % | 0 | 59 |
 | 5 % | 1.25 % | 153 |
 | 5 % | 2.5 % | 434 |
+| 10 % | 0 | 29 |
+| 10 % | 2.5 % | 76 |
+| 10 % | 5 % | 203 |
 
 ## A2. The certification procedure itself (simulated)
 
-`coverage_at_risk` (#98) on a calibration half, applied to a test half of the same size. Confidences are continuous; the top 50 % of rows err at r′, the rest at 20 %. The most a half can automate with a true error rate still at most r is the slice plus as many other rows as r allows: 53 % at 1 %, 56 % at 2 %, 67 % at 5 % when r′ = 0. With continuous confidences the first cut the procedure tests holds exactly the rows zero errors need (299 at 1 %), all inside the slice, and passes only if they hold no error, so P(certifies) = (1 − r′)^rows, exactly; the simulated share is printed next to it as a check. 500 simulated datasets per cell (Monte Carlo SE of a share: at most 2.2 points). Coverage is on the test half, given that the procedure certified; mean coverage counts a run that certified nothing as 0. *Violation* = a threshold whose true error rate above it exceeds r; the guarantee allows it 5 % of the time.
+`coverage_at_risk` (#98) on a calibration half, applied to a test half of the same size. Confidences are continuous; the top 50 % of rows err at r′, the rest at 20 %. The most a half can automate with a true error rate still at most r is the slice plus as many other rows as r allows: 53 % at 1 %, 56 % at 2 %, 67 % at 5 %, 100 % at 10 % when r′ = 0. With continuous confidences the first cut the procedure tests holds exactly the rows zero errors need (299 at 1 %), all inside the slice, and passes only if they hold no error, so P(certifies) = (1 − r′)^rows (the exact column sums over the slice's size, `p_first_cut_passes`, which differs only if a half's slice could hold fewer rows than the cut); the simulated share is printed next to it as a check. 500 simulated datasets per cell (Monte Carlo SE of a share: at most 2.2 points). Coverage is on the test half, given that the procedure certified; mean coverage counts a run that certified nothing as 0. *Violation* = a threshold whose true error rate above it exceeds r; the guarantee allows it 5 % of the time.
 
 | r | r′ | rows per half | P(certifies), exact | simulated | coverage if certified (median) | mean coverage | violations |
 |---|---|---:|---:|---:|---:|---:|---:|
@@ -52,8 +56,45 @@ Rows one **fixed** set needs for an 80 % chance to certify r when its true error
 | 5 % | 0 | 1,540 | 100 % | 100 % | 62 % | 62 % | 3.6 % |
 | 5 % | 1.25 % | 1,540 | 48 % | 49 % | 55 % | 17 % | 0.8 % |
 | 5 % | 2.5 % | 1,540 | 22 % | 24 % | 6 % | 4 % | 0.6 % |
+| 10 % | 0 | 950 | 100 % | 100 % | 84 % | 85 % | 0.0 % |
+| 10 % | 2.5 % | 950 | 48 % | 44 % | 69 % | 22 % | 2.2 % |
+| 10 % | 5 % | 950 | 23 % | 24 % | 5 % | 6 % | 0.4 % |
+| 10 % | 0 | 1,540 | 100 % | 100 % | 88 % | 89 % | 0.0 % |
+| 10 % | 2.5 % | 1,540 | 48 % | 47 % | 72 % | 23 % | 1.4 % |
+| 10 % | 5 % | 1,540 | 23 % | 22 % | 3 % | 4 % | 0.2 % |
 
-**Read it this way.** With no error in the automatable slice the procedure certifies 100 % of the time and then automates 51 % to 62 % of a half (median). With a true error rate a quarter of the target it certifies 47 % to 48 % of the time, and at half the target 22 %; when it does certify there, it automates 6 % to 46 %. The reason is where the sequence starts: #98 starts at the smallest cut that could pass (299 rows at 1 %, where it must hold zero errors), and with continuous confidences one error among those rows ends the walk before any larger cut is tried. The largest violation rate in the table is 4.8 %, which is consistent with the 5 % allowed (each rate is one simulated estimate, standard error about 1.0 points). Starting the sequence at a later, pre-registered cut keeps the guarantee and should certify more often when the slice is not error-free; that choice, and its effect in this simulation, belong in the plan.
+**Read it this way.** With no error in the automatable slice the procedure certifies 100 % of the time and then automates 51 % to 88 % of a half (median). With a true error rate a quarter of the target it certifies 47 % to 48 % of the time, and at half the target 22 % to 23 %; when it does certify there, it automates 3 % to 46 %. The reason is where the sequence starts: #98 starts at the smallest cut that could pass (299 rows at 1 %, where it must hold zero errors), and with continuous confidences one error among those rows ends the walk before any larger cut is tried. The largest violation rate in the table is 4.8 %, which is consistent with the 5 % allowed (each rate is one simulated estimate, standard error about 1.0 points). The plan starts the sequence at a later, pre-registered cut (D3); the next table shows what that changes.
+
+**From the plan's start (D3).** The same calibration halves, walked from the first cut holding the rows that certify r with 2 errors (628 / 313 / 124 / 61 rows at 1 % / 2 % / 5 % / 10 %) instead of zero. The start depends on the row counts only, never on which rows are wrong, so the guarantee is the same (`coverage_at_risk(..., start_errors=2)`). P(certifies) is exact by the same argument: the first cut tested holds the start's rows, may hold 2 errors, and decides; when the half's automatable rows are fewer than the start, the rest of the cut comes from rows that err at 20 % (the sum over the slice's size is in `p_first_cut_passes`). The simulated runs use the calibration halves above; their test halves come from a second stream (seed 2027), as do all the 10 % runs, so the rows published before keep their numbers. 500 runs per cell.
+
+| r | r′ | rows per half | start (rows) | P(certifies), #98 start | P(certifies), plan start, exact | simulated | coverage if certified (median) | mean coverage | violations |
+|---|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| 1 % | 0 | 950 | 628 | 100 % | **0 %** | 0 % | — | 0 % | 0.0 % |
+| 1 % | 0.25 % | 950 | 628 | 47 % | **0 %** | 0 % | — | 0 % | 0.0 % |
+| 1 % | 0.5 % | 950 | 628 | 22 % | **0 %** | 0 % | — | 0 % | 0.0 % |
+| 1 % | 0 | 1,540 | 628 | 100 % | **100 %** | 100 % | 51 % | 51 % | 2.0 % |
+| 1 % | 0.25 % | 1,540 | 628 | 47 % | **79 %** | 81 % | 51 % | 41 % | 3.0 % |
+| 1 % | 0.5 % | 1,540 | 628 | 22 % | **39 %** | 40 % | 50 % | 20 % | 3.2 % |
+| 2 % | 0 | 950 | 313 | 100 % | **100 %** | 100 % | 52 % | 52 % | 2.4 % |
+| 2 % | 0.5 % | 950 | 313 | 47 % | **79 %** | 81 % | 52 % | 40 % | 2.8 % |
+| 2 % | 1 % | 950 | 313 | 22 % | **39 %** | 40 % | 50 % | 18 % | 2.0 % |
+| 2 % | 0 | 1,540 | 313 | 100 % | **100 %** | 100 % | 53 % | 53 % | 3.0 % |
+| 2 % | 0.5 % | 1,540 | 313 | 47 % | **79 %** | 80 % | 52 % | 38 % | 2.2 % |
+| 2 % | 1 % | 1,540 | 313 | 22 % | **39 %** | 35 % | 46 % | 13 % | 2.0 % |
+| 5 % | 0 | 950 | 124 | 100 % | **100 %** | 100 % | 60 % | 61 % | 4.8 % |
+| 5 % | 1.25 % | 950 | 124 | 48 % | **80 %** | 77 % | 56 % | 40 % | 4.0 % |
+| 5 % | 2.5 % | 950 | 124 | 22 % | **40 %** | 37 % | 23 % | 12 % | 1.6 % |
+| 5 % | 0 | 1,540 | 124 | 100 % | **100 %** | 100 % | 62 % | 62 % | 3.6 % |
+| 5 % | 1.25 % | 1,540 | 124 | 48 % | **80 %** | 81 % | 57 % | 40 % | 2.4 % |
+| 5 % | 2.5 % | 1,540 | 124 | 22 % | **40 %** | 41 % | 50 % | 14 % | 2.2 % |
+| 10 % | 0 | 950 | 61 | 100 % | **100 %** | 100 % | 84 % | 84 % | 0.0 % |
+| 10 % | 2.5 % | 950 | 61 | 48 % | **80 %** | 79 % | 73 % | 52 % | 3.6 % |
+| 10 % | 5 % | 950 | 61 | 23 % | **41 %** | 43 % | 55 % | 16 % | 2.0 % |
+| 10 % | 0 | 1,540 | 61 | 100 % | **100 %** | 100 % | 88 % | 89 % | 0.0 % |
+| 10 % | 2.5 % | 1,540 | 61 | 48 % | **80 %** | 78 % | 76 % | 54 % | 3.4 % |
+| 10 % | 5 % | 1,540 | 61 | 23 % | **41 %** | 42 % | 59 % | 16 % | 1.6 % |
+
+**Read it this way.** With a true error rate a quarter of the target the plan's start certifies 79 % to 80 % of the time, against 47 % to 48 % from #98's start, and its mean coverage (a run that certifies nothing counts 0) goes from 17–23 % to 38–54 %; at half the target it certifies 39 % to 41 % (22 % to 23 %), mean coverage 4–8 % → 12–20 %; with no error in the slice, 100 % (100 %). A few errors no longer end the walk before it reaches the rows that could absorb them. What it costs: at 1 % on a 950-row half the start (628 rows) is more than the 500 rows it can automate at a true error rate of at most 1 % even when r′ = 0, so there it certifies 0 % of the time (#98's start: 22 % to 100 %), because of where the sequence starts, not because of the judge. The largest violation rate from the plan's start is 4.8 %, which is consistent with the 5 % allowed.
 
 ## B. Paired AUROC: the smallest difference resolved
 
@@ -166,6 +207,6 @@ At n = 1,900 the ECE MDE is 0.022 to 0.026.
 ## What the plan takes from this (proposals for `docs/v05-plan.md`)
 
 - **n**: every distinct text, 3,079 for BANKING77 and 1,900 for CLINC150; paired comparisons use all of them, certification uses halves.
-- **Certification**: at 1 % zero errors certify from 299 automated rows and each further error costs about 129–174 more; the table in A2 shows how often the procedure succeeds at each target. The plan states which targets are primary per dataset on that basis, and where the fixed sequence starts.
+- **Certification**: at 1 % zero errors certify from 299 automated rows and each further error costs about 129–174 more. The maintainer's decisions for the plan: certify at 1 %, 2 %, 5 % and 10 % in one table (D2), and start the fixed sequence at the 2-error cut (D3), which A2's second table shows certifying 79 % to 80 % of the time at a quarter of the target, where #98's start certifies 47 % to 48 %; it cannot usefully start on a 950-row half at 1 %.
 - **Smallest differences stated before the runs**: paired AUROC 0.028 to 0.041 on BANKING77 and 0.036 to 0.052 on CLINC150; ECE 0.017 to 0.021 and 0.022 to 0.026 (80 % power, α = 0.05). At the pilot's ties, in every tied cell the exact gap is negative (-0.0188 to -0.0138), its size smaller than the MDE in 36 of 36: the 5-sample vote coarsens self-consistency so much that its latent advantage of +0.05 becomes an observed deficit. The plan states the MDE of the cell the pilot matches. The MDE sizes the study; the paired test judges each observed difference, and a difference it does not resolve is reported as not resolved, not as no difference.
 - **Caveat**: A2, B and C assume the shapes above. B takes its accuracy, ρ, AUROC level and ties, and C takes only its confidence distribution, from a 308-row pilot on train queries with one open model (Qwen3-8B, 4-bit), not from the judges or the test split the study scores; C's ρ (`RHOS_C`) and overconfidence gaps, and A2's slice, are design values, not pilot estimates.

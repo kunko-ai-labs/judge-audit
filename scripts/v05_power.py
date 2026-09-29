@@ -6,10 +6,12 @@ Four questions, answered before any model is run so the pre-registration can fix
       confidence" about a set of automated decisions, how many must it hold with 0, 1, 2 ...
       errors; and how many for an 80 % chance to certify one fixed set whose true error
       rate is r' < r. One fixed set's power is an upper bound on the procedure's in A2.
-  A2. The procedure itself (simulated). `metrics.selective.coverage_at_risk` (#98) walks
-      the calibration half from the most confident row down and stops at the first cut
-      that fails. How often does it certify, and how much does it automate on the test
-      half, when half the rows are automatable at a true error rate r'?
+  A2. The procedure itself (simulated, P(certifies) exact). `metrics.selective.
+      coverage_at_risk` (#98) walks the calibration half from the most confident row down
+      and stops at the first cut that fails. How often does it certify, and how much does
+      it automate on the test half, when half the rows are automatable at a true error rate
+      r'? Once from #98's start (the cut zero errors could pass) and once from the plan's
+      (D3: the cut START_ERRORS errors could pass), on the same calibration halves.
   B.  Paired AUROC (asymptotic, DeLong). Two confidence methods ranking the same decisions
       (H1: same model, verbalized against another method): the smallest AUROC difference
       a paired test detects with 80 % power at alpha 0.05, per n, accuracy, correlation and
@@ -101,6 +103,16 @@ def binom_cdf(k: int, m: int, p: float) -> float:
     return min(1.0, math.exp(top) * math.fsum(math.exp(t - top) for t in terms))
 
 
+def binom_pmf(i: int, m: int, p: float) -> float:
+    """P(Bin(m, p) = i), in log space."""
+    if not 0 <= i <= m:
+        return 0.0
+    if p == 0 or p == 1:
+        return 1.0 if i == (0 if p == 0 else m) else 0.0
+    return math.exp(math.lgamma(m + 1) - math.lgamma(i + 1) - math.lgamma(m - i + 1)
+                    + i * math.log(p) + (m - i) * math.log1p(-p))
+
+
 def certifiable_errors(m: int, r: float, delta: float = DELTA) -> int:
     """The most errors among m rows that still certify risk <= r: the one-sided
     Clopper-Pearson upper bound is at most r exactly when P(Bin(m, r) <= k) <= delta, the
@@ -160,10 +172,16 @@ def rows_for_power(r: float, r_true: float, target: float = POWER, limit: int = 
     return None
 
 
-RISKS = [0.01, 0.02, 0.05]
+RISKS = [0.01, 0.02, 0.05, 0.1]  # the plan's targets (D2): one table, none the headline
 # r' = 0, a quarter and a half of each target
-ALTERNATIVES = {r: [0.0, r / 4, r / 2] for r in (0.01, 0.02, 0.05)}
+ALTERNATIVES = {r: [0.0, r / 4, r / 2] for r in RISKS}
 ERRORS = [0, 1, 2, 5, 10]
+START_ERRORS = 2                  # the plan's start (D3): the first cut 2 errors could pass
+# A2's first version simulated these targets from the main stream; they keep drawing from it,
+# in the same order, so their rows (and B and C after them) keep their published numbers.
+# Everything A2 added later (the 10 % target, the plan's start) draws from its own stream.
+RISKS_MAIN_STREAM = (0.01, 0.02, 0.05)
+SEED_ADDED = SEED + 1
 
 
 def section_a() -> dict:
@@ -198,36 +216,90 @@ def fixed_sequence_threshold(confidences: list[float], correct: list[bool], ksta
     return threshold
 
 
+def p_first_cut_passes(n_half: int, m: int, k: int, r_true: float) -> float:
+    """Exact P(the procedure certifies) on a calibration half in A2's model, for a sequence
+    that starts at m rows and lets them hold k errors (k = kstar[m]).
+
+    With continuous confidences every cut adds one row, so the first cut tested holds
+    exactly m rows, and the procedure certifies exactly when it passes (if it fails, the
+    walk ends; if it passes, its threshold stands). The top m rows are the automatable
+    rows (their number S ~ Bin(n_half, AUTOMATABLE)) first, then the others: min(S, m) rows
+    erring at r_true and m - min(S, m) at REST_ERROR, all independent. Summed over S. A
+    start past the half (m > n_half) certifies nothing."""
+    if m > n_half or k < 0:
+        return 0.0
+    terms = []
+    for s in range(n_half + 1):
+        a = min(s, m)
+        inside = math.fsum(binom_pmf(x, a, r_true) * binom_cdf(k - x, m - a, REST_ERROR)
+                           for x in range(min(k, a) + 1))
+        terms.append(binom_pmf(s, n_half, AUTOMATABLE) * inside)
+    return min(1.0, math.fsum(terms))
+
+
+def _true_risk_above(t: float, r_true: float) -> float:
+    """The true error rate of the rows above threshold t in A2's model."""
+    cut = 1.0 - AUTOMATABLE
+    if t >= cut:
+        return r_true
+    return (AUTOMATABLE * r_true + (cut - t) * REST_ERROR) / (1.0 - t)
+
+
 def simulate_fixed_sequence(n_half: int, r: float, r_true: float, rng: random.Random,
-                            kstar: list[int], n_min: int) -> dict:
+                            kstar: list[int], n_min: int,
+                            later: tuple[int, random.Random] | None = None) -> dict:
     """Both halves draw continuous confidences uniformly on [0, 1]. Rows above
     1 - AUTOMATABLE err at r_true, the others at REST_ERROR. The threshold is chosen on
     the calibration half and applied to the test half. A violation is a threshold whose
-    true error rate above it exceeds r (the guarantee says at most DELTA of the time)."""
+    true error rate above it exceeds r (the guarantee says at most DELTA of the time).
+
+    `later` = (n_start, rng_later): the same calibration halves are also walked from the
+    plan's later start (the first cut of n_start rows), whose test halves are drawn from
+    rng_later, so `rng` is consumed exactly as without it."""
     cut = 1.0 - AUTOMATABLE
     certified = violations = 0
     coverages: list[float] = []                 # test coverage of the runs that certify
+    late_certified = late_violations = 0
+    late_coverages: list[float] = []
     for _ in range(REPS_A2):
         conf = [rng.random() for _ in range(n_half)]
         ok = [rng.random() >= (r_true if c >= cut else REST_ERROR) for c in conf]
+        if later is not None:
+            n_start, rng_later = later
+            t_late = fixed_sequence_threshold(conf, ok, kstar, n_start)
+            if t_late is not None:
+                late_certified += 1
+                late_coverages.append(
+                    sum(1 for _ in range(n_half) if rng_later.random() >= t_late) / n_half)
+                late_violations += _true_risk_above(t_late, r_true) > r
         t = fixed_sequence_threshold(conf, ok, kstar, n_min)
         if t is None:
             continue
         certified += 1
         coverages.append(sum(1 for _ in range(n_half) if rng.random() >= t) / n_half)
-        above = 1.0 - t
-        true_risk = (r_true if t >= cut else
-                     (AUTOMATABLE * r_true + (cut - t) * REST_ERROR) / above)
-        violations += true_risk > r
-    return {"n_half": n_half, "target": r, "true_rate": r_true,
-            # continuous confidences: the first cut holds exactly n_min rows, all in the
-            # automatable slice, and passes only with no error, so this is exact
-            "p_certify_exact": round((1 - r_true) ** n_min, 3),
-            "p_certify_simulated": round(certified / REPS_A2, 3),
-            "median_coverage_if_certified": (round(median(coverages), 3) if coverages
-                                             else None),
-            "mean_coverage": round(math.fsum(coverages) / REPS_A2, 3),
-            "violation_rate": round(violations / REPS_A2, 3)}
+        violations += _true_risk_above(t, r_true) > r
+    row = {"n_half": n_half, "target": r, "true_rate": r_true,
+           # exact: see p_first_cut_passes (#98's start: kstar[n_min] = 0 errors allowed)
+           "p_certify_exact": round(p_first_cut_passes(n_half, n_min, kstar[n_min], r_true),
+                                    3),
+           "p_certify_simulated": round(certified / REPS_A2, 3),
+           "median_coverage_if_certified": (round(median(coverages), 3) if coverages
+                                            else None),
+           "mean_coverage": round(math.fsum(coverages) / REPS_A2, 3),
+           "violation_rate": round(violations / REPS_A2, 3)}
+    if later is not None:
+        n_start = later[0]
+        row["plan_start"] = {
+            "start_errors": START_ERRORS, "start_rows": n_start,
+            "p_certify_exact": round(p_first_cut_passes(n_half, n_start,
+                                                        kstar[min(n_start, n_half)],
+                                                        r_true), 3),
+            "p_certify_simulated": round(late_certified / REPS_A2, 3),
+            "median_coverage_if_certified": (round(median(late_coverages), 3)
+                                             if late_coverages else None),
+            "mean_coverage": round(math.fsum(late_coverages) / REPS_A2, 3),
+            "violation_rate": round(late_violations / REPS_A2, 3)}
+    return row
 
 
 def max_safe_coverage(r: float, r_true: float) -> float:
@@ -238,14 +310,19 @@ def max_safe_coverage(r: float, r_true: float) -> float:
     return min(1.0, AUTOMATABLE * (REST_ERROR - r_true) / (REST_ERROR - r))
 
 
-def section_a2(rng: random.Random) -> list[dict]:
+def section_a2(rng: random.Random, rng_added: random.Random) -> list[dict]:
+    """Every cell walked from #98's start and from the plan's (START_ERRORS); see
+    RISKS_MAIN_STREAM for which stream each draw comes from."""
     rows = []
     for r in RISKS:
         kstar = certifiable_table(r, max(HALVES))
         n_min = rows_to_certify(r, 0)
+        n_start = rows_to_certify(r, START_ERRORS)
+        stream = rng if r in RISKS_MAIN_STREAM else rng_added
         for n_half in HALVES:
             for t in ALTERNATIVES[r]:
-                rows.append(simulate_fixed_sequence(n_half, r, t, rng, kstar, n_min))
+                rows.append(simulate_fixed_sequence(n_half, r, t, stream, kstar, n_min,
+                                                    later=(n_start, rng_added)))
     return rows
 
 
@@ -475,12 +552,14 @@ def simulate_ece(n: int, rho: float, rng: random.Random) -> dict:
 
 def compute() -> dict:
     rng = random.Random(SEED)
+    rng_added = random.Random(SEED_ADDED)
     return {"seed": SEED, "delta": DELTA, "power": POWER,
             "a_certification": section_a(),
             "a2_fixed_sequence": {"assumptions": {
                 "automatable_share": AUTOMATABLE, "rest_error": REST_ERROR,
-                "reps": REPS_A2, "confidences": "continuous, uniform on [0, 1]"},
-                "rows": section_a2(rng)},
+                "reps": REPS_A2, "confidences": "continuous, uniform on [0, 1]",
+                "plan_start_errors": START_ERRORS, "seed_added": SEED_ADDED},
+                "rows": section_a2(rng, rng_added)},
             "b_paired_auroc": {"assumptions": {
                 "latent_auroc": [AUROC_A, AUROC_B], "tie_shares_a": TIE_SHARES_A,
                 "tie_shares_b": TIE_SHARES_B, "rows_in_large_sample": N_BIG,
@@ -572,6 +651,110 @@ def per_error_increment(table: dict, r: str) -> tuple[int, int]:
     return round(min(steps)), round(max(steps))
 
 
+def _p_range(values: list[float]) -> str:
+    lo, hi = _share(min(values)), _share(max(values))
+    return lo if lo == hi else f"{lo} to {hi}"
+
+
+def _p_dash(values: list[float]) -> str:
+    """'17–23 %': a range inside a sentence that already says 'from … to …'."""
+    lo, hi = round(min(values) * 100), round(max(values) * 100)
+    return f"{lo} %" if lo == hi else f"{lo}–{hi} %"
+
+
+def blocked(row: dict) -> bool:
+    """The plan's start holds more rows than a half can automate at a true error rate of at
+    most r in A2's model, even with no error in the slice (r' = 0, the most it can): a
+    certification there would be a violation, and it (almost) never happens. A property of
+    the (target, half) cell, whatever r'."""
+    return (row["plan_start"]["start_rows"]
+            > max_safe_coverage(row["target"], 0.0) * row["n_half"])
+
+
+def plan_start_gain(a2: list[dict]) -> str:
+    """The plan bullet's one-line summary of A2's second table."""
+    rows = [r for r in a2 if not blocked(r) and r["true_rate"] == r["target"] / 4]
+    text = (f"{_p_range([r['plan_start']['p_certify_exact'] for r in rows])} of the time at a "
+            f"quarter of the target, where #98's start certifies "
+            f"{_p_range([r['p_certify_exact'] for r in rows])}")
+    stuck = sorted({(r["target"], r["n_half"]) for r in a2 if blocked(r)})
+    if stuck:
+        text += "; it cannot usefully start on " + " or ".join(
+            f"a {n:,}-row half at {_pct(t)}" for t, n in stuck)
+    return text
+
+
+def plan_start_section(a2: list[dict], reps: int, se_violation: float) -> list[str]:
+    """A2's second table and its reading: the same calibration halves walked from the plan's
+    start (D3), next to #98's P(certifies). Every figure is computed from the rows."""
+    starts = {r["target"]: r["plan_start"]["start_rows"] for r in a2}
+    lines = [
+        (f"**From the plan's start (D3).** The same calibration halves, walked from the first "
+         f"cut holding the rows that certify r with {START_ERRORS} errors ("
+         + " / ".join(f"{n:,}" for n in starts.values()) + " rows at "
+         + " / ".join(_pct(r) for r in starts) + ") instead of zero. The start depends on "
+         "the row counts only, never on which rows are wrong, so the guarantee is the same "
+         "(`coverage_at_risk(..., start_errors="
+         f"{START_ERRORS})`). P(certifies) is exact by the same argument: the first cut "
+         f"tested holds the start's rows, may hold {START_ERRORS} errors, and decides; when "
+         "the half's automatable rows are fewer than the start, the rest of the cut comes "
+         f"from rows that err at {_share(REST_ERROR)} (the sum over the slice's size is in "
+         "`p_first_cut_passes`). The simulated runs use the calibration halves above; their "
+         f"test halves come from a second stream (seed {SEED_ADDED}), as do all the "
+         f"{_pct(RISKS[-1])} runs, so the rows published before keep their numbers. "
+         f"{reps} runs per cell."), "",
+        ("| r | r′ | rows per half | start (rows) | P(certifies), #98 start | P(certifies), "
+         "plan start, exact | simulated | coverage if certified (median) | mean coverage | "
+         "violations |"),
+        "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|"]
+    for row in a2:
+        ps = row["plan_start"]
+        cov = ps["median_coverage_if_certified"]
+        lines.append(f"| {_pct(row['target'])} | "
+                     f"{_pct(row['true_rate']) if row['true_rate'] else '0'} | "
+                     f"{row['n_half']:,} | {ps['start_rows']:,} | "
+                     f"{_share(row['p_certify_exact'])} | **{_share(ps['p_certify_exact'])}** | "
+                     f"{_share(ps['p_certify_simulated'])} | "
+                     f"{_share(cov) if cov is not None else '—'} | "
+                     f"{_share(ps['mean_coverage'])} | {ps['violation_rate'] * 100:.1f} % |")
+    usable = [r for r in a2 if not blocked(r)]
+    stuck = [r for r in a2 if blocked(r)]
+
+    def compare(frac: float) -> tuple[str, str, str, str]:
+        rows = [r for r in usable if r["true_rate"] == r["target"] * frac]
+        return (_p_range([r["plan_start"]["p_certify_exact"] for r in rows]),
+                _p_range([r["p_certify_exact"] for r in rows]),
+                _p_dash([r["plan_start"]["mean_coverage"] for r in rows]),
+                _p_dash([r["mean_coverage"] for r in rows]))
+
+    q_new, q_old, qm_new, qm_old = compare(0.25)
+    h_new, h_old, hm_new, hm_old = compare(0.5)
+    c_new, c_old, _, _ = compare(0.0)
+    worst = max(r["plan_start"]["violation_rate"] for r in a2)
+    verdict = ("is consistent with" if worst <= DELTA + 2 * se_violation else "**exceeds**")
+    text = (f"**Read it this way.** With a true error rate a quarter of the target the plan's "
+            f"start certifies {q_new} of the time, against {q_old} from #98's start, and its "
+            f"mean coverage (a run that certifies nothing counts 0) goes from {qm_old} to "
+            f"{qm_new}; at half the target it certifies {h_new} ({h_old}), mean coverage "
+            f"{hm_old} → {hm_new}; with no error in the slice, {c_new} ({c_old}). A few errors "
+            "no longer end the walk before it reaches the rows that could absorb them. ")
+    if stuck:
+        cells = sorted({(r["target"], r["n_half"]) for r in stuck})
+        where = "; ".join(
+            f"at {_pct(t)} on a {n:,}-row half the start ({starts[t]:,} rows) is more than "
+            f"the {math.floor(max_safe_coverage(t, 0.0) * n):,} rows it can automate at a "
+            f"true error rate of at most {_pct(t)} even when r′ = 0"
+            for t, n in cells)
+        p_stuck = _p_range([r["plan_start"]["p_certify_exact"] for r in stuck])
+        p_stuck_old = _p_range([r["p_certify_exact"] for r in stuck])
+        text += (f"What it costs: {where}, so there it certifies {p_stuck} of the time "
+                 f"(#98's start: {p_stuck_old}), because of where the sequence starts, not "
+                 "because of the judge. ")
+    text += (f"The largest violation rate from the plan's start is {worst * 100:.1f} %, "
+             f"which {verdict} the {_pct(DELTA)} allowed.")
+    return [*lines, "", text]
+
+
 def markdown(d: dict) -> str:
     a = d["a_certification"]
     table = a["rows_to_certify"]
@@ -626,7 +809,9 @@ def markdown(d: dict) -> str:
               + " when r′ = 0. With continuous confidences the first cut the procedure tests "
               f"holds exactly the rows zero errors need ({first:,} at {_pct(RISKS[0])}), all "
               "inside the slice, and passes only if they hold no error, so P(certifies) = "
-              "(1 − r′)^rows, exactly; the simulated share is printed next to it as a check. "
+              "(1 − r′)^rows (the exact column sums over the slice's size, "
+              "`p_first_cut_passes`, which differs only if a half's slice could hold fewer "
+              "rows than the cut); the simulated share is printed next to it as a check. "
               f"{reps} simulated datasets per cell (Monte Carlo SE of a share: at most "
               f"{100 * math.sqrt(0.25 / reps):.1f} points). Coverage is on the test half, "
               "given that the procedure certified; mean coverage counts a run that "
@@ -676,9 +861,9 @@ def markdown(d: dict) -> str:
                f"is {worst_violation * 100:.1f} %, which {guarantee} the {_pct(DELTA)} allowed "
                f"(each rate is one simulated estimate, standard error about "
                f"{se_violation * 100:.1f} points). "
-               "Starting the sequence at a later, pre-registered cut keeps the guarantee and "
-               "should certify more often when the slice is not error-free; that choice, and "
-               "its effect in this simulation, belong in the plan."), "",
+               "The plan starts the sequence at a later, pre-registered cut (D3); the next "
+               "table shows what that changes."), "",
+              *plan_start_section(a2, reps, se_violation), "",
               "## B. Paired AUROC: the smallest difference resolved", "",
               (f"Two confidence methods on the same decisions, latent AUROCs {AUROC_A} and "
                f"{AUROC_B}. Ties \"none\": continuous scores; \"tied\": {tie_values()}, "
@@ -752,10 +937,12 @@ def markdown(d: dict) -> str:
               (f"- **n**: every distinct text, {big:,} for BANKING77 and {clinc:,} for "
                "CLINC150; paired comparisons use all of them, certification uses halves."),
               (f"- **Certification**: at {_pct(RISKS[0])} zero errors certify from {first:,} "
-               f"automated rows and each further error costs about {inc_lo}–{inc_hi} more; the "
-               "table in A2 shows how often the procedure succeeds at each target. The plan "
-               "states which targets are primary per dataset on that basis, and where the "
-               "fixed sequence starts."),
+               f"automated rows and each further error costs about {inc_lo}–{inc_hi} more. "
+               "The maintainer's decisions for the plan: certify at "
+               + ", ".join(_pct(r) for r in RISKS[:-1]) + f" and {_pct(RISKS[-1])} in one "
+               f"table (D2), and start the fixed sequence at the {START_ERRORS}-error cut (D3), "
+               "which A2's second table shows certifying "
+               + plan_start_gain(a2) + "."),
               (f"- **Smallest differences stated before the runs**: paired AUROC "
                f"{_span(b_big)} on BANKING77 and {_span(b_clinc)} on CLINC150; ECE "
                f"{_span(c_big)} and {_span(c_clinc)} (80 % power, α = 0.05)."
