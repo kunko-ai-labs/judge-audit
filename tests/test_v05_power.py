@@ -160,6 +160,113 @@ def test_a2_certification_probability_is_exact(monkeypatch):
     assert abs(out["p_certify_simulated"] - exact) < 3 * math.sqrt(exact * (1 - exact) / 400)
 
 
+def test_the_fast_walk_is_the_library_procedure_from_the_plans_start():
+    """The same check from the plan's start: `fixed_sequence_threshold` from
+    rows_to_certify(r, 2) chooses what `coverage_at_risk(..., start_errors=2)` chooses."""
+    import random
+
+    from judge_audit.metrics.selective import coverage_at_risk
+
+    rng = random.Random(17)
+    certified = 0
+    for r in power.RISKS:
+        kstar = power.certifiable_table(r, 1500)
+        n_start = power.rows_to_certify(r, power.START_ERRORS)
+        for _ in range(25):
+            n = rng.randint(max(1, n_start - 50), 1500)
+            err = rng.choice([0.0, r / 4, r / 2, 2 * r])
+            conf = [round(rng.random(), rng.choice([2, 3, 6])) for _ in range(n)]
+            ok = [rng.random() >= (err if c >= 0.5 else 0.3) for c in conf]
+            ours = power.fixed_sequence_threshold(conf, ok, kstar, n_start)
+            lib = coverage_at_risk(conf, ok, conf, ok, target_risk=r,
+                                   start_errors=power.START_ERRORS)["threshold"]
+            assert ours == lib
+            certified += ours is not None
+    assert certified >= 30
+
+
+def test_first_cut_probability_by_brute_force(monkeypatch):
+    """Five rows per half: each is automatable with probability 1/2 and then errs at r', else
+    errs at 20 %. Enumerate every membership and error pattern; the top m rows are the
+    automatable ones first. P(at most k errors among them) is `p_first_cut_passes`."""
+    import itertools
+
+    monkeypatch.setattr(power, "AUTOMATABLE", 0.5)
+    monkeypatch.setattr(power, "REST_ERROR", 0.2)
+    n, r_true = 5, 0.1
+    for m, k in ((3, 0), (3, 1), (4, 2), (5, 1)):
+        total = 0.0
+        for member in itertools.product((True, False), repeat=n):
+            for wrong in itertools.product((True, False), repeat=n):
+                w = 0.5 ** n
+                for s, e in zip(member, wrong, strict=True):
+                    p = r_true if s else 0.2
+                    w *= p if e else 1 - p
+                order = sorted(range(n), key=lambda i: not member[i])   # automatable first
+                if sum(wrong[i] for i in order[:m]) <= k:
+                    total += w
+        assert power.p_first_cut_passes(n, m, k, r_true) == pytest.approx(total, abs=1e-12)
+    assert power.p_first_cut_passes(n, 6, 2, r_true) == 0.0              # start past the half
+
+
+def test_the_plans_start_is_exact_and_leaves_the_main_stream_alone(monkeypatch):
+    """#98's exact column is still (1 - r')^n_min on a half whose slice always holds n_min
+    rows; the plan's start agrees with its simulation; and walking the plan's start as well
+    does not change a single draw of the main stream."""
+    import random
+
+    monkeypatch.setattr(power, "REPS_A2", 400)
+    r, r_true = 0.05, 0.0125
+    kstar = power.certifiable_table(r, 950)
+    n_min, n_start = power.rows_to_certify(r, 0), power.rows_to_certify(r, 2)
+    assert (n_min, n_start) == (59, 124)
+    out = power.simulate_fixed_sequence(950, r, r_true, random.Random(3), kstar, n_min,
+                                        later=(n_start, random.Random(4)))
+    alone = power.simulate_fixed_sequence(950, r, r_true, random.Random(3), kstar, n_min)
+    assert {k: v for k, v in out.items() if k != "plan_start"} == alone
+    assert out["p_certify_exact"] == round((1 - r_true) ** n_min, 3)
+    ps = out["plan_start"]
+    exact = power.binom_cdf(2, n_start, r_true)        # 124 rows, all inside the slice
+    assert ps["p_certify_exact"] == round(exact, 3) == 0.797
+    assert ps["start_rows"] == n_start and ps["start_errors"] == 2
+    assert abs(ps["p_certify_simulated"] - exact) < 3 * math.sqrt(exact * (1 - exact) / 400)
+    # at 1 % a 950-row half's slice (about 475 rows) is smaller than the 628-row start: the
+    # cut takes about 150 rows that err at 20 %, and 2 errors almost never suffice
+    k1 = power.certifiable_table(0.01, 950)
+    assert power.p_first_cut_passes(950, 628, k1[628], 0.0) < 1e-6
+
+
+def test_every_target_is_in_every_table():
+    assert power.RISKS == [0.01, 0.02, 0.05, 0.1]
+    a = power.section_a()
+    assert a["rows_to_certify"]["0.1"] == {"0": 29, "1": 46, "2": 61, "5": 103, "10": 167}
+    assert list(a["rows_for_80pct_power_one_cut"]["0.1"]) == ["0", "0.025", "0.05"]
+
+
+def test_the_plan_start_prose_follows_its_rows(monkeypatch):
+    d = _small(monkeypatch)
+    a2 = d["a2_fixed_sequence"]["rows"]
+    md = power.markdown(d)
+    assert "| start (rows) | P(certifies), #98 start |" in md
+    assert ("at 1 % on a 950-row half the start (628 rows) is more than the 500 rows it can "
+            "automate") in md
+    assert "628 / 313 / 124 / 61 rows at 1 % / 2 % / 5 % / 10 %" in md
+    quarter = [r for r in a2 if r["true_rate"] == r["target"] / 4 and not power.blocked(r)]
+    for i, r in enumerate(quarter):
+        r["plan_start"]["p_certify_exact"] = 0.70 + 0.01 * i
+        r["p_certify_exact"] = 0.40
+    md = power.markdown(d)
+    assert (f"quarter of the target the plan's start certifies 70 % to "
+            f"{round(100 * (0.70 + 0.01 * (len(quarter) - 1)))} % of the time, against 40 %"
+            in md)
+    bullet = next(line for line in md.splitlines() if line.startswith("- **Certification"))
+    assert "certify at 1 %, 2 %, 5 % and 10 % in one table (D2)" in bullet
+    assert "certifying 70 % to" in bullet and "#98's start certifies 40 %" in bullet
+    assert "cannot usefully start on a 950-row half at 1 %" in bullet
+    a2[0]["plan_start"]["violation_rate"] = 0.50     # 5 runs here: 2 SE above 5 % is 24.5 %
+    assert "from the plan's start is 50.0 %, which **exceeds**" in power.markdown(d)
+
+
 def test_population_auroc():
     """Without ties the binormal AUROC is Phi(mu / sqrt 2); cut into levels it is what a large
     sample cut the same way gives; and one level for everything is a coin flip."""
