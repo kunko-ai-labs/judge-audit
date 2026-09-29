@@ -233,9 +233,20 @@ def coverage_at_risk(cal_confidences: Sequence[float], cal_correct: Sequence[boo
 
     Nothing passes → `threshold` is None and nothing is automated: on few rows even a
     perfect judge cannot certify a small risk (zero errors in 100 rows bound the risk
-    at 2.95 %, not below 2 %). `min_covered` is the size of the first cut the sequence may
-    test.
+    at 2.95 %, not below 2 %). `min_covered` is the fewest rows the first cut tested may
+    hold: that cut is the first whole group of equal confidence that reaches it, so ties
+    can make it larger.
     """
+    return _coverage_at_risk(cal_confidences, cal_correct, test_confidences, test_correct,
+                             target_risk, delta, start_errors, unit="rows")
+
+
+def _coverage_at_risk(cal_confidences: Sequence[float], cal_correct: Sequence[bool],
+                      test_confidences: Sequence[float], test_correct: Sequence[bool],
+                      target_risk: float, delta: float, start_errors: int,
+                      unit: str) -> dict:
+    """`coverage_at_risk`, with the unit its `reason` counts in ("rows", or "texts" when
+    the cross-fit has reduced each half to one unit per text)."""
     _check_count("start_errors", start_errors)
     n_min = min_rows_to_certify(target_risk, delta, errors=start_errors)
     _require_finite(cal_confidences)
@@ -250,7 +261,7 @@ def coverage_at_risk(cal_confidences: Sequence[float], cal_correct: Sequence[boo
     for c, m, e in _groups_desc(cal_confidences, cal_correct):
         rows, errors = rows + m, errors + e
         if rows < n_min:
-            continue                      # cannot pass with any number of errors
+            continue                      # before the pre-registered start: not tested
         upper = risk_upper_bound(errors, rows, delta)
         if upper > target_risk:
             break
@@ -276,9 +287,9 @@ def coverage_at_risk(cal_confidences: Sequence[float], cal_correct: Sequence[boo
         result["start_errors"] = start_errors
         if n_min > n_cal:
             result["reason"] = (
-                f"the sequence starts at the first cut holding {n_min} rows (the rows that "
-                f"certify {_pct(target_risk)} with {start_errors} errors); the calibration "
-                f"split holds {n_cal}, so nothing can be certified")
+                f"the sequence starts at the first cut holding {n_min} {unit} (the {unit} "
+                f"that certify {_pct(target_risk)} with {start_errors} errors); the "
+                f"calibration split holds {n_cal} {unit}, so nothing can be certified")
     return result
 
 
@@ -352,8 +363,8 @@ def coverage_at_risk_crossfit(confidences: Sequence[float], correct: Sequence[bo
             return conf, ok
         return aggregate_by_group(conf, ok, [groups[i] for i in idx])
 
-    folds = [coverage_at_risk(*part(cal), *part(test), target_risk, delta,
-                              start_errors=start_errors)
+    folds = [_coverage_at_risk(*part(cal), *part(test), target_risk, delta, start_errors,
+                               unit="rows" if groups is None else "texts")
              for cal, test in ((a, b), (b, a))]
     covered = sum(f["test"]["covered"] for f in folds)
     errs = sum(f["test"]["errors"] for f in folds)
@@ -549,7 +560,8 @@ def paired_difference_test(values_a: Sequence[T], values_b: Sequence[T],
 
 def holm(p_values: Mapping[str, float], alpha: float = 0.05) -> dict[str, dict]:
     """Holm's step-down adjustment (Scandinavian Journal of Statistics 1979) of a family of
-    tests, controlling the family-wise error rate at `alpha` under any dependence.
+    tests: the family-wise error rate stays at most `alpha` under any dependence between
+    the tests, as far as the p-values are accurate (bootstrap p-values are approximate).
 
     Sort the m p-values ascending; the i-th smallest (i = 1 … m) is multiplied by
     m − i + 1, each adjusted p is raised to the largest adjusted p before it (so it never

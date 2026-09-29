@@ -359,6 +359,47 @@ def test_crossfit_passes_the_start_through():
     assert tiny["pooled"]["covered"] == 0
     assert all("628" in f["reason"] for f in tiny["folds"])
     assert "628" in tiny["reason"]
+    # the cross-fit with groups counts texts, and its reason says so; without groups, rows
+    assert "628 texts" in tiny["reason"] and "holds 200 texts" in tiny["reason"]
+    assert " rows" not in tiny["reason"]
+    by_row = coverage_at_risk_crossfit(conf[:400], ok[:400], 0.01, seed=0, start_errors=2)
+    assert "628 rows" in by_row["reason"] and "holds 200 rows" in by_row["reason"]
+
+
+def test_min_covered_is_the_least_size_of_the_first_cut_tested():
+    # 61 rows are the start at 10 % from 2 errors; the top group holds 80 tied rows, so the
+    # first cut tested holds 80, more than min_covered (the next cut, 20 errors in 100, fails)
+    res = coverage_at_risk([0.9] * 80 + [0.5] * 20, [True] * 80 + [False] * 20, [0.9],
+                           [True], 0.1, start_errors=2)
+    assert res["min_covered"] == 61 and res["calibration"]["covered"] == 80
+
+
+def test_the_guarantee_holds_from_the_2_error_start_when_errors_rise_as_confidence_falls():
+    """Seeded simulation: 600 calibration rows, confidence c uniform on the 100 levels
+    0.00, 0.01 … 0.99, each row wrong with probability 0.3 × (1 − c)² (none at the top, 30 %
+    at the bottom). A violation is a threshold whose true error rate above it (the mean of
+    that probability over the levels at or above it) exceeds the target; from the 2-error
+    start it must happen at most delta of the time, up to 3 Monte Carlo SE."""
+    rng = random.Random(2026)
+    target, reps = 0.05, 400
+    levels = [j / 100 for j in range(100)]
+
+    def p_wrong(c: float) -> float:
+        return 0.3 * (1 - c) ** 2
+
+    violations = certified = 0
+    for _ in range(reps):
+        conf = [rng.choice(levels) for _ in range(600)]
+        ok = [rng.random() >= p_wrong(c) for c in conf]
+        t = coverage_at_risk(conf, ok, [], [], target, start_errors=2)["threshold"]
+        if t is None:
+            continue
+        certified += 1
+        above = [p_wrong(c) for c in levels if c >= t]
+        violations += sum(above) / len(above) > target
+    se = math.sqrt(0.05 * 0.95 / reps)
+    assert certified > reps / 2                     # the test is not vacuous
+    assert violations / reps <= 0.05 + 3 * se
 
 
 def test_coverage_at_risk_does_not_depend_on_row_order():
