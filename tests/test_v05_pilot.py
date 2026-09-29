@@ -553,11 +553,11 @@ def test_hosted_runs_are_optional_context(d):
 
 
 def test_hosted_runs_are_summarised_and_never_move_the_constants(tmp_path, d):
-    """Jev right on 0, 1, 2, 4 (row 3 wrong at 0.65, row 5 missing), $0.001 a row; Gemini
+    """Jev right on 0, 1, 2, 4 (row 3 wrong at 0.65, row 5 no answer), $0.001 a row; Gemini
     verbalized agrees with Qwen3 verbalized on rows 0-4; the Gemini self-consistency run
     is absent (paused on cost) and reads "not run"."""
     runs = _synthetic(tmp_path, verbalized=[r for r in _FIXTURE_VERB], hosted={
-        JEV: [("a", 0.9), ("b", 0.8), ("c", 0.7), ("b", 0.65), ("b", 0.6)],
+        JEV: [("a", 0.9), ("b", 0.8), ("c", 0.7), ("b", 0.65), ("b", 0.6), ("", None)],
         GEM: [("a", 0.9), ("b", 0.9), ("a", 0.6), ("a", 0.8), ("b", 0.95), ("a", 0.9)]})
     shutil.copy(FIXTURE / "llm-qwen3-8b-sc5.ckpt.jsonl", runs)
     shutil.copy(FIXTURE / "logprob-qwen3-8b.ckpt.jsonl", runs)
@@ -565,9 +565,9 @@ def test_hosted_runs_are_summarised_and_never_move_the_constants(tmp_path, d):
     _rewrite_sha(runs)
     h = pilot.compute(runs, runs / "labels.jsonl", n_sim=N_SIM, n_boot=N_BOOT)
     jev = h["hosted"][JEV]
-    assert jev["status"] == "run" and jev["missing"] == 1
+    assert jev["status"] == "run" and jev["missing"] == 0 and jev["no_answer"] == 1
     assert jev["accuracy"]["right"] == 4 and jev["accuracy"]["n"] == 6
-    assert jev["cost"] == {"usd": 0.005, "decisions_priced": 5, "decisions_unpriced": 0}
+    assert jev["cost"] == {"usd": 0.006, "decisions_priced": 6, "decisions_unpriced": 0}
     assert jev["auroc"]["value"] == pytest.approx(0.75)       # 3 of 4 right above 0.65
     assert jev["agreement_with"] == VERB
     # decisions a b c b b - against a b a a b c; correctness T T T F T F against T T F T T F
@@ -655,3 +655,149 @@ def _synthetic(tmp_path: Path, verbalized=None, sc=None, logprob=None, laya=None
         (runs / f"{slug}.ckpt.jsonl").write_text(
             "".join(json.dumps(x) + "\n" for x in lines), encoding="utf-8")
     return runs
+
+
+# --- review of #110: run log, incomplete hosted runs, rounding edges, provenance -------------
+
+
+def test_run_log_counts_the_stop_rules_from_the_checkpoints(d):
+    log = d["run_log"]
+    # verbalized: no row without a parsed answer among its first 40 (6 here; row 5 has a
+    # decision, only no confidence)
+    v = log["stop_rules"][VERB]
+    assert (v["unit"], v["checked"], v["failed"], v["limit"]) == ("rows", 6, 0, 2)
+    assert v["stopped"] is False
+    # self-consistency: failed samples among the first 200 (30 here): 1 in row 1, 5 in row 5
+    s = log["stop_rules"][SC]
+    assert (s["unit"], s["checked"], s["failed"], s["limit"]) == ("samples", 30, 6, 10)
+    assert s["stopped"] is False       # 6 of 30 is 20 %, but the limit is 5 % of 200
+    assert log["selfcheck"] is None
+    assert log["billing_console"] == "not yet reported by the maintainer"
+    assert {h: log["hosted"][h]["status"] for h in (JEV, GEM, GEM_SC)} == {
+        JEV: "not run", GEM: "not run", GEM_SC: "not run"}
+    text = pilot.markdown(d)
+    assert "## Run log" in text and "not yet reported by the maintainer" in text
+
+
+def test_the_stop_rule_limit_is_five_percent_of_what_it_is_judged_on():
+    assert pilot.stop_rule([False] * 38 + [True] * 2, 40)["stopped"] is False
+    assert pilot.stop_rule([False] * 37 + [True] * 3, 40)["stopped"] is True
+    out = pilot.stop_rule([True] * 3 + [False] * 300, 200)
+    assert (out["checked"], out["failed"], out["limit"]) == (200, 3, 10)
+
+
+def test_the_selfcheck_output_is_printed_verbatim(tmp_path):
+    runs = tmp_path / "runs"
+    shutil.copytree(FIXTURE, runs)
+    (runs / "logprob-selfcheck.txt").write_text("# cmd\nlargest probability difference "
+                                                "3.89e-07 · decisions changed 0\nexit 0\n")
+    d = pilot.compute(runs, runs / "labels.jsonl", n_sim=2000, n_boot=50)
+    assert d["run_log"]["selfcheck"]["exit"] == 0
+    assert "largest probability difference 3.89e-07" in pilot.markdown(d)
+
+
+def test_an_incomplete_hosted_run_is_not_analysed(tmp_path):
+    """Gemini stopped after 3 of 6 rows: its missing rows are not wrong answers; the run is
+    reported as stopped, with the maintainer's note on why, and no accuracy is computed."""
+    runs = _synthetic(tmp_path, hosted={GEM: [("a", 0.9), ("b", 0.9), ("a", 0.6)]})
+    (runs / "run-notes.json").write_text(json.dumps(
+        {"runs": {GEM: {"stopped": "provider quota"}}}), encoding="utf-8")
+    d = pilot.compute(runs, runs / "labels.jsonl", n_sim=2000, n_boot=50)
+    g = d["hosted"][GEM]
+    assert g["status"] == "incomplete" and (g["rows"], g["of"]) == (3, 6)
+    assert "accuracy" not in g and g["reason"] == "provider quota"
+    text = pilot.markdown(d)
+    assert "stopped at 3/6 (provider quota, the maintainer's note), not analysed" in text
+    assert d["run_log"]["hosted"][GEM]["status"] == "incomplete"
+
+
+def test_rounding_edges():
+    assert pilot.rounding_edge(0.67487, 0.05) == (0.675, pytest.approx(0.00013))
+    assert pilot.rounding_edge(0.4729, 0.05) == (0.475, pytest.approx(0.0021))
+    assert pilot.rounding_edge(0.62, 0.05) == (0.625, pytest.approx(0.005))
+
+
+def test_rho_seed_check_is_reported_and_never_fed_back(d):
+    chk = d["rho_seed_check"]
+    assert [r["seed"] for r in chk["rows"]] == [2027, 2028, 2029, 2030, 2031]
+    for r in chk["rows"]:
+        assert set(r["rho"]) == {f"{VERB}|{SC}", f"{VERB}|{LP}"}
+    assert "a check, not fed back" in pilot.markdown(d)
+
+
+def test_low_option_mass_rows():
+    rows = [(0, 0.99, 0.9), (104, 1e-9, 0.85), (7, 0.3, 0.99), (8, 0.5, 0.2)]
+    out = pilot.low_option_mass(rows)
+    assert out == {"threshold": 0.5, "n": 2, "lowest": {"idx": 104, "option_mass": 1e-9},
+                   "confidence_range": [0.85, 0.99]}
+    assert pilot.low_option_mass([(0, 0.9, 0.9)])["n"] == 0
+
+
+def test_top_slices_take_whole_tie_levels(d):
+    """Verbalized scored rows 0.95 T, 0.9 T, 0.9 T, 0.8 T, 0.6 F (n = 5): the top level
+    holds 1 row; 10 % and 20 % need 0.5 and 1 row, so the top level; 30 % needs 1.5, so the
+    top two levels, 3 rows. Self-consistency: its top level, 1.0, holds 2 rows, 1 wrong."""
+    from judge_audit.metrics.calibration import clopper_pearson
+
+    v = d["runs"][VERB]["top_slices"]
+    assert v["top_level"] == {"value": 0.95, "rows": 1, "errors": 0, "error_rate": 0.0,
+                              "clopper_pearson_95": list(clopper_pearson(0, 1))}
+    assert [(s["share"], s["rows"], s["errors"]) for s in v["slices"]] == [
+        (0.1, 1, 0), (0.2, 1, 0), (0.3, 3, 0)]
+    s = d["runs"][SC]["top_slices"]
+    assert (s["top_level"]["value"], s["top_level"]["rows"], s["top_level"]["errors"]) == \
+        (1.0, 2, 1)
+    assert s["top_level"]["clopper_pearson_95"] == list(clopper_pearson(1, 2))
+    assert [(x["rows"], x["errors"]) for x in s["slices"]] == [(2, 1), (2, 1), (2, 1)]
+    lp = d["runs"][LP]["top_slices"]
+    assert [x["rows"] for x in lp["slices"]] == [1, 2, 2]
+    assert pilot.top_slices([], [])["top_level"] is None
+    assert "most confident" in pilot.markdown(d)
+
+
+def test_llm_provenance_gaps_are_stated(d):
+    p = d["llm_provenance"]
+    assert p[VERB]["weights_revision"] is None and p[VERB]["enable_thinking"] is None
+    assert "record neither the weights revision nor `enable_thinking`" in pilot.markdown(d)
+
+
+# --- sensitivity: confidences compared exactly (not the protocol's 1e-6 rounding) ------------
+
+NEAR_ONE = [0.9999996, 0.9999999, 0.99999999, 0.9999997, 0.99999995, 0.9]
+
+
+def test_rounding_to_a_millionth_merges_near_one_values_exact_comparison_does_not():
+    assert pilot.tie_levels(NEAR_ONE) == [(0.9, 1), (1.0, 5)]
+    assert len(pilot.tie_levels(NEAR_ONE, exact=True)) == 6
+    x = [1, 2, 3]
+    y = [0.9999996, 0.9999999, 0.99999999]
+    assert pilot.spearman(x, y) is None                       # one level once rounded
+    assert pilot.spearman(x, y, exact=True) == pytest.approx(1.0)
+    assert pilot.shares_of(y) == [1.0] and pilot.shares_of(y, exact=True) is None
+    ok = [True] * 6
+    assert pilot.top_slices(NEAR_ONE, ok)["top_level"]["rows"] == 5
+    top = pilot.top_slices(NEAR_ONE, ok, exact=True)["top_level"]
+    assert (top["value"], top["rows"]) == (0.99999999, 1)
+
+
+def test_the_exact_sensitivity_is_reported_and_never_fed_back(tmp_path):
+    """Log-probability right on every row with five confidences within 5e-7 of 1: the
+    protocol's rounding makes them one level of 5 rows; compared exactly they are five."""
+    runs = _synthetic(tmp_path, verbalized=[(x, 0.5 + i / 10) for i, x in enumerate(LABELS)],
+                      logprob=[(x, c) for x, c in zip(LABELS, NEAR_ONE, strict=True)])
+    d = pilot.compute(runs, runs / "labels.jsonl", n_sim=2000, n_boot=50)
+    s = d["sensitivity_exact"]
+    main_vl = pair(d["rank_agreement"], VERB, LP)
+    exact_vl = pair(s["rank_agreement"], VERB, LP)
+    assert main_vl["levels"][1] == 2 and exact_vl["levels"][1] is None
+    assert main_vl["spearman"] != exact_vl["spearman"]
+    assert s["top_slices"][LP]["top_level"]["rows"] == 1
+    assert d["runs"][LP]["top_slices"]["top_level"]["rows"] == 5    # the registered table
+    merged = s["merged_levels"][LP]
+    assert (merged["rows"], merged["distinct_values"]) == (5, 5)
+    assert merged["range"] == [0.9999996, 0.99999999]
+    # the registered constants are the rounded ones: the sensitivity changes none of them
+    assert d["proposed_constants"] == pilot.proposed({**d, "sensitivity_exact": None})
+    text = pilot.markdown(d)
+    assert "sensitivity, not fed back" in text.lower()
+    assert "found after the constants were set" in text

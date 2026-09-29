@@ -1,6 +1,6 @@
 # v0.5 pilot on the BANKING77 train sample — protocol
 
-**Issue:** [#91](https://github.com/kunko-ai-labs/judge-audit/issues/91) · **Status:** committed before the first model call of the pilot; §3–§5 amended after an independent review, before any pilot run started (only the 20-row `logprob_selfcheck.py` check, which computes no accuracy, had run). Nothing in this pilot is a result about any judge.
+**Issue:** [#91](https://github.com/kunko-ai-labs/judge-audit/issues/91) · **Status:** committed before the first model call of the pilot (2026-09-27 08:55Z). Its amendments, with times from the git log and the checkpoint headers (UTC): the §3–§5 estimation rules, after an independent review (09:16:12Z), before any pilot run (Laya's header 09:16:38Z; a 20-row `logprob_selfcheck.py` attempt, which computes no accuracy, had been started); the hosted approval and its $2 ceiling (09:47:22Z) before the hosted calls it governs (gemini-3.6-flash verbalized 09:47:44Z, Jev 09:49:30Z), and Gemini's ceiling raised to $5 (09:54:25Z) before its self-consistency run; the §4.1 self-check cut to 5 rows (10:07:39Z) **after** the Laya, Jev and Gemini verbalized runs had started and before the log-probability run it gates (10:47:02Z). Nothing in this pilot is a result about any judge.
 
 ## 1. Why
 

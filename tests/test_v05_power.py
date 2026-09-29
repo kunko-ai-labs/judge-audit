@@ -234,6 +234,14 @@ def test_prose_ranges_are_computed_from_the_tables(monkeypatch):
     monkeypatch.setattr(power, "REPS_A2", 20)
     monkeypatch.setattr(power, "REPS_ECE", 8)
     monkeypatch.setattr(power, "N_BIG", 3000)
+    # a fixed 2 x 2 grid (8 cells at each n), independent of the PILOT constants
+    monkeypatch.setattr(power, "ACCURACIES", [0.85, 0.93])
+    monkeypatch.setattr(power, "RHOS", [0.3, 0.7])
+    # and the design's positive gap (the pilot's ties make it negative)
+    monkeypatch.setattr(power, "AUROC_A", 0.70)
+    monkeypatch.setattr(power, "AUROC_B", 0.75)
+    for name in ("TIE_SHARES_A", "TIE_SHARES_B"):
+        monkeypatch.setattr(power, name, [0.05, 0.05, 0.10, 0.15, 0.25, 0.40])
     d = power.compute()
     md = power.markdown(d)
     cells = [r for r in d["b_paired_auroc"]["rows"] if r["n"] == 3079]
@@ -280,6 +288,8 @@ def test_b_cuts_each_method_by_its_own_shares_and_c_uses_rhos_c(monkeypatch):
     monkeypatch.setattr(power, "N_BIG", 2000)
     monkeypatch.setattr(power, "ACCURACIES", [0.85])
     monkeypatch.setattr(power, "RHOS", [0.5])
+    monkeypatch.setattr(power, "AUROC_A", 0.70)
+    monkeypatch.setattr(power, "AUROC_B", 0.75)
     monkeypatch.setattr(power, "TIE_SHARES_A", [0.05, 0.05, 0.10, 0.15, 0.25, 0.40])
     monkeypatch.setattr(power, "TIE_SHARES_B", [1.0])
     tied = [r for r in power.section_b(random.Random(1)) if r["ties"] == "tied"]
@@ -304,3 +314,57 @@ def test_the_model_limits_are_printed_next_to_their_tables(monkeypatch):
     assert b < md.index(power.LIMIT_B) < c < md.index(power.LIMIT_C)
     assert "one shared set of decisions" in power.LIMIT_B
     assert "independently" in power.LIMIT_C
+
+
+def test_the_pilot_constants_are_the_estimates_proposed():
+    """Every PILOT constant is exactly what docs/v05-pilot-estimates.json proposes: a change
+    to either without the other fails here."""
+    import json
+
+    proposed = json.loads((ROOT / "docs" / "v05-pilot-estimates.json").read_text(
+        encoding="utf-8"))["proposed_constants"]
+    for name in ("ACCURACIES", "RHOS", "AUROC_A", "AUROC_B", "TIE_SHARES_A", "TIE_SHARES_B",
+                 "CONF_VALUES", "CONF_WEIGHTS"):
+        assert getattr(power, name) == proposed[name]["value"], name
+
+
+def _small(monkeypatch):
+    monkeypatch.setattr(power, "REPS_A2", 5)
+    monkeypatch.setattr(power, "REPS_ECE", 3)
+    monkeypatch.setattr(power, "N_BIG", 3000)
+    return power.compute()
+
+
+def test_resolvable_means_mde_at_most_the_absolute_gap(monkeypatch):
+    """The paired test is two-sided: a gap of -0.06 against an MDE of 0.05 is resolvable."""
+    d = _small(monkeypatch)
+    cells = [r for r in d["b_paired_auroc"]["rows"] if r["n"] == 3079]
+    for r in cells:
+        r["mde"], r["gap"] = 0.05, 0.01
+    cells[0]["gap"] = -0.06
+    assert f"is resolvable in 1 of {len(cells)} cells: " in power.markdown(d)
+
+
+def test_the_plan_bullet_states_a_negative_tied_gap_from_the_table(monkeypatch):
+    d = _small(monkeypatch)
+    rows = d["b_paired_auroc"]["rows"]
+    tied = [r for r in rows if r["ties"] == "tied"]
+    for i, r in enumerate(tied):
+        r["gap"], r["mde"] = -0.0138 - 0.001 * (i % 3), 0.03
+    md = power.markdown(d)
+    bullet = next(line for line in md.splitlines() if line.startswith("- **Smallest"))
+    assert "in every tied cell the exact gap is negative (-0.0158 to -0.0138" in bullet
+    assert f"smaller than the MDE in {len(tied)} of {len(tied)}" in bullet
+    tied[0]["gap"] = 0.02
+    bullet = next(line for line in power.markdown(d).splitlines()
+                  if line.startswith("- **Smallest"))
+    assert "in every tied cell the exact gap is negative" not in bullet
+
+
+def test_b_prose_explains_the_coarsening_and_c_takes_only_the_distribution(monkeypatch):
+    monkeypatch.setattr(power, "TIE_SHARES_B", [0.003, 0.013, 0.055, 0.107, 0.822])
+    md = power.markdown(_small(monkeypatch))
+    assert "verbalized 0.95" not in md
+    assert "82 % at its top level" in md and "coarsening" in md
+    assert "B and C take their accuracy" not in md
+    assert "C takes only its confidence distribution" in md

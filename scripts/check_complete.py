@@ -25,6 +25,20 @@ LEGACY = {"audit-jev-real.ckpt.jsonl": "examples/email-routing/labels.jsonl",
           "audit-jev-router.ckpt.jsonl": "examples/task-routing/labels.jsonl"}
 
 
+def stopped(ckpt: Path, written: int) -> bool:
+    """Whether run-notes.json beside the checkpoint declares its run stopped at exactly the
+    `written` rows the checkpoint holds (the pilot's notes file:
+    docs/runs/v05-pilot/run-notes.json). A note without that count, or with another one,
+    declares nothing: a run that lost rows cannot hide behind a stale note."""
+    notes = ckpt.parent / "run-notes.json"
+    if not notes.exists():
+        return False
+    slug = ckpt.name.removesuffix(".ckpt.jsonl")
+    runs = json.loads(notes.read_text(encoding="utf-8")).get("runs") or {}
+    note = runs.get(slug) or {}
+    return bool(note.get("stopped")) and note.get("rows") == written
+
+
 def gaps(ckpt: Path) -> list[str]:
     lines = [json.loads(x) for x in ckpt.read_text(encoding="utf-8").splitlines() if x.strip()]
     headers = [x["run"] for x in lines if x["idx"] == -1]
@@ -45,7 +59,13 @@ def gaps(ckpt: Path) -> list[str]:
             seen[x["idx"]] = seen.get(x["idx"], 0) + 1
     done = {x["idx"]: x for x in lines if x["idx"] >= 0}
     out = [f"{ckpt}: row {i} written {k} times" for i, k in sorted(seen.items()) if k > 1]
-    out += [f"{ckpt}: row {i} missing" for i in wanted if i not in done]
+    # A run the maintainer declares stopped (run-notes.json beside it) is kept so the driver
+    # can resume it: the rows after its last written one are not gaps. A hole before them is.
+    tail = []
+    if stopped(ckpt, len(done)):
+        last = max((wanted.index(i) for i in done if i in wanted), default=-1)
+        tail = wanted[last + 1:]
+    out += [f"{ckpt}: row {i} missing" for i in wanted if i not in done and i not in tail]
     for i in wanted:
         if i in done:
             g = answer_gaps(rows[i], [j["question"] for j in done[i]["judgments"]])

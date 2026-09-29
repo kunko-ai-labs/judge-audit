@@ -185,6 +185,42 @@ def test_a_row_written_twice_in_a_checkpoint_is_a_gap(tmp_path, monkeypatch):
     assert check_complete.gaps(ckpt) == [f"{ckpt}: row 0 written 2 times"]
 
 
+def test_a_run_declared_stopped_may_miss_only_its_tail(tmp_path, monkeypatch):
+    """A hosted run stopped on a quota error is kept to be resumed: when run-notes.json beside
+    it says it stopped, rows missing after its last written one are not gaps. Anything else
+    still is: an undeclared tail, a hole before the tail, a doubled row."""
+    import json
+    from pathlib import Path
+
+    _scripts()
+    import check_complete
+
+    labels = tmp_path / "labels.jsonl"
+    labels.write_text("\n".join(json.dumps(r) for r in rows(4)) + "\n")
+    ans = [{"question": "a", "decision": "x"}, {"question": "b", "decision": "y"}]
+    head = {"idx": -1, "run": {"dataset": {"path": str(labels)}}}
+    ckpt = tmp_path / "slug.ckpt.jsonl"
+    monkeypatch.setattr(check_complete, "ROOT", Path("/"))
+
+    def write(idxs):
+        ckpt.write_text("\n".join(json.dumps(x) for x in
+                                  [head] + [{"idx": i, "judgments": ans} for i in idxs]) + "\n")
+
+    write([0, 1])
+    assert check_complete.gaps(ckpt) == [f"{ckpt}: row 2 missing", f"{ckpt}: row 3 missing"]
+    notes = tmp_path / "run-notes.json"
+    # a note without the rows it stopped at, or with another count, silences nothing: the
+    # maintainer states where the run stopped and the checkpoint must agree
+    notes.write_text(json.dumps({"runs": {"slug": {"stopped": "provider quota"}}}))
+    assert check_complete.gaps(ckpt) == [f"{ckpt}: row 2 missing", f"{ckpt}: row 3 missing"]
+    notes.write_text(json.dumps({"runs": {"slug": {"stopped": "provider quota", "rows": 3}}}))
+    assert check_complete.gaps(ckpt) == [f"{ckpt}: row 2 missing", f"{ckpt}: row 3 missing"]
+    notes.write_text(json.dumps({"runs": {"slug": {"stopped": "provider quota", "rows": 2}}}))
+    assert check_complete.gaps(ckpt) == []
+    write([0, 2])                                   # a hole before the tail is still a gap
+    assert check_complete.gaps(ckpt) == [f"{ckpt}: row 1 missing"]
+
+
 def _orphan_dataset(tmp_path):
     import json
 
