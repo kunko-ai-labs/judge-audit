@@ -57,7 +57,7 @@ Rows one **fixed** set needs for an 80 % chance to certify r when its true error
 
 ## B. Paired AUROC: the smallest difference resolved
 
-Two confidence methods on the same decisions, latent AUROCs 0.65 and 0.7. Ties "none": continuous scores; "tied": method A says one of 4 values with shares [0.032, 0.14, 0.597, 0.231], method B one of 5 with shares [0.003, 0.013, 0.055, 0.107, 0.822], lowest to highest. Method B's levels are those of a 5-sample vote; with 82 % at its top level (unanimous), that coarsening caps its observed AUROC below what its latent AUROC alone would give. ρ is the latent correlation of the two methods' noise; the pilot measures the rank agreement of the two methods and ρ is set to reproduce it (the largest ρ, verbalized against token log-probability, is lower when the pilot's confidences are compared exactly rather than to 1e-6: see the sensitivity section of [the estimates](v05-pilot-estimates.md)). The standard deviation of the paired difference comes from DeLong's placement values on one sample of 100,000 rows per cell, scaled to n; MDE = (z₀.₉₇₅ + z₀.₈) × SD, the smallest true difference a paired test at α = 0.05 detects with 80 % power. That one sample makes each MDE an estimate: the ± after it is its Monte Carlo standard error (delta method from the fourth moments of the placement differences). The AUROC columns and their gap are exact population values after ties, not sample estimates.
+Two confidence methods on the same decisions, latent AUROCs 0.65 and 0.7. Ties "none": continuous scores; "tied": method A says one of 4 values with shares [0.032, 0.14, 0.597, 0.231], method B one of 7 with shares [0.013, 0.023, 0.026, 0.032, 0.039, 0.107, 0.76], lowest to highest. The tied cells use self-consistency at k = 10 (the k adopted under docs/v05-pilot.md §5b): method B's levels are those of a 10-sample vote; with 76 % at its top level (unanimous), that coarsening caps its observed AUROC below what its latent AUROC alone would give. ρ is the latent correlation of the two methods' noise; the pilot measures the rank agreement of the two methods and ρ is set to reproduce it (the largest ρ, verbalized against token log-probability, is lower when the pilot's confidences are compared exactly rather than to 1e-6: see the sensitivity section of [the estimates](v05-pilot-estimates.md)). The standard deviation of the paired difference comes from DeLong's placement values on one sample of 100,000 rows per cell, scaled to n; MDE = (z₀.₉₇₅ + z₀.₈) × SD, the smallest true difference a paired test at α = 0.05 detects with 80 % power. That one sample makes each MDE an estimate: the ± after it is its Monte Carlo standard error (delta method from the fourth moments of the placement differences). The AUROC columns and their gap are exact population values after ties, not sample estimates.
 
 | ties | accuracy | ρ | n | errors | AUROC A | AUROC B | gap | SD(Δ) | MDE |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -97,46 +97,46 @@ Two confidence methods on the same decisions, latent AUROCs 0.65 and 0.7. Ties "
 | no ties | 69 % | 0.45 | 1,540 | 477 | 0.6500 | 0.7000 | 0.0500 | 0.01567 | **0.0439** ± 0.0001 |
 | no ties | 69 % | 0.45 | 1,900 | 589 | 0.6500 | 0.7000 | 0.0500 | 0.01410 | **0.0395** ± 0.0001 |
 | no ties | 69 % | 0.45 | 3,079 | 954 | 0.6500 | 0.7000 | 0.0500 | 0.01108 | **0.0310** ± 0.0001 |
-| 4 and 5 levels | 62 % | 0.0 | 950 | 361 | 0.6198 | 0.6010 | -0.0188 | 0.02116 | **0.0593** ± 0.0001 |
-| 4 and 5 levels | 62 % | 0.0 | 1,540 | 585 | 0.6198 | 0.6010 | -0.0188 | 0.01662 | **0.0466** ± 0.0001 |
-| 4 and 5 levels | 62 % | 0.0 | 1,900 | 722 | 0.6198 | 0.6010 | -0.0188 | 0.01496 | **0.0419** ± 0.0001 |
-| 4 and 5 levels | 62 % | 0.0 | 3,079 | 1,170 | 0.6198 | 0.6010 | -0.0188 | 0.01175 | **0.0329** ± 0.0001 |
-| 4 and 5 levels | 62 % | 0.4 | 950 | 361 | 0.6198 | 0.6010 | -0.0188 | 0.01837 | **0.0515** ± 0.0001 |
-| 4 and 5 levels | 62 % | 0.4 | 1,540 | 585 | 0.6198 | 0.6010 | -0.0188 | 0.01443 | **0.0404** ± 0.0001 |
-| 4 and 5 levels | 62 % | 0.4 | 1,900 | 722 | 0.6198 | 0.6010 | -0.0188 | 0.01299 | **0.0364** ± 0.0001 |
-| 4 and 5 levels | 62 % | 0.4 | 3,079 | 1,170 | 0.6198 | 0.6010 | -0.0188 | 0.01020 | **0.0286** ± 0.0001 |
-| 4 and 5 levels | 62 % | 0.45 | 950 | 361 | 0.6198 | 0.6010 | -0.0188 | 0.01798 | **0.0504** ± 0.0001 |
-| 4 and 5 levels | 62 % | 0.45 | 1,540 | 585 | 0.6198 | 0.6010 | -0.0188 | 0.01412 | **0.0396** ± 0.0001 |
-| 4 and 5 levels | 62 % | 0.45 | 1,900 | 722 | 0.6198 | 0.6010 | -0.0188 | 0.01272 | **0.0356** ± 0.0001 |
-| 4 and 5 levels | 62 % | 0.45 | 3,079 | 1,170 | 0.6198 | 0.6010 | -0.0188 | 0.00999 | **0.0280** ± 0.0001 |
-| 4 and 5 levels | 64 % | 0.0 | 950 | 342 | 0.6198 | 0.6025 | -0.0173 | 0.02153 | **0.0603** ± 0.0002 |
-| 4 and 5 levels | 64 % | 0.0 | 1,540 | 554 | 0.6198 | 0.6025 | -0.0173 | 0.01691 | **0.0474** ± 0.0001 |
-| 4 and 5 levels | 64 % | 0.0 | 1,900 | 684 | 0.6198 | 0.6025 | -0.0173 | 0.01522 | **0.0427** ± 0.0001 |
-| 4 and 5 levels | 64 % | 0.0 | 3,079 | 1,108 | 0.6198 | 0.6025 | -0.0173 | 0.01196 | **0.0335** ± 0.0001 |
-| 4 and 5 levels | 64 % | 0.4 | 950 | 342 | 0.6198 | 0.6025 | -0.0173 | 0.01866 | **0.0523** ± 0.0001 |
-| 4 and 5 levels | 64 % | 0.4 | 1,540 | 554 | 0.6198 | 0.6025 | -0.0173 | 0.01466 | **0.0411** ± 0.0001 |
-| 4 and 5 levels | 64 % | 0.4 | 1,900 | 684 | 0.6198 | 0.6025 | -0.0173 | 0.01320 | **0.0370** ± 0.0001 |
-| 4 and 5 levels | 64 % | 0.4 | 3,079 | 1,108 | 0.6198 | 0.6025 | -0.0173 | 0.01037 | **0.0290** ± 0.0001 |
-| 4 and 5 levels | 64 % | 0.45 | 950 | 342 | 0.6198 | 0.6025 | -0.0173 | 0.01827 | **0.0512** ± 0.0001 |
-| 4 and 5 levels | 64 % | 0.45 | 1,540 | 554 | 0.6198 | 0.6025 | -0.0173 | 0.01435 | **0.0402** ± 0.0001 |
-| 4 and 5 levels | 64 % | 0.45 | 1,900 | 684 | 0.6198 | 0.6025 | -0.0173 | 0.01292 | **0.0362** ± 0.0001 |
-| 4 and 5 levels | 64 % | 0.45 | 3,079 | 1,108 | 0.6198 | 0.6025 | -0.0173 | 0.01015 | **0.0284** ± 0.0001 |
-| 4 and 5 levels | 69 % | 0.0 | 950 | 295 | 0.6201 | 0.6063 | -0.0138 | 0.02270 | **0.0636** ± 0.0002 |
-| 4 and 5 levels | 69 % | 0.0 | 1,540 | 477 | 0.6201 | 0.6063 | -0.0138 | 0.01783 | **0.0499** ± 0.0001 |
-| 4 and 5 levels | 69 % | 0.0 | 1,900 | 589 | 0.6201 | 0.6063 | -0.0138 | 0.01605 | **0.0450** ± 0.0001 |
-| 4 and 5 levels | 69 % | 0.0 | 3,079 | 954 | 0.6201 | 0.6063 | -0.0138 | 0.01261 | **0.0353** ± 0.0001 |
-| 4 and 5 levels | 69 % | 0.4 | 950 | 295 | 0.6201 | 0.6063 | -0.0138 | 0.01956 | **0.0548** ± 0.0002 |
-| 4 and 5 levels | 69 % | 0.4 | 1,540 | 477 | 0.6201 | 0.6063 | -0.0138 | 0.01536 | **0.0430** ± 0.0001 |
-| 4 and 5 levels | 69 % | 0.4 | 1,900 | 589 | 0.6201 | 0.6063 | -0.0138 | 0.01383 | **0.0387** ± 0.0001 |
-| 4 and 5 levels | 69 % | 0.4 | 3,079 | 954 | 0.6201 | 0.6063 | -0.0138 | 0.01086 | **0.0304** ± 0.0001 |
-| 4 and 5 levels | 69 % | 0.45 | 950 | 295 | 0.6201 | 0.6063 | -0.0138 | 0.01914 | **0.0536** ± 0.0002 |
-| 4 and 5 levels | 69 % | 0.45 | 1,540 | 477 | 0.6201 | 0.6063 | -0.0138 | 0.01504 | **0.0421** ± 0.0001 |
-| 4 and 5 levels | 69 % | 0.45 | 1,900 | 589 | 0.6201 | 0.6063 | -0.0138 | 0.01354 | **0.0379** ± 0.0001 |
-| 4 and 5 levels | 69 % | 0.45 | 3,079 | 954 | 0.6201 | 0.6063 | -0.0138 | 0.01063 | **0.0298** ± 0.0001 |
+| 4 and 7 levels | 62 % | 0.0 | 950 | 361 | 0.6198 | 0.6226 | 0.0028 | 0.02203 | **0.0617** ± 0.0001 |
+| 4 and 7 levels | 62 % | 0.0 | 1,540 | 585 | 0.6198 | 0.6226 | 0.0028 | 0.01730 | **0.0485** ± 0.0001 |
+| 4 and 7 levels | 62 % | 0.0 | 1,900 | 722 | 0.6198 | 0.6226 | 0.0028 | 0.01558 | **0.0436** ± 0.0001 |
+| 4 and 7 levels | 62 % | 0.0 | 3,079 | 1,170 | 0.6198 | 0.6226 | 0.0028 | 0.01223 | **0.0343** ± 0.0001 |
+| 4 and 7 levels | 62 % | 0.4 | 950 | 361 | 0.6198 | 0.6226 | 0.0028 | 0.01882 | **0.0527** ± 0.0001 |
+| 4 and 7 levels | 62 % | 0.4 | 1,540 | 585 | 0.6198 | 0.6226 | 0.0028 | 0.01478 | **0.0414** ± 0.0001 |
+| 4 and 7 levels | 62 % | 0.4 | 1,900 | 722 | 0.6198 | 0.6226 | 0.0028 | 0.01331 | **0.0373** ± 0.0001 |
+| 4 and 7 levels | 62 % | 0.4 | 3,079 | 1,170 | 0.6198 | 0.6226 | 0.0028 | 0.01046 | **0.0293** ± 0.0001 |
+| 4 and 7 levels | 62 % | 0.45 | 950 | 361 | 0.6198 | 0.6226 | 0.0028 | 0.01839 | **0.0515** ± 0.0001 |
+| 4 and 7 levels | 62 % | 0.45 | 1,540 | 585 | 0.6198 | 0.6226 | 0.0028 | 0.01444 | **0.0405** ± 0.0001 |
+| 4 and 7 levels | 62 % | 0.45 | 1,900 | 722 | 0.6198 | 0.6226 | 0.0028 | 0.01300 | **0.0364** ± 0.0001 |
+| 4 and 7 levels | 62 % | 0.45 | 3,079 | 1,170 | 0.6198 | 0.6226 | 0.0028 | 0.01021 | **0.0286** ± 0.0001 |
+| 4 and 7 levels | 64 % | 0.0 | 950 | 342 | 0.6198 | 0.6240 | 0.0042 | 0.02241 | **0.0628** ± 0.0002 |
+| 4 and 7 levels | 64 % | 0.0 | 1,540 | 554 | 0.6198 | 0.6240 | 0.0042 | 0.01760 | **0.0493** ± 0.0001 |
+| 4 and 7 levels | 64 % | 0.0 | 1,900 | 684 | 0.6198 | 0.6240 | 0.0042 | 0.01584 | **0.0444** ± 0.0001 |
+| 4 and 7 levels | 64 % | 0.0 | 3,079 | 1,108 | 0.6198 | 0.6240 | 0.0042 | 0.01245 | **0.0349** ± 0.0001 |
+| 4 and 7 levels | 64 % | 0.4 | 950 | 342 | 0.6198 | 0.6240 | 0.0042 | 0.01911 | **0.0536** ± 0.0001 |
+| 4 and 7 levels | 64 % | 0.4 | 1,540 | 554 | 0.6198 | 0.6240 | 0.0042 | 0.01501 | **0.0421** ± 0.0001 |
+| 4 and 7 levels | 64 % | 0.4 | 1,900 | 684 | 0.6198 | 0.6240 | 0.0042 | 0.01352 | **0.0379** ± 0.0001 |
+| 4 and 7 levels | 64 % | 0.4 | 3,079 | 1,108 | 0.6198 | 0.6240 | 0.0042 | 0.01062 | **0.0297** ± 0.0001 |
+| 4 and 7 levels | 64 % | 0.45 | 950 | 342 | 0.6198 | 0.6240 | 0.0042 | 0.01868 | **0.0523** ± 0.0001 |
+| 4 and 7 levels | 64 % | 0.45 | 1,540 | 554 | 0.6198 | 0.6240 | 0.0042 | 0.01467 | **0.0411** ± 0.0001 |
+| 4 and 7 levels | 64 % | 0.45 | 1,900 | 684 | 0.6198 | 0.6240 | 0.0042 | 0.01321 | **0.0370** ± 0.0001 |
+| 4 and 7 levels | 64 % | 0.45 | 3,079 | 1,108 | 0.6198 | 0.6240 | 0.0042 | 0.01038 | **0.0291** ± 0.0001 |
+| 4 and 7 levels | 69 % | 0.0 | 950 | 295 | 0.6201 | 0.6277 | 0.0076 | 0.02360 | **0.0661** ± 0.0002 |
+| 4 and 7 levels | 69 % | 0.0 | 1,540 | 477 | 0.6201 | 0.6277 | 0.0076 | 0.01854 | **0.0519** ± 0.0001 |
+| 4 and 7 levels | 69 % | 0.0 | 1,900 | 589 | 0.6201 | 0.6277 | 0.0076 | 0.01669 | **0.0468** ± 0.0001 |
+| 4 and 7 levels | 69 % | 0.0 | 3,079 | 954 | 0.6201 | 0.6277 | 0.0076 | 0.01311 | **0.0367** ± 0.0001 |
+| 4 and 7 levels | 69 % | 0.4 | 950 | 295 | 0.6201 | 0.6277 | 0.0076 | 0.02004 | **0.0562** ± 0.0002 |
+| 4 and 7 levels | 69 % | 0.4 | 1,540 | 477 | 0.6201 | 0.6277 | 0.0076 | 0.01574 | **0.0441** ± 0.0001 |
+| 4 and 7 levels | 69 % | 0.4 | 1,900 | 589 | 0.6201 | 0.6277 | 0.0076 | 0.01417 | **0.0397** ± 0.0001 |
+| 4 and 7 levels | 69 % | 0.4 | 3,079 | 954 | 0.6201 | 0.6277 | 0.0076 | 0.01113 | **0.0312** ± 0.0001 |
+| 4 and 7 levels | 69 % | 0.45 | 950 | 295 | 0.6201 | 0.6277 | 0.0076 | 0.01956 | **0.0548** ± 0.0002 |
+| 4 and 7 levels | 69 % | 0.45 | 1,540 | 477 | 0.6201 | 0.6277 | 0.0076 | 0.01536 | **0.0430** ± 0.0001 |
+| 4 and 7 levels | 69 % | 0.45 | 1,900 | 589 | 0.6201 | 0.6277 | 0.0076 | 0.01383 | **0.0387** ± 0.0001 |
+| 4 and 7 levels | 69 % | 0.45 | 3,079 | 954 | 0.6201 | 0.6277 | 0.0076 | 0.01086 | **0.0304** ± 0.0001 |
 
-At n = 3,079 the MDE is 0.0280 to 0.0409; the exact gap between the two methods (0.0500 without ties, -0.0188 to -0.0138 with 4 and 5 levels) is resolvable in 9 of 18 cells: no ties, accuracy 62 %, ρ 0.0; no ties, accuracy 62 %, ρ 0.4; no ties, accuracy 62 %, ρ 0.45; no ties, accuracy 64 %, ρ 0.0; no ties, accuracy 64 %, ρ 0.4; no ties, accuracy 64 %, ρ 0.45; no ties, accuracy 69 %, ρ 0.0; no ties, accuracy 69 %, ρ 0.4; no ties, accuracy 69 %, ρ 0.45. The closest call is no ties, accuracy 69 %, ρ 0.0: MDE 0.0409 ± 0.0001 against a gap of 0.0500, 91.0 standard errors apart.
+At n = 3,079 the MDE is 0.0286 to 0.0409; the exact gap between the two methods (0.0500 without ties, 0.0028 to 0.0076 with 4 and 7 levels) is resolvable in 9 of 18 cells: no ties, accuracy 62 %, ρ 0.0; no ties, accuracy 62 %, ρ 0.4; no ties, accuracy 62 %, ρ 0.45; no ties, accuracy 64 %, ρ 0.0; no ties, accuracy 64 %, ρ 0.4; no ties, accuracy 64 %, ρ 0.45; no ties, accuracy 69 %, ρ 0.0; no ties, accuracy 69 %, ρ 0.4; no ties, accuracy 69 %, ρ 0.45. The closest call is no ties, accuracy 69 %, ρ 0.0: MDE 0.0409 ± 0.0001 against a gap of 0.0500, 91.0 standard errors apart.
 
-At n = 1,900 the MDE is 0.0356 to 0.0521; the exact gap between the two methods (0.0500 without ties, -0.0188 to -0.0138 with 4 and 5 levels) is resolvable in 7 of 18 cells: no ties, accuracy 62 %, ρ 0.0; no ties, accuracy 62 %, ρ 0.4; no ties, accuracy 62 %, ρ 0.45; no ties, accuracy 64 %, ρ 0.4; no ties, accuracy 64 %, ρ 0.45; no ties, accuracy 69 %, ρ 0.4; no ties, accuracy 69 %, ρ 0.45. The closest call is no ties, accuracy 64 %, ρ 0.0: MDE 0.0502 ± 0.0001 against a gap of 0.0500, 2.0 standard errors apart.
+At n = 1,900 the MDE is 0.0364 to 0.0521; the exact gap between the two methods (0.0500 without ties, 0.0028 to 0.0076 with 4 and 7 levels) is resolvable in 7 of 18 cells: no ties, accuracy 62 %, ρ 0.0; no ties, accuracy 62 %, ρ 0.4; no ties, accuracy 62 %, ρ 0.45; no ties, accuracy 64 %, ρ 0.4; no ties, accuracy 64 %, ρ 0.45; no ties, accuracy 69 %, ρ 0.4; no ties, accuracy 69 %, ρ 0.45. The closest call is no ties, accuracy 64 %, ρ 0.0: MDE 0.0502 ± 0.0001 against a gap of 0.0500, 2.0 standard errors apart.
 
 What drives it is the number of **errors**, not rows: at 69 % accuracy 3,079 rows hold about 954.
 
@@ -167,5 +167,5 @@ At n = 1,900 the ECE MDE is 0.022 to 0.026.
 
 - **n**: every distinct text, 3,079 for BANKING77 and 1,900 for CLINC150; paired comparisons use all of them, certification uses halves.
 - **Certification**: at 1 % zero errors certify from 299 automated rows and each further error costs about 129–174 more; the table in A2 shows how often the procedure succeeds at each target. The plan states which targets are primary per dataset on that basis, and where the fixed sequence starts.
-- **Smallest differences stated before the runs**: paired AUROC 0.028 to 0.041 on BANKING77 and 0.036 to 0.052 on CLINC150; ECE 0.017 to 0.021 and 0.022 to 0.026 (80 % power, α = 0.05). At the pilot's ties, in every tied cell the exact gap is negative (-0.0188 to -0.0138), its size smaller than the MDE in 36 of 36: the 5-sample vote coarsens self-consistency so much that its latent advantage of +0.05 becomes an observed deficit. The plan states the MDE of the cell the pilot matches. The MDE sizes the study; the paired test judges each observed difference, and a difference it does not resolve is reported as not resolved, not as no difference.
+- **Smallest differences stated before the runs**: paired AUROC 0.029 to 0.041 on BANKING77 and 0.036 to 0.052 on CLINC150; ECE 0.017 to 0.021 and 0.022 to 0.026 (80 % power, α = 0.05). At the pilot's ties, in every tied cell the exact gap is 0.0028 to 0.0076, below the MDE in 36 of 36: the 10-sample vote's coarsening shrinks the latent advantage of +0.05 to less than the study can resolve. The plan states the MDE of the cell the pilot matches. The MDE sizes the study; the paired test judges each observed difference, and a difference it does not resolve is reported as not resolved, not as no difference.
 - **Caveat**: A2, B and C assume the shapes above. B takes its accuracy, ρ, AUROC level and ties, and C takes only its confidence distribution, from a 308-row pilot on train queries with one open model (Qwen3-8B, 4-bit), not from the judges or the test split the study scores; C's ρ (`RHOS_C`) and overconfidence gaps, and A2's slice, are design values, not pilot estimates.

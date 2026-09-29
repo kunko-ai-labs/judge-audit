@@ -326,6 +326,8 @@ def test_the_pilot_constants_are_the_estimates_proposed():
     for name in ("ACCURACIES", "RHOS", "AUROC_A", "AUROC_B", "TIE_SHARES_A", "TIE_SHARES_B",
                  "CONF_VALUES", "CONF_WEIGHTS"):
         assert getattr(power, name) == proposed[name]["value"], name
+    # §5b: the k whose tie shares TIE_SHARES_B holds, as the prose names it
+    assert power.SC_SAMPLES == proposed["SC_K"]["value"]
 
 
 def _small(monkeypatch):
@@ -359,6 +361,17 @@ def test_the_plan_bullet_states_a_negative_tied_gap_from_the_table(monkeypatch):
     bullet = next(line for line in power.markdown(d).splitlines()
                   if line.startswith("- **Smallest"))
     assert "in every tied cell the exact gap is negative" not in bullet
+    # all positive but all below the MDE: said too, with the range, computed
+    for i, r in enumerate(tied):
+        r["gap"], r["mde"] = 0.0028 + 0.001 * (i % 3), 0.03
+    bullet = next(line for line in power.markdown(d).splitlines()
+                  if line.startswith("- **Smallest"))
+    assert ("in every tied cell the exact gap is 0.0028 to 0.0048, below the MDE in "
+            f"{len(tied)} of {len(tied)}") in bullet
+    tied[0]["mde"] = 0.001                  # one cell resolvable: no blanket statement
+    bullet = next(line for line in power.markdown(d).splitlines()
+                  if line.startswith("- **Smallest"))
+    assert "in every tied cell" not in bullet
 
 
 def test_b_prose_explains_the_coarsening_and_c_takes_only_the_distribution(monkeypatch):

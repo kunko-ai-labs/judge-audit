@@ -61,14 +61,16 @@ DATASETS = {"BANKING77 test": 3079, "CLINC150 subset": 1900}   # distinct texts 
 N_GRID = [950, 1540, 1900, 3079]  # a CLINC150 half, a BANKING77 half, CLINC150, BANKING77
 HALVES = [950, 1540]
 
-# PILOT: the pilot's estimates, from docs/v05-pilot-estimates.json (docs/v05-pilot.md §5).
+# PILOT: the pilot's estimates, from docs/v05-pilot-estimates.json (docs/v05-pilot.md §5, §5b).
 ACCURACIES = [0.62, 0.64, 0.69]   # Qwen3-8B read-outs; 0.69 = Wilson upper bound of the highest
 RHOS = [0.0, 0.4, 0.45]           # B: latent correlation of the two methods' noise
 AUROC_A, AUROC_B = 0.65, 0.70     # latent (continuous) AUROCs of the two methods
 # B's tied cells, per method (A: verbalized, B: self-consistency, the primary H1 pair),
-# lowest value to highest; the report's "levels" wording is derived from their lengths
+# lowest value to highest; the report's "levels" wording is derived from their lengths.
+# TIE_SHARES_B is the k = 10 run's, the k §5b's decision rule adopted (SC_SAMPLES).
 TIE_SHARES_A = [0.032, 0.14, 0.597, 0.231]
-TIE_SHARES_B = [0.003, 0.013, 0.055, 0.107, 0.822]
+TIE_SHARES_B = [0.013, 0.023, 0.026, 0.032, 0.039, 0.107, 0.76]
+SC_SAMPLES = 10                   # method B: self-consistency, a vote over k samples (§5b)
 CONF_VALUES = [0.8, 0.9, 0.95, 1.0]
 CONF_WEIGHTS = [0.032, 0.14, 0.597, 0.231]
 GAP_A, GAP_B = 0.05, 0.08         # judge A 5 points overconfident, judge B 8
@@ -525,23 +527,32 @@ def tie_values() -> str:
             f"method B one of {len(TIE_SHARES_B)} with shares {TIE_SHARES_B}")
 
 
-SC_SAMPLES = 5                    # method B: self-consistency, a vote over k samples (design)
 
 
 def coarsening() -> str:
     """B's prose: what the vote's levels do to its observed AUROC."""
-    return (f"Method B's levels are those of a {SC_SAMPLES}-sample vote; with "
+    return (f"The tied cells use self-consistency at k = {SC_SAMPLES} (the k adopted under "
+            f"docs/v05-pilot.md §5b): method B's levels are those of a {SC_SAMPLES}-sample "
+            "vote; with "
             f"{_share(TIE_SHARES_B[-1])} at its top level (unanimous), that coarsening caps "
             "its observed AUROC below what its latent AUROC alone would give. ")
 
 
 def tied_gap_finding(b: list[dict]) -> str:
-    """The plan bullet's finding about the tied cells, computed from B's table: said only
-    when every tied cell's exact gap is negative."""
+    """The plan bullet's finding about the tied cells, computed from B's table: said when
+    every tied cell's exact gap is negative, or when every one is positive and below its
+    MDE (the vote's coarsening leaves less than the study can resolve)."""
     tied = [r for r in b if r["ties"] == "tied"]
-    if not tied or any(r["gap"] >= 0 for r in tied):
+    if not tied:
         return ""
     below = sum(abs(r["gap"]) < r["mde"] for r in tied)
+    if all(r["gap"] > 0 for r in tied) and below == len(tied):
+        return (f" At the pilot's ties, in every tied cell the exact gap is "
+                f"{_span([r['gap'] for r in tied], 4)}, below the MDE in {below} of "
+                f"{len(tied)}: the {SC_SAMPLES}-sample vote's coarsening shrinks the latent "
+                f"advantage of +{AUROC_B - AUROC_A:.2f} to less than the study can resolve.")
+    if any(r["gap"] >= 0 for r in tied):
+        return ""
     return (f" At the pilot's ties, in every tied cell the exact gap is negative "
             f"({_span([r['gap'] for r in tied], 4)}), its size smaller than the MDE in {below} "
             f"of {len(tied)}: the {SC_SAMPLES}-sample vote coarsens self-consistency so much "
