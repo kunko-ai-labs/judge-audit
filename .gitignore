@@ -15,3 +15,9 @@ docs/.frames/
 *.local.md
 auditoria*.md
 .mypy_cache/
+
+# What `judge-audit run` writes by default; never committed
+/audit-judgments.jsonl
+/audit-result.json
+/audit-report.md
+/audit-report.html
