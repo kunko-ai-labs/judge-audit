@@ -42,6 +42,51 @@ is ready for two annotators blind to the label (`scripts/relabel.py`). Once scor
 the share of rows both annotators label differently from the dataset, with a Wilson 95 %
 interval; the adjudicated sample is what can be reported as GT-4.
 
+### The v2 synthetic stress sets ([#87](https://github.com/kunko-ai-labs/judge-audit/issues/87))
+
+The v1 synthetic files stay as they are: the published audits were run on them, so they
+are frozen evidence and are never regenerated with new content (`scripts/synthetic_v2.py
+--check` pins their sha256). Their weakness is documented next to their numbers
+([#54](https://github.com/kunko-ai-labs/judge-audit/issues/54)): texts repeat within a
+file, and some attacked emails are clean emails. The v2 sets are for the audits to come.
+They are still **GT-1**: synthetic and seeded, each label true by construction of its
+template, never checked by a person. A score on them is a stress test, not evidence of
+accuracy on real mail or real routing. No audit has been run on them yet.
+
+| File | Rows | Distinct texts | Templates dev / held out | Rows dev / held out |
+|---|---|---|---|---|
+| `examples/email-routing-v2/labels.jsonl` | 1000 | 1000 | 60 / 20 | 750 / 250 |
+| `examples/email-routing-adversarial-v2/labels.jsonl` | 1000 | 1000 | 105 / 31 | 761 / 239 |
+| `examples/task-routing-v2/labels.jsonl` | 1050 | 1050 | 72 / 24 | 784 / 266 |
+
+What changed against v1:
+
+- **No repeated text.** No two rows share a `state` once case and whitespace are ignored
+  (the rule of `scripts/fetch_real_datasets.py`). Every email of the adversarial file,
+  controls included, is built on a base email (`_meta.base`) that appears nowhere in the
+  clean file, and no two share one; no attacked router task is the text of a clean row.
+- **More templates and vocabulary.** 80 email templates instead of 24 (four English and
+  four German per category), 32 items instead of 8, and company, sender, city, country and
+  date fills; 20 ambiguous, 16 injection, 10 social-engineering and 10 PII templates
+  instead of 10, 8, 5 and 5; 40 easy and 40 hard coding-task families instead of 14 and
+  14, and 16 cost-inflation injections instead of 8. The label schema, the questions and
+  the header line are v1's.
+- **A template-level split, committed before any use.** Each directory's
+  `split-templates.json` names the development and the held-out templates: a quarter of
+  each stratum (category × language for emails, family × language for attacks, difficulty
+  for coding tasks), drawn with one seed fixed before any file existed. A row is held out
+  when every template it was built from is; the adversarial file keeps the clean file's
+  halves for the email templates. No held-out template shares a run of six words with a
+  development one.
+
+**The held-out rule: held-out templates are never used in development.** No prompt
+wording, few-shot example, training row, threshold or calibration fit may come from a row
+built on one; held-out rows are scored once, under a pre-registered protocol. Rows of one
+template differ only in their fills, so they are near-duplicates by design: a score on
+rows whose templates were seen in development says how well a judge fits those templates,
+and only the held-out rows say how it does on wording it has not seen. Homoglyph
+disguises, and the router's openings and style requests, are shared on both sides.
+
 ## What each tier lets you claim
 
 The same accuracy number is evidence of different things depending on the tier. This

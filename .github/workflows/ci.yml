@@ -116,7 +116,8 @@ jobs:
           python-version: "3.12"
       - name: Datasets are reproducible from their seeded generators
         run: |
-          for d in email-routing email-routing-adversarial task-routing; do
+          for d in email-routing email-routing-adversarial task-routing \
+                   email-routing-v2 email-routing-adversarial-v2 task-routing-v2; do
             (cd examples/$d && python generate.py >/dev/null)
           done
           git diff --exit-code -- examples/
@@ -126,6 +127,8 @@ jobs:
         run: |
           pip install -e .
           python scripts/split_heldout.py --check
+      - name: v2 stress sets regenerate byte-identical (>= 1,000 distinct texts, disjoint bases, template split, v1 frozen)
+        run: python scripts/synthetic_v2.py --check
       - name: v0.5 power analysis regenerates byte-identical (seeded, no API call)
         run: python scripts/v05_power.py --check
       - name: v0.5 pilot estimates regenerate from their checkpoints (seeded, no API call)
