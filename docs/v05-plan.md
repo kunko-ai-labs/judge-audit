@@ -31,7 +31,7 @@ Every confirmatory test, what counts as support, and the prediction for each are
 
 | judge | runs where | methods | role |
 |---|---|---|---|
-| Qwen3-8B, 4-bit, MLX, pinned `545dc4251c05440727734bcd94334791f6ab0192` | the maintainer's machine | token log-probability; verbalized (T = 0); self-consistency (k fixed by the rule of [v05-pilot.md](v05-pilot.md) §5b: 10 or 5, T = 1); thinking off in all three, served as in the pilot | H1-lp, H1-sc, H2 |
+| Qwen3-8B, 4-bit, MLX, pinned `545dc4251c05440727734bcd94334791f6ab0192` | the maintainer's machine | token log-probability; verbalized (T = 0); self-consistency (**k = 10**, T = 1: the rule of [v05-pilot.md](v05-pilot.md) §5b adopted it, 76.0 % of pilot rows at the top level against 82.1 % at k = 5); thinking off in all three, served as in the pilot | H1-lp, H1-sc, H2 |
 | Jev (`jev-latest`, TypeSafe endpoint) | hosted | native probability of the chosen option | H2 |
 | `gemini-3.6-flash` | hosted, OpenAI-compatible endpoint | verbalized (T = 0); self-consistency (k = 5, T = 1). No token log-probability: no judge here reads a hosted model's ([confidence methods](v05/confidence-methods.md)) | H1-sc, H2 |
 | Laya, pinned `55cf4c4ebb4ebe31b2550e8bdf3bd21b99753851`, budgets 640 / 1,024 | the maintainer's machine | probability of the chosen option | context only (budgets outside the shipped ones; a softmax temperature clamped by the library) |
@@ -60,7 +60,7 @@ One primary run per judge and method; every confirmatory test uses it. Explorato
 
 - **"Best method"** of a chat model is the one with the highest AUROC point estimate on **BANKING77**; T7–T8 then test it on **CLINC150** only, so the choice and the test never see the same rows.
 - **H1** is supported for a model only when every test listed for it is resolved; **H2** is reported per model.
-- **Predictions.** T1, T2 and T7, T8: positive and resolved. T3–T6: at k = 5 the pilot's ties (82 % of Qwen3's rows unanimous) turn a latent advantage of 0.05 into an observed deficit of 0.014–0.019 in the power model (§ B), so at k = 5 self-consistency is predicted **not** to beat verbalized, for reasons of resolution, not of the model; this is the prediction for T5–T6 (Gemini, k = 5) and for T3–T4 if the §5b rule keeps k = 5. If it adopts k = 10, T3–T4's prediction is stated in the same commit that sets the constants from the k = 10 run, before the freeze.
+- **Predictions.** T1, T2 and T7, T8: positive and resolved. T3–T6: **not resolved**, for reasons of resolution, not of the model. At Qwen3's k = 10 ties (76 % of pilot rows unanimous) the power model turns a latent advantage of 0.05 into an observed gap of +0.003 to +0.008 ([power § B](v05-power.md)), far below the MDE (§8): T3–T4. At k = 5 ties (82 % unanimous) the modelled gap was −0.014 to −0.019 (the power page before the k = 10 constants, [#110](https://github.com/kunko-ai-labs/judge-audit/pull/110)): T5–T6, Gemini. H1-sc is therefore predicted **not supported** for either model.
 - **Secondary, not confirmatory:** accuracy (Wilson; McNemar on discordant rows); ECE (10 equal-width bins) and MCE, paired by the same bootstrap; AURC; Brier; NLL (infinite counts printed); zero-error coverage; certified coverage at risk (§7) per judge and method, reported side by side without a test; cost and latency. No composite score. Everything not in the table above is exploratory and labelled so.
 
 ## 7. Certification
@@ -81,12 +81,13 @@ From [v05-power.md](v05-power.md) on the pilot's constants, 80 % power, α = 0.0
 | tests | pair and model cell | BANKING77 (n = 3,079) | CLINC150 (n = 1,900) |
 |---|---|---:|---:|
 | T1, T2 (H1-lp) | verbalized vs log-probability: no ties (the model has no tied-vs-continuous cell), accuracy 62–64 %. The registered latent ρ is 0.47 (→ 0.45); compared exactly, without the protocol's 1e-6 rounding, it is 0.36 [0.19, 0.52] (the estimates' sensitivity table, a deviation found after the constants were set). Declared: the ρ 0.40 cell, slightly optimistic against the exact 0.36 (interpolating the ρ 0.40 and 0.45 cells gives about 0.032 on BANKING77), and the ρ 0 cell as the bound | 0.031 (ρ 0.40) to 0.039–0.040 (ρ 0) | 0.039–0.040 (ρ 0.40) to 0.050 (ρ 0) |
-| T3–T6 (H1-sc) | verbalized vs self-consistency: 4 and 5 levels, accuracy 62–64 %, latent ρ 0.40 | 0.029 | 0.036–0.037 |
+| T3–T4 (H1-sc, Qwen3, k = 10) | verbalized vs self-consistency: 4 and 7 levels, accuracy 62–64 %, latent ρ 0.40–0.45 (k = 10's own estimate is 0.44) | 0.029–0.030 | 0.036–0.038 |
+| T5–T6 (H1-sc, Gemini, k = 5) | Qwen3's k = 5 ties (4 and 5 levels) as the stand-in, accuracy 62–64 %, ρ 0.40 (the power page of #110) | 0.029 | 0.036–0.037 |
 | T7, T8 (H2) | different judges, ρ unknown: no ties, ρ 0 (the conservative cell), accuracy 62–64 % | — | 0.050 |
 | any, conservative | accuracy 69 % (Wilson upper bound), ρ 0 | 0.035 (tied) / 0.041 (no ties) | 0.045 / 0.052 |
 | paired ECE (secondary) | design gaps 0.05 / 0.08, verbalized distribution from the pilot, ρ_C 0.3–0.7 | 0.017–0.021 | 0.022–0.026 |
 
-Stated with the numbers: in the tied H1-sc cells the modelled gap itself is negative (−0.014 to −0.019), so at k = 5 those tests are sized for a difference that points the other way (D1). The accuracies are Qwen3's on train; a more accurate judge has fewer errors and a larger MDE.
+Stated with the numbers: in the tied H1-sc cells the modelled gap is +0.003 to +0.008 at k = 10 and −0.014 to −0.019 at k = 5, against MDEs of 0.029 or more: those tests can only resolve a difference far larger than the one the pilot's ties leave room for. The accuracies are Qwen3's on train; a more accurate judge has fewer errors and a larger MDE.
 
 ## 9. Cost ceiling and time
 
@@ -99,7 +100,7 @@ Per-call costs from committed checkpoints: Gemini, from its 21 pilot rows before
 | Jev, primary (4,980 rows) + 2 exploratory repeats on BANKING77 (6,160) | 11,140 | $0.48 |
 
 - **D6 (decided) — ceiling: $30** (three times the $9.98 Gemini + Jev estimate, for unseen reasoning tokens). A run that would cross it stops; going on needs a dated amendment.
-- **Local time**, from the pilot's per-row latencies on the maintainer's 16 GB machine, sequential: verbalized ≈ 5.5 h, self-consistency k = 5 ≈ 13.0 h, log-probability ≈ 13.3 h, Laya ≈ 0.5 h, the two exploratory Qwen3 repeats ≈ 6.9 h: about 39 h; k = 10 adds about 13 h. The log-probability self-check's uncached reference path needed about 12 GB and swapped on 16 GB ([v05-pilot.md](v05-pilot.md) §4.1); the check runs on 5 rows.
+- **Local time**, from the pilot's per-row latencies on the maintainer's 16 GB machine, sequential: verbalized ≈ 5.5 h, self-consistency k = 10 ≈ 28.1 h (20.3 s per row in its pilot checkpoint), log-probability ≈ 13.3 h, Laya ≈ 0.5 h, the two exploratory Qwen3 repeats ≈ 6.9 h: about 54 h. The log-probability self-check's uncached reference path needed about 12 GB and swapped on 16 GB ([v05-pilot.md](v05-pilot.md) §4.1); the check runs on 5 rows.
 
 ## 10. Execution and stopping rules
 
@@ -115,7 +116,7 @@ Dated amendments, committed before the call they govern. None yet.
 
 1. ~~The maintainer settles D1–D6~~ (done 2026-09-29).
 2. Code, with tests, reviewed: the percentile p-value from `paired_difference_ci`'s resamples and Holm (§6); D3's start parameter for `coverage_at_risk`, and power § A2 rerun on it (§7).
-3. D1: the k = 10 pilot run ([v05-pilot.md](v05-pilot.md) §5b), its estimates, and the constants commit its rule prescribes; T3–T4's prediction stated with it.
+3. ~~D1: the k = 10 pilot run, its estimates and constants~~ ([#113](https://github.com/kunko-ai-labs/judge-audit/pull/113); k = 10 adopted).
 4. Gemini's quota: the provider account must allow the ~29,900 calls (billing enabled); its billing-console figure for the pilot reported in `docs/runs/v05-pilot/run-notes.json`.
 5. An external human reviewer is sought. **None has read this plan yet**; if none does before the first study call, the published report says so.
 
@@ -123,7 +124,7 @@ Dated amendments, committed before the call they govern. None yet.
 
 | id | question | decision |
 |---|---|---|
-| D1 | self-consistency k | measure k = 10 on the 308 pilot rows first ([v05-pilot.md](v05-pilot.md) §5b, amended before the run); its pre-registered rule fixes k for Qwen3; hosted models keep k = 5 |
+| D1 | self-consistency k | measured k = 10 on the 308 pilot rows first ([v05-pilot.md](v05-pilot.md) §5b, amended before the run); its rule adopted **k = 10 for Qwen3**; Gemini keeps k = 5 |
 | D2 | certification targets | 1 %, 2 %, 5 % and 10 % in one table, each with its plain reading, none as the headline |
 | D3 | where the fixed sequence starts | at the 2-error cut, a pre-registered parameter; power § A2 rerun on it before the freeze |
 | D4 | label noise | not measured before the runs; bounds stated as including it; the #86 relabel after the runs as a sensitivity analysis |
