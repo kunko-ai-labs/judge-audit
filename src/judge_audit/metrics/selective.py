@@ -9,7 +9,8 @@ prediction, § Paired comparisons):
 - how much can be automated at a target risk, with the threshold chosen on one split and
   checked on another? (`coverage_at_risk`, `coverage_at_risk_crossfit`)
 - is judge A better than judge B on the same rows? (`paired_difference_ci`,
-  `mcnemar_exact`)
+  `paired_difference_test` with its percentile p-value, `holm` across a family of such
+  tests, `mcnemar_exact`)
 
 Every point estimate here treats a tie as one threshold, as `zero_error_coverage` does:
 rows with the same confidence are never split by the order they happen to arrive in, and no
@@ -20,9 +21,10 @@ that is not a finite number is refused, never imputed.
 """
 from __future__ import annotations
 
+import functools
 import math
 import random
-from collections.abc import Callable, Hashable, Sequence
+from collections.abc import Callable, Hashable, Mapping, Sequence
 from typing import NamedTuple, TypeVar
 
 from .calibration import (
@@ -136,25 +138,51 @@ def risk_upper_bound(errors: int, n: int, delta: float = 0.05) -> float:
     return _beta_quantile(1.0 - delta, errors + 1, n - errors)
 
 
-def min_rows_to_certify(target_risk: float, delta: float = 0.05) -> int:
-    """The fewest rows whose error rate `risk_upper_bound` can certify at `target_risk`:
-    the smallest n with zero errors bounded at or below it (299 for 1 %, 149 for 2 %, 59
-    for 5 %, at delta = 0.05). A set with fewer rows cannot pass, however few errors."""
+def _check_count(name: str, value: object) -> int:
+    """A non-negative int (a bool is refused: True is not a number of errors)."""
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError(f"{name} must be a non-negative integer, got {value!r}")
+    return value
+
+
+def min_rows_to_certify(target_risk: float, delta: float = 0.05, errors: int = 0) -> int:
+    """The fewest rows whose error rate `risk_upper_bound` can certify at `target_risk`
+    with `errors` errors among them: the smallest n whose bound is at or below the target.
+    At delta = 0.05, zero errors need 299 rows for 1 %, 149 for 2 %, 59 for 5 % and 29 for
+    10 %; two errors need 628, 313, 124 and 61. With zero errors, a set with fewer rows
+    cannot pass however few errors it holds."""
     if not 0 < target_risk < 1:
         raise ValueError(f"target_risk must be in (0, 1), got {target_risk}")
     if not 0 < delta < 1:
         raise ValueError(f"delta must be in (0, 1), got {delta}")
-    n = max(1, math.ceil(math.log(delta) / math.log1p(-target_risk)))
-    while n > 1 and risk_upper_bound(0, n - 1, delta) <= target_risk:
-        n -= 1
-    while risk_upper_bound(0, n, delta) > target_risk:
-        n += 1
-    return n
+    _check_count("errors", errors)
+    return _min_rows(target_risk, delta, errors)
+
+
+@functools.lru_cache(maxsize=256)
+def _min_rows(target_risk: float, delta: float, errors: int) -> int:
+    """`min_rows_to_certify` on checked input, cached: each call bisects on beta quantiles,
+    and the cross-fit and the simulations ask for the same few targets many times."""
+    if errors == 0:
+        n = max(1, math.ceil(math.log(delta) / math.log1p(-target_risk)))
+        while n > 1 and risk_upper_bound(0, n - 1, delta) <= target_risk:
+            n -= 1
+        while risk_upper_bound(0, n, delta) > target_risk:
+            n += 1
+        return n
+    # the bound falls as n grows with the errors fixed: bracket, then bisect
+    lo, hi = errors, 2 * (errors + 1)           # lo fails (n = errors bounds nothing)
+    while risk_upper_bound(errors, hi, delta) > target_risk:
+        lo, hi = hi, 2 * hi
+    while hi - lo > 1:
+        mid = (lo + hi) // 2
+        lo, hi = (lo, mid) if risk_upper_bound(errors, mid, delta) <= target_risk else (mid, hi)
+    return hi
 
 
 def coverage_at_risk(cal_confidences: Sequence[float], cal_correct: Sequence[bool],
                      test_confidences: Sequence[float], test_correct: Sequence[bool],
-                     target_risk: float, delta: float = 0.05) -> dict:
+                     target_risk: float, delta: float = 0.05, start_errors: int = 0) -> dict:
     """The share of decisions a judge can automate at a target risk, chosen on one split
     and checked on another.
 
@@ -182,15 +210,34 @@ def coverage_at_risk(cal_confidences: Sequence[float], cal_correct: Sequence[boo
     repeated texts, pass one unit per text (`aggregate_by_group`), as
     `coverage_at_risk_crossfit` does when given `groups`.
 
+    **A later, pre-registered start (`start_errors`).** Starting where zero errors could
+    pass means that, with continuous confidences, one error among the first
+    `min_rows_to_certify` rows ends the walk: the procedure certifies with probability
+    (1 − r′)^299 at 1 %, about 47 % when the true rate r′ is a quarter of the target.
+    With `start_errors = k` the sequence starts instead at the first cut holding
+    `min_rows_to_certify(target_risk, delta, errors=k)` rows (628 for 1 %, 313 for 2 %,
+    124 for 5 %, 61 for 10 % with k = 2), and the walk and its stopping rule are otherwise
+    the same. The start depends only on the target, delta, k and the row counts of the
+    confidence groups, never on which rows are wrong, so the guarantee above is
+    unchanged; k must be fixed before the labels are seen (pre-registered), since choosing
+    it after looking would make it depend on them. What it costs: cuts above the start are
+    never tested, so a judge whose top rows are error-free cannot be certified on fewer
+    rows than the start. `start_errors = 0` (the default) is the #98 procedure and returns
+    exactly its result. With k > 0 the result also carries `start_errors`, and when the
+    calibration split holds fewer rows than the start, nothing can be tested: `threshold`
+    is None and `reason` says so, rather than a coverage of 0 with no explanation.
+
     **Checking it (test split).** The threshold is applied to the test rows unchanged:
     their coverage, errors, observed risk and its own one-sided bound are reported. No
     test row influences the threshold.
 
     Nothing passes → `threshold` is None and nothing is automated: on few rows even a
     perfect judge cannot certify a small risk (zero errors in 100 rows bound the risk
-    at 2.95 %, not below 2 %).
+    at 2.95 %, not below 2 %). `min_covered` is the size of the first cut the sequence may
+    test.
     """
-    n_min = min_rows_to_certify(target_risk, delta)
+    _check_count("start_errors", start_errors)
+    n_min = min_rows_to_certify(target_risk, delta, errors=start_errors)
     _require_finite(cal_confidences)
     _require_finite(test_confidences)
     if len(cal_confidences) != len(cal_correct) or len(test_confidences) != len(test_correct):
@@ -213,7 +260,7 @@ def coverage_at_risk(cal_confidences: Sequence[float], cal_correct: Sequence[boo
                if threshold is not None and c >= threshold]
     t_covered, t_errors = len(covered), sum(1 for ok in covered if not ok)
     n_cal, n_test = len(cal_confidences), len(test_confidences)
-    return {
+    result = {
         "target_risk": target_risk, "delta": delta, "min_covered": n_min,
         "threshold": threshold,
         "calibration": {"n": n_cal, "covered": cal_covered, "errors": cal_errors,
@@ -225,6 +272,18 @@ def coverage_at_risk(cal_confidences: Sequence[float], cal_correct: Sequence[boo
                  "risk_upper": (round(risk_upper_bound(t_errors, t_covered, delta), 4)
                                 if t_covered else None)},
     }
+    if start_errors:                      # only a non-default start adds keys (#98 unchanged)
+        result["start_errors"] = start_errors
+        if n_min > n_cal:
+            result["reason"] = (
+                f"the sequence starts at the first cut holding {n_min} rows (the rows that "
+                f"certify {_pct(target_risk)} with {start_errors} errors); the calibration "
+                f"split holds {n_cal}, so nothing can be certified")
+    return result
+
+
+def _pct(x: float) -> str:
+    return f"{round(x * 100, 4):g} %"
 
 
 def _key_order(key: Hashable) -> tuple[str, str]:
@@ -265,7 +324,7 @@ def aggregate_by_group(confidences: Sequence[float], correct: Sequence[bool],
 def coverage_at_risk_crossfit(confidences: Sequence[float], correct: Sequence[bool],
                               target_risk: float, delta: float = 0.05,
                               groups: Sequence[Hashable] | None = None,
-                              seed: int = 0) -> dict:
+                              seed: int = 0, start_errors: int = 0) -> dict:
     """`coverage_at_risk` both ways over two halves of one dataset, split by distinct text.
 
     The rows are split in two by `split_by_group` (every row of a text on the same side;
@@ -276,6 +335,9 @@ def coverage_at_risk_crossfit(confidences: Sequence[float], correct: Sequence[bo
     `pooled` adds the two test halves together: every unit is judged once, against a
     threshold it did not help choose. The two thresholds can differ; both are reported.
     The split depends on `seed`: pre-register it, or report the spread over seeds.
+    `start_errors` is passed to both folds (see `coverage_at_risk`); when it is not 0 the
+    result carries it, and a `reason` when either calibration half is smaller than the
+    start, so a pooled coverage of 0 is never left unexplained.
     """
     if len(confidences) != len(correct):
         raise ValueError(f"{len(confidences)} confidences for {len(correct)} outcomes")
@@ -290,12 +352,13 @@ def coverage_at_risk_crossfit(confidences: Sequence[float], correct: Sequence[bo
             return conf, ok
         return aggregate_by_group(conf, ok, [groups[i] for i in idx])
 
-    folds = [coverage_at_risk(*part(cal), *part(test), target_risk, delta)
+    folds = [coverage_at_risk(*part(cal), *part(test), target_risk, delta,
+                              start_errors=start_errors)
              for cal, test in ((a, b), (b, a))]
     covered = sum(f["test"]["covered"] for f in folds)
     errs = sum(f["test"]["errors"] for f in folds)
     n = sum(f["test"]["n"] for f in folds)
-    return {
+    result = {
         "target_risk": target_risk, "delta": delta, "seed": seed,
         "unit": "row" if groups is None else "text",
         "folds": folds,
@@ -303,6 +366,13 @@ def coverage_at_risk_crossfit(confidences: Sequence[float], correct: Sequence[bo
                    "coverage": round(covered / n, 4) if n else None,
                    "risk": round(errs / covered, 4) if covered else None},
     }
+    if start_errors:
+        result["start_errors"] = start_errors
+        reasons = [f"calibrated on half {name}: {f['reason']}"
+                   for name, f in zip("AB", folds, strict=True) if "reason" in f]
+        if reasons:
+            result["reason"] = "; ".join(reasons)
+    return result
 
 
 # --- uncertainty on statistics that can be undefined, and paired comparisons -----------
@@ -327,9 +397,20 @@ def bootstrap_defined(values: Sequence[T], statistic: Callable[[list[T]], float 
     Same resampling unit, seed and draws as `bootstrap_ci`, so resample i is the same set of
     texts for every metric; the percentiles are taken over the resamples where the
     statistic is defined. No rows, or no defined resample → `ci` None."""
+    stats, undefined = _resampled(values, statistic, n_boot, seed, groups)
+    return BootstrapResult(_percentile_interval(stats), undefined)
+
+
+def _resampled(values: Sequence[T], statistic: Callable[[list[T]], float | None],
+               n_boot: int, seed: int, groups: Sequence[Hashable] | None
+               ) -> tuple[list[float], int]:
+    """The statistic on each resample where it is defined, in draw order, and how many
+    resamples left it undefined. The one resampling loop every interval and test here
+    shares: `random.Random(seed)`, texts (or rows) drawn with replacement in
+    first-appearance order."""
     n = len(values)
     if n == 0:
-        return BootstrapResult(None, 0)
+        return [], 0
     if groups is None:
         units: list[list[T]] = [[v] for v in values]
     else:
@@ -349,13 +430,16 @@ def bootstrap_defined(values: Sequence[T], statistic: Callable[[list[T]], float 
             undefined += 1
         else:
             stats.append(s)
+    return stats, undefined
+
+
+def _percentile_interval(stats: list[float]) -> Interval | None:
     if not stats:
-        return BootstrapResult(None, undefined)
-    stats.sort()
+        return None
+    ordered = sorted(stats)
     tail = (1 - CI_LEVEL) / 2
-    return BootstrapResult(Interval(interpolated_quantile(stats, tail),
-                                    interpolated_quantile(stats, 1 - tail), BOOTSTRAP),
-                           undefined)
+    return Interval(interpolated_quantile(ordered, tail),
+                    interpolated_quantile(ordered, 1 - tail), BOOTSTRAP)
 
 
 def failure_auroc_ci(confidences: Sequence[float], correct: Sequence[bool],
@@ -392,6 +476,13 @@ def paired_difference_ci(values_a: Sequence[T], values_b: Sequence[T],
     overlap do not show that the judges are indistinguishable (Schenker & Gentleman, The
     American Statistician 2001). An interval that excludes 0 separates them on this data.
     A resample where either statistic is undefined is counted, not used."""
+    pairs, diff = _paired(values_a, values_b, statistic)
+    return bootstrap_defined(pairs, diff, n_boot, seed, groups)
+
+
+def _paired(values_a: Sequence[T], values_b: Sequence[T],
+            statistic: Callable[[list[T]], float | None]
+            ) -> tuple[list[tuple[T, T]], Callable[[list[tuple[T, T]]], float | None]]:
     if len(values_a) != len(values_b):
         raise ValueError(f"{len(values_a)} rows for judge A, {len(values_b)} for judge B")
     pairs = list(zip(values_a, values_b, strict=True))
@@ -401,7 +492,87 @@ def paired_difference_ci(values_a: Sequence[T], values_b: Sequence[T],
         sb = statistic([b for _, b in rs])
         return None if sa is None or sb is None else sa - sb
 
-    return bootstrap_defined(pairs, diff, n_boot, seed, groups)
+    return pairs, diff
+
+
+def percentile_p_value(differences: Sequence[float]) -> float | None:
+    """Two-sided percentile p-value of "no difference" from bootstrap differences Δ*:
+    min(1, 2 × min(1 + #{Δ* ≤ 0}, 1 + #{Δ* ≥ 0}) / (B + 1)), B = len(differences).
+
+    The +1s count the observed data as one of the resamples (Davison & Hinkley, Bootstrap
+    Methods and Their Application, 1997, ch. 4), so the smallest p it can give is
+    2 / (B + 1), never 0; a Δ* of exactly 0 counts on both sides. Up to that +1 and the
+    interpolation between resamples, the p-value is below α when the equal-tailed
+    percentile interval at level 1 − α excludes 0: the same evidence as
+    `paired_difference_ci`, read at a level a multiple-testing correction chooses.
+    No differences → None."""
+    if not differences:
+        return None
+    b = len(differences)
+    below = sum(1 for d in differences if d <= 0)
+    above = sum(1 for d in differences if d >= 0)
+    return min(1.0, 2 * min(1 + below, 1 + above) / (b + 1))
+
+
+class PairedTest(NamedTuple):
+    """`paired_difference_ci`'s interval and the percentile p-value from the same resamples.
+
+    `difference` is statistic(A) − statistic(B) on all the rows (None when either is
+    undefined there); `n_defined` is B, the resamples where both statistics are defined, on
+    which the interval and the p-value are computed; `undefined` counts the others."""
+
+    difference: float | None
+    ci: Interval | None
+    p_value: float | None
+    n_defined: int
+    undefined: int
+
+
+def paired_difference_test(values_a: Sequence[T], values_b: Sequence[T],
+                           statistic: Callable[[list[T]], float | None],
+                           n_boot: int = N_BOOT, seed: int = 0,
+                           groups: Sequence[Hashable] | None = None) -> PairedTest:
+    """A two-sided test of statistic(A) = statistic(B), two methods on the same rows.
+
+    The resamples are exactly those `paired_difference_ci` draws with the same arguments
+    (same seed, same clustering by `groups`): each resample draws texts once and scores both
+    methods on it; the interval returned is that function's. The p-value is
+    `percentile_p_value` over the B resamples where both statistics are defined; the
+    resamples where either is undefined are counted in `undefined`, not used. Deterministic
+    for a given seed and row order. For AUROC, pass (confidence, correct) pairs and a
+    statistic that scores each method on its own correctness (docs/v05-plan.md § 6)."""
+    pairs, diff = _paired(values_a, values_b, statistic)
+    stats, undefined = _resampled(pairs, diff, n_boot, seed, groups)
+    return PairedTest(diff(pairs) if pairs else None, _percentile_interval(stats),
+                      percentile_p_value(stats), len(stats), undefined)
+
+
+def holm(p_values: Mapping[str, float], alpha: float = 0.05) -> dict[str, dict]:
+    """Holm's step-down adjustment (Scandinavian Journal of Statistics 1979) of a family of
+    tests, controlling the family-wise error rate at `alpha` under any dependence.
+
+    Sort the m p-values ascending; the i-th smallest (i = 1 … m) is multiplied by
+    m − i + 1, each adjusted p is raised to the largest adjusted p before it (so it never
+    falls down the order) and capped at 1. A test is `resolved` when its adjusted p is
+    below `alpha` — the rule of docs/v05-plan.md § 6, which also requires the difference to
+    have the predicted sign; that check is the caller's. Tied p-values get the same
+    adjusted p whatever their order. The result keeps the order of `p_values`:
+    {name: {"p", "p_adjusted", "resolved"}}. A missing (None), non-finite or out-of-range
+    p-value is refused: a test that was not run is left out of the family by the caller,
+    and saying so is the report's job."""
+    if not 0 < alpha < 1:
+        raise ValueError(f"alpha must be in (0, 1), got {alpha}")
+    for name, p in p_values.items():
+        if not isinstance(p, (int, float)) or isinstance(p, bool) or not 0 <= p <= 1:
+            raise ValueError(f"p-value of {name!r} must be a number in [0, 1], got {p!r}")
+    m = len(p_values)
+    adjusted: dict[str, float] = {}
+    running = 0.0
+    for i, (name, p) in enumerate(sorted(p_values.items(), key=lambda kv: kv[1])):
+        running = max(running, min(1.0, (m - i) * p))
+        adjusted[name] = running
+    return {name: {"p": p, "p_adjusted": adjusted[name], "resolved": adjusted[name] < alpha}
+            for name, p in p_values.items()}
 
 
 def mcnemar_exact(correct_a: Sequence[bool], correct_b: Sequence[bool]) -> dict:
