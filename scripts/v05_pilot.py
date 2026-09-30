@@ -953,15 +953,12 @@ def compute(runs_dir: Path = RUNS_DIR, labels: Path = LABELS, n_sim: int | None 
             d["hosted"][s] = hosted_summary(s, run, runs[VERB], keys)
         if ADAPTER[s] == "llm":
             stop_rules[s] = stop_rule_of(s, run)
-    billing = notes.get("billing_console_usd")
     d["run_log"] = {
         "selfcheck": read_selfcheck(runs_dir),
         "stop_rules": stop_rules,
         "hosted": {s: {k: v for k, v in d["hosted"][s].items()
                        if k in ("status", "rows", "of", "reason")} for s in HOSTED},
-        "billing_console": (f"${billing} (the maintainer's note, not a checkpoint figure)"
-                            if billing is not None
-                            else "not yet reported by the maintainer"),
+        "billing_console": billing_text(notes),
         "notes_file": _shown(Path(runs_dir) / "run-notes.json") if notes else None}
     for s in HOSTED:
         if d["hosted"][s]["status"] == "run":
@@ -1035,6 +1032,18 @@ def rho_seed_check(runs: dict, keys: list, n_sim: int, main: list[dict],
               for name in names}
     return {"seeds": seeds, "normal_pairs": n_sim, "main_seed": SEED, "main": main_rho,
             "rows": out_rows, "round_differently": differ}
+
+
+def billing_text(notes: dict) -> str:
+    """The provider billing console's figure as the maintainer reported it in run-notes.json:
+    `billing_console` = {amount, currency, covers}, or the older `billing_console_usd`. Never
+    converted, and always labelled as a note: no checkpoint records it."""
+    tag = "(the maintainer's note, not a checkpoint figure)"
+    b = notes.get("billing_console")
+    if isinstance(b, dict) and b.get("amount") is not None:
+        return f"{b['amount']:g} {b.get('currency', '')} for {b.get('covers', '')} {tag}"
+    usd = notes.get("billing_console_usd")
+    return f"${usd:g} {tag}" if usd is not None else "not yet reported by the maintainer"
 
 
 def _shown(p: Path) -> str:

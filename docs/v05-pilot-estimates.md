@@ -40,7 +40,7 @@ exit 0
 | gemini-3.6-flash verbalized | rows | 40 | 40 | 0 | 2 | no |
 | gemini-3.6-flash self-consistency (k = 5) | samples | 200 | 200 | 0 | 10 | no |
 
-**Hosted runs**: Jev: complete (308/308); gemini-3.6-flash verbalized: complete (308/308, resumed 2026-09-29, the maintainer's note); gemini-3.6-flash self-consistency (k = 5): complete (308/308). Billing console total: not yet reported by the maintainer.
+**Hosted runs**: Jev: complete (308/308); gemini-3.6-flash verbalized: complete (308/308, resumed 2026-09-29, the maintainer's note); gemini-3.6-flash self-consistency (k = 5): complete (308/308). Billing console total: 2.7 EUR for gemini-3.6-flash on 2026-09-29 (the resumed verbalized rows 21-307 and the whole self-consistency run; the 21 rows of 2026-09-27 ran under another project) (the maintainer's note, not a checkpoint figure).
 
 **Provenance of the served chat model.** The `llm` checkpoints' headers record neither the weights revision nor `enable_thinking`: the pin rests on the protocol's offline `refs/main` check (docs/v05-pilot.md §3), and the server's `system_fingerprint` `0.31.3-0.32.2-macOS-26.6.2-arm64-arm-64bit-applegpu_g16g` records software and platform versions, not the weights.
 

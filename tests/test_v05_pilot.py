@@ -914,3 +914,16 @@ def test_without_the_k10_run_the_tables_hold_the_four_runs(d):
     md = pilot.markdown(d)
     table = md[md.index("| run | rows timed |"):].split("\n\n")[0].splitlines()[2:]
     assert len(table) == 4
+
+
+def test_billing_console_note_in_any_currency():
+    """The maintainer's billing figure is printed as given (amount, currency, what it
+    covers) and labelled as a note, never converted or passed off as a checkpoint figure."""
+    assert pilot.billing_text({}) == "not yet reported by the maintainer"
+    assert pilot.billing_text({"billing_console_usd": 1.5}) == (
+        "$1.5 (the maintainer's note, not a checkpoint figure)")
+    note = {"billing_console": {"amount": 2.7, "currency": "EUR",
+                                "covers": "gemini-3.6-flash on 2026-09-29"}}
+    assert pilot.billing_text(note) == (
+        "2.7 EUR for gemini-3.6-flash on 2026-09-29 (the maintainer's note, not a "
+        "checkpoint figure)")

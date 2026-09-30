@@ -333,7 +333,20 @@ def vote_replies(texts: list[str], questions: list[Question]
     return vote([parse_reply(t, questions) for t in texts], questions)
 
 
+def hidden_output_tokens(usage: dict) -> int:
+    """Tokens an endpoint billed but did not itemise: total_tokens minus prompt and completion
+    tokens, when the total is larger. Gemini's OpenAI-compatible endpoint reports a model's
+    internal reasoning only this way; OpenAI counts it inside completion_tokens, so its total
+    adds up and nothing is added twice. No total, nothing invented."""
+    total = usage.get("total_tokens")
+    if not isinstance(total, int):
+        return 0
+    return max(0, total - int(usage.get("prompt_tokens") or 0)
+               - int(usage.get("completion_tokens") or 0))
+
+
 class LLMJudge(Judge):
+    _hidden = 0  # tokens the last call billed but did not itemise (hidden_output_tokens)
     _served: dict  # what the provider said it served on the last call (per decide())
     _custom_takes_temperature = False
     _upstream: str | None = None  # which upstream a gateway routed the last call to
@@ -512,9 +525,19 @@ class LLMJudge(Judge):
         # A gateway may say which upstream served the request, in a "provider" field.
         self._upstream = checked_upstream(data.get("provider"), self.extra_body)
         usage = data.get("usage") or {}
-        return text, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
+        in_tok, out_tok = usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
+        self._hidden = hidden_output_tokens(usage)
+        return text, in_tok, out_tok
 
     # ---------------------------------------------------------------- judge
+    def _usage(self, in_tok: int, out_tok: int) -> dict:
+        """The usage record of one call: v0.4's shape, plus `hidden_output_tokens` when the
+        endpoint billed tokens it did not itemise."""
+        u = {"input_tokens": in_tok, "output_tokens": out_tok}
+        if self._hidden:
+            u["hidden_output_tokens"] = self._hidden
+        return u
+
     def _cost(self, in_tok: int, out_tok: int) -> tuple[float | None, bool]:
         price = self._price()
         local_free = price is None and self.provider == "openai-compatible" and _is_local_url(
@@ -529,10 +552,12 @@ class LLMJudge(Judge):
         t0 = time.monotonic()
         self._served = {}
         self._upstream = None
+        self._hidden = 0
         text, in_tok, out_tok = self._call(_render(state, questions))
         served = served_of(self._served)
         latency = time.monotonic() - t0
-        cost, priced = self._cost(in_tok, out_tok)
+        usage = self._usage(in_tok, out_tok)
+        cost, priced = self._cost(in_tok, out_tok + self._hidden)
         parsed = parse_reply(text, questions)
         out: list[Judgment] = []
         for q in questions:
@@ -541,7 +566,7 @@ class LLMJudge(Judge):
                 question=q.name, decision=decision, confidence=confidence,
                 latency_s=latency / max(len(questions), 1),
                 cost_usd=cost / max(len(questions), 1) if cost is not None else None,
-                raw={"text": text, "usage": {"input_tokens": in_tok, "output_tokens": out_tok},
+                raw={"text": text, "usage": usage,
                      "parsed": ans, "priced": priced, "served": served,
                      **({"upstream_provider": self._upstream} if self._upstream else {})},
                 parse_status=status,
@@ -556,15 +581,17 @@ class LLMJudge(Judge):
         for _ in range(self.samples):
             self._served = {}
             self._upstream = None
+            self._hidden = 0
             text, in_tok, out_tok = self._call(user)
             samples.append({"text": text,
-                            "usage": {"input_tokens": in_tok, "output_tokens": out_tok},
+                            "usage": self._usage(in_tok, out_tok),
                             "served": served_of(self._served),
                             **({"upstream_provider": self._upstream} if self._upstream else {})})
         latency = time.monotonic() - t0
         in_all = sum(x["usage"]["input_tokens"] for x in samples)
         out_all = sum(x["usage"]["output_tokens"] for x in samples)
-        cost, priced = self._cost(in_all, out_all)
+        hidden_all = sum(x["usage"].get("hidden_output_tokens", 0) for x in samples)
+        cost, priced = self._cost(in_all, out_all + hidden_all)
         parsed = [parse_reply(x["text"], questions) for x in samples]
         voted = vote(parsed, questions)
         out: list[Judgment] = []
@@ -576,7 +603,8 @@ class LLMJudge(Judge):
                 cost_usd=cost / max(len(questions), 1) if cost is not None else None,
                 raw={"samples": samples, "votes": votes,
                      "verbalized": [p[q.name][1] for p in parsed],
-                     "usage": {"input_tokens": in_all, "output_tokens": out_all},
+                     "usage": {"input_tokens": in_all, "output_tokens": out_all,
+                               **({"hidden_output_tokens": hidden_all} if hidden_all else {})},
                      "priced": priced, "served": served_across(samples)},
                 parse_status=status,
             ))

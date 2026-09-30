@@ -391,3 +391,55 @@ def test_extra_body_is_refused_outside_openai_compatible(monkeypatch):
     monkeypatch.setenv("LLM_EXTRA_BODY", '{"provider": {}}')
     with pytest.raises(ValueError, match="openai-compatible only"):
         LLMJudge()
+
+
+def _priced(monkeypatch, usage: dict, samples: str | None = None):
+    """An OpenAI-compatible judge on a priced model (gemini-3.6-flash: $0.30 / $2.50 per
+    million tokens in llm.PRICES) whose endpoint answers with `usage`."""
+    from judge_audit.judges import llm as llm_mod
+
+    monkeypatch.setenv("LLM_PROVIDER", "openai-compatible")
+    monkeypatch.setenv("LLM_BASE_URL", "https://vendor.test/v1")
+    monkeypatch.setenv("LLM_MODEL", "gemini-3.6-flash")
+    monkeypatch.delenv("LLM_EXTRA_BODY", raising=False)
+    for var in ("LLM_SAMPLES", "LLM_TEMPERATURE"):
+        monkeypatch.delenv(var, raising=False)
+    if samples:
+        monkeypatch.setenv("LLM_SAMPLES", samples)
+        monkeypatch.setenv("LLM_TEMPERATURE", "1")
+    reply = {"model": "gemini-3.6-flash", "choices": [{"message": {"content": ANSWER}}],
+             "usage": usage}
+    monkeypatch.setattr(llm_mod, "_fetch_json", lambda req, deadline: reply)
+    return LLMJudge()
+
+
+def test_tokens_billed_but_not_itemised_are_recorded_and_priced(monkeypatch):
+    """Some endpoints (Gemini's OpenAI-compatible one) bill a model's internal reasoning
+    as output tokens but itemise only the visible reply: total_tokens exceeds
+    prompt + completion. The difference is recorded and priced at the output rate."""
+    (out,) = _priced(monkeypatch, {"prompt_tokens": 851, "completion_tokens": 23,
+                                   "total_tokens": 1065}).decide("buy now", [Q])
+    assert out.raw["usage"] == {"input_tokens": 851, "output_tokens": 23,
+                                "hidden_output_tokens": 191}
+    assert out.cost_usd == pytest.approx((851 * 0.30 + (23 + 191) * 2.50) / 1e6)
+
+
+def test_no_hidden_tokens_when_the_total_adds_up_or_is_absent(monkeypatch):
+    """OpenAI counts reasoning inside completion_tokens (the total adds up): nothing is
+    added twice. Without a total, nothing is invented. The usage record keeps its v0.4
+    shape in both cases."""
+    for usage in ({"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+                  {"prompt_tokens": 10, "completion_tokens": 5}):
+        (out,) = _priced(monkeypatch, usage).decide("buy now", [Q])
+        assert out.raw["usage"] == {"input_tokens": 10, "output_tokens": 5}
+        assert out.cost_usd == pytest.approx((10 * 0.30 + 5 * 2.50) / 1e6)
+
+
+def test_self_consistency_sums_hidden_tokens_over_its_samples(monkeypatch):
+    j = _priced(monkeypatch, {"prompt_tokens": 100, "completion_tokens": 10,
+                              "total_tokens": 150}, samples="3")
+    (out,) = j.decide("buy now", [Q])
+    assert [s["usage"]["hidden_output_tokens"] for s in out.raw["samples"]] == [40, 40, 40]
+    assert out.raw["usage"] == {"input_tokens": 300, "output_tokens": 30,
+                                "hidden_output_tokens": 120}
+    assert out.cost_usd == pytest.approx((300 * 0.30 + 150 * 2.50) / 1e6)
