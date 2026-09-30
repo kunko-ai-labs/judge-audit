@@ -28,7 +28,7 @@ DOC = ROOT / "docs" / "v05" / "prompt-templates.md"
 LLM_V1 = "fe16e59adeda960f12e22d035cf7f126a82c526117e73a379d8c301f1763d2c9"
 LOGPROB_V1 = "e3f03049572329d2457a798202b9ce91a11998af94294036ac4b1390ff328e30"
 # Fixed when v2 was written, before any run used it: the pre-registration cites them.
-LLM_V2 = "b435f82d3d7991d25b36489efd2c910c24cfc6733a00bc109a44fa47999db67c"
+LLM_V2 = "ab4f08750ed37ec92f5e6716bec63b03f9bafce67beb440041dbf03fa8b1f502"
 LOGPROB_V2 = "3b73900112a90c2e7f958b794dec4c3b5c8750776244dd40903e063c6d5d301a"
 
 Q = Question(name="intent", type=QuestionType.CHOICE,
@@ -220,6 +220,11 @@ def test_the_llm_v2_keeps_the_output_contract():
     assert '"urgent"' in text and "true | false" in text
     for word in ("0", "1", "probability", "correct", "JSON"):
         assert word in llm_mod.SYSTEM_V2
+    # v1's anchors reworded, not tightened: "1.0 = certain" is not "1 only if certain".
+    assert "0.5 if it is a coin flip, 1 if you are certain" in llm_mod.SYSTEM_V2
+    assert "only if" not in llm_mod.SYSTEM_V2
+    # The prompt does not end on the raw input text, as logprob v2 does not.
+    assert text.endswith("INPUT:\nhello\n\nReply with the JSON only.")
 
 
 def test_the_logprob_v2_prompt_is_used_and_the_decision_rule_is_not_touched(monkeypatch):
@@ -298,17 +303,33 @@ def test_the_prompt_digest_alone_stops_a_resume(monkeypatch, tmp_path):
         ar.same_method(tmp_path / "c", {**now, "prompt_sha256": LLM_V2}, now)
 
 
-def test_a_checkpoint_written_before_templates_existed_still_resumes_with_v1(
-        monkeypatch, tmp_path):
-    """Headers written before this change have no `prompt_template`; a default run must
-    resume them (the partial Gemini pilot checkpoint is one)."""
+PILOT = ROOT / "docs" / "runs" / "v05-pilot"
+
+
+@pytest.mark.parametrize("ckpt", ["llm-gemini-3.6-flash.ckpt.jsonl", "llm-qwen3-8b.ckpt.jsonl",
+                                  "logprob-qwen3-8b.ckpt.jsonl"])
+def test_a_header_written_before_templates_existed_still_resumes_with_v1(
+        monkeypatch, tmp_path, ckpt):
+    """Headers written before this change have no `prompt_template`. A default (v1) run of
+    the same judge passes the resume check against them, and a v2 run does not. Checked on
+    the committed v0.5 pilot headers of the three judges v2 applies to."""
     ar = _resumable()
-    j, _ = llm_judge(monkeypatch)
-    old_header = {k: v for k, v in j.describe().items() if k != "prompt_template"}
-    ar.same_method(tmp_path / "c", old_header, j.describe())
-    lp, _ = lp_judge(monkeypatch)
-    old_lp = {k: v for k, v in lp.describe().items() if k != "prompt_template"}
-    ar.same_method(tmp_path / "c", old_lp, lp.describe())
+    with open(PILOT / ckpt, encoding="utf-8") as f:
+        header = json.loads(f.readline())["run"]["judge"]
+    assert "prompt_template" not in header
+    adapter = header["name"].split(":")[0]
+    judges = {}
+    for template in (None, "v2"):
+        if adapter == "llm":
+            monkeypatch.setenv("LLM_MODEL_LABEL", header["model"])
+            judges[template], _ = llm_judge(monkeypatch, template=template)
+            judges[template].base_url = header["base_url"]   # the endpoint it recorded
+        else:
+            monkeypatch.setenv("LOGPROB_LABEL", header["model"])
+            judges[template], _ = lp_judge(monkeypatch, template=template)
+    ar.same_method(tmp_path / "c", header, judges[None].describe())
+    with pytest.raises(SystemExit, match="use a new checkpoint"):
+        ar.same_method(tmp_path / "c", header, judges["v2"].describe())
 
 
 def test_audit_resumable_refuses_a_v2_session_on_a_v1_checkpoint(tmp_path, monkeypatch):
@@ -352,11 +373,31 @@ def test_mcp_lists_the_templates_with_their_digests():
     assert any("LOGPROB_PROMPT_TEMPLATE" in e for e in by_name["logprob"]["env"])
 
 
-def test_the_doc_prints_both_templates_verbatim_with_their_digests():
+def _doc_sections() -> dict[str, str]:
+    """{`### ` heading: the text under it, up to the next heading of any level}."""
+    import re
+
     doc = DOC.read_text(encoding="utf-8")
-    for mod in (llm_mod, lp_mod):
+    parts = re.split(r"^(#{1,6} .*)$", doc, flags=re.M)
+    return {parts[i]: parts[i + 1] for i in range(1, len(parts) - 1, 2)
+            if parts[i].startswith("### ")}
+
+
+def test_the_doc_prints_each_template_verbatim_under_its_own_heading():
+    """Each `### `<judge>`, `<template>`` section holds exactly that template's digest, its
+    system prompt and its user message, in that order: a swap between sections fails."""
+    import re
+
+    sections = _doc_sections()
+    seen = set()
+    for judge, mod in (("llm", llm_mod), ("logprob", lp_mod)):
         for t in mod.PROMPT_TEMPLATES:
+            (heading,) = [h for h in sections if h.startswith(f"### `{judge}`, `{t}`")]
+            seen.add(heading)
+            body = sections[heading]
             system, sample = mod.prompt_sample(t)
-            assert f"```text\n{system}\n```" in doc, (mod.__name__, t, "system")
-            assert f"```text\n{sample}\n```" in doc, (mod.__name__, t, "user")
-            assert mod.prompt_sha256(t) in doc
+            assert re.findall(r"`prompt_sha256` = `([0-9a-f]{64})`", body) == [
+                mod.prompt_sha256(t)], heading
+            assert re.findall(r"```text\n(.*?)\n```", body, flags=re.S) == [system, sample], \
+                heading
+    assert len(seen) == 4
