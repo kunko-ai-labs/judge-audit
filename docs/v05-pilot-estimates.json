@@ -3676,6 +3676,24 @@
    }
   }
  },
+ "cost_probe": {
+  "llm-gemini-3.6-flash-probe": {
+   "rows": 20,
+   "calls": 20,
+   "input_per_call": 854.9,
+   "output_per_call": 26.5,
+   "hidden_output_per_call": 253.9,
+   "cost_per_call": 0.000957
+  },
+  "llm-gemini-3.6-flash-sc5-probe": {
+   "rows": 20,
+   "calls": 100,
+   "input_per_call": 854.9,
+   "output_per_call": 27.1,
+   "hidden_output_per_call": 249.3,
+   "cost_per_call": 0.000947
+  }
+ },
  "run_log": {
   "selfcheck": {
    "file": "docs/runs/v05-pilot/logprob-selfcheck.txt",

@@ -148,6 +148,15 @@ Latency is each judge's own per-decision field, measured on the maintainer's mac
 | gemini-3.6-flash verbalized | 308 | 1: 0/25 = 0.0 % [0.000, 0.137] | 0/39 = 0.0 % [0.000, 0.090] | 4/143 = 2.8 % [0.008, 0.070] | 4/143 = 2.8 % [0.008, 0.070] |
 | gemini-3.6-flash self-consistency (k = 5) | 308 | 1: 45/286 = 15.7 % [0.117, 0.205] | 45/286 = 15.7 % [0.117, 0.205] | 45/286 = 15.7 % [0.117, 0.205] | 45/286 = 15.7 % [0.117, 0.205] |
 
+## Gemini cost probe (§5c; sizes the cost ceiling, feeds no constant)
+
+The first 20 pilot rows, run again with the judge that records the reasoning tokens the endpoint bills but does not itemise. Per call, at the list price in `src/judge_audit/judges/llm.py`:
+
+| run | rows | calls | input | itemised output | hidden output | cost |
+|---|---:|---:|---:|---:|---:|---:|
+| `llm-gemini-3.6-flash-probe` | 20 | 20 | 854.9 | 26.5 | 253.9 | $0.000957 |
+| `llm-gemini-3.6-flash-sc5-probe` | 20 | 100 | 854.9 | 27.1 | 249.3 | $0.000947 |
+
 ## Hosted runs (context only, not fed back)
 
 Jev and gemini-3.6-flash on the same rows (docs/v05-pilot.md §3), under the same rules as above. They add hosted accuracies, tie shares and agreement with the Qwen3 verbalized run for context; they never enter the proposed constants. A run that was not made reads "not run"; one that stopped before its last row is not analysed (its missing rows are not wrong answers). Cost is what the checkpoint records per decision.

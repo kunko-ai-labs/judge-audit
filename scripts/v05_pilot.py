@@ -953,6 +953,9 @@ def compute(runs_dir: Path = RUNS_DIR, labels: Path = LABELS, n_sim: int | None 
             d["hosted"][s] = hosted_summary(s, run, runs[VERB], keys)
         if ADAPTER[s] == "llm":
             stop_rules[s] = stop_rule_of(s, run)
+    d["cost_probe"] = {slug: cost_probe_summary(Path(runs_dir) / f"{slug}.ckpt.jsonl", k)
+                       for slug, k in PROBES.items()
+                       if (Path(runs_dir) / f"{slug}.ckpt.jsonl").exists()}
     d["run_log"] = {
         "selfcheck": read_selfcheck(runs_dir),
         "stop_rules": stop_rules,
@@ -1032,6 +1035,26 @@ def rho_seed_check(runs: dict, keys: list, n_sim: int, main: list[dict],
               for name in names}
     return {"seeds": seeds, "normal_pairs": n_sim, "main_seed": SEED, "main": main_rho,
             "rows": out_rows, "round_differently": differ}
+
+
+PROBES = {"llm-gemini-3.6-flash-probe": 1, "llm-gemini-3.6-flash-sc5-probe": 5}   # §5c
+
+
+def cost_probe_summary(path: Path, calls_per_row: int) -> dict:
+    """§5c: per call, the mean input, itemised output and hidden output tokens and the cost
+    the (fixed) judge recorded, from a probe checkpoint's usage records. Feeds no constant:
+    it sizes the study's cost ceiling."""
+    recs = [json.loads(x) for x in Path(path).read_text(encoding="utf-8").splitlines()
+            if x.strip()]
+    js = [r["judgments"][0] for r in recs if r["idx"] >= 0]
+    calls = len(js) * calls_per_row
+    tot = {k: sum(j["raw"]["usage"].get(k, 0) for j in js)
+           for k in ("input_tokens", "output_tokens", "hidden_output_tokens")}
+    return {"rows": len(js), "calls": calls,
+            "input_per_call": round(tot["input_tokens"] / calls, 1),
+            "output_per_call": round(tot["output_tokens"] / calls, 1),
+            "hidden_output_per_call": round(tot["hidden_output_tokens"] / calls, 1),
+            "cost_per_call": round(math.fsum(j["cost_usd"] or 0.0 for j in js) / calls, 6)}
 
 
 def billing_text(notes: dict) -> str:
@@ -1363,6 +1386,17 @@ def markdown(d: dict) -> str:
                    "machine (the checkpoints do not record the hardware); for the local runs it "
                    "excludes loading the model.")]
     lines += top_slice_lines(d)
+    if d.get("cost_probe"):
+        lines += ["", "## Gemini cost probe (§5c; sizes the cost ceiling, feeds no constant)", "",
+                  ("The first 20 pilot rows, run again with the judge that records the "
+                   "reasoning tokens the endpoint bills but does not itemise. Per call, at "
+                   "the list price in `src/judge_audit/judges/llm.py`:"), "",
+                  "| run | rows | calls | input | itemised output | hidden output | cost |",
+                  "|---|---:|---:|---:|---:|---:|---:|"]
+        for slug, c in d["cost_probe"].items():
+            lines.append(f"| `{slug}` | {c['rows']} | {c['calls']} | {c['input_per_call']:g} "
+                         f"| {c['output_per_call']:g} | {c['hidden_output_per_call']:g} | "
+                         f"${c['cost_per_call']:.6f} |")
 
     h = d["hosted"]
     lines += ["", "## Hosted runs (context only, not fed back)", "",

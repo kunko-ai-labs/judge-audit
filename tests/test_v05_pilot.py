@@ -927,3 +927,19 @@ def test_billing_console_note_in_any_currency():
     assert pilot.billing_text(note) == (
         "2.7 EUR for gemini-3.6-flash on 2026-09-29 (the maintainer's note, not a "
         "checkpoint figure)")
+
+
+def test_cost_probe_per_call(tmp_path):
+    """§5c: mean itemised and hidden output tokens and cost per call, from the probe
+    checkpoints' own usage records (k calls per self-consistency row)."""
+    head = {"idx": -1, "run": {"judge": {"name": "llm:gemini-3.6-flash"}}}
+    rows = [{"idx": i, "judgments": [{"cost_usd": 0.001, "raw": {"usage": {
+        "input_tokens": 800, "output_tokens": 20, "hidden_output_tokens": 200}}}]}
+        for i in range(2)]
+    p = tmp_path / "p.ckpt.jsonl"
+    p.write_text("\n".join(json.dumps(x) for x in [head] + rows) + "\n")
+    s = pilot.cost_probe_summary(p, calls_per_row=1)
+    assert s == {"rows": 2, "calls": 2, "input_per_call": 800.0, "output_per_call": 20.0,
+                 "hidden_output_per_call": 200.0, "cost_per_call": 0.001}
+    s5 = pilot.cost_probe_summary(p, calls_per_row=5)
+    assert s5["calls"] == 10 and s5["cost_per_call"] == pytest.approx(0.0002)
