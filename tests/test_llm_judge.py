@@ -443,3 +443,28 @@ def test_self_consistency_sums_hidden_tokens_over_its_samples(monkeypatch):
     assert out.raw["usage"] == {"input_tokens": 300, "output_tokens": 30,
                                 "hidden_output_tokens": 120}
     assert out.cost_usd == pytest.approx((300 * 0.30 + 150 * 2.50) / 1e6)
+
+
+@pytest.mark.parametrize("usage", [
+    {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 12},      # total < sum
+    {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 20.0},    # not an int
+    {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": "20"},
+    {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": True},    # a bool
+    {"completion_tokens": 20, "total_tokens": 1000},                        # no prompt count
+    {"prompt_tokens": None, "completion_tokens": 20, "total_tokens": 1000},
+    {"prompt_tokens": 10, "total_tokens": 1000},                            # no completion
+])
+def test_hidden_tokens_need_three_integer_counts(usage):
+    """Nothing is inferred from a partial or malformed usage record: a missing prompt count
+    must not turn the whole prompt into hidden output priced at the output rate."""
+    from judge_audit.judges.llm import hidden_output_tokens
+
+    assert hidden_output_tokens(usage) == 0
+
+
+def test_the_anthropic_path_keeps_the_v04_usage_shape():
+    from judge_audit.judges.llm import LLMJudge as J
+
+    j = J.__new__(J)
+    j._hidden = 0
+    assert j._usage(10, 5) == {"input_tokens": 10, "output_tokens": 5}

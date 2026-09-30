@@ -337,12 +337,15 @@ def hidden_output_tokens(usage: dict) -> int:
     """Tokens an endpoint billed but did not itemise: total_tokens minus prompt and completion
     tokens, when the total is larger. Gemini's OpenAI-compatible endpoint reports a model's
     internal reasoning only this way; OpenAI counts it inside completion_tokens, so its total
-    adds up and nothing is added twice. No total, nothing invented."""
-    total = usage.get("total_tokens")
-    if not isinstance(total, int):
+    adds up and nothing is added twice. Nothing is inferred from a partial or malformed
+    record: all three counts must be integers (not bools), or the answer is 0."""
+    total, prompt, completion = (usage.get(k) for k in ("total_tokens", "prompt_tokens",
+                                                         "completion_tokens"))
+    if not all(isinstance(c, int) and not isinstance(c, bool)
+               for c in (total, prompt, completion)):
         return 0
-    return max(0, total - int(usage.get("prompt_tokens") or 0)
-               - int(usage.get("completion_tokens") or 0))
+    assert isinstance(total, int) and isinstance(prompt, int) and isinstance(completion, int)
+    return max(0, total - prompt - completion)
 
 
 class LLMJudge(Judge):

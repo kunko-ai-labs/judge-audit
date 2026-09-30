@@ -940,6 +940,28 @@ def test_cost_probe_per_call(tmp_path):
     p.write_text("\n".join(json.dumps(x) for x in [head] + rows) + "\n")
     s = pilot.cost_probe_summary(p, calls_per_row=1)
     assert s == {"rows": 2, "calls": 2, "input_per_call": 800.0, "output_per_call": 20.0,
-                 "hidden_output_per_call": 200.0, "cost_per_call": 0.001}
+                 "hidden_output_per_call": 200.0, "billed_output_per_call": 220.0,
+                 "cost_per_call": 0.001}
     s5 = pilot.cost_probe_summary(p, calls_per_row=5)
     assert s5["calls"] == 10 and s5["cost_per_call"] == pytest.approx(0.0002)
+
+
+def test_cost_probe_sums_the_cost_of_every_question_in_a_row(tmp_path):
+    """A row's cost is split over its questions (cost_usd per judgment): the probe adds them
+    back, so a two-question checkpoint is not undercounted."""
+    head = {"idx": -1, "run": {"judge": {"name": "llm:m"}}}
+    u = {"input_tokens": 100, "output_tokens": 10, "hidden_output_tokens": 5}
+    row = {"idx": 0, "judgments": [{"cost_usd": 0.0005, "raw": {"usage": u}},
+                                   {"cost_usd": 0.0005, "raw": {"usage": u}}]}
+    p = tmp_path / "p.ckpt.jsonl"
+    p.write_text(json.dumps(head) + "\n" + json.dumps(row) + "\n")
+    s = pilot.cost_probe_summary(p, calls_per_row=1)
+    assert s["cost_per_call"] == pytest.approx(0.001)
+    assert s["billed_output_per_call"] == 15.0
+
+
+def test_the_day_reconstruction_prices_the_resumed_calls_at_the_probe_rates():
+    probe = {"llm-gemini-3.6-flash-probe": {"cost_per_call": 0.001},
+             "llm-gemini-3.6-flash-sc5-probe": {"cost_per_call": 0.002}}
+    r = pilot.day_reconstruction(probe, verbalized_calls=10, sc_calls=5)
+    assert r == {"verbalized_calls": 10, "sc_calls": 5, "usd": 0.02}

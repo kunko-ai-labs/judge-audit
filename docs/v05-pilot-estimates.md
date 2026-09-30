@@ -152,10 +152,12 @@ Latency is each judge's own per-decision field, measured on the maintainer's mac
 
 The first 20 pilot rows, run again with the judge that records the reasoning tokens the endpoint bills but does not itemise. Per call, at the list price in `src/judge_audit/judges/llm.py`:
 
-| run | rows | calls | input | itemised output | hidden output | cost |
-|---|---:|---:|---:|---:|---:|---:|
-| `llm-gemini-3.6-flash-probe` | 20 | 20 | 854.9 | 26.5 | 253.9 | $0.000957 |
-| `llm-gemini-3.6-flash-sc5-probe` | 20 | 100 | 854.9 | 27.1 | 249.3 | $0.000947 |
+| run | rows | calls | input | itemised output | hidden output | billed output | cost |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `llm-gemini-3.6-flash-probe` | 20 | 20 | 854.9 | 26.5 | 253.9 | 280.4 | $0.000957 |
+| `llm-gemini-3.6-flash-sc5-probe` | 20 | 100 | 854.9 | 27.1 | 249.3 | 276.4 | $0.000947 |
+
+The 287 verbalized and 1,540 self-consistency calls of 2026-09-29 (run-notes.json), priced at these rates, come to $1.73; the billing console's figure for that day is 2.7 EUR for gemini-3.6-flash on 2026-09-29 (the resumed verbalized rows 21-307 and the whole self-consistency run; the 21 rows of 2026-09-27 ran under another project) (the maintainer's note, not a checkpoint figure). The hidden tokens explain part of the difference with the $0.59 the checkpoints recorded that day; the checkpoints do not explain the rest (list price, currency, tax, retried or other calls are not separated).
 
 ## Hosted runs (context only, not fed back)
 
