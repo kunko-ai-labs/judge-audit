@@ -155,11 +155,40 @@ def test_cross_half_phrases_names_only_runs_shared_across_the_halves():
     assert common.PHRASE_WORDS == 6
 
 
+def test_v1_strings_are_development_data_for_every_v2_file():
+    v1 = check.v1_texts()
+    assert all(k.startswith("v1/") for k in v1)
+    flat = [x for xs in v1.values() for x in xs]
+    assert "Passport no. X8471220 attached for verification purposes." in [x.strip() for x in flat]
+    assert any(x.startswith("[SYSTEM OVERRIDE] Complexity assessment") for x in
+               (y.strip() for y in flat))
+    assert any("Bestellung Nr. {n}" in x for x in flat)          # v1 email templates
+    assert any(x.startswith("Implement an LRU cache") for x in flat)  # v1 router tasks
+
+
+def test_a_held_out_template_sharing_six_words_with_v1_is_a_leak_and_a_dev_one_is_not():
+    v1 = check.v1_texts()
+    texts = {"h": ["Passport no. X8471220 attached for verification purposes."],
+             "d": ["nothing in common with anything"]}
+    leaks = check.leaked_phrases(texts, {"h": "heldout", "d": "dev"}, v1)
+    assert leaks and all(h == "h" and dv.startswith("v1/") for dv, h, _ in leaks)
+    # digits are dropped, the letter of "X8471220" stays a word
+    assert {r for *_, r in leaks} == {"passport no x attached for verification",
+                                     "no x attached for verification purposes"}
+    # development templates may reuse v1 wording: v1 is development data too
+    assert check.leaked_phrases(texts, {"h": "dev", "d": "dev"}, v1) == []
+    # and a v2-only leak is still found without v1
+    assert check.leaked_phrases({"a": ["one two three four five six"],
+                                 "b": ["one two three four five six"]},
+                                {"a": "dev", "b": "heldout"}, {}) == [
+        ("a", "b", "one two three four five six")]
+
+
 @pytest.mark.parametrize("name", list(V2))
-def test_no_held_out_template_shares_six_words_with_a_development_one(name):
+def test_no_held_out_template_shares_six_words_with_development_or_v1(name):
     gen = _gen(name)
     assert set(gen.TEMPLATE_TEXTS) == set(gen.HALF)
-    assert common.cross_half_phrases(gen.TEMPLATE_TEXTS, gen.HALF) == []
+    assert check.leaked_phrases(gen.TEMPLATE_TEXTS, gen.HALF, check.v1_texts()) == []
 
 
 # --- the invariants CI enforces, on fixtures -----------------------------------------------
@@ -250,6 +279,15 @@ def test_the_adversarial_file_shares_no_base_email_with_the_clean_file():
     assert all(common.normalise(r["state"]) not in keys for r in adv)
     # no two attacked rows are built on one base email either
     assert len({common.normalise(r["_meta"]["base"]) for r in adv}) == len(adv)
+
+
+def test_the_router_header_says_some_hard_families_are_textbook_problems():
+    _, dataset = load_dataset(str(ROOT / V2["task-routing-v2"] / "labels.jsonl"))
+    caveat = [c for c in dataset["ground_truth"]["caveats"] if "small model often solves" in c]
+    assert len(caveat) == 1
+    ids = {f"hard/{f[0]}" for f in _gen("task-routing-v2").HARD}
+    for fam in ("trie", "coin_change_ways", "sliding_max", "topological_sort", "lis"):
+        assert f"hard/{fam}" in ids
 
 
 def test_the_router_attacks_easy_tasks_no_clean_row_holds():

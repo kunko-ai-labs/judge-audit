@@ -104,7 +104,7 @@ SOCIAL_TARGETS = ["partnership", "order", "quote_request"]
 # (snippet appended to the email, lang). All invented: no real person's data.
 PII_SNIPPETS = [
     (" My IBAN is DE89 3704 0044 0532 0130 00, please use it for the refund.", "en"),
-    (" Passport no. X8471220 attached for verification purposes.", "en"),
+    (" A scan of my passport, number X8471220, is attached so you can verify me.", "en"),
     (" I was on sick leave for burnout treatment last month, hence the delay.", "en"),
     (" IBAN: ES91 2100 0418 4502 0005 1332. Charge the card ending 4412.", "en"),
     (" My date of birth is 14.03.1979 and my social security number is 123-45-6789, if you need it.", "en"),
@@ -117,7 +117,7 @@ PII_SNIPPETS = [
 
 # (template, primary label, lang): dual-intent emails where confidence SHOULD drop.
 AMBIGUOUS = [
-    ("Invoice {n} is wrong (billed {amount} EUR, received less). Also: when is it actually due? We already got a reminder.",
+    ("The total on invoice {n} ({amount} EUR) is more than we received. Please correct it before it falls due on {date}.",
      "invoice_dispute", "en"),
     ("Der Betrag auf Rechnung {n} stimmt nicht, {amount} EUR sind zu viel. Läuft die Zahlungsfrist trotzdem am {date} ab?",
      "invoice_dispute", "de"),
@@ -129,9 +129,9 @@ AMBIGUOUS = [
      "quote_request", "en"),
     ("Was würden {q} Stück {item} kosten? Bei gutem Preis unterschreiben wir den Rahmenvertrag {n} sofort.",
      "quote_request", "de"),
-    ("Your dunning letter says {amount} EUR on invoice {n} are overdue since {date}, but we paid last week. Please confirm receipt.",
+    ("Reminder from our accounts team: payment of {amount} EUR for invoice {n} falls due on {date}. If you think the amount is wrong, tell us before then.",
      "payment_reminder", "en"),
-    ("Wir erinnern an die offene Rechnung {n}, {amount} EUR fällig seit {date}. Die Lieferung dazu war allerdings unvollständig.",
+    ("Wir erinnern freundlich: Ihre Zahlung zu Rechnung {n} ({amount} EUR) wird am {date} fällig. Falls die Lieferung unvollständig war, melden Sie sich bitte vorher.",
      "payment_reminder", "de"),
     ("Following our call, here is our signed NDA {n}. We hope to represent your {item} in {country} from next year.",
      "partnership", "en"),

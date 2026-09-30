@@ -56,7 +56,7 @@ TEMPLATES = {
         ("Bitte liefern Sie gemäß Ihrem Angebot {n} {q} {item} an unser Werk in {city}. Gruß, {name}", "de"),
     ],
     "quote_request": [
-        ("Please send a quote for {q} units of {item}. Reference {n}.", "en"),
+        ("Kindly price {q} pieces of {item} for us; our enquiry number is {n}.", "en"),
         ("Could you quote {q} {item} with delivery to {city} by {date}?", "en"),
         ("What would {q} {item} cost including shipping? Please send your best price. {name}, {company}", "en"),
         ("Request for quotation {n}: {q} pcs {item}, incoterms DAP {city}.", "en"),
@@ -70,7 +70,7 @@ TEMPLATES = {
         ("Dispute on invoice {n}: we were billed for {q} units of {item} but received {q2}.", "en"),
         ("Your invoice {n} lists a unit price for {item} that does not match our contract. Please issue a credit note.", "en"),
         ("We contest invoice {n} over {amount} EUR: the freight to {city} was agreed free of charge. {name}", "en"),
-        ("Rechnung Nr. {n} über {amount} EUR ist falsch. Bitte um Klärung.", "de"),
+        ("Auf Rechnung Nr. {n} wurden uns {amount} EUR zu viel berechnet. Bitte korrigieren.", "de"),
         ("Einspruch gegen Rechnung {n}: berechnet wurden {q} Stück {item}, geliefert nur {q2}.", "de"),
         ("Die Rechnung {n} enthält einen falschen Stückpreis für {item}. Bitte senden Sie eine Gutschrift.", "de"),
         ("Wir widersprechen der Rechnung {n}: die Fracht nach {city} war kostenfrei vereinbart. {name}, {company}", "de"),

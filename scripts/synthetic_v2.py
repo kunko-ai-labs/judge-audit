@@ -83,6 +83,46 @@ def _rows(rel: str) -> list[dict]:
     return load_dataset(str(ROOT / rel))[0]
 
 
+# The strings each v1 generator builds its rows from. v1 is development data (published
+# audits, split-heldout.json's train side, the fine-tuned classifier), so a held-out v2
+# template may not share wording with it either.
+V1_TEMPLATE_ATTRS = {
+    "email-routing": ("TEMPLATES",),
+    "email-routing-adversarial": ("INJECTION_TEMPLATES", "SOCIAL_TEMPLATES", "PII_SNIPPETS",
+                                  "AMBIGUOUS"),
+    "task-routing": ("EASY", "HARD", "INJECTION_TEMPLATES"),
+}
+
+
+def _strings(obj: object) -> list[str]:
+    """The phrases in a template structure: strings with a space (labels and language codes
+    have none)."""
+    if isinstance(obj, str):
+        return [obj] if " " in obj.strip() else []
+    if isinstance(obj, dict):
+        obj = list(obj.values())
+    if isinstance(obj, (list, tuple)):
+        return [s for x in obj for s in _strings(x)]
+    return []
+
+
+def v1_texts() -> dict[str, list[str]]:
+    """`v1/<dataset>/<ATTR>` -> the v1 generator's strings, all development data."""
+    out: dict[str, list[str]] = {}
+    for name, attrs in V1_TEMPLATE_ATTRS.items():
+        mod = _load(f"gen_v1_{name.replace('-', '_')}", ROOT / "examples" / name / "generate.py")
+        for attr in attrs:
+            out[f"v1/{name}/{attr}"] = _strings(getattr(mod, attr))
+    return out
+
+
+def leaked_phrases(texts: dict[str, list[str]], half: dict[str, str],
+                   v1: dict[str, list[str]]) -> list[tuple[str, str, str]]:
+    """(development template or v1 source, held-out template, run) for every six-word run
+    a held-out template shares with the development side, v1 included."""
+    return _common.cross_half_phrases({**texts, **v1}, {**half, **{k: "dev" for k in v1}})
+
+
 # --- invariants, each a pure function of rows --------------------------------------------
 
 def duplicate_states(rows: list[dict]) -> list[list[int]]:
@@ -158,6 +198,7 @@ def frozen_problems() -> list[str]:
 def problems() -> list[str]:
     """Every invariant, on the committed files."""
     out = frozen_problems()
+    v1 = v1_texts()
     rows = {d: _rows(f"{d}/labels.jsonl") for d in V2_DIRS}
     for d, rs in rows.items():
         out += row_count_problems(d, rs)
@@ -168,8 +209,8 @@ def problems() -> list[str]:
         if split["sha256_rows"] != sha256_rows_of(str(ROOT / d / "labels.jsonl")):
             out.append(f"{d}/split-templates.json: sha256_rows is not the labels file's")
         gen = generator(d)
-        out += [f"{d}: held-out template {h} shares '{run}' with development template {dv}"
-                for dv, h, run in _common.cross_half_phrases(gen.TEMPLATE_TEXTS, gen.HALF)]
+        out += [f"{d}: held-out template {h} shares '{run}' with {dv}"
+                for dv, h, run in leaked_phrases(gen.TEMPLATE_TEXTS, gen.HALF, v1)]
     adv = rows[ADVERSARIAL]
     out += [f"{ADVERSARIAL}: row {i} is built on a base email of {CLEAN}"
             for i in shared_bases(rows[CLEAN], adv)]

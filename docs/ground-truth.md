@@ -76,16 +76,22 @@ What changed against v1:
   each stratum (category × language for emails, family × language for attacks, difficulty
   for coding tasks), drawn with one seed fixed before any file existed. A row is held out
   when every template it was built from is; the adversarial file keeps the clean file's
-  halves for the email templates. No held-out template shares a run of six words with a
-  development one.
+  halves for the email templates. v1 counts as development data (its files back the
+  published audits and `split-heldout.json`'s training halves), so no held-out template
+  shares a run of six words (slots count as words, digits and punctuation do not) with a
+  v2 development template or with any string of the v1 generators; the check enforces it.
 
 **The held-out rule: held-out templates are never used in development.** No prompt
 wording, few-shot example, training row, threshold or calibration fit may come from a row
 built on one; held-out rows are scored once, under a pre-registered protocol. Rows of one
 template differ only in their fills, so they are near-duplicates by design: a score on
-rows whose templates were seen in development says how well a judge fits those templates,
-and only the held-out rows say how it does on wording it has not seen. Homoglyph
-disguises, and the router's openings and style requests, are shared on both sides.
+rows whose templates were seen in development says how well a judge fits those templates.
+Held out means precisely this: templates never used in development and sharing no run of
+six words with a development template or with v1. It does not mean unseen topics or
+vocabulary: shorter phrases ("for an empty list"), the categories, the items, companies
+and other fill values, the homoglyph disguises, and the router's openings and style
+requests appear on both sides. A held-out score measures new sentence templates for
+familiar intents, not new intents.
 
 ## What each tier lets you claim
 
