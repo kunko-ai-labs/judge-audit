@@ -1,0 +1,21 @@
+# 2026-10-01: the study's first logprob self-check (scripts/logprob_selfcheck.py as frozen, --rows 5, BANKING77 test rows 0-4)
+model mlx-community/Qwen3-8B-4bit · 5 rows · largest probability difference 5.09e-02 · decisions changed 1 · cached path 5.9 rows/min · labels tokenised alone 0
+# exit 1: the plan's stop rule (§10) held the log-probability runs
+#
+# Diagnosis, same rows, same model (Qwen3-8B 4-bit at 545dc4251c05440727734bcd94334791f6ab0192):
+# option probabilities by the trimmed cache, a fresh cache per option, and a full forward pass per option
+row 0 label=card_arrival 680s | trim-vs-full 5.09e-02 fresh-vs-full 5.09e-02 trim-vs-fresh 0.00e+00
+   trim top2 [('card_delivery_estimate', 0.3924), ('card_not_working', 0.3924)]
+   full top2 [('card_not_working', 0.4434), ('card_delivery_estimate', 0.3453)]
+row 1 label=card_arrival 692s | trim-vs-full 2.10e-09 fresh-vs-full 2.10e-09 trim-vs-fresh 0.00e+00
+   trim top2 [('order_physical_card', 0.9996), ('get_physical_card', 0.0004)]
+   full top2 [('order_physical_card', 0.9996), ('get_physical_card', 0.0004)]
+row 2 label=card_arrival 771s | trim-vs-full 2.49e-09 fresh-vs-full 2.49e-09 trim-vs-fresh 0.00e+00
+   trim top2 [('order_physical_card', 1.0), ('get_physical_card', 0.0)]
+   full top2 [('order_physical_card', 1.0), ('get_physical_card', 0.0)]
+row 3 label=card_arrival 637s | trim-vs-full 8.72e-09 fresh-vs-full 8.72e-09 trim-vs-fresh 0.00e+00
+   trim top2 [('card_delivery_estimate', 0.9525), ('get_physical_card', 0.0474)]
+   full top2 [('card_delivery_estimate', 0.9525), ('get_physical_card', 0.0474)]
+row 4 label=card_arrival 578s | trim-vs-full 1.06e-06 fresh-vs-full 1.06e-06 trim-vs-fresh 0.00e+00
+   trim top2 [('get_physical_card', 0.9988), ('card_arrival', 0.0012)]
+   full top2 [('get_physical_card', 0.9988), ('card_arrival', 0.0012)]

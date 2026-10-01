@@ -235,14 +235,16 @@ class MLXBackend:
         return prompt_ids, out, alone
 
     def option_logprobs(self, prompt: str, labels: Sequence[str],
-                        recompute: bool = False) -> dict[str, float]:
+                        recompute: bool = False, fresh: bool = False) -> dict[str, float]:
         """log P(label, then end of turn | prompt) for every label.
 
         The whole prompt runs once (`continuations` says how each label is tokenised after
         it), into a cache that each label's tokens extend and that is trimmed back after
         each. `recompute` runs the whole sequence per label instead (slower; the check that
-        trimming changes nothing, and the fallback for caches that cannot be trimmed). The
-        labels tokenised alone are left in `last_tokenised_alone`."""
+        trimming changes nothing, and the fallback for caches that cannot be trimmed).
+        `fresh` prefills a new cache for every label instead of trimming one: the same
+        computation as the trimmed path, step for step, so the two must agree exactly; the
+        self-check's gate. The labels tokenised alone are left in `last_tokenised_alone`."""
         import mlx.core as mx
         from mlx_lm.models.cache import can_trim_prompt_cache, make_prompt_cache, trim_prompt_cache
 
@@ -262,9 +264,14 @@ class MLXBackend:
         cache = make_prompt_cache(self.model)
         head = log_softmax(self.model(mx.array([prefix]), cache=cache)[0, -1])
         trimmable = can_trim_prompt_cache(cache) and not recompute
-        self.cache_mode = "trim" if trimmable else "recompute"
+        self.cache_mode = "fresh" if fresh else "trim" if trimmable else "recompute"
         for lab, cont in conts.items():
-            if trimmable:
+            if fresh:
+                c2 = make_prompt_cache(self.model)
+                head2 = log_softmax(self.model(mx.array([prefix]), cache=c2)[0, -1])
+                cont_logits = log_softmax(self.model(mx.array([cont]), cache=c2)[0])
+                out[lab] = score(head2, cont_logits, cont)
+            elif trimmable:
                 cont_logits = log_softmax(self.model(mx.array([cont]), cache=cache)[0])
                 out[lab] = score(head, cont_logits, cont)
                 trim_prompt_cache(cache, len(cont))

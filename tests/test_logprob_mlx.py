@@ -63,6 +63,17 @@ def test_cached_scores_equal_a_full_forward_pass(backend):
         assert cached[lab] == pytest.approx(fresh[lab], abs=1e-4)
 
 
+def test_the_trimmed_cache_equals_a_fresh_cache_per_option(backend):
+    """The self-check's gate (plan amendment 1): scoring every option on one trimmed cache is
+    exactly what a new cache per option computes (prefix prefilled, then the option)."""
+    prompt = backend.prompt_text(SYSTEM, "STATE:\nwhere is my card")
+    labels = ["card", "card_arrival", "top_up", "x"]
+    trimmed = backend.option_logprobs(prompt, labels)
+    fresh = backend.option_logprobs(prompt, labels, fresh=True)
+    assert backend.cache_mode == "fresh"
+    assert trimmed == fresh
+
+
 def test_a_label_that_starts_another_is_not_credited_with_it(backend):
     prompt = backend.prompt_text(SYSTEM, "STATE:\ntop up")
     both = backend.option_logprobs(prompt, ["top_up", "top_up_failed"])
@@ -152,4 +163,7 @@ def test_selfcheck_passes_on_a_model_whose_cache_is_exact(backend, tmp_path, mon
              "labels": {"intent": "card"}} for i in range(3)]
     labels.write_text("".join(json.dumps(r) + "\n" for r in rows))
     assert mod.main([str(labels), "--rows", "3"]) == 0
-    assert "decisions changed 0" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert ("trimmed vs fresh cache: largest probability difference 0.00e+00 · "
+            "decisions changed 0") in out
+    assert "full forward pass (numerical spread, reported, not a gate)" in out
