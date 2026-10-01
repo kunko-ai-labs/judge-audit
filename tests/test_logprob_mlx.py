@@ -2,6 +2,8 @@
 are installed (Apple silicon, or Linux CPU), skipped elsewhere."""
 from __future__ import annotations
 
+import math
+
 import pytest
 
 from judge_audit.judges.logprob import SYSTEM, option_distribution
@@ -164,6 +166,86 @@ def test_selfcheck_passes_on_a_model_whose_cache_is_exact(backend, tmp_path, mon
     labels.write_text("".join(json.dumps(r) + "\n" for r in rows))
     assert mod.main([str(labels), "--rows", "3"]) == 0
     out = capsys.readouterr().out
-    assert ("trimmed vs fresh cache: largest probability difference 0.00e+00 · "
+    assert ("trimmed vs fresh cache: largest log-probability difference 0.00e+00 · "
             "decisions changed 0") in out
     assert "full forward pass (numerical spread, reported, not a gate)" in out
+
+
+def _selfcheck_module(backend, monkeypatch):
+    import importlib.util
+    import sys
+    from pathlib import Path
+
+    from judge_audit.judges.logprob import LogprobJudge
+
+    root = Path(__file__).resolve().parent.parent
+    spec = importlib.util.spec_from_file_location("logprob_selfcheck_gate",
+                                                  root / "scripts" / "logprob_selfcheck.py")
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["logprob_selfcheck_gate"] = mod
+    spec.loader.exec_module(mod)
+    monkeypatch.setattr(mod, "LogprobJudge",
+                        lambda model=None: LogprobJudge(model="tiny", backend=backend))
+    return mod
+
+
+def _labels(tmp_path):
+    import json
+
+    rows = [{"state": f"message {i}",
+             "questions": [{"name": "intent", "type": "choice", "instructions": "Which?",
+                            "options": ["card", "card_arrival", "top_up"]}],
+             "labels": {"intent": "card"}} for i in range(2)]
+    p = tmp_path / "labels.jsonl"
+    p.write_text("".join(json.dumps(r) + "\n" for r in rows))
+    return p
+
+
+def test_the_selfcheck_fails_when_trimming_breaks(backend, tmp_path, monkeypatch, capsys):
+    """A cache that is not trimmed back between options scores later options after the
+    earlier ones' tokens: the trimmed path then differs from a fresh cache, and the gate
+    fails."""
+    import mlx_lm.models.cache as cache_mod
+
+    monkeypatch.setattr(cache_mod, "trim_prompt_cache", lambda cache, n: 0)
+    mod = _selfcheck_module(backend, monkeypatch)
+    assert mod.main([str(_labels(tmp_path)), "--rows", "2"]) == 1
+
+
+def test_the_selfcheck_fails_on_a_large_full_pass_spread(backend, tmp_path, monkeypatch):
+    """The full forward pass is not exact in bfloat16, but a changed decision whose
+    trimmed-path margin is beyond the loose bound (four bfloat16 steps at logit magnitudes
+    32-64) still fails the check."""
+    mod = _selfcheck_module(backend, monkeypatch)
+    real = backend.option_logprobs
+
+    def skewed(prompt, labels, recompute=False, fresh=False):
+        """The full pass alone puts top_up first: a changed decision whose trimmed-path
+        margin is far above the bound."""
+        out = real(prompt, labels, recompute=recompute, fresh=fresh)
+        return {k: v + (30.0 if recompute and k == "top_up" else 0.0) for k, v in out.items()}
+
+    monkeypatch.setattr(backend, "option_logprobs", skewed)
+    assert mod.main([str(_labels(tmp_path)), "--rows", "2"]) == 1
+    monkeypatch.setattr(backend, "option_logprobs", real)
+    assert mod.main([str(_labels(tmp_path)), "--rows", "2"]) == 0
+
+
+def test_log_odds_helpers():
+    import importlib.util
+    import sys
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    spec = importlib.util.spec_from_file_location("logprob_selfcheck_h",
+                                                  root / "scripts" / "logprob_selfcheck.py")
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["logprob_selfcheck_h"] = mod
+    spec.loader.exec_module(mod)
+    # the diagnosed near-tie: 0.25 in log-odds on the top pair, within the bound
+    a = {"x": 0.3924, "y": 0.3924, "z": 0.2152}
+    b = {"x": 0.3453, "y": 0.4434, "z": 0.2113}
+    assert mod.log_odds_shift(a, b) == pytest.approx(math.log(0.4434 / 0.3453))   # 0.25
+    assert mod.margin(a) == 0.0 and mod.margin({"x": 1.0, "y": 0.0}) == math.inf
+    # options under 1 % in either distribution are not compared: one option left, no pair
+    assert mod.log_odds_shift({"x": 0.995, "y": 0.005}, {"x": 0.9, "y": 0.1}) == 0.0

@@ -262,7 +262,8 @@ class MLXBackend:
 
         out: dict[str, float] = {}
         cache = make_prompt_cache(self.model)
-        head = log_softmax(self.model(mx.array([prefix]), cache=cache)[0, -1])
+        # the fresh path prefills its own cache per label: no shared prefill
+        head = None if fresh else log_softmax(self.model(mx.array([prefix]), cache=cache)[0, -1])
         trimmable = can_trim_prompt_cache(cache) and not recompute
         self.cache_mode = "fresh" if fresh else "trim" if trimmable else "recompute"
         for lab, cont in conts.items():

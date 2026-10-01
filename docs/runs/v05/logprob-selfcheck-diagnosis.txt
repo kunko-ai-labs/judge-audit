@@ -4,6 +4,7 @@ model mlx-community/Qwen3-8B-4bit · 5 rows · largest probability difference 5.
 #
 # Diagnosis, same rows, same model (Qwen3-8B 4-bit at 545dc4251c05440727734bcd94334791f6ab0192):
 # option probabilities by the trimmed cache, a fresh cache per option, and a full forward pass per option
+# (an ad-hoc script at the time; the same comparison is now `scripts/logprob_selfcheck.py --per-row`)
 row 0 label=card_arrival 680s | trim-vs-full 5.09e-02 fresh-vs-full 5.09e-02 trim-vs-fresh 0.00e+00
    trim top2 [('card_delivery_estimate', 0.3924), ('card_not_working', 0.3924)]
    full top2 [('card_not_working', 0.4434), ('card_delivery_estimate', 0.3453)]
