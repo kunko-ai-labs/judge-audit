@@ -115,9 +115,10 @@ def test_runs_report_covers_every_per_run_report(root):
     covered = {t["json"] for t in runs_report.targets()}
     # docs/runs/finetuned/ holds training logs and jury/panel.json the frozen panel:
     # neither is an audit report, nor is run-notes.json (the maintainer's notes on the v0.5
-    # pilot's runs). 54 Arena and jury reports + 9 pre-registered repeats.
+    # pilot's runs) or cost-probe-rows.json (the rows of its cost probe, §5c). 54 Arena and
+    # jury reports + 9 pre-registered repeats.
     on_disk = {str(p.relative_to(root)) for p in (root / "docs" / "runs").rglob("*.json")
-               if p.name not in ("panel.json", "run-notes.json")
+               if p.name not in ("panel.json", "run-notes.json", "cost-probe-rows.json")
                and p.parent.name != "finetuned"}
     assert len(on_disk) == 63 and on_disk <= covered, sorted(on_disk - covered)
     assert "docs/audit-jev-real.json" in covered

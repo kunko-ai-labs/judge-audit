@@ -14,6 +14,7 @@ Accuracy alone does not answer it, and neither does the average calibration erro
 | Page | In one line |
 |---|---|
 | [Three ways to read a chat model's confidence](confidence-methods.md) | The same model, read up to three ways (the number it writes, how often it repeats its answer, and, for open-weight models run locally, the probability of its answer tokens), on the same rows. Is the v0.4 gap the model or the method? |
+| [Prompt sensitivity: a second wording](prompt-templates.md) | The same question to the same model in two wordings (`v1`, the published prompt, and `v2`), both printed verbatim with their digests. Does the confidence move with the wording? |
 | [How much can you automate at error ≤ X %?](automation-at-risk.md) | A threshold chosen and certified on one half of the data with an exact binomial bound, then applied unchanged to the other half, which reports its own bound; instead of an ECE nobody can act on. |
 | [Judgment models against chat models, paired](judgment-models-vs-llms.md) | Jev and Laya return a probability per option by design; chat models do not. Compared on the same rows with paired tests, not by eyeballing intervals. |
 | [What runs where](where-to-run.md) | Which judges run on a laptop, which need a key, which need neither, and what CI checks. |

@@ -953,15 +953,27 @@ def compute(runs_dir: Path = RUNS_DIR, labels: Path = LABELS, n_sim: int | None 
             d["hosted"][s] = hosted_summary(s, run, runs[VERB], keys)
         if ADAPTER[s] == "llm":
             stop_rules[s] = stop_rule_of(s, run)
-    billing = notes.get("billing_console_usd")
+    d["cost_probe"] = {slug: cost_probe_summary(Path(runs_dir) / f"{slug}.ckpt.jsonl", k)
+                       for slug, k in PROBES.items()
+                       if (Path(runs_dir) / f"{slug}.ckpt.jsonl").exists()}
+    gem_note = (notes.get("runs") or {}).get(GEM) or {}
+    if len(d["cost_probe"]) == len(PROBES) and isinstance(gem_note.get("resumed_from_row"), int):
+        # 2026-09-29, the day the billing note covers: the resumed verbalized rows and the
+        # whole self-consistency run (run-notes.json), priced at the probe's rates.
+        sc_rows = len((Path(runs_dir) / f"{GEM_SC}.ckpt.jsonl").read_text(
+            encoding="utf-8").splitlines()) - 1
+        d["cost_probe_day"] = day_reconstruction(
+            d["cost_probe"], len(keys) - gem_note["resumed_from_row"],
+            sc_rows * EXPECTED_SAMPLES[GEM_SC])
+        d["cost_probe_day_recorded"] = round(
+            recorded_cost(Path(runs_dir) / f"{GEM}.ckpt.jsonl", gem_note["resumed_from_row"])
+            + recorded_cost(Path(runs_dir) / f"{GEM_SC}.ckpt.jsonl", 0), 4)
     d["run_log"] = {
         "selfcheck": read_selfcheck(runs_dir),
         "stop_rules": stop_rules,
         "hosted": {s: {k: v for k, v in d["hosted"][s].items()
                        if k in ("status", "rows", "of", "reason")} for s in HOSTED},
-        "billing_console": (f"${billing} (the maintainer's note, not a checkpoint figure)"
-                            if billing is not None
-                            else "not yet reported by the maintainer"),
+        "billing_console": billing_text(notes),
         "notes_file": _shown(Path(runs_dir) / "run-notes.json") if notes else None}
     for s in HOSTED:
         if d["hosted"][s]["status"] == "run":
@@ -1035,6 +1047,59 @@ def rho_seed_check(runs: dict, keys: list, n_sim: int, main: list[dict],
               for name in names}
     return {"seeds": seeds, "normal_pairs": n_sim, "main_seed": SEED, "main": main_rho,
             "rows": out_rows, "round_differently": differ}
+
+
+PROBES = {"llm-gemini-3.6-flash-probe": 1, "llm-gemini-3.6-flash-sc5-probe": 5}   # §5c
+
+
+def cost_probe_summary(path: Path, calls_per_row: int) -> dict:
+    """§5c: per call, the mean input, itemised output and hidden output tokens and the cost
+    the (fixed) judge recorded, from a probe checkpoint's usage records. Feeds no constant:
+    it sizes the study's cost ceiling."""
+    recs = [json.loads(x) for x in Path(path).read_text(encoding="utf-8").splitlines()
+            if x.strip()]
+    rows = [r for r in recs if r["idx"] >= 0]
+    js = [r["judgments"][0] for r in rows]        # a row's usage is repeated per question
+    calls = len(js) * calls_per_row
+    tot = {k: sum(j["raw"]["usage"].get(k, 0) for j in js)
+           for k in ("input_tokens", "output_tokens", "hidden_output_tokens")}
+    return {"rows": len(js), "calls": calls,
+            "input_per_call": round(tot["input_tokens"] / calls, 1),
+            "output_per_call": round(tot["output_tokens"] / calls, 1),
+            "hidden_output_per_call": round(tot["hidden_output_tokens"] / calls, 1),
+            "billed_output_per_call": round(
+                (tot["output_tokens"] + tot["hidden_output_tokens"]) / calls, 1),
+            # a row's cost is split over its questions: add every question's share back
+            "cost_per_call": round(math.fsum(j["cost_usd"] or 0.0 for r in rows
+                                             for j in r["judgments"]) / calls, 6)}
+
+
+def recorded_cost(path: Path, from_row: int) -> float:
+    """The cost a checkpoint recorded for its rows from `from_row` on (every question)."""
+    recs = [json.loads(x) for x in Path(path).read_text(encoding="utf-8").splitlines()
+            if x.strip()]
+    return math.fsum(j["cost_usd"] or 0.0 for r in recs if r["idx"] >= from_row
+                     for j in r["judgments"])
+
+
+def day_reconstruction(probe: dict, verbalized_calls: int, sc_calls: int) -> dict:
+    """The calls of a billed day priced at the probe's per-call rates: what the fixed judge
+    would have recorded for them. A bill above it is not explained by the checkpoints."""
+    usd = (verbalized_calls * probe["llm-gemini-3.6-flash-probe"]["cost_per_call"]
+           + sc_calls * probe["llm-gemini-3.6-flash-sc5-probe"]["cost_per_call"])
+    return {"verbalized_calls": verbalized_calls, "sc_calls": sc_calls, "usd": round(usd, 4)}
+
+
+def billing_text(notes: dict) -> str:
+    """The provider billing console's figure as the maintainer reported it in run-notes.json:
+    `billing_console` = {amount, currency, covers}, or the older `billing_console_usd`. Never
+    converted, and always labelled as a note: no checkpoint records it."""
+    tag = "(the maintainer's note, not a checkpoint figure)"
+    b = notes.get("billing_console")
+    if isinstance(b, dict) and b.get("amount") is not None:
+        return f"{b['amount']:g} {b.get('currency', '')} for {b.get('covers', '')} {tag}"
+    usd = notes.get("billing_console_usd")
+    return f"${usd:g} {tag}" if usd is not None else "not yet reported by the maintainer"
 
 
 def _shown(p: Path) -> str:
@@ -1354,6 +1419,28 @@ def markdown(d: dict) -> str:
                    "machine (the checkpoints do not record the hardware); for the local runs it "
                    "excludes loading the model.")]
     lines += top_slice_lines(d)
+    if d.get("cost_probe"):
+        lines += ["", "## Gemini cost probe (§5c; sizes the cost ceiling, feeds no constant)", "",
+                  ("The first 20 pilot rows, run again with the judge that records the "
+                   "reasoning tokens the endpoint bills but does not itemise. Per call, at "
+                   "the list price in `src/judge_audit/judges/llm.py`:"), "",
+                  ("| run | rows | calls | input | itemised output | hidden output | billed output "
+                   "| cost |"),
+                  "|---|---:|---:|---:|---:|---:|---:|---:|"]
+        for slug, c in d["cost_probe"].items():
+            lines.append(f"| `{slug}` | {c['rows']} | {c['calls']} | {c['input_per_call']:g} "
+                         f"| {c['output_per_call']:g} | {c['hidden_output_per_call']:g} | "
+                         f"{c['billed_output_per_call']:g} | ${c['cost_per_call']:.6f} |")
+        day = d.get("cost_probe_day")
+        if day:
+            lines += ["", (f"The {day['verbalized_calls']:,} verbalized and {day['sc_calls']:,} "
+                           f"self-consistency calls of 2026-09-29 (run-notes.json), priced at "
+                           f"these rates, come to ${day['usd']:.2f}; the billing console's "
+                           f"figure for that day is {d['run_log']['billing_console']}. The "
+                           "hidden tokens explain part of the difference with the $"
+                           f"{d['cost_probe_day_recorded']:.2f} the checkpoints recorded that "
+                           "day; the checkpoints do not explain the rest (list price, "
+                           "currency, tax, retried or other calls are not separated).")]
 
     h = d["hosted"]
     lines += ["", "## Hosted runs (context only, not fed back)", "",
