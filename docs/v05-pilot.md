@@ -65,6 +65,10 @@ The k = 5 run left 82.1 % of rows unanimous, so its confidence barely ranks the 
 - **Estimated as for the other runs** (§5 rules; confidences compared exactly, the sensitivity rule, since k = 10 votes take at most 10 values): accuracy, tie shares, AUROC, decision agreement with the verbalized run, Spearman and latent ρ against the verbalized run on the rows both got right.
 - **Decision rule, fixed now:** the study uses **k = 10 for Qwen3** if this run's share of rows at its top confidence level is below the k = 5 run's 82.1 %; otherwise it keeps k = 5. Hosted models keep k = 5 (cost). The adopted run's tie shares replace `TIE_SHARES_B`, and its latent ρ against verbalized joins `RHOS`, in one reviewed commit that regenerates [v05-power.md](v05-power.md); the other run's numbers are reported beside them.
 
+## 5c. Amendment (2026-09-30): a cost probe for Gemini, before its first call
+
+The maintainer's billing console showed 2.7 EUR for gemini-3.6-flash on 2026-09-29 against $0.59 recorded. One cause is known: the endpoint bills reasoning tokens it reports only in `usage.total_tokens`, which the judge did not count until #117; whether it is the only one is what the probe helps tell. To size the study's cost ceiling (plan D6/D7), the fixed judge runs once more on the first 20 pilot rows (`docs/runs/v05-pilot/cost-probe-rows.json`), verbalized (T = 0) and self-consistency (k = 5, T = 1), same model, endpoint and prompt as §3: checkpoints `llm-gemini-3.6-flash-probe` and `llm-gemini-3.6-flash-sc5-probe`. Estimated: the mean billed output tokens per call (itemised + hidden) for each, and the cost per call at list price. Nothing else is estimated from these rows; they feed no constant. Ceiling for the probe: $1.
+
 ## 6. What happens next
 
 The constants are changed in one reviewed commit that cites `docs/v05-pilot-estimates.json`, `docs/v05-power.md` is regenerated, and `docs/v05-plan.md` is drafted from it and reviewed before the study's first call. Estimates are published whether or not they are convenient: if ρ is low or accuracy high, the MDEs grow, and the plan says so.
