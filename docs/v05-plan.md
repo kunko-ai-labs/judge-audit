@@ -1,6 +1,6 @@
-# v0.5 study — pre-registered plan (DRAFT)
+# v0.5 study — pre-registered plan
 
-**Issue:** [#91](https://github.com/kunko-ai-labs/judge-audit/issues/91) · **Status: DRAFT. Not frozen; no study call has been made.** The maintainer settled decisions D1–D6 on 2026-09-29 (table at the end). The plan is frozen (tag `v05-plan-freeze`) only when the pre-freeze work in §12 is merged; after the first study call nothing in §3–§10 changes without a dated amendment in §11.
+**Issue:** [#91](https://github.com/kunko-ai-labs/judge-audit/issues/91) · **Status: FROZEN on 2026-10-01 (tag `v05-plan-freeze`), before the study's first call.** The maintainer settled decisions D1–D7 (table at the end); the pre-freeze work of §12 is merged. No external human reviewer has read it yet (§12.6): if none does before the results, the published report says so. From here, nothing in §3–§10 changes without a dated amendment in §11, committed before the call it governs.
 
 Inputs: [power analysis](v05-power.md) on the [pilot's estimates](v05-pilot-estimates.md) (protocol: [v05-pilot.md](v05-pilot.md), checkpoints: `docs/runs/v05-pilot/`); the method notes in [docs/v05/](v05/README.md).
 

@@ -43,7 +43,7 @@ Everything else (prompt templates, repeats, the fine-tuned learning curve, delib
 | Pilot on the BANKING77 train sample | maintainer's machine; protocol in [`docs/v05-pilot.md`](../v05-pilot.md) | run; estimates in [`docs/v05-pilot-estimates.md`](../v05-pilot-estimates.md) |
 | Label noise: two annotators on 500 rows per dataset | maintainer ([#86](https://github.com/kunko-ai-labs/judge-audit/issues/86)) | not started |
 | A truly unseen held-out slice | [#106](https://github.com/kunko-ai-labs/judge-audit/issues/106) | not started |
-| Pre-registration `docs/v05-plan.md` | [#91](https://github.com/kunko-ai-labs/judge-audit/issues/91) | draft, six open decisions |
+| Pre-registration `docs/v05-plan.md` | [#91](https://github.com/kunko-ai-labs/judge-audit/issues/91) | frozen 2026-10-01 (tag `v05-plan-freeze`) |
 | Runs, reports, release | — | not started |
 
 "On `main`" means available from source; the PyPI package is still v0.4.0 until v0.5 is released.
