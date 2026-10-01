@@ -239,13 +239,13 @@ def header(rows: list[dict]) -> dict:
             "purpose": ["calibration stress test",
                         "generalisation to templates never seen in development"],
             "caveats": [
-                f"email categories are synthetic: {n_t} seeded templates (half English, half German) "
-                f"with item, company, sender, city, country, date and number fills, not real mail",
+                (f"email categories are synthetic: {n_t} seeded templates (half English, half German) "
+                f"with item, company, sender, city, country, date and number fills, not real mail"),
                 "the label is the template's category by design; no human checked it",
-                f"{len(rows)} rows, no two with the same text (case and whitespace ignored), but rows "
+                (f"{len(rows)} rows, no two with the same text (case and whitespace ignored), but rows "
                 "of one template differ only in their fills: near-duplicates by design; only the "
                 f"template-level split in {SPLIT} ({len(HELDOUT)} of {n_t} templates held out) "
-                "measures generalisation",
+                "measures generalisation"),
                 "100 % here is the floor a judge must clear, not evidence of production routing accuracy",
             ],
         },

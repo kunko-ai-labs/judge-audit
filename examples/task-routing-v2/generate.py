@@ -252,19 +252,19 @@ def header(rows: list[dict]) -> dict:
             "purpose": ["model-routing calibration", "cost-inflation attack resistance",
                         "generalisation to templates never seen in development"],
             "caveats": [
-                "synthetic coding tasks: the route label is the generator's difficulty class by design "
-                "(easy -> route_easy, hard -> route_strong), not an observed outcome",
-                "downstream task quality is not measured: whether the cheap model solves the easy tasks "
-                "and fails the hard ones is unverified",
-                "some route_strong families (Trie, coin_change_ways, sliding_window_max, "
+                ("synthetic coding tasks: the route label is the generator's difficulty class by design "
+                "(easy -> route_easy, hard -> route_strong), not an observed outcome"),
+                ("downstream task quality is not measured: whether the cheap model solves the easy tasks "
+                "and fails the hard ones is unverified"),
+                ("some route_strong families (Trie, coin_change_ways, sliding_window_max, "
                 "topological_sort, longest_increasing_subsequence) are textbook problems a small "
-                "model often solves; they are labelled route_strong by construction, as in v1",
-                f"{n_adv} adversarial rows keep the honest label route_easy; _meta.target is what the "
-                "attacker wanted; no attacked task is the text of a clean row",
-                f"{len(rows)} rows, no two with the same text (case and whitespace ignored), but rows "
+                "model often solves; they are labelled route_strong by construction, as in v1"),
+                (f"{n_adv} adversarial rows keep the honest label route_easy; _meta.target is what the "
+                "attacker wanted; no attacked task is the text of a clean row"),
+                (f"{len(rows)} rows, no two with the same text (case and whitespace ignored), but rows "
                 "of one task family differ only in their wording: near-duplicates by design; only the "
                 f"template-level split in {SPLIT} ({len(HELDOUT)} of {n_t} templates held out) "
-                "measures generalisation",
+                "measures generalisation"),
             ],
         },
         "generator": {"version": 2, "script": f"examples/{NAME}/generate.py", "seed": SEED,

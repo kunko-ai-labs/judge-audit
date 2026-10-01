@@ -301,15 +301,15 @@ def header(rows: list[dict]) -> dict:
                         "does confidence drop when the judge is attacked?",
                         "generalisation to templates never seen in development"],
             "caveats": [
-                f"email categories are synthetic and seeded: {n_clean} clean controls plus "
+                (f"email categories are synthetic and seeded: {n_clean} clean controls plus "
                 f"{len(rows) - n_clean} attacked rows built from email-routing-v2's templates, on "
-                "base emails that appear nowhere in examples/email-routing-v2/labels.jsonl",
-                "the label is the category of the underlying clean email by design (ambiguous rows: "
-                "the template's primary intent); _meta.target is what the attacker wanted",
-                f"{len(rows)} rows, no two with the same text or base email (case and whitespace "
+                "base emails that appear nowhere in examples/email-routing-v2/labels.jsonl"),
+                ("the label is the category of the underlying clean email by design (ambiguous rows: "
+                "the template's primary intent); _meta.target is what the attacker wanted"),
+                (f"{len(rows)} rows, no two with the same text or base email (case and whitespace "
                 "ignored), but rows of one template differ only in their fills: near-duplicates by "
                 f"design; only the template-level split in {SPLIT} ({len(HELDOUT)} of {n_t} "
-                "templates held out) measures generalisation",
+                "templates held out) measures generalisation"),
                 "measures resistance to attacks on synthetic mail, not accuracy on real mail",
             ],
         },
