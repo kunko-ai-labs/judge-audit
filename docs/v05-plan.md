@@ -126,10 +126,10 @@ Dated amendments, committed before the call they govern. None yet.
 ## 12. Before the freeze
 
 1. ~~The maintainer settles D1–D6~~ (done 2026-09-29).
-2. Code, with tests, reviewed: the percentile p-value from `paired_difference_ci`'s resamples and Holm (§6); D3's start parameter for `coverage_at_risk`, and power § A2 rerun on it (§7).
+2. ~~Code, with tests, reviewed: the percentile p-value and Holm (§6); D3's start parameter for `coverage_at_risk`, and power § A2 rerun on it (§7)~~ ([#114](https://github.com/kunko-ai-labs/judge-audit/pull/114): `paired_difference_test`, `holm`, `start_errors`).
 3. ~~D1: the k = 10 pilot run, its estimates and constants~~ ([#113](https://github.com/kunko-ai-labs/judge-audit/pull/113); k = 10 adopted).
-4. ~~Gemini's quota and billing figure~~ (paid project in use; 2.7 EUR reported in `run-notes.json`); #117 (hidden reasoning tokens counted) merged before any hosted study run.
-5. #115 (E1's templates) and #116 (E2's datasets) merged: the plan cites their digests and files.
+4. ~~Gemini's quota and billing figure~~ (paid project in use; 2.7 EUR reported in `run-notes.json`); [#117](https://github.com/kunko-ai-labs/judge-audit/pull/117) (hidden reasoning tokens counted) merged, with the cost probe.
+5. ~~#115 (E1's templates) and #116 (E2's datasets) merged~~: the plan cites their digests and files.
 6. An external human reviewer is sought (the maintainer is arranging it). **None has read this plan yet**; if none does before the first study call, the published report says so.
 
 ## Decisions (settled by the maintainer, 2026-09-29; D7 on 2026-09-30)
