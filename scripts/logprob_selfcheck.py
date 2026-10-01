@@ -22,8 +22,8 @@ are therefore tokenised alone after it (`MLXBackend.continuations`): not an erro
 number to know before a run.
 
 Exit status 0 when the trimmed and fresh caches' log-probabilities agree within --tolerance
-with no decision
-changed, and the full pass stays within the loose bound; 1 otherwise. Nothing is written; no network after the model is downloaded.
+with no decision changed, and the full pass stays within the loose bound; 1 otherwise.
+Nothing is written; no network after the model is downloaded.
 """
 from __future__ import annotations
 
