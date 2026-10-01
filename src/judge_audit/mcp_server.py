@@ -20,6 +20,7 @@ import os
 
 from .cli import JUDGES, _judge
 from .ground_truth import ground_truth_of
+from .judges import llm, logprob
 from .judges.base import Judge
 from .judges.simulated import SIMULATED_TAG
 from .report import IncompatibleBaseline
@@ -59,7 +60,8 @@ JUDGE_INFO: dict[str, dict[str, object]] = {
                        "and labelled as such.",
         "env": ["LLM_PROVIDER=anthropic (default) + ANTHROPIC_API_KEY; extra [anthropic]",
                 "LLM_PROVIDER=openai-compatible + LLM_BASE_URL + LLM_MODEL (+ LLM_API_KEY)",
-                "LLM_EFFORT (anthropic only, optional)"],
+                "LLM_EFFORT (anthropic only, optional)",
+                "LLM_PROMPT_TEMPLATE (optional): v1 (default, the published prompt) or v2"],
     },
     "nli": {
         "description": "Local zero-shot NLI encoder (DeBERTa-class): the small-model baseline. "
@@ -81,7 +83,8 @@ JUDGE_INFO: dict[str, dict[str, object]] = {
                        "token log-probability of each option (option then end of turn), "
                        "normalised over the options. Nothing is sampled.",
         "env": ["extra [mlx]", "LOGPROB_MODEL (required), LOGPROB_REVISION (recommended)",
-                "LOGPROB_LABEL, LOGPROB_CHAT_KWARGS (optional)"],
+                "LOGPROB_LABEL, LOGPROB_CHAT_KWARGS (optional)",
+                "LOGPROB_PROMPT_TEMPLATE (optional): v1 (default, the published prompt) or v2"],
     },
     "laya": {
         "description": "Laya, an open-weight judgment model run locally (encoder, one forward "
@@ -213,8 +216,18 @@ def check_drift(labels_path: str, baseline_path: str, judge: str = "simulated",
     "List the judges this server can audit, with what each needs. simulated needs "
     "nothing and is a demo; jev and llm call the configured model API."))
 def list_judges() -> dict:
-    return {"judges": [{"name": name, **JUDGE_INFO[name]} for name in JUDGES],
+    return {"judges": [{"name": name, **JUDGE_INFO[name], **_templates(name)}
+                       for name in JUDGES],
             "simulated_tag": SIMULATED_TAG}
+
+
+def _templates(name: str) -> dict:
+    """The prompt templates a judge can be run with (#92) and the digest each records."""
+    mod = {"llm": llm, "logprob": logprob}.get(name)
+    if mod is None:
+        return {}
+    return {"prompt_templates": [{"id": t, "prompt_sha256": mod.prompt_sha256(t),
+                                  "default": t == "v1"} for t in mod.PROMPT_TEMPLATES]}
 
 
 def main(argv: list[str] | None = None) -> None:

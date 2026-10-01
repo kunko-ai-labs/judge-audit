@@ -960,8 +960,8 @@ def compute(runs_dir: Path = RUNS_DIR, labels: Path = LABELS, n_sim: int | None 
     if len(d["cost_probe"]) == len(PROBES) and isinstance(gem_note.get("resumed_from_row"), int):
         # 2026-09-29, the day the billing note covers: the resumed verbalized rows and the
         # whole self-consistency run (run-notes.json), priced at the probe's rates.
-        sc_rows = sum(1 for _ in open(Path(runs_dir) / f"{GEM_SC}.ckpt.jsonl",
-                                      encoding="utf-8")) - 1
+        sc_rows = len((Path(runs_dir) / f"{GEM_SC}.ckpt.jsonl").read_text(
+            encoding="utf-8").splitlines()) - 1
         d["cost_probe_day"] = day_reconstruction(
             d["cost_probe"], len(keys) - gem_note["resumed_from_row"],
             sc_rows * EXPECTED_SAMPLES[GEM_SC])
