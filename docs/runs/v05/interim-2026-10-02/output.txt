@@ -2,6 +2,7 @@
 # Produced by interim.py in this folder on the complete checkpoints of origin/audit/v05-study (commit 2b82fd4).
 # The re-reading here (LENIENT=1) is the one used that day: the decision text before ':' when it is an option;
 # for self-consistency only the voted decision was re-read (the amendment re-reads each sample before the vote).
+# interim.py's two file reads were later wrapped in `with` blocks (CodeQL); its logic and this output are unchanged.
 
 ## strict (pre-registered rule)
 

@@ -18,9 +18,11 @@ def load(ds, slug):
     p = f"{W}/docs/runs/v05/{ds}/{slug}.ckpt.jsonl"
     if not os.path.exists(p):
         return None
-    rows = [json.loads(l) for l in open(p) if l.strip()]
+    with open(p) as f:
+        rows = [json.loads(l) for l in f if l.strip()]
     rec = {r["idx"]: r["judgments"][0] for r in rows if r["idx"] >= 0}
-    lab = [json.loads(l) for l in open(f"{W}/{LABELS[ds]}") if l.strip()]
+    with open(f"{W}/{LABELS[ds]}") as f:
+        lab = [json.loads(l) for l in f if l.strip()]
     lab = [r for r in lab if "state" in r]
     if len(rec) < len(lab):
         return None
