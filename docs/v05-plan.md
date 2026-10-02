@@ -133,6 +133,12 @@ Dated amendments, committed before the call they govern.
 - **Reported with every log-probability result:** the full-pass spread printed by the passing amended check (`docs/runs/v05/logprob-selfcheck.txt`, its rows and figures quoted), the count of near-tie decisions in the run, and that a near-tie's decision and confidence are unstable at that scale.
 - **Nothing else changes:** the same judge, model, revision, prompt, decision rule and confidence. T1, T2 and E1/E2's log-probability runs resume once the amended check passes.
 
+**Amendment 2 (2026-10-02, approved by the maintainer; after an interim look).** On 2026-10-02, with the hosted runs complete, an interim look computed descriptive metrics on the complete checkpoints and raw (un-adjusted) results for T3, T5, T6 and T8. It is disclosed here because it was taken before this amendment. It found that `gemini-3.6-flash` (verbalized and self-consistency) answered 267 and 259 CLINC150 rows with an option followed by its description, as the v1 prompt lists them (`out_of_scope: the request asks for none of the other intents`); no other judge did (0 such answers). The pre-registered rule (unchanged since v0.4: a decision outside the options is an answer, scored wrong) scores those rows wrong, at a confidence near 1. Gemini's CLINC150 results, and therefore T6 and T8, hinge on that rule: in the interim look, T8 was +0.48 under it and +0.001 when those answers are read as their option.
+- **The primary analysis keeps the pre-registered rule.** Nothing in §3–§10 changes.
+- **A declared sensitivity analysis** re-reads a decision of the form `<option>: <text>`, where `<option>` is exactly one of the question's options and nothing else, as that option, for every chat-model run on every dataset. Every metric and every test of §6 is reported under both readings side by side, with the number of re-read decisions per run.
+- **The report says, next to H2's CLINC150 result,** that the conclusion depends on this rule, and quotes both values. It does not choose between them.
+- The interim look changed no run, no setting and no other rule; the remaining runs proceed as planned.
+
 ## 12. Before the freeze
 
 1. ~~The maintainer settles D1–D6~~ (done 2026-09-29).
