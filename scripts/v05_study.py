@@ -76,6 +76,9 @@ PLAIN = {0.01: "at most 1 in 100 automated decisions wrong",
 START_ERRORS = 2                               # §7, D3
 SPREAD_SEEDS = list(range(2027, 2037))         # §7: the split's spread over seeds, secondary
 NEAR_TIE = 0.5                                 # amendment 1: top-two log-odds margin
+MARGIN_TOL = 2e-6      # the checkpoint rounds each log-probability to 1e-6 (error 5e-7
+                       # each), so a margin is known to within 1e-6; twice that, so float
+                       # arithmetic never decides a margin bfloat16 put exactly on 0.5
 READINGS = ("strict", "reread")                # amendment 2
 
 REAL = ["banking77", "clinc150"]
@@ -195,8 +198,9 @@ def load_run(dataset: str, slug: str, labels: dict, runs_dir: Path = RUNS_DIR) -
             PROMPT_SHA[(adapter, template)]):
         problems.append(f"prompt digest {judge.get('prompt_sha256')!r}, expected "
                         f"{PROMPT_SHA[(adapter, template)]}… ({template})")
-    if adapter == "logprob" and judge.get("loaded_revision") != QWEN_REVISION:
-        problems.append(f"revision {judge.get('loaded_revision')!r}")
+    pinned = {"logprob": QWEN_REVISION, "laya": LAYA_REVISION}.get(adapter)
+    if pinned and judge.get("loaded_revision") != pinned:
+        problems.append(f"revision {judge.get('loaded_revision')!r}, pinned {pinned}")
     if (header.get("dataset") or {}).get("sha256") != labels["sha256"]:
         problems.append("judged another labels file")
     if problems:
@@ -270,12 +274,15 @@ def read_rows(run: dict, labels: dict, reading: str) -> tuple[list[dict], dict]:
 
 
 def option_margin(raw: dict) -> float:
-    """Top-two log-odds margin of a log-probability decision, from the recorded option
-    probabilities (rounded to 1e-6 in the checkpoint); inf when the second is 0."""
-    probs = sorted((float(v) for v in (raw.get("probabilities") or {}).values()), reverse=True)
-    if len(probs) < 2 or probs[1] <= 0:
+    """Top-two log-odds margin of a log-probability decision: the difference of the two
+    largest recorded option log-probabilities (`raw.logprobs`, the trimmed path's scores
+    that amendment 1 defines it on; the normalisation over the options cancels). Each is
+    rounded to 1e-6 in the checkpoint, so the margin is known to within MARGIN_TOL. inf
+    with fewer than two options."""
+    lps = sorted((float(v) for v in (raw.get("logprobs") or {}).values()), reverse=True)
+    if len(lps) < 2 or not math.isfinite(lps[1]):
         return math.inf
-    return math.log(probs[0]) - math.log(probs[1])
+    return lps[0] - lps[1]
 
 
 # --- statistics --------------------------------------------------------------------------
@@ -552,9 +559,11 @@ def compute(runs_dir: Path = RUNS_DIR, root: Path = ROOT, n_boot: int = N_BOOT,
         if run["adapter"] != "logprob":
             continue
         margins = [option_margin(r["raw"]) for r in run["records"] if r is not None]
-        near[f"{d}/{s}"] = {"decisions": len(margins),
-                            "near_ties": sum(1 for m in margins if m <= NEAR_TIE),
-                            "exact_ties": sum(1 for m in margins if m == 0)}
+        near[f"{d}/{s}"] = {
+            "decisions": len(margins),
+            "near_ties": sum(1 for m in margins if m <= NEAR_TIE + MARGIN_TOL),
+            "at_the_bound": sum(1 for m in margins if abs(m - NEAR_TIE) <= MARGIN_TOL),
+            "exact_ties": sum(1 for m in margins if m <= MARGIN_TOL)}
     selfcheck = [ln for ln in (runs_dir / "logprob-selfcheck.txt").read_text(
         encoding="utf-8").splitlines() if ln and not ln.startswith("row ")]
 
@@ -621,6 +630,7 @@ def compute(runs_dir: Path = RUNS_DIR, root: Path = ROOT, n_boot: int = N_BOOT,
         "plan": "docs/v05-plan.md (tag v05-plan-freeze; amendments 1 and 2)",
         "seed": SEED, "n_boot": n_boot, "alpha": ALPHA, "targets": TARGETS,
         "start_errors": START_ERRORS, "near_tie_margin": NEAR_TIE,
+        "margin_tolerance": MARGIN_TOL,
         "best_method": best, "tests": tests, "verdicts": verdicts,
         "metrics": metrics, "near_ties": near, "selfcheck": selfcheck,
         "e1": {"pairs": e1, "order": order, "order_same": e1_order_same},
@@ -664,6 +674,15 @@ def label(slug: str) -> str:
     return f"{judge} {method}"
 
 
+def row_label(slug: str) -> str:
+    """The label of a table row, with the role the plan gives the run next to it."""
+    if slug.endswith(("-r2", "-r3", "-prompt-v2")):
+        return f"{label(slug)} (exploratory)"
+    if slug == "laya":
+        return f"{label(slug)} (context only)"
+    return label(slug)
+
+
 def outcome(v: dict) -> str:
     """§6: resolved needs Holm p < 0.05 **and** the predicted (+) sign; a difference
     below 0 at Holm p < 0.05 is not resolved, and the table says which way it went."""
@@ -695,9 +714,10 @@ def markdown(r: dict) -> str:
         "the study ran (§12.6). (2) Label noise was not measured (D4): every error rate and "
         "certified bound below includes the datasets' own label errors, and the #86 relabel "
         "will be a sensitivity analysis, never the primary labels. (3) An interim look on "
-        "2026-10-02, before amendment 2, saw raw values of T3, T5, T6 and T8; it is "
-        "disclosed in amendment 2 with its script and output "
-        "(`docs/runs/v05/interim-2026-10-02/`). (4) BANKING77 (2020) and CLINC150 (2019) are "
+        "2026-10-02, before amendment 2, computed descriptive metrics on the runs complete "
+        "that day (accuracy, AUROC, certified coverage at 5 and 10 %) and raw, un-adjusted "
+        "results for T3, T5, T6 and T8 (2,000 resamples); it is disclosed in amendment 2, "
+        "with its script and full output in `docs/runs/v05/interim-2026-10-02/`. (4) BANKING77 (2020) and CLINC150 (2019) are "
         "public and probably in the judges' pretraining data. (5) Laya ran with budgets "
         "outside the shipped ones (640 / 1,024) and is context only.")
     add("")
@@ -712,20 +732,37 @@ def markdown(r: dict) -> str:
     add("| hypothesis | model | tests | verdict of record (pre-registered rule) | "
         "re-reading (sensitivity) | |")
     add("|---|---|---|---|---|---|")
+    best = {m: label(b["method"]).replace(m + " ", "") for m, b in r["best_method"].items()}
     for v in r["verdicts"]:
-        note = "**depends on the scoring rule**" if v["depends_on_scoring_rule"] else ""
+        notes = []
+        if v["depends_on_scoring_rule"]:
+            which = [t for t in v["tests"] if T["strict"][t]["depends_on_scoring_rule"]]
+            same = v["strict"] == v["reread"]
+            notes.append(f"**depends on the scoring rule** ({', '.join(which)}"
+                         + ("; the verdict is the same under both readings" if same else "")
+                         + ")")
+        if v["hypothesis"] == "H2":
+            notes.append(f"against {v['model']}'s method chosen on BANKING77 ({best[v['model']]})"
+                         ", tested on CLINC150 only")
+        note = "; ".join(notes)
         add(f"| {v['hypothesis']} | {v['model']} | {', '.join(v['tests'])} | "
             f"{'supported' if v['strict'] else 'not supported'} | "
             f"{'supported' if v['reread'] else 'not supported'} | {note} |")
     add("")
     dep = [t for t, v in T["strict"].items() if v["depends_on_scoring_rule"]]
     if dep:
+        changed = [(k, v["reread_changes"]) for k, v in r["metrics"].items()
+                   if v["reread_changes"]["rows"] and k.split("/")[0] in REAL]
         add(f"Tests whose resolution or sign depends on the scoring rule: {', '.join(dep)}. "
-            "The difference is due to an output format, not the confidence: "
-            f"`{GEMINI}` answered some CLINC150 rows with the option followed by its own "
-            "description (`out_of_scope: the request asks for none of the other intents`), "
-            "which the pre-registered rule scores wrong at a confidence near 1 and the "
-            "re-reading reads as the option.")
+            "The difference is due to an output format, not the confidence: the re-reading "
+            "reads an answer written as an option followed by its own description (e.g. "
+            "`out_of_scope: the request asks for none of the other intents`) as that option, "
+            "where the pre-registered rule scores it wrong. It changed "
+            + "; ".join(f"{label(k.split('/')[1])} on {NAME[k.split('/')[0]]}: {c['rows']} rows"
+                        + (f" ({c['samples']} samples, {c['decisions_changed']} voted "
+                           "decisions)" if c["samples"] else "")
+                        for k, c in changed)
+            + "; no other run on these datasets.")
         add("")
 
     add("## 2. Confirmatory tests (§6)")
@@ -760,27 +797,51 @@ def markdown(r: dict) -> str:
             + ". The smallest p-value a test can give is 2 / (B + 1) ≈ "
             + f"{2 / (r['n_boot'] + 1):.4f}.")
         add("")
-    add("Under the re-reading T2's Holm p rises to "
-        f"{_p(T['reread']['T2']['p_holm'])} because T8's p does (Holm is a step-down over the "
-        "family); T2 is not resolved under either reading.")
+    s2, r2 = T["strict"]["T2"], T["reread"]["T2"]
+    if s2["p_holm"] != r2["p_holm"]:
+        add(f"T2's Holm p is {_p(s2['p_holm'])} under the pre-registered rule and "
+            f"{_p(r2['p_holm'])} under the re-reading, with the same raw p: Holm is a "
+            "step-down over the family, and T8's p moves with the reading.")
+        add("")
+    lp = [k for k in r["near_ties"] if k.split("/")[1] == "logprob-qwen3-8b"
+          and k.split("/")[0] in REAL]
+    add("T1, T2 and T7 read Qwen3-8B's token log-probability, whose near-ties are unstable "
+        "at bfloat16 scale (amendment 1, §5 below): "
+        + "; ".join(f"{r['near_ties'][k]['near_ties']} of {r['near_ties'][k]['decisions']} "
+                    f"decisions on {NAME[k.split('/')[0]]}" for k in lp) + ".")
     add("")
-    add("Secondary, not confirmatory, same pairs (pre-registered rule): paired ECE "
+    e1 = {e["v1"]: e for e in r["e1"]["pairs"]}
+    if "logprob-qwen3-8b" in e1 and "llm-qwen3-8b" in e1:
+        a2 = r["metrics"]["banking77/logprob-qwen3-8b-prompt-v2"]["strict"]["auroc"]
+        b2 = r["metrics"]["banking77/llm-qwen3-8b-prompt-v2"]["strict"]["auroc"]
+        add(f"Exploratory, next to T1 (E1, §6 below): with prompt template v2 the same "
+            f"BANKING77 gap, log-probability − verbalized, is {_s(a2 - b2)} "
+            f"({_f(a2)} − {_f(b2)}), against T1's {_s(T['strict']['T1']['difference'])}: "
+            "with another wording of the same prompt the gap is smaller. Not tested, outside "
+            "the Holm family, one alternative wording only.")
+        add("")
+    add("Secondary, not confirmatory, same pairs, under both readings: paired ECE "
         "difference A − B with its clustered 95 % interval, and exact McNemar on accuracy "
-        "(rows without an answer or a confidence count wrong).")
+        "(rows without an answer or a confidence count wrong). No Holm; no composite.")
     add("")
-    add("| id | ECE difference 95 % CI | McNemar: A right only / B right only | McNemar p |")
-    add("|---|---|---|---:|")
-    for tid, v in T["strict"].items():
-        mc = v["accuracy_mcnemar"]
-        add(f"| {tid} | {_iv(v['ece_difference_ci'], signed=True)} | "
-            f"{mc['a_only']} / {mc['b_only']} | {_p(mc['p_value'])} |")
+    add("| id | reading | ECE difference 95 % CI | McNemar: A right only / B right only | "
+        "McNemar p |")
+    add("|---|---|---|---|---:|")
+    for tid in T["strict"]:
+        for reading in READINGS:
+            v = T[reading][tid]
+            mc = v["accuracy_mcnemar"]
+            tag = "pre-registered" if reading == "strict" else "re-read"
+            add(f"| {tid} | {tag} | {_iv(v['ece_difference_ci'], signed=True)} | "
+                f"{mc['a_only']} / {mc['b_only']} | {_p(mc['p_value'])} |")
     add("")
 
     add("## 3. Every run on the real datasets (secondary metrics)")
     add("")
     add("Accuracy counts a row without an answer or a confidence as wrong (Wilson 95 % "
         "interval); AUROC, ECE (10 equal-width bins), MCE (its worst bin's rows in "
-        "parentheses), AURC, Brier and NLL use the scored rows only; intervals are the "
+        "parentheses; a maximum tends to rise on resamples, so its point can sit low in its "
+        "interval), AURC, Brier and NLL use the scored rows only; intervals are the "
         "clustered bootstrap, 10,000 resamples, seed 2026. NLL is printed only when no "
         "scored row has confidence 1 and is wrong (the count of such rows is printed). "
         "Zero-error coverage is the largest top slice with no error. Cost is the recorded "
@@ -790,7 +851,8 @@ def markdown(r: dict) -> str:
         add(f"### {NAME[d]}")
         add("")
         add("| judge and method | reading | scored / n | no answer / no conf. | accuracy | "
-            "AUROC [95 % CI] | ECE [95 % CI] | MCE (rows) | AURC | Brier | NLL (∞ rows) | "
+            "AUROC [95 % CI] | ECE [95 % CI] | MCE [95 % CI] (rows) | AURC | Brier | "
+            "NLL (∞ rows) | "
             "zero-error cov. | cost | p50 latency |")
         add("|---|---|---:|---:|---|---|---|---|---:|---:|---|---:|---:|---:|")
         for s in PLANNED[d]:
@@ -802,11 +864,12 @@ def markdown(r: dict) -> str:
                 tag = "pre-registered" if reading == "strict" else "re-read"
                 nll = "—" if m["nll"] is None else _f(m["nll"])
                 cost = "—" if m["cost_usd"] is None else f"${m['cost_usd']:.2f}"
-                add(f"| {label(s)} | {tag} | {m['scored']} / {m['n']} | "
+                add(f"| {row_label(s)} | {tag} | {m['scored']} / {m['n']} | "
                     f"{m['no_answer']} / {m['no_confidence']} | {_f(m['accuracy'])} "
                     f"{_iv(m['accuracy_wilson'])} | {_f(m['auroc'])} {_iv(m.get('auroc_ci'))} | "
                     f"{_f(m['ece'])} {_iv(m.get('ece_ci'))} | {_f(m['mce'])} "
-                    f"({m['mce_bin_rows']}) | {_f(m['aurc'])} | {_f(m['brier'])} | "
+                    f"{_iv(m.get('mce_ci'))} ({m['mce_bin_rows']}) | {_f(m['aurc'])} | "
+                    f"{_f(m['brier'])} | "
                     f"{nll} ({m['nll_infinite']}) | {_pct(m['zero_error_coverage'])} | "
                     f"{cost} | "
                     f"{_f(m['latency_p50_s'], 2)} s |")
@@ -838,8 +901,9 @@ def markdown(r: dict) -> str:
     for d in REAL:
         add(f"### {NAME[d]}")
         add("")
-        add("| judge and method | " + " | ".join(f"{_pct(t, 0)}: coverage (errors / "
-                                                  "automated) · seeds" for t in TARGETS) + " |")
+        add("| judge and method | " + " | ".join(
+            f"{_pct(t, 0)} ({PLAIN[t].replace('at most ', '≤ ').replace(' automated decisions', '')}"
+            "): coverage (errors / automated) · seeds" for t in TARGETS) + " |")
         add("|---|" + "---|" * len(TARGETS))
         notes = []
         for s in PLANNED[d]:
@@ -862,12 +926,27 @@ def markdown(r: dict) -> str:
                         notes.append(x["reason"])
                     cells.append(cell)
                 tag = "" if reading == "strict" else " (re-read, sensitivity)"
-                add(f"| {label(s)}{tag} | " + " | ".join(cells) + " |")
+                add(f"| {row_label(s)}{tag} | " + " | ".join(cells) + " |")
         add("")
         if notes:
             add(f"† {notes[0]}. At this target a half of {NAME[d]} holds fewer texts than the "
                 "sequence's starting cut, so no threshold can be certified by construction "
                 "(§7), whatever the judge.")
+            add("")
+        add("0.0 % (0 / 0): no text was automated on either test half, because no "
+            "threshold was certified on the calibration halves at that target.")
+        add("")
+        if d == "clinc150" and not notes:
+            one = [row_label(s) + ("" if rd == "strict" else " (re-read)")
+                   for s in PLANNED[d] for rd in ("strict", "reread")
+                   if rd in r["metrics"][f"{d}/{s}"]
+                   and r["metrics"][f"{d}/{s}"][rd]["certification"]["0.01"]["pooled"]["covered"]]
+            add("**Deviation from §7 (D3).** The plan expected a CLINC150 half not to certify "
+                "at 1 % by construction and the table to say so. A half holds 950 texts, more "
+                "than the 628 the starting cut needs, so certification at 1 % was possible and "
+                "the table prints what was computed"
+                + (f": {', '.join(one)} certified at 1 %"
+                   if one else "") + ". The plan's sentence was wrong; nothing was changed.")
             add("")
 
     add("## 5. Token log-probability: numerical noise (amendment 1)")
@@ -883,15 +962,18 @@ def markdown(r: dict) -> str:
     add("")
     add(f"A **near-tie** is a decision whose top-two log-odds margin is at most "
         f"{r['near_tie_margin']} (two bfloat16 steps), read from the recorded option "
-        "probabilities (rounded to 1e-6). A near-tie's decision and confidence are unstable "
-        "at that scale: another kernel path can flip them.")
+        "log-probabilities of the trimmed path (`raw.logprobs`). Those are rounded to 1e-6, "
+        "so a margin is known to within 1e-6, and the bfloat16 grid puts many margins "
+        f"exactly on 0.5: a margin within {r['margin_tolerance']:g} of 0.5 counts as a "
+        "near-tie, and those are counted on their own. A near-tie's decision and confidence "
+        "are unstable at that scale: another kernel path can flip them.")
     add("")
-    add("| run | decisions | near-ties | exact ties (margin 0) |")
-    add("|---|---:|---:|---:|")
+    add("| run | decisions | near-ties | of which at 0.5 | exact ties (margin 0) |")
+    add("|---|---:|---:|---:|---:|")
     for k, v in r["near_ties"].items():
         d, s = k.split("/")
-        add(f"| {label(s)}, {NAME[d]} | {v['decisions']} | {v['near_ties']} | "
-            f"{v['exact_ties']} |")
+        add(f"| {row_label(s)}, {NAME[d]} | {v['decisions']} | {v['near_ties']} | "
+            f"{v['at_the_bound']} | {v['exact_ties']} |")
     add("")
 
     add("## 6. Exploratory: E1, prompt sensitivity (BANKING77)")
@@ -968,7 +1050,7 @@ def markdown(r: dict) -> str:
                         else _pct(m["certification"][f"{t:g}"]["pooled"]["coverage"], 0)
                         for t in TARGETS)
                     tag = "pre-registered" if reading == "strict" else "re-read"
-                    add(f"| {label(s)} | {tag} | {part} | {m['n']} | {_f(m['accuracy'])} | "
+                    add(f"| {row_label(s)} | {tag} | {part} | {m['n']} | {_f(m['accuracy'])} | "
                         f"{_f(m['auroc'])} | {_f(m['ece'])} | {_f(m['mce'])} | "
                         f"{_pct(m['zero_error_coverage'])} | {cert} |")
         add("")

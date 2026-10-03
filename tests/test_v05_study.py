@@ -182,13 +182,26 @@ def test_a_test_that_flips_with_the_reading_marks_its_hypothesis():
 # --- amendment 1's near-ties --------------------------------------------------------------
 
 
-def test_the_near_tie_margin_is_the_top_two_log_odds():
-    assert study.option_margin({"probabilities": {"a": 0.392441, "b": 0.392441,
-                                                  "c": 0.2}}) == 0.0
-    assert study.option_margin({"probabilities": {"a": 0.6, "b": 0.3, "c": 0.1}}) == (
-        pytest.approx(math.log(2)))
-    assert study.option_margin({"probabilities": {"a": 1.0, "b": 0.0}}) == math.inf
+def test_the_near_tie_margin_is_the_top_two_recorded_log_probabilities():
+    assert study.option_margin({"logprobs": {"a": -0.935825, "b": -0.935825,
+                                             "c": -1.7}}) == 0.0
+    assert study.option_margin({"logprobs": {"a": -0.5, "b": -1.2, "c": -3.0}}) == (
+        pytest.approx(0.7))
+    assert study.option_margin({"logprobs": {"a": -0.1}}) == math.inf
     assert study.option_margin({}) == math.inf
+
+
+def test_a_margin_on_the_bfloat16_step_is_a_near_tie_whatever_the_rounding():
+    """Log-probabilities 0.5 apart stay a near-tie when each is rounded to 1e-6; the same
+    pair read from probabilities rounded to 1e-6 (small ones) would not."""
+    for a, b in ((-8.0, -8.5), (-1.234567, -1.734568), (-1.234568, -1.734567)):
+        m = study.option_margin({"logprobs": {"x": a, "y": b, "z": -20.0}})
+        assert abs(m - 0.5) <= 1e-6 + 1e-12
+        assert m <= study.NEAR_TIE + study.MARGIN_TOL
+    assert study.option_margin({"logprobs": {"x": -8.0, "y": -8.500011}}) > (
+        study.NEAR_TIE + study.MARGIN_TOL)
+    rounded = [round(math.exp(-8.0), 6), round(math.exp(-8.5), 6)]
+    assert math.log(rounded[0]) - math.log(rounded[1]) > study.NEAR_TIE + study.MARGIN_TOL
 
 
 def test_the_groups_are_the_repository_normalisation():

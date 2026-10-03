@@ -11,6 +11,7 @@
  ],
  "start_errors": 2,
  "near_tie_margin": 0.5,
+ "margin_tolerance": 2e-06,
  "best_method": {
   "Qwen3-8B": {
    "method": "logprob-qwen3-8b",
@@ -5471,32 +5472,38 @@
  "near_ties": {
   "banking77/logprob-qwen3-8b": {
    "decisions": 3080,
-   "near_ties": 87,
+   "near_ties": 93,
+   "at_the_bound": 20,
    "exact_ties": 7
   },
   "banking77/logprob-qwen3-8b-prompt-v2": {
    "decisions": 3080,
-   "near_ties": 122,
+   "near_ties": 128,
+   "at_the_bound": 12,
    "exact_ties": 7
   },
   "clinc150/logprob-qwen3-8b": {
    "decisions": 1900,
-   "near_ties": 8,
+   "near_ties": 11,
+   "at_the_bound": 6,
    "exact_ties": 0
   },
   "email-routing-v2/logprob-qwen3-8b": {
    "decisions": 1000,
    "near_ties": 2,
+   "at_the_bound": 1,
    "exact_ties": 0
   },
   "email-routing-adversarial-v2/logprob-qwen3-8b": {
    "decisions": 1000,
-   "near_ties": 15,
+   "near_ties": 17,
+   "at_the_bound": 6,
    "exact_ties": 2
   },
   "task-routing-v2/logprob-qwen3-8b": {
    "decisions": 1050,
    "near_ties": 10,
+   "at_the_bound": 5,
    "exact_ties": 0
   }
  },
