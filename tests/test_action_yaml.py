@@ -101,3 +101,12 @@ def test_the_run_step_survives_a_drift_verdict(action):
     body = next(s["run"] for s in steps if "${cmd[@]}" in s.get("run", ""))
     assert '"${cmd[@]}" || code=$?' in body
     assert "JA_DRIFT=1" in body
+
+
+def test_min_coverage_is_matched_against_a_pattern_and_passed_as_argv(action, steps):
+    assert action["inputs"]["min-coverage"]["default"] == ""
+    dispatch = next(s for s in steps if "MODE" in s.get("env", {}))
+    assert dispatch["env"]["MIN_COVERAGE"] == "${{ inputs.min-coverage }}"
+    run = dispatch["run"]
+    assert '=~ ^0?\\.[0-9]+:' in run and 'cmd+=(--min-coverage "$m")' in run
+    assert "certified_coverage=" in next(s for s in steps if s.get("id") == "read")["run"]

@@ -29,6 +29,10 @@ inputs:
     description: "Fail when accuracy drops by more than this vs the baseline (check mode)"
     required: false
     default: "0.01"
+  min-coverage:
+    description: "Check mode: space-separated RISK:SHARE minimums for the automation certificate, e.g. '0.05:0.40' fails when, at a certified error of at most 5 %, the judge can automate less than 40 % of the decisions. Empty = no minimum"
+    required: false
+    default: ""
   allow-incompatible:
     description: "Compare against a baseline that measured another dataset, judge or n (check mode). The gate refuses such a baseline by default"
     required: false
@@ -67,6 +71,9 @@ outputs:
   n:
     description: "Number of judged decisions"
     value: ${{ steps.read.outputs.n }}
+  certified-coverage:
+    description: "Automation certificate of the first question: the certified share per target error, e.g. '1%=0.0 2%=0.0 5%=0.41 10%=0.7226'"
+    value: ${{ steps.read.outputs.certified_coverage }}
   drift:
     description: "'true' when check mode detected drift vs the baseline, 'false' otherwise ('' in run mode)"
     value: ${{ steps.read.outputs.drift }}
@@ -116,6 +123,7 @@ runs:
         MAX_ECE_DRIFT: ${{ inputs.max-ece-drift }}
         MAX_ACC_DROP: ${{ inputs.max-acc-drop }}
         ALLOW_INCOMPATIBLE: ${{ inputs.allow-incompatible }}
+        MIN_COVERAGE: ${{ inputs.min-coverage }}
       # One step builds the argv array and runs it: no command file, no eval, no string
       # that bash has to re-parse. `mode` is checked against an allowlist first.
       run: |
@@ -135,7 +143,16 @@ runs:
                  --max-ece-drift "$MAX_ECE_DRIFT" --max-acc-drop "$MAX_ACC_DROP"
                  --out judge-audit-report.md --json judge-audit-result.json
                  --drift judge-audit-drift.json)
-            if [ "$ALLOW_INCOMPATIBLE" = "true" ]; then cmd+=(--allow-incompatible); fi ;;
+            if [ "$ALLOW_INCOMPATIBLE" = "true" ]; then cmd+=(--allow-incompatible); fi
+            # each minimum is checked against a strict pattern, then passed as one argv item
+            read -r -a mins <<< "$MIN_COVERAGE"
+            for m in "${mins[@]}"; do
+              if ! [[ "$m" =~ ^0?\.[0-9]+:(0?\.[0-9]+|0|1|1\.0+)$ ]]; then
+                echo "::error::min-coverage expects RISK:SHARE such as 0.05:0.40 (got '$m')"
+                exit 2
+              fi
+              cmd+=(--min-coverage "$m")
+            done ;;
           *)
             echo "::error::unknown mode '$MODE' (run | check)"
             exit 2 ;;
@@ -169,6 +186,10 @@ runs:
         print(f"ece={r['ece']}")
         print(f"zero_error_coverage={r['zero_error_coverage']['coverage']}")
         print(f"n={r['n']}")
+        qs = (r.get("certificate") or {}).get("questions") or []
+        print("certified_coverage=" + (" ".join(
+            f"{t['target_risk'] * 100:g}%={t['coverage']}" for t in qs[0]["targets"])
+            if qs else ""))
         drift = ""
         if os.path.exists("judge-audit-drift.json"):
             drift = "false" if json.load(open("judge-audit-drift.json"))["ok"] else "true"
@@ -230,5 +251,5 @@ runs:
       env:
         BASELINE: ${{ inputs.baseline }}
       run: |
-        echo "judge-audit: the judge drifted vs ${BASELINE} (see the job summary)." >&2
+        echo "judge-audit: the judge drifted vs ${BASELINE}, or fell below a min-coverage minimum (see the job summary)." >&2
         exit 1

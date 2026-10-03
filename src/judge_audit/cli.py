@@ -13,6 +13,7 @@ import tempfile
 from typing import NoReturn
 
 from . import __version__
+from .certificate import DEFAULT_TARGETS
 from .ground_truth import ground_truth_of
 from .judges.finetuned import FinetunedJudge
 from .judges.jev import JevJudge
@@ -23,13 +24,23 @@ from .judges.nli import NLIJudge
 from .judges.simulated import SIMULATED_TAG, SimulatedJudge
 from .report import (
     IncompatibleBaseline,
+    certificate_summary,
+    check_coverage,
     check_drift,
     fmt4,
     interval,
+    parse_min_coverage,
     render_html,
     render_markdown,
 )
-from .runner import IncompleteAnswers, load_dataset, run_audit, write_judgments
+from .runner import (
+    IncompleteAnswers,
+    certificate_of,
+    groups_of,
+    load_dataset,
+    run_audit,
+    write_judgments,
+)
 
 JUDGES = ("jev", "llm", "nli", "finetuned", "laya", "logprob", "simulated")
 
@@ -110,6 +121,10 @@ def _parser() -> argparse.ArgumentParser:
     c.add_argument("--baseline", required=True, help="audit-result.json of a previous run")
     c.add_argument("--max-ece-drift", type=float, default=0.02)
     c.add_argument("--max-acc-drop", type=float, default=0.01)
+    c.add_argument("--min-coverage", action="append", default=[], metavar="RISK:SHARE",
+                   help="fail when, at a certified error of at most RISK, the judge can "
+                        "automate less than SHARE of the decisions (e.g. 0.05:0.40); "
+                        "repeatable; see the report's 'Can I automate this?'")
     c.add_argument("--out", default=None, help="also write the markdown report here")
     c.add_argument("--json", default=None, help="also write metrics + run metadata here")
     c.add_argument("--drift", default=None,
@@ -148,8 +163,21 @@ def main(argv: list[str] | None = None) -> None:
         _die(f"judge '{args.judge}' is not configured: {e}")
     lead = f"{tag} · " if tag else ""  # the line that gets copied says it is simulated
 
+    minimums: list[tuple[float, float]] = []
+    for spec in getattr(args, "min_coverage", []):
+        try:
+            minimums.append(parse_min_coverage(spec))
+        except ValueError as e:
+            _die(str(e))
     result = _audit(judge, rows, args, dataset_meta)
     done = result.completeness
+    extra = [r for r, _ in minimums
+             if not any(abs(r - t) < 1e-12 for t in DEFAULT_TARGETS)]
+    if extra:
+        # a gate on a target the default certificate does not carry: certify it too
+        result.certificate = certificate_of(
+            result.records, groups_of(result.records, rows),
+            targets=sorted({*DEFAULT_TARGETS, *extra}))
 
     if args.cmd == "run":
         fmt = args.format
@@ -172,6 +200,7 @@ def main(argv: list[str] | None = None) -> None:
                 else "unknown")
         print(f"{lead}judge={result.judge} n={result.n} "
               f"accuracy={result.accuracy:.1%}{interval(result.accuracy_ci, pct=True)} "
+              f"{certificate_summary(result.to_dict())} "
               f"answered={done['answered']}/{done['expected']} "
               f"{'unexpected=' + str(done['unexpected']) + ' ' if done['unexpected'] else ''}"
               f"confidence_known={confidence['known']}/{confidence['total']} "
@@ -193,6 +222,7 @@ def main(argv: list[str] | None = None) -> None:
             _die(str(e))
         except (OSError, ValueError, KeyError) as e:
             _die(f"cannot use baseline {args.baseline}: {e}")
+        failures += check_coverage(result.certificate, minimums)
         if args.out:
             content = render_markdown(result)
             if tag:
@@ -206,7 +236,9 @@ def main(argv: list[str] | None = None) -> None:
                          "accuracy": result.accuracy, "n": result.n,
                          "baseline": args.baseline,
                          "max_ece_drift": args.max_ece_drift,
-                         "max_acc_drop": args.max_acc_drop})
+                         "max_acc_drop": args.max_acc_drop,
+                         "min_coverage": [{"risk": r, "share": sh} for r, sh in minimums],
+                         "certificate": result.certificate})
         if failures:
             print(f"{lead}DRIFT DETECTED:", file=sys.stderr)
             for fl in failures:
@@ -214,6 +246,7 @@ def main(argv: list[str] | None = None) -> None:
             sys.exit(1)
         ece = fmt4(result.ece)
         print(f"{lead}OK: no drift (ece={ece}, accuracy={result.accuracy:.1%}, "
+              f"{certificate_summary(result.to_dict())}, "
               f"gt={ground_truth_of(result.run).tier})")
 
 

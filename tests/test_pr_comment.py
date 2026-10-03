@@ -116,10 +116,13 @@ def test_dataset_strings_cannot_forge_the_verdict_a_human_reads(tmp_path):
     assert "![img](" not in md and "http://evil/x.png)" not in md
     heads = [line for line in md.splitlines() if line.startswith("#")]
     quotes = [line for line in md.splitlines() if line.startswith(">")]
-    assert heads == ["## judge-audit"]                       # no forged section
+    # no forged section: only our own heading and the certificate's
+    assert heads == ["## judge-audit", "### Can I automate this?"]
     assert len(quotes) == 1 and "SIMULATED" in quotes[0]     # only our own banner
-    # …the table is still exactly its header, its rule and its one row…
-    assert sum(1 for line in md.splitlines() if line.startswith("|")) == 3
+    # …the tables are still exactly their headers, rules and rows (the metrics table's one
+    # row, the certificate's one row per target)…
+    targets = len(result["certificate"]["questions"][0]["targets"])
+    assert sum(1 for line in md.splitlines() if line.startswith("|")) == 3 + 2 + targets
     # …and the text is all there, escaped, on the single line it belongs to.
     gt = next(line for line in md.splitlines() if line.startswith("_Ground truth:"))
     assert "\\!\\[img\\]\\(http://evil/x.png\\)" in gt
@@ -131,7 +134,7 @@ def test_dataset_strings_cannot_forge_the_verdict_a_human_reads(tmp_path):
     forged["run"]["judge"]["name"] = "jev` | 100.0% | GT-1 | 0.0 |"
     md2 = pr_comment.build(forged)
     assert "GT-1 constructed \\| \\*\\*owned\\*\\*" in md2
-    assert sum(1 for line in md2.splitlines() if line.startswith("|")) == 3
+    assert sum(1 for line in md2.splitlines() if line.startswith("|")) == 3 + 2 + targets
 
 
 def test_md_escapes_every_metacharacter_and_flattens_newlines():
