@@ -83,7 +83,7 @@ Secondary, not confirmatory, same pairs, under both readings: paired ECE differe
 
 ## 3. Every run on the real datasets (secondary metrics)
 
-Accuracy counts a row without an answer or a confidence as wrong (Wilson 95 % interval); AUROC, ECE (10 equal-width bins), MCE (its worst bin's rows in parentheses; a maximum tends to rise on resamples, so its point can sit low in its interval), AURC, Brier and NLL use the scored rows only; intervals are the clustered bootstrap, 10,000 resamples, seed 2026. NLL is printed only when no scored row has confidence 1 and is wrong (the count of such rows is printed). Zero-error coverage is the largest top slice with no error. Cost is the recorded list-price cost (the bill may be higher, §9). No composite score.
+Accuracy counts a row without an answer or a confidence as wrong (Wilson 95 % interval); AUROC, ECE (10 equal-width bins), MCE (its worst bin's rows in parentheses; a maximum tends to rise on resamples, so its point can sit low in its interval; ‡ where every resample gave the same value at the printed precision), AURC, Brier and NLL use the scored rows only; intervals are the clustered bootstrap, 10,000 resamples, seed 2026. NLL is printed only when no scored row has confidence 1 and is wrong (the count of such rows is printed). Zero-error coverage is the largest top slice with no error. Cost is the recorded list-price cost (the bill may be higher, §9). No composite score.
 
 ### BANKING77
 
@@ -91,7 +91,7 @@ Accuracy counts a row without an answer or a confidence as wrong (Wilson 95 % in
 |---|---|---:|---:|---|---|---|---|---:|---:|---|---:|---:|---:|
 | Jev native probability | pre-registered | 3080 / 3080 | 0 / 0 | 0.802 [0.788, 0.816] | 0.839 [0.821, 0.856] | 0.088 [0.075, 0.100] | 0.282 [0.273, 0.290] (5) | 0.066 | 0.127 | — (37) | 0.0 % | $0.13 | 0.26 s |
 | Laya probability of the chosen option (context only) | pre-registered | 3080 / 3080 | 0 / 0 | 0.462 [0.444, 0.479] | 0.747 [0.730, 0.764] | 0.350 [0.333, 0.367] | 0.518 [0.468, 0.578] (246) | 0.360 | 0.344 | — (164) | 0.0 % | $0.00 | 0.83 s |
-| Qwen3-8B verbalized | pre-registered | 3066 / 3080 | 14 / 0 | 0.631 [0.614, 0.648] | 0.699 [0.683, 0.716] | 0.315 [0.298, 0.331] | 0.700 [0.700, 0.700] (4) | 0.225 | 0.317 | — (88) | 0.0 % | $0.00 | 4.09 s |
+| Qwen3-8B verbalized | pre-registered | 3066 / 3080 | 14 / 0 | 0.631 [0.614, 0.648] | 0.699 [0.683, 0.716] | 0.315 [0.298, 0.331] | 0.700 ‡ (4) | 0.225 | 0.317 | — (88) | 0.0 % | $0.00 | 4.09 s |
 | Qwen3-8B self-consistency (k = 10) | pre-registered | 3077 / 3080 | 3 / 0 | 0.632 [0.615, 0.649] | 0.629 [0.612, 0.646] | 0.312 [0.296, 0.329] | 0.405 [0.367, 0.900] (105) | 0.300 | 0.312 | — (683) | 0.0 % | $0.00 | 16.00 s |
 | Qwen3-8B token log-probability | pre-registered | 3080 / 3080 | 0 / 0 | 0.656 [0.640, 0.673] | 0.797 [0.781, 0.813] | 0.309 [0.293, 0.326] | 0.637 [0.550, 0.718] (93) | 0.156 | 0.305 | 2.963 (0) | 3.0 % | $0.00 | 8.22 s |
 | gemini-3.6-flash verbalized | pre-registered | 3080 / 3080 | 0 / 0 | 0.834 [0.820, 0.846] | 0.755 [0.736, 0.773] | 0.126 [0.113, 0.138] | 0.738 [0.700, 0.750] (4) | 0.070 | 0.146 | — (3) | 0.0 % | $2.88 | 2.15 s |
