@@ -21,8 +21,24 @@ def test_every_checkpoint_under_docs_runs_yields_a_job():
     """Discovery starts from the evidence: no arena or jury checkpoint goes unregenerated."""
     jobs = {t["ckpt"] for t in runs_report.targets()}
     ckpts = {p.relative_to(ROOT).as_posix()
-             for p in (ROOT / "docs" / "runs").glob("*/*/*.ckpt.jsonl")}
+             for p in (ROOT / "docs" / "runs").glob("*/*/*.ckpt.jsonl")
+             if not p.relative_to(ROOT).as_posix().startswith("docs/runs/v05/")}
     assert len(ckpts) == 63 and ckpts <= jobs, sorted(ckpts - jobs)
+
+
+def test_every_v05_study_checkpoint_is_read_by_its_report():
+    """The v0.5 study's checkpoints have no per-run report: scripts/v05_study.py reads every
+    one (CI regenerates docs/v05-results.md from them), so none may sit outside its plan."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("v05_study_runs",
+                                                  ROOT / "scripts" / "v05_study.py")
+    study = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(study)
+    planned = {f"docs/runs/v05/{d}/{s}.ckpt.jsonl" for d, slugs in study.PLANNED.items()
+               for s in slugs}
+    ckpts = {p.relative_to(ROOT).as_posix()
+             for p in (ROOT / "docs" / "runs" / "v05").glob("*/*.ckpt.jsonl")}
+    assert ckpts == planned, sorted(ckpts ^ planned)
 
 
 def test_a_checkpoint_without_its_report_fails_instead_of_being_skipped(tmp_path):
