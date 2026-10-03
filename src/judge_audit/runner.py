@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .certificate import DEFAULT_TARGETS, automation_certificate
 from .ground_truth import parse_ground_truth
 from .judges.base import Judge, Question, QuestionType
 from .metrics.calibration import (
@@ -81,6 +82,9 @@ class AuditResult:
     # Expected (row, question) pairs vs what the judge answered; empty for a report rebuilt
     # from a checkpoint, where `scripts/audit_resumable.py` enforces the same rule.
     completeness: dict = field(default_factory=dict)
+    # How much the judge can decide alone at each target risk, the threshold to deploy and
+    # its certified bound (certificate.py; docs/judges.md § The automation certificate).
+    certificate: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         d = {
@@ -106,6 +110,8 @@ class AuditResult:
                      **ci_fields("zero_error_coverage", self.zero_error_coverage_ci,
                                  self.zero_error.get("coverage")),
                      bootstrap=dict(BOOTSTRAP))
+        if self.certificate:
+            d["certificate"] = self.certificate
         if self.completeness:
             d["completeness"] = self.completeness
         if self.regenerated:
@@ -317,6 +323,15 @@ def bootstrap_enabled() -> bool:
         "0", "false", "no", "off")
 
 
+def certificate_of(records: list[dict], groups: list[str] | None = None,
+                   targets: tuple[float, ...] | list[float] = DEFAULT_TARGETS) -> dict:
+    """`certificate.automation_certificate` on the runner's records, each confidence read
+    as every other metric reads it (`clamp_confidence`: an invalid one is unknown)."""
+    return automation_certificate(
+        [{"question": r.get("question", ""), "confidence": clamp_confidence(r.get("confidence")),
+          "correct": r["correct"]} for r in records], groups, targets=targets)
+
+
 def summarize(judge_name: str, records: list[dict], run: dict | None = None,
               ci: bool | None = None, groups: list[str] | None = None) -> AuditResult:
     """Metrics from per-question records ({confidence, correct, latency_s, cost_usd, ...}).
@@ -370,6 +385,7 @@ def summarize(judge_name: str, records: list[dict], run: dict | None = None,
              if known and not nll_infinite(confidences, correct) else None),
         nll_ci=nll_ci(confidences, correct, groups=known_groups) if ci and known else None,
         nll_infinite=nll_infinite(confidences, correct),
+        certificate=certificate_of(records, groups),
     )
 
 

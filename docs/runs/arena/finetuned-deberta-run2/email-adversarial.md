@@ -5,13 +5,22 @@
 
 _judge `finetuned:deberta-v3-base-ft-email-routing-run2` · model `deberta-v3-base-ft-email-routing-run2` · seed 2026 · run 2026-09-22T08:17:03+00:00 · judge-audit 0.3.2_
 _dataset `examples/email-routing-adversarial/labels.jsonl` · 200 rows · sha256 `8b7dbc8ded1b…`_
-_regenerated 2026-09-24T15:48:07+00:00 from `docs/runs/arena/finetuned-deberta-run2/email-adversarial.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-10-03T17:18:07+00:00 from `docs/runs/arena/finetuned-deberta-run2/email-adversarial.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic and seeded: 60 clean controls plus 140 attacked rows built from the same templates; the label is the category of the underlying clean email by design; _meta.target is what the attacker wanted; measures resistance to attacks on synthetic mail, not accuracy on real mail**
 
 _Brackets are 95% percentile-bootstrap intervals over the dataset's distinct texts (2,000 resamples, seed 0): how far the number would move on another sample of n=200 drawn the same way._
 
 ## Can I automate this?
+
+| at most this error | in plain words | automate (certified) | deploy at confidence ≥ | checked out of sample |
+|---|---|---|---|---|
+| 1% | 1 in 100 automated decisions wrong | not certified: needs 628 texts with a confidence to certify 1%; has 189 | — | — |
+| 2% | 1 in 50 automated decisions wrong | not certified: needs 313 texts with a confidence to certify 2%; has 189 | — | — |
+| 5% | 1 in 20 automated decisions wrong | 100.0% (189 of 189 texts; 2 wrong, bound 3.3%) | 0.275445… | not checkable: a half holds at most 95 texts with a confidence; the target needs 124 |
+| 10% | 1 in 10 automated decisions wrong | 100.0% (189 of 189 texts; 2 wrong, bound 3.3%) | 0.275445… | 98.9% automated, 1.1% wrong |
+
+_With 95% confidence, the error rate among decisions at or above the threshold is at most the target — on traffic drawn like these labelled texts (same mix, same judge version), with the labels taken as right: a label error counts as a judge error. Each row is its own 95% statement; choose the target before reading the table. "Automate" is the share of the labelled texts the threshold covers; "out of sample" is the same procedure with the threshold chosen on half of them and applied to the other half (seed 0), the estimate to plan with. One unit per distinct text; a decision without a confidence is never automated. Exact one-sided binomial bound, fixed-sequence walk from the most confident down, starting at the cut that certifies with 2 errors (docs/judges.md § The automation certificate)._
 
 Zero observed errors through the most confident **96.0%** [93.1, 100.0] (192 decisions, confidence ≥ 0.7097).
 Retrospective on this dataset — not a production guarantee.

@@ -133,7 +133,11 @@ def _make_judge(name: str, rows: list[dict]) -> tuple[Judge | None, str, dict | 
 
 @server.tool(description=(
     "Audit a judge in shadow mode against a labeled JSONL file "
-    "({state, questions, labels} per line). Returns n, accuracy, ECE (equal-width bins), "
+    "({state, questions, labels} per line). Returns certificate first in importance: per "
+    "question and target error (1/2/5/10 %), the confidence threshold to deploy, the share "
+    "of the labelled texts it automates, its errors and certified 95 % bound, and an "
+    "out-of-sample check (valid for traffic drawn like the labelled rows; each target is "
+    "its own statement). Also n, accuracy, ECE (equal-width bins), "
     "ece_equal_mass (equal-mass bins, ties never split), brier (Brier score, no bins), "
     "nll (log loss, never clipped: null when infinite, with nll_infinite = the answers "
     "declared certain and wrong), "

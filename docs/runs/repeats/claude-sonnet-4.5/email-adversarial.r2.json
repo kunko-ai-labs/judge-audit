@@ -190,5 +190,113 @@
     "level": 0.95,
     "n_boot": 2000,
     "seed": 0
+  },
+  "certificate": {
+    "unit": "text",
+    "delta": 0.05,
+    "start_errors": 2,
+    "seed": 0,
+    "targets": [
+      0.01,
+      0.02,
+      0.05,
+      0.1
+    ],
+    "questions": [
+      {
+        "question": "category",
+        "n": 189,
+        "scored": 189,
+        "targets": [
+          {
+            "target_risk": 0.01,
+            "plain": "at most 1 in 100 automated decisions wrong",
+            "threshold": null,
+            "n": 189,
+            "automated": 0,
+            "coverage": 0.0,
+            "errors": 0,
+            "risk_upper": null,
+            "min_units": 628,
+            "reason": "needs 628 texts with a confidence to certify 1%; has 189",
+            "out_of_sample": {
+              "n": 189,
+              "automated": 0,
+              "errors": 0,
+              "coverage": 0.0,
+              "risk": null,
+              "reason": "a half holds at most 95 texts with a confidence; the target needs 628"
+            }
+          },
+          {
+            "target_risk": 0.02,
+            "plain": "at most 1 in 50 automated decisions wrong",
+            "threshold": null,
+            "n": 189,
+            "automated": 0,
+            "coverage": 0.0,
+            "errors": 0,
+            "risk_upper": null,
+            "min_units": 313,
+            "reason": "needs 313 texts with a confidence to certify 2%; has 189",
+            "out_of_sample": {
+              "n": 189,
+              "automated": 0,
+              "errors": 0,
+              "coverage": 0.0,
+              "risk": null,
+              "reason": "a half holds at most 95 texts with a confidence; the target needs 313"
+            }
+          },
+          {
+            "target_risk": 0.05,
+            "plain": "at most 1 in 20 automated decisions wrong",
+            "threshold": null,
+            "n": 189,
+            "automated": 0,
+            "coverage": 0.0,
+            "errors": 0,
+            "risk_upper": null,
+            "min_units": 124,
+            "reason": "no threshold passes: the first cut tested holds 174 texts with 5 errors (bound 5.9% > 5%)",
+            "out_of_sample": {
+              "n": 189,
+              "automated": 0,
+              "errors": 0,
+              "coverage": 0.0,
+              "risk": null,
+              "reason": "a half holds at most 95 texts with a confidence; the target needs 124"
+            }
+          },
+          {
+            "target_risk": 0.1,
+            "plain": "at most 1 in 10 automated decisions wrong",
+            "threshold": 0.5,
+            "n": 189,
+            "automated": 189,
+            "coverage": 1.0,
+            "errors": 7,
+            "risk_upper": 0.06843809142112572,
+            "min_units": 61,
+            "reason": null,
+            "out_of_sample": {
+              "n": 189,
+              "automated": 94,
+              "errors": 4,
+              "coverage": 0.4974,
+              "risk": 0.0426,
+              "reason": null
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "regenerated": {
+    "utc": "2026-10-03T17:18:07+00:00",
+    "judge_audit_version": "0.4.0",
+    "script": "scripts/runs_report.py",
+    "checkpoint": "docs/runs/repeats/claude-sonnet-4.5/email-adversarial.r2.ckpt.jsonl",
+    "labels": "examples/email-routing-adversarial/labels.jsonl"
   }
 }

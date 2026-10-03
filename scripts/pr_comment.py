@@ -69,6 +69,51 @@ def _ground_truth(run: dict) -> tuple[str, str]:
     return cell, f"Ground truth: {cell} — {tail}"
 
 
+def _pct(x: float) -> str:
+    return f"{x * 100:g}%"
+
+
+def _certificate(result: dict) -> list[str]:
+    """The "Can I automate this?" table of `audit-result.json`'s certificate (mirrors
+    `report.certificate_lines` without importing it: stdlib only). [] without one."""
+    c = result.get("certificate") or {}
+    questions = c.get("questions") or []
+    if not questions:
+        return []
+    unit = _md(c.get("unit", "text"))
+    lines = ["### Can I automate this?", ""]
+    for q in questions:
+        if len(questions) > 1:
+            lines += [f"**`{_md(q.get('question', '?'))}`**", ""]
+        lines += ["| at most this error | in plain words | automate (certified) | "
+                  "deploy at confidence ≥ | checked out of sample |",
+                  "|---|---|---|---|---|"]
+        for t in q.get("targets", []):
+            risk = _pct(float(t["target_risk"]))
+            plain = _md(str(t.get("plain", "")).removeprefix("at most "))
+            if t.get("threshold") is None:
+                lines.append(f"| {risk} | {plain} | not certified: "
+                             f"{_md(t.get('reason') or 'nothing certified')} | — | — |")
+                continue
+            o = t.get("out_of_sample") or {}
+            if o.get("reason") and not o.get("automated"):
+                oos = f"not checkable: {_md(o['reason'])}"
+            else:
+                oos = f"{float(o.get('coverage') or 0):.1%} automated" + (
+                    f", {float(o['risk']):.1%} wrong" if o.get("risk") is not None else "")
+            bound = (f", bound {float(t['risk_upper']):.1%}"
+                     if t.get("risk_upper") is not None else "")
+            lines.append(f"| {risk} | {plain} | **{float(t['coverage']):.1%}** "
+                         f"({int(t['automated']):,} of {int(t['n']):,} {unit}s; "
+                         f"{int(t['errors'])} wrong{bound}) | {_md(t['threshold'])} | {oos} |")
+        lines.append("")
+    level = 1 - float(c.get("delta", 0.05))
+    lines += [f"_Certified with {level:.0%} confidence for traffic drawn like these labelled "
+              f"{unit}s, labels taken as right; each row is its own statement. Out of sample "
+              "= threshold chosen on half the texts, applied to the other half._", ""]
+    return lines
+
+
 def _metric(value: object, spec: str) -> str:
     return "unknown" if value is None else format(value, spec)
 
@@ -87,6 +132,7 @@ def build(result: dict, drift: dict | None = None, artifact_url: str = "",
     zec_cell = ("unknown" if zec.get("coverage") is None else
                 f"{_metric(zec.get('coverage'), '.1%')} "
                 f"(n={_md(zec.get('n', 0))}, conf ≥ {_md(zec.get('threshold'))})")
+    lines += [*_certificate(result)]
     lines += [f"Judge {_judge_line(run)}", "",
               "| n | confidence known | accuracy | ground truth | ECE | zero-error coverage | cost | p50 | p99 | slowest |",
               "|---|---|---|---|---|---|---|---|---|---|",
@@ -101,9 +147,12 @@ def build(result: dict, drift: dict | None = None, artifact_url: str = "",
     if drift is not None:
         base = _md(drift.get("baseline", "baseline"))
         if drift.get("ok"):
+            mins = "".join(
+                f", certified share at ≤ {_pct(float(m['risk']))} error ≥ "
+                f"{float(m['share']):.1%}" for m in drift.get("min_coverage") or [])
             lines += [f"✅ **No drift** vs `{base}` "
                       f"(ECE drift ≤ {_md(drift.get('max_ece_drift'))}, "
-                      f"accuracy drop ≤ {_md(drift.get('max_acc_drop'))})."]
+                      f"accuracy drop ≤ {_md(drift.get('max_acc_drop'))}{mins})."]
         else:
             lines += [f"❌ **Drift detected** vs `{base}`:", ""]
             lines += [f"- {_md(f)}" for f in drift.get("failures", [])]
