@@ -83,7 +83,9 @@ Secondary, not confirmatory, same pairs, under both readings: paired ECE differe
 
 ## 3. Every run on the real datasets (secondary metrics)
 
-Accuracy counts a row without an answer or a confidence as wrong (Wilson 95 % interval); AUROC, ECE (10 equal-width bins), MCE (its worst bin's rows in parentheses; a maximum tends to rise on resamples, so its point can sit low in its interval; ‡ where every resample gave the same value at the printed precision), AURC, Brier and NLL use the scored rows only; intervals are the clustered bootstrap, 10,000 resamples, seed 2026. NLL is printed only when no scored row has confidence 1 and is wrong (the count of such rows is printed). Zero-error coverage is the largest top slice with no error. Cost is the recorded list-price cost (the bill may be higher, §9). No composite score.
+Accuracy counts a row without an answer or a confidence as wrong (Wilson 95 % interval); AUROC, ECE (10 equal-width bins), MCE (its worst bin's rows in parentheses; a maximum tends to rise on resamples, so its point can sit low in its interval), AURC, Brier and NLL use the scored rows only; intervals are the clustered bootstrap, 10,000 resamples, seed 2026. NLL is printed only when no scored row has confidence 1 and is wrong (the count of such rows is printed). Zero-error coverage is the largest top slice with no error. Cost is the recorded list-price cost (the bill may be higher, §9). No composite score.
+
+**‡** degenerate: every clustered-bootstrap resample returned the same value, so no interval width is published for that number.
 
 ### BANKING77
 

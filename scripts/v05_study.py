@@ -54,7 +54,7 @@ from judge_audit.metrics.selective import (  # noqa: E402
     paired_difference_ci,
     paired_difference_test,
 )
-from judge_audit.report import DEGENERATE_MARK  # noqa: E402
+from judge_audit.report import DEGENERATE_MARK, DEGENERATE_NOTE  # noqa: E402
 from judge_audit.runner import (  # noqa: E402
     checkpoint_record,
     is_correct,
@@ -855,12 +855,13 @@ def markdown(r: dict) -> str:
     add("Accuracy counts a row without an answer or a confidence as wrong (Wilson 95 % "
         "interval); AUROC, ECE (10 equal-width bins), MCE (its worst bin's rows in "
         "parentheses; a maximum tends to rise on resamples, so its point can sit low in its "
-        "interval; ‡ where every resample gave the same value at the printed precision), "
-        "AURC, Brier and NLL use the scored rows only; intervals are the "
+        "interval), AURC, Brier and NLL use the scored rows only; intervals are the "
         "clustered bootstrap, 10,000 resamples, seed 2026. NLL is printed only when no "
         "scored row has confidence 1 and is wrong (the count of such rows is printed). "
         "Zero-error coverage is the largest top slice with no error. Cost is the recorded "
         "list-price cost (the bill may be higher, §9). No composite score.")
+    add("")
+    add(DEGENERATE_NOTE)
     add("")
     for d in REAL:
         add(f"### {NAME[d]}")
