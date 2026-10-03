@@ -10,6 +10,7 @@ import hashlib
 import json
 import math
 import sys
+from collections import Counter
 from pathlib import Path
 
 import pytest
@@ -98,20 +99,24 @@ def test_v1_keeps_the_digest_every_published_run_recorded():
     assert lp_mod.prompt_sha256() == lp_mod.prompt_sha256("v1") == LOGPROB_V1
 
 
-def test_every_committed_checkpoint_of_these_judges_recorded_the_v1_digest():
+def test_every_committed_checkpoint_of_these_judges_recorded_its_template_digest():
     """A new template never re-labels an old run: every header that carries a digest for
-    the llm or logprob adapter carries v1's."""
-    expected = {"llm": LLM_V1, "logprob": LOGPROB_V1}
-    seen = 0
+    the llm or logprob adapter carries v1's, unless it names template v2 (the v0.5 study's
+    E1 runs), and then v2's. Only the `-prompt-v2` checkpoints may name v2."""
+    expected = {("llm", "v1"): LLM_V1, ("logprob", "v1"): LOGPROB_V1,
+                ("llm", "v2"): LLM_V2, ("logprob", "v2"): LOGPROB_V2}
+    seen = Counter()
     for path in sorted((ROOT / "docs" / "runs").rglob("*.ckpt.jsonl")):
         with open(path, encoding="utf-8") as f:
             first = json.loads(f.readline() or "{}")
         judge = (first.get("run") or {}).get("judge") or {}
         adapter = str(judge.get("name", "")).split(":")[0]
-        if adapter in expected and "prompt_sha256" in judge:
-            assert judge["prompt_sha256"] == expected[adapter], path
-            seen += 1
-    assert seen >= 2
+        if adapter in {"llm", "logprob"} and "prompt_sha256" in judge:
+            template = judge.get("prompt_template", "v1")
+            assert (template == "v2") == path.name.endswith("-prompt-v2.ckpt.jsonl"), path
+            assert judge["prompt_sha256"] == expected[(adapter, template)], path
+            seen[template] += 1
+    assert seen["v1"] >= 2
 
 
 def test_the_default_llm_judge_is_unchanged(monkeypatch):

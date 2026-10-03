@@ -133,3 +133,5 @@ jobs:
         run: python scripts/v05_power.py --check
       - name: v0.5 pilot estimates regenerate from their checkpoints (seeded, no API call)
         run: python scripts/v05_pilot.py --check
+      - name: v0.5 study results regenerate from their checkpoints (seeded, no API call)
+        run: python scripts/v05_study.py --check

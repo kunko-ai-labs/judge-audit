@@ -1,0 +1,8 @@
+row 0 trimmed-vs-full 5.09e-02 trimmed-vs-fresh 0.00e+00 | trimmed top2 [('card_delivery_estimate', 0.3924), ('card_not_working', 0.3924)] | full top2 [('card_not_working', 0.4434), ('card_delivery_estimate', 0.3453)]
+row 1 trimmed-vs-full 2.10e-09 trimmed-vs-fresh 0.00e+00 | trimmed top2 [('order_physical_card', 0.9996), ('get_physical_card', 0.0004)] | full top2 [('order_physical_card', 0.9996), ('get_physical_card', 0.0004)]
+row 2 trimmed-vs-full 2.49e-09 trimmed-vs-fresh 0.00e+00 | trimmed top2 [('order_physical_card', 1.0), ('get_physical_card', 0.0)] | full top2 [('order_physical_card', 1.0), ('get_physical_card', 0.0)]
+row 3 trimmed-vs-full 8.72e-09 trimmed-vs-fresh 0.00e+00 | trimmed top2 [('card_delivery_estimate', 0.9525), ('get_physical_card', 0.0474)] | full top2 [('card_delivery_estimate', 0.9525), ('get_physical_card', 0.0474)]
+row 4 trimmed-vs-full 1.06e-06 trimmed-vs-fresh 0.00e+00 | trimmed top2 [('get_physical_card', 0.9988), ('card_arrival', 0.0012)] | full top2 [('get_physical_card', 0.9988), ('card_arrival', 0.0012)]
+model mlx-community/Qwen3-8B-4bit · 5 rows · trimmed vs fresh cache: largest log-probability difference 0.00e+00 · decisions changed 0 · cached path 6.8 rows/min · labels tokenised alone 0
+full forward pass (numerical spread, reported, not a gate): largest probability difference 5.09e-02 · decisions changed 1
+full forward pass, loose bound: largest log-odds shift 0.250 (bound 1) · decisions changed with a trimmed-path margin above the bound 0
