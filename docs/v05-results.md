@@ -16,7 +16,9 @@ A hypothesis is supported for a model only when every test listed for it is reso
 | H2 | Qwen3-8B | T7 | supported | supported | against Qwen3-8B's method chosen on BANKING77 (token log-probability), tested on CLINC150 only |
 | H2 | gemini-3.6-flash | T8 | supported | not supported | **depends on the scoring rule** (T8); against gemini-3.6-flash's method chosen on BANKING77 (verbalized), tested on CLINC150 only |
 
-Tests whose resolution or sign depends on the scoring rule: T6, T8. The difference is due to an output format, not the confidence: the re-reading reads an answer written as an option followed by its own description (e.g. `out_of_scope: the request asks for none of the other intents`) as that option, where the pre-registered rule scores it wrong. It changed gemini-3.6-flash verbalized on CLINC150: 267 rows; gemini-3.6-flash self-consistency (k = 5) on CLINC150: 541 rows (1386 samples, 259 voted decisions); no other run on these datasets.
+Tests whose resolution or sign depends on the scoring rule: T6, T8. The difference is due to an output format, not to what the model declared: the re-reading reads an answer written as an option followed by its own description (e.g. `out_of_scope: the request asks for none of the other intents`) as that option, where the pre-registered rule scores it wrong. It changed gemini-3.6-flash verbalized on CLINC150: 267 rows; gemini-3.6-flash self-consistency (k = 5) on CLINC150: 541 rows (1386 samples, 259 voted decisions); no other run on these datasets. For self-consistency the vote share, its confidence, is recomputed after the re-reading.
+
+Under the re-reading, gemini-3.6-flash verbalized is also more accurate than Jev native probability on CLINC150 (McNemar 12 / 56, p < 0.0001; secondary, §2).
 
 ## 2. Confirmatory tests (§6)
 

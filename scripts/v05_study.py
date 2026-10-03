@@ -754,7 +754,8 @@ def markdown(r: dict) -> str:
         changed = [(k, v["reread_changes"]) for k, v in r["metrics"].items()
                    if v["reread_changes"]["rows"] and k.split("/")[0] in REAL]
         add(f"Tests whose resolution or sign depends on the scoring rule: {', '.join(dep)}. "
-            "The difference is due to an output format, not the confidence: the re-reading "
+            "The difference is due to an output format, not to what the model declared: the "
+            "re-reading "
             "reads an answer written as an option followed by its own description (e.g. "
             "`out_of_scope: the request asks for none of the other intents`) as that option, "
             "where the pre-registered rule scores it wrong. It changed "
@@ -762,8 +763,17 @@ def markdown(r: dict) -> str:
                         + (f" ({c['samples']} samples, {c['decisions_changed']} voted "
                            "decisions)" if c["samples"] else "")
                         for k, c in changed)
-            + "; no other run on these datasets.")
+            + "; no other run on these datasets. For self-consistency the vote share, its "
+              "confidence, is recomputed after the re-reading.")
         add("")
+        for tid in dep:
+            mc = T["reread"][tid]["accuracy_mcnemar"]
+            if mc["p_value"] < ALPHA and mc["b_only"] > mc["a_only"]:
+                v = T["reread"][tid]
+                add(f"Under the re-reading, {label(v['b'])} is also more accurate than "
+                    f"{label(v['a'])} on {NAME[v['dataset']]} (McNemar {mc['a_only']} / "
+                    f"{mc['b_only']}, p {_p(mc['p_value'])}; secondary, §2).")
+                add("")
 
     add("## 2. Confirmatory tests (§6)")
     add("")
