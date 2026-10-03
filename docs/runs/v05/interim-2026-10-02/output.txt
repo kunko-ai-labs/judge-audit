@@ -1,0 +1,53 @@
+# Interim look, 2026-10-02 (docs/v05-plan.md §11, amendment 2). Not the published analysis.
+# Produced by interim.py in this folder on the complete checkpoints of origin/audit/v05-study (commit 2b82fd4).
+# The re-reading here (LENIENT=1) is the one used that day: the decision text before ':' when it is an option;
+# for self-consistency only the voted decision was re-read (the amendment re-reads each sample before the vote).
+# interim.py's two file reads were later wrapped in `with` blocks (CodeQL); its logic and this output are unchanged.
+
+## strict (pre-registered rule)
+
+== banking77
+jev                          acc 0.802  AUROC 0.839 [0.822, 0.856]  no-conf 0  cert5% 0.4102  cert10% 0.7226
+laya                         acc 0.462  AUROC 0.747 [0.730, 0.764]  no-conf 0  cert5% 0.0  cert10% 0.0
+llm-gemini-3.6-flash         acc 0.834  AUROC 0.755 [0.735, 0.772]  no-conf 0  cert5% 0.1432  cert10% 0.4553
+llm-gemini-3.6-flash-sc5     acc 0.833  AUROC 0.611 [0.591, 0.630]  no-conf 0  cert5% 0.0  cert10% 0.0
+llm-qwen3-8b                 acc 0.631  AUROC 0.699 [0.682, 0.715]  no-conf 14  cert5% 0.0  cert10% 0.0
+llm-qwen3-8b-sc10            acc 0.632  AUROC 0.629 [0.613, 0.646]  no-conf 3  cert5% 0.0  cert10% 0.0
+
+== clinc150
+jev                          acc 0.949  AUROC 0.868 [0.830, 0.905]  no-conf 0  cert5% 0.9621  cert10% 0.9989
+laya                         acc 0.877  AUROC 0.751 [0.719, 0.783]  no-conf 0  cert5% 0.0  cert10% 0.8274
+llm-gemini-3.6-flash         acc 0.832  AUROC 0.391 [0.365, 0.418]  no-conf 0  cert5% 0.0  cert10% 0.0
+llm-gemini-3.6-flash-sc5     acc 0.834  AUROC 0.754 [0.725, 0.783]  no-conf 0  cert5% 0.0  cert10% 0.7353
+llm-qwen3-8b                 acc 0.877  AUROC 0.807 [0.777, 0.833]  no-conf 0  cert5% 0.3874  cert10% 0.7668
+
+== confirmatory tests available now (raw p, no Holm yet)
+T3: llm-qwen3-8b-sc10 − llm-qwen3-8b = -0.070 [-0.091, -0.048] p=0.0010
+T5: llm-gemini-3.6-flash-sc5 − llm-gemini-3.6-flash = -0.144 [-0.169, -0.119] p=0.0010
+T6: llm-gemini-3.6-flash-sc5 − llm-gemini-3.6-flash = +0.363 [+0.318, +0.407] p=0.0010
+Gemini's best method on BANKING77 (by AUROC): llm-gemini-3.6-flash
+T8: jev − llm-gemini-3.6-flash = +0.477 [+0.427, +0.522] p=0.0010
+
+## LENIENT=1
+
+== banking77
+jev                          acc 0.802  AUROC 0.839 [0.822, 0.856]  no-conf 0  cert5% 0.4102  cert10% 0.7226
+laya                         acc 0.462  AUROC 0.747 [0.730, 0.764]  no-conf 0  cert5% 0.0  cert10% 0.0
+llm-gemini-3.6-flash         acc 0.834  AUROC 0.755 [0.735, 0.772]  no-conf 0  cert5% 0.1432  cert10% 0.4553
+llm-gemini-3.6-flash-sc5     acc 0.833  AUROC 0.611 [0.591, 0.630]  no-conf 0  cert5% 0.0  cert10% 0.0
+llm-qwen3-8b                 acc 0.631  AUROC 0.699 [0.682, 0.715]  no-conf 14  cert5% 0.0  cert10% 0.0
+llm-qwen3-8b-sc10            acc 0.632  AUROC 0.629 [0.613, 0.646]  no-conf 3  cert5% 0.0  cert10% 0.0
+
+== clinc150
+jev                          acc 0.949  AUROC 0.868 [0.830, 0.905]  no-conf 0  cert5% 0.9621  cert10% 0.9989
+laya                         acc 0.877  AUROC 0.751 [0.719, 0.783]  no-conf 0  cert5% 0.0  cert10% 0.8274
+llm-gemini-3.6-flash         acc 0.972  AUROC 0.867 [0.819, 0.908]  no-conf 0  cert5% 0.9995  cert10% 0.9995
+llm-gemini-3.6-flash-sc5     acc 0.971  AUROC 0.502 [0.442, 0.561]  no-conf 0  cert5% 0.5  cert10% 1.0
+llm-qwen3-8b                 acc 0.877  AUROC 0.807 [0.777, 0.833]  no-conf 0  cert5% 0.3874  cert10% 0.7668
+
+== confirmatory tests available now (raw p, no Holm yet)
+T3: llm-qwen3-8b-sc10 − llm-qwen3-8b = -0.070 [-0.091, -0.048] p=0.0010
+T5: llm-gemini-3.6-flash-sc5 − llm-gemini-3.6-flash = -0.144 [-0.169, -0.119] p=0.0010
+T6: llm-gemini-3.6-flash-sc5 − llm-gemini-3.6-flash = -0.365 [-0.437, -0.285] p=0.0010
+Gemini's best method on BANKING77 (by AUROC): llm-gemini-3.6-flash
+T8: jev − llm-gemini-3.6-flash = +0.001 [-0.036, +0.039] p=0.9515
