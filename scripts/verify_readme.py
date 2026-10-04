@@ -604,8 +604,6 @@ def v05_expected(d: dict) -> dict[str, list[str]]:
         lo, hi = m[f"banking77/{run}"]["strict"]["certification"]["0.05"]["spread_coverage"]
         return lo, hi
 
-    overlap = ("overlap" if spread5("jev")[0] <= spread5("llm-gemini-3.6-flash")[1]
-               else "do not overlap")
 
     noise = "label noise was not measured"
     return {
@@ -618,8 +616,9 @@ def v05_expected(d: dict) -> dict[str, list[str]]:
             f"split seeds {seeds[0]}–{seeds[1]}) of the texts alone, gemini-3.6-flash verbalized "
             f"{rate('llm-gemini-3.6-flash')}), Qwen3-8B token log-probability "
             f"{rate('logprob-qwen3-8b')})",
-            f"the ranges of Jev and gemini-3.6-flash {overlap}",
-            "probably seen in pretraining", "one run each", "label noise not measured",
+            "probably seen in pretraining",
+            f"one run each, except {repeated} on BANKING77 ({len(d['repeats'][0]['runs'])} runs)",
+            "label noise not measured",
             "the held-out slice not run (#106)",
         ],
         "A pre-registered study": [

@@ -10,8 +10,8 @@ evaluation platforms keep using them (Galileo, Patronus AI, Braintrust, DeepEval
 they evaluate applications *using* judges. Independent calibration audits of single
 judges do exist, Jev's among them; comparing them with ours is open work (#93).
 
-Analogy: there are labs that sell thermometers, but no body that checks the
-thermometers measure correctly.
+Analogy: thermometers are sold everywhere; a published check that one reads
+correctly, on the patient it will be used on, is rare.
 
 - Galileo: metrics and guardrails on proprietary Luna models (black box —
   you cannot audit the auditor).
