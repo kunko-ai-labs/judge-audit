@@ -236,8 +236,12 @@ def test_rewording_the_robustness_sentence_fails_instead_of_skipping():
     [
         ("BANKING77 test (3,080 rows)", "BANKING77 test (3,081 rows)"),
         ("CLINC150 subset (1,900 rows)", "CLINC150 subset (1,800 rows)"),
-        ("4 of the 8 tests are resolved", "5 of the 8 tests are resolved"),
-        ("6 of the 8 came out as predicted", "7 of the 8 came out as predicted"),
+        ("4 are resolved (T1, T6, T7, T8)", "5 are resolved (T1, T6, T7, T8)"),
+        ("6 match their pre-registered prediction", "7 match their pre-registered prediction"),
+        ("Of the 5 hypothesis verdicts 2 are supported",
+         "Of the 5 hypothesis verdicts 3 are supported"),
+        ("T2 -0.046 [-0.089, -0.003], Holm p 0.036)", "T2 -0.046 [-0.089, -0.003], Holm p 0.030)"),
+        ("(Holm p 0.072)", "(Holm p 0.036)"),
         ("T7 +0.107 [+0.062, +0.151]", "T7 +0.108 [+0.062, +0.151]"),
         ("T8 +0.477 [+0.428, +0.524]", "T8 +0.477 [+0.428, +0.534]"),
         ("T8 re-read +0.001 [-0.037, +0.041]", "T8 re-read +0.001 [-0.036, +0.041]"),
@@ -252,9 +256,11 @@ def test_rewording_the_robustness_sentence_fails_instead_of_skipping():
         ("Qwen3-8B k = 10, gemini-3.6-flash k = 5", "Qwen3-8B k = 9, gemini-3.6-flash k = 5"),
         ("in 3 of the 4 tests", "in 4 of the 4 tests"),
         ("41.0 % at ≤ 5 % (37 errors", "42.0 % at ≤ 5 % (37 errors"),
-        ("(37 errors / 1263 automated)", "(36 errors / 1263 automated)"),
-        ("72.3 % at ≤ 10 % (182 / 2225)", "72.3 % at ≤ 10 % (182 / 2226)"),
-        ("27.0 %–45.1 % and 72.0 %–73.4 %", "27.0 %–45.1 % and 72.0 %–74.4 %"),
+        ("(37 errors / 1263 automated;", "(36 errors / 1263 automated;"),
+        ("72.3 % at ≤ 10 % (182 / 2225;", "72.3 % at ≤ 10 % (182 / 2226;"),
+        ("27.0 %–45.1 % over seeds", "27.0 %–46.1 % over seeds"),
+        ("72.0 %–73.4 % over the same seeds", "72.0 %–74.4 % over the same seeds"),
+        ("split seed 2026", "split seed 2027"),
         ("14.3 % at ≤ 5 % (6 errors", "14.3 % at ≤ 5 % (7 errors"),
         ("45.5 % at ≤ 10 % (59 / 1402)", "45.5 % at ≤ 10 % (59 / 1412)"),
         ("12.5 % at ≤ 10 % (19 / 384)", "12.6 % at ≤ 10 % (19 / 384)"),
@@ -272,6 +278,70 @@ def test_rewording_the_robustness_sentence_fails_instead_of_skipping():
 )
 def test_a_one_digit_edit_of_a_v05_figure_is_caught(old, new):
     assert any(f.startswith(("v0.5", "quickstart")) for f in check(edit(old, new)).failures)
+
+
+def edit_in(opening: str, old: str, new: str) -> str:
+    """Edit `old` inside the one paragraph that starts with `opening`."""
+    paras = README.split("\n\n")
+    (i,) = [i for i, p in enumerate(paras) if p.startswith(opening)]
+    assert old in paras[i], (opening, old)
+    paras[i] = paras[i].replace(old, new, 1)
+    return "\n\n".join(paras)
+
+
+TESTS, SC, SAFE = ("**Pre-registered confirmatory tests.**",
+                   "**Self-consistency against verbalized confidence.**",
+                   "**Safe automation rate on BANKING77.**")
+
+
+@pytest.mark.parametrize(
+    "opening,old,new",
+    [
+        # direction words: the sign of the difference, not just its digits
+        (TESTS, "token log-probability beat verbalized",
+         "token log-probability lost to verbalized"),
+        (TESTS, "lost to it on CLINC150", "beat it on CLINC150"),
+        (SC, "ranked errors worse than", "ranked errors better than"),
+        # the Holm threshold
+        ("A pre-registered study", "Holm-adjusted p below 0.05", "Holm-adjusted p below 0.01"),
+        (TESTS, "opposite direction (Holm p < 0.05)", "opposite direction (Holm p < 0.5)"),
+        (SC, "Holm p < 0.05", "Holm p < 0.5"),
+        # the counts' honest reading
+        (TESTS, "count as matched only because", "count as matched because"),
+        (TESTS, "not resolved under the re-reading", "resolved under the re-reading"),
+        # the dataset years, in every paragraph's caveat
+        (TESTS, "BANKING77 (2020)", "BANKING77 (2021)"),
+        (SC, "BANKING77 (2020)", "BANKING77 (2021)"),
+        (SAFE, "CLINC150 (2019)", "CLINC150 (2018)"),
+        # the single-run caveat, in every paragraph
+        (TESTS, "each confirmatory run ran once", "each confirmatory run ran three times"),
+        (SC, "repeats only for Jev and Qwen3-8B verbalized", "repeats for every run"),
+        (SAFE, "each confirmatory run ran once", "every run repeated"),
+        (SAFE, "probably in the judges' pretraining data", "not in the judges' pretraining data"),
+    ],
+)
+def test_a_v05_direction_or_criterion_edit_is_caught(opening, old, new):
+    assert any(f.startswith("v0.5") for f in check(edit_in(opening, old, new)).failures)
+
+
+@pytest.mark.parametrize(
+    "old,new",
+    [
+        ("--target 0.10 --min-safe-rate 0.10:0.60\n", "--target 0.10 --min-safe-rate 0.10:0.90\n"),
+        ("`check --min-safe-rate 0.10:0.60` exits", "`check --min-safe-rate 0.10:0.90` exits"),
+        ("falls below 60 %", "falls below 50 %"),
+        ("exits 0 here and exits 1", "exits 1 here and exits 0"),
+    ],
+)
+def test_a_quickstart_gate_edit_is_caught(old, new):
+    assert any(f.startswith("quickstart") for f in check(edit(old, new)).failures)
+
+
+def test_the_gate_threshold_follows_a_fresh_check(monkeypatch):
+    import verify_readme
+
+    monkeypatch.setattr(verify_readme, "simulated_check", lambda share: 1)
+    assert any(f.startswith("quickstart") and "exit" in f for f in check(README).failures)
 
 
 def test_a_second_copy_of_a_v05_figure_fails():

@@ -6,7 +6,7 @@ Research to position judge-audit. Sources with URLs in each section.
 
 Judges keep getting cheaper (Jev, Patronus's Glider, Galileo's Luna) and
 platforms keep using them (Galileo, Patronus AI, Braintrust, Arize Phoenix,
-DeepEval, Ragas). **None of them audits the judge's calibration as a product.**
+DeepEval, Ragas). **None of them audits the judge's calibration.**
 All of them evaluate applications *using* judges; nobody publishes "is your
 judge's confidence honest?".
 
@@ -82,6 +82,5 @@ publicly.)
 ## 5. Risks
 
 - If Galileo/Braintrust add "calibration reports", they compete from above.
-  Defence: open source, portable (CI-first, no data lock-in) and European
-  (EU residency, AI Act narrative).
+  Defence: open source and portable (CI-first, no data lock-in).
 - Still to verify: conformal prediction as a standard.

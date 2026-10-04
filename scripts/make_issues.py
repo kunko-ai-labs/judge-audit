@@ -1,18 +1,29 @@
 """Create labels + roadmap issues (5 epics, 10 stories) for kunko-ai-labs/judge-audit.
 
   python scripts/make_issues.py --dry-run   # print the labels and issue titles, no network
-  python scripts/make_issues.py             # create them (needs the GitHub credential helper)
+  python scripts/make_issues.py --helper-dir DIR   # create them (needs a GitHub credential helper)
+
+The credential helper module (`dynamic_credentials`) is looked up in --helper-dir, else in
+$JUDGE_AUDIT_CREDENTIAL_HELPER_DIR, else on the normal import path.
 """
 import argparse
 import json
+import os
 import sys
 import urllib.request
 
 API = "https://api.github.com"
 REPO = "kunko-ai-labs/judge-audit"
 
+HELPER_ENV = "JUDGE_AUDIT_CREDENTIAL_HELPER_DIR"
+
+
+def helper_dir(cli_value):
+    """Where the credential helper lives: the CLI flag, then the environment, else None."""
+    return cli_value or os.environ.get(HELPER_ENV) or None
+
+
 def call(method, path, body=None):
-    sys.path.insert(0, "/opt/hatch/skills/skill-creator/bin")
     from dynamic_credentials import add_surrogate_to_request, read_json_response
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(API + path, data=data, method=method,
@@ -291,6 +302,8 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--dry-run", action="store_true",
                     help="print the labels and issues that would be created; no network call")
+    ap.add_argument("--helper-dir", default=None,
+                    help=f"directory holding the credential helper module (default: ${HELPER_ENV})")
     args = ap.parse_args(argv)
     if args.dry_run:
         for name, _, _ in LABELS:
@@ -299,6 +312,9 @@ def main(argv=None):
             print("issue:", title, labels)
         print("TOTAL:", len(ISSUES), "issues (dry run)")
         return
+    where = helper_dir(args.helper_dir)
+    if where:
+        sys.path.insert(0, where)
     for name, color, desc in LABELS:
         try:
             call("POST", f"/repos/{REPO}/labels",
