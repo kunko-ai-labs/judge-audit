@@ -21,13 +21,16 @@ For each question and each target risk r:
   automates less than the deployed one: a conservative check, not a forecast.
 - **per-text check**, only when the labelled set repeats texts: each distinct text once,
   automated when any copy is at or above the threshold and wrong when any copy is wrong
-  (conservative), certified the same way. It is the number to read if the repeats were
-  copied in rather than sampled.
+  (so its error count can be smaller than the per-decision one), bounded the same way.
+  It is the number to read if the repeats were copied in rather than sampled; it is not
+  always the more cautious reading when the copies of a text carry different confidences.
 - **segments**: the deployed threshold applied to each segment (by default the true
   label; or a metadata field), with each segment's observed error and its own exact
   one-sided bound. The overall bound does not cover a segment; the worst segment with
   enough automated decisions is named so an average cannot hide it.
-- **primary target**: the one target chosen before the run (`--target`, default 5 %).
+- **primary target**: the one target passed with `--target` (default 5 %), to be chosen
+  before the run. A report regenerated from an archived checkpoint uses the default and says
+  it was not fixed in advance.
   Each target is its own 1 − δ statement; the four default ones hold together with
   probability at least 1 − 4δ (80 %). Reading several and keeping the best is neither.
 
@@ -94,7 +97,8 @@ def scope_of(run: dict | None) -> dict:
             "prompt_sha256": j.get("prompt_sha256"), "served": served or None,
             "dataset": ds.get("path"),
             "dataset_sha256": ds.get("sha256_rows") or ds.get("sha256"),
-            "measured_utc": measured, "review_by": review}
+            "measured_utc": measured, "review_by": review,
+            "regenerated": bool(run.get("recomputed_utc")) and not run.get("timestamp_utc")}
 
 
 def scope_changes(old: dict, new: dict) -> list[str]:
@@ -124,7 +128,7 @@ def _out_of_sample(conf: list[float], ok: list[bool], keys: list[Hashable], r: f
 def _per_text(conf: list[float], ok: list[bool], keys: list[Hashable], n_texts: int,
               r: float, delta: float, start_errors: int) -> dict:
     """The per-text check: each distinct text once (highest confidence of its copies,
-    wrong when any copy is wrong), certified the same way; its share is of all texts."""
+    wrong when any copy is wrong), bounded the same way; its share is of all texts."""
     units: dict[Hashable, list] = {}
     for c, o, k in zip(conf, ok, keys, strict=True):
         u = units.setdefault(k, [c, o])
@@ -141,9 +145,11 @@ def _segments(segs: list, conf: list[float | None], ok: list[bool],
               threshold: float | None, delta: float) -> dict:
     """The deployed threshold applied to each segment: automated decisions, errors,
     observed rate and exact one-sided bound per segment (most error-prone first), the worst
-    segment with at least MIN_SEGMENT automated decisions, and how many have fewer."""
+    segment with at least MIN_SEGMENT automated decisions, how many have fewer and how many
+    errors sit in those (the worst ranked segment can be error-free while they hold them)."""
     if threshold is None or all(s is None for s in segs):
-        return {"segments": [], "worst_segment": None, "segments_too_small": 0}
+        return {"segments": [], "worst_segment": None, "segments_too_small": 0,
+                "errors_in_small_segments": 0}
     seen: dict[str, list[int]] = {}
     for seg, c, o in zip(segs, conf, ok, strict=True):
         s = seen.setdefault(str(seg), [0, 0])
@@ -158,7 +164,9 @@ def _segments(segs: list, conf: list[float | None], ok: list[bool],
     rows.sort(key=lambda s: (-(s["rate"] or 0.0), -(s["risk_upper"] or 0.0), s["segment"]))
     ranked = [s for s in rows if s["automated"] >= MIN_SEGMENT]
     return {"segments": rows, "worst_segment": ranked[0] if ranked else None,
-            "segments_too_small": sum(1 for s in rows if 0 < s["automated"] < MIN_SEGMENT)}
+            "segments_too_small": sum(1 for s in rows if 0 < s["automated"] < MIN_SEGMENT),
+            "errors_in_small_segments": sum(s["errors"] for s in rows
+                                            if 0 < s["automated"] < MIN_SEGMENT)}
 
 
 def automation_certificate(records: list[dict], groups: Sequence[Hashable] | None = None,

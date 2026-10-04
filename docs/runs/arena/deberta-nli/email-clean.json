@@ -299,7 +299,8 @@
       "dataset": "examples/email-routing/labels.jsonl",
       "dataset_sha256": "c5b4c111290aa657236ea520a8043b14ce23e9b26af01a6c5e7ec9b87082e1cf",
       "measured_utc": "2026-09-20T18:50:38+00:00",
-      "review_by": "2026-12-19"
+      "review_by": "2026-12-19",
+      "regenerated": false
     },
     "disclaimer": "Statistical evidence on the labelled decisions, not a conformity assessment or a certification by a notified body.",
     "questions": [
@@ -320,7 +321,7 @@
             "errors": 0,
             "risk_upper": null,
             "min_units": 628,
-            "reason": "needs 628 decisions with a confidence to certify 1%; has 200",
+            "reason": "needs 628 decisions with a confidence to bound the error at 1%; has 200",
             "out_of_sample": {
               "n": 200,
               "seed": 0,
@@ -341,6 +342,7 @@
             "segments": [],
             "worst_segment": null,
             "segments_too_small": 0,
+            "errors_in_small_segments": 0,
             "per_text": {
               "n": 161,
               "automated": 0,
@@ -348,7 +350,7 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "needs 628 texts with a confidence to certify 1%; has 161"
+              "reason": "needs 628 texts with a confidence to bound the error at 1%; has 161"
             }
           },
           {
@@ -362,7 +364,7 @@
             "errors": 0,
             "risk_upper": null,
             "min_units": 313,
-            "reason": "needs 313 decisions with a confidence to certify 2%; has 200",
+            "reason": "needs 313 decisions with a confidence to bound the error at 2%; has 200",
             "out_of_sample": {
               "n": 200,
               "seed": 0,
@@ -383,6 +385,7 @@
             "segments": [],
             "worst_segment": null,
             "segments_too_small": 0,
+            "errors_in_small_segments": 0,
             "per_text": {
               "n": 161,
               "automated": 0,
@@ -390,7 +393,7 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "needs 313 texts with a confidence to certify 2%; has 161"
+              "reason": "needs 313 texts with a confidence to bound the error at 2%; has 161"
             }
           },
           {
@@ -425,6 +428,7 @@
             "segments": [],
             "worst_segment": null,
             "segments_too_small": 0,
+            "errors_in_small_segments": 0,
             "per_text": {
               "n": 161,
               "automated": 0,
@@ -538,6 +542,7 @@
             ],
             "worst_segment": null,
             "segments_too_small": 9,
+            "errors_in_small_segments": 7,
             "per_text": {
               "n": 161,
               "automated": 101,
@@ -553,7 +558,7 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-04T07:03:39+00:00",
+    "utc": "2026-10-04T09:30:59+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/deberta-nli/email-clean.ckpt.jsonl",

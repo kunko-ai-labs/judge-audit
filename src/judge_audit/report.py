@@ -5,6 +5,7 @@ import html
 import json
 import math
 import warnings
+from fractions import Fraction
 
 from .ground_truth import ground_truth_of
 from .metrics.calibration import EXACT as EXACT_METHOD
@@ -34,6 +35,14 @@ THREE_NUMBERS_NOTE = (
 
 def _pct_of(x: float) -> str:
     return f"{x * 100:g}%"
+
+
+def inline(value: object) -> str:
+    """A name from the data or the command line, made safe to print inside a Markdown line
+    or a code span: every run of whitespace (newlines included) becomes one space, so a
+    value can never open a heading, a list item or a table row, and a backtick becomes an
+    apostrophe so it cannot close the code span it sits in."""
+    return " ".join(str(value).split()).replace("`", "'")
 
 
 def threshold_text(t: float) -> str:
@@ -89,7 +98,9 @@ def per_text_line(t: dict, q: dict) -> str:
     head = (f"This labelled set repeats texts ({q['n']:,} decisions, {q['texts']:,} distinct "
             "texts). The bound above treats the decisions as a random sample of your "
             "traffic, repeats included as they occur there. If the repeats were copied in "
-            "instead, count each text once")
+            "instead, count each text once (at its highest confidence, wrong if any copy is: "
+            "not always the more cautious reading when the copies of a text carry different "
+            "confidences)")
     if p["threshold"] is None:
         return f"{head}: at this target, none ({p.get('reason') or 'no threshold passes'})."
     return (f"{head}: {p['coverage']:.1%} of the texts ({p['automated']:,} of {p['n']:,}; "
@@ -101,16 +112,20 @@ def worst_segment_line(t: dict, c: dict) -> str:
     """The worst segment above the primary threshold, or why none is ranked."""
     if t["threshold"] is None or not t.get("segments"):
         return ""
-    by = "true label" if c.get("segment_by") == "label" else f"`{c.get('segment_by')}`"
+    by = "true label" if c.get("segment_by") == "label" else f"`{inline(c.get('segment_by'))}`"
     small = t.get("segments_too_small", 0)
     tail = (f" {small} segment{'s' if small != 1 else ''} with fewer than "
             f"{c['min_segment']} automated {c['unit']}s {'are' if small != 1 else 'is'} not "
             "ranked." if small else "")
+    hidden = t.get("errors_in_small_segments", 0)
+    if hidden:
+        tail += (f" {hidden} of the {t['errors']} errors above the threshold sit in segments "
+                 "too small to rank.")
     w = t.get("worst_segment")
     if w is None:
         return (f"Segments ({by}): none has {c['min_segment']} automated {c['unit']}s, so "
                 f"none is ranked.{tail}")
-    return (f"Worst segment above that threshold ({by}): `{w['segment']}`, {w['errors']} of "
+    return (f"Worst segment above that threshold ({by}): `{inline(w['segment'])}`, {w['errors']} of "
             f"{w['automated']} automated {c['unit']}s wrong ({w['rate']:.1%}; its own error "
             f"bound {w['risk_upper']:.1%}). The overall bound does not cover a segment.{tail}")
 
@@ -118,17 +133,18 @@ def worst_segment_line(t: dict, c: dict) -> str:
 def scope_line(c: dict) -> str:
     """What the rate is valid for, and when to review it."""
     s = c.get("scope") or {}
-    parts = [f"judge `{s['judge']}`" if s.get("judge") else None,
-             f"model `{s['model']}`" if s.get("model") else None,
-             f"revision `{str(s['revision'])[:12]}`" if s.get("revision") else None,
-             f"prompt `{str(s['prompt_sha256'])[:8]}…`" if s.get("prompt_sha256") else None,
-             f"served `{', '.join(s['served'])}`" if s.get("served") else None,
-             f"data `{s['dataset']}`" if s.get("dataset") else None,
-             (f"sha256 `{str(s['dataset_sha256'])[:12]}…`" if s.get("dataset_sha256")
-              else None),
-             f"measured {s['measured_utc']}" if s.get("measured_utc") else None]
+    parts = [f"judge `{inline(s['judge'])}`" if s.get("judge") else None,
+             f"model `{inline(s['model'])}`" if s.get("model") else None,
+             f"revision `{inline(str(s['revision'])[:12])}`" if s.get("revision") else None,
+             (f"prompt `{inline(str(s['prompt_sha256'])[:8])}…`"
+              if s.get("prompt_sha256") else None),
+             f"served `{inline(', '.join(s['served']))}`" if s.get("served") else None,
+             f"data `{inline(s['dataset'])}`" if s.get("dataset") else None,
+             (f"sha256 `{inline(str(s['dataset_sha256'])[:12])}…`"
+              if s.get("dataset_sha256") else None),
+             f"measured {inline(s['measured_utc'])}" if s.get("measured_utc") else None]
     what = " · ".join(p for p in parts if p) or "this run"
-    review = (f"Review by {s['review_by']}, and measure again as soon as any of these "
+    review = (f"Review by {inline(s['review_by'])}, and measure again as soon as any of these "
               "changes." if s.get("review_by") else
               "Measure again as soon as any of these changes.")
     return f"Valid only for: {what}. {review}"
@@ -139,13 +155,17 @@ def certificate_note(c: dict) -> str:
     k = len(c.get("targets") or [])
     joint = (f"; the {k} rows hold together with probability at least "
              f"{max(0.0, 1 - k * c['delta']):.0%}" if k > 1 else "")
+    regenerated = (" (this report was regenerated from an archived checkpoint with the "
+                   "default target: the target was not fixed in advance)"
+                   if (c.get("scope") or {}).get("regenerated") else "")
     return (f"With {level:.0%} confidence, the error rate among decisions at or above the "
             "threshold is at most the target — on traffic drawn like these labelled "
             "decisions (a random sample of it, each decision an independent draw), judged by "
             "the judge and prompt above, with the labels taken as right. Label errors cut "
             "both ways: a wrong label the judge disagrees with counts as a judge error, one "
-            "it agrees with hides an error. The primary target was set before the run "
-            f"(`--target`, here {_pct_of(c['primary_target'])}); every row is its own "
+            "it agrees with hides an error. The primary target is the one passed with "
+            f"`--target` (here {_pct_of(c['primary_target'])}), to be chosen before the run"
+            f"{regenerated}; every row is its own "
             f"{level:.0%} statement{joint}; keeping the best-looking row after reading them is "
             "neither. The rate is the share of the labelled decisions the threshold covers; "
             "the out-of-sample check chooses the threshold on half of them (split by distinct "
@@ -171,7 +191,7 @@ def certificate_lines(d: dict) -> list[str]:
     several = len(c["questions"]) > 1
     for q in c["questions"]:
         if several:
-            lines += [f"### `{q['question']}`", ""]
+            lines += [f"### `{inline(q['question'])}`", ""]
         p = _primary(q)
         lines += [certificate_headline(p, c["unit"]), ""]
         for extra in (per_text_line(p, q), worst_segment_line(p, c)):
@@ -236,7 +256,8 @@ def certificate_summary(d: dict) -> str:
     for q in c["questions"]:
         p = _primary(q)
         name = f"[{q['question']}]" if len(c["questions"]) > 1 else ""
-        parts.append(f"safe_automation{name}@{_pct_of(p['target_risk'])}={p['coverage']:.1%}")
+        rate = "none" if p["threshold"] is None else f"{p['coverage']:.1%}"
+        parts.append(f"safe_automation{name}@{_pct_of(p['target_risk'])}={rate}")
     return " ".join(parts)
 
 
@@ -574,11 +595,18 @@ def check_safe_rate(certificate: dict, minimums: list[tuple[float, float]]) -> l
             t = next((t for t in q["targets"] if math.isclose(t["target_risk"], risk)), None)
             if t is None:
                 raise ValueError(f"the certificate has no target {risk:g}")
-            if t["coverage"] < share:
+            if not t["n"]:
+                have = Fraction(0)
+            else:
+                have = Fraction(t["automated"], t["n"])     # exact, never the rounded JSON
+            if have < Fraction(str(share)):
                 why = f" ({t['reason']})" if t.get("reason") else ""
+                digits = next((d for d in range(1, 7)
+                               if f"{float(have):.{d}%}" != f"{share:.{d}%}"), 6)
                 failures.append(
-                    f"Safe automation rate at ≤ {_pct_of(risk)} error: {t['coverage']:.1%} of "
-                    f"`{q['question']}` decisions (minimum {share:.1%}){why}.")
+                    f"Safe automation rate at ≤ {_pct_of(risk)} error: "
+                    f"{float(have):.{digits}%} of `{inline(q['question'])}` decisions (minimum "
+                    f"{share:.{digits}%}){why}.")
     return failures
 
 

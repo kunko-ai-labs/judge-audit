@@ -276,8 +276,8 @@ def certify_threshold(confidences: Sequence[float], correct: Sequence[bool],
     }
     if r["threshold"] is None:
         if n < r["min_covered"]:
-            out["reason"] = (f"needs {r['min_covered']} units with a confidence to certify "
-                             f"{target_risk * 100:g}%; has {n}")
+            out["reason"] = (f"needs {r['min_covered']} units with a confidence to bound the "
+                             f"error at {target_risk * 100:g}%; has {n}")
         else:
             rows = errs = 0
             for _, m, e in _groups_desc(confidences, correct):

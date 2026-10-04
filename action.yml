@@ -162,7 +162,7 @@ runs:
             read -r -a mins <<< "${MIN_SAFE_RATE//[$'\n\r']/ }"
             for m in ${mins[@]+"${mins[@]}"}; do
               if ! [[ "$m" =~ ^0?\.[0-9]+:(0?\.[0-9]+|0|1|1\.0+)$ ]]; then
-                echo "::error::min-safe-rate expects RISK:SHARE such as 0.05:0.40 (got '$m')"
+                echo "::error::min-safe-rate expects RISK:SHARE such as 0.05:0.40 (got '${m//[^[:alnum:]:.]/?}')"
                 exit 2
               fi
               cmd+=(--min-safe-rate "$m")
@@ -174,11 +174,11 @@ runs:
 
         # target and segments: strict patterns, then one argv item each, in both modes
         if ! [[ "$TARGET" =~ ^0?\.[0-9]+$ ]]; then
-          echo "::error::target expects an error rate such as 0.05 (got '$TARGET')"
+          echo "::error::target expects an error rate such as 0.05 (got '${TARGET//[^[:alnum:].]/?}')"
           exit 2
         fi
         if ! [[ "$SEGMENT_BY" =~ ^(label|none|meta\.[A-Za-z0-9_]+)$ ]]; then
-          echo "::error::segment-by expects label, none or meta.FIELD (got '$SEGMENT_BY')"
+          echo "::error::segment-by expects label, none or meta.FIELD (got '${SEGMENT_BY//[^[:alnum:]._]/?}')"
           exit 2
         fi
         cmd+=(--target "$TARGET" --segment-by "$SEGMENT_BY")
@@ -196,7 +196,7 @@ runs:
 
         # exit 2 = usage/configuration error, not a verdict: fail loudly and now.
         if [ "$code" -eq 2 ]; then exit 2; fi
-        # exit 1 = drift detected: recorded, enforced in the final step.
+        # exit 1 = drift detected or a min-safe-rate minimum missed: recorded, enforced in the final step.
         if [ "$code" -ne 0 ]; then echo "JA_DRIFT=1" >> "$GITHUB_ENV"; fi
 
     - name: Read outputs

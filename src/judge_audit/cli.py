@@ -9,6 +9,7 @@ import contextlib
 import datetime
 import json
 import os
+import re
 import sys
 import tempfile
 from typing import NoReturn
@@ -204,8 +205,8 @@ def main(argv: list[str] | None = None) -> None:
     if not 0 < args.target < 1:
         _die(f"--target must be between 0 and 1, got {args.target}")
     segment_by = None if args.segment_by == "none" else args.segment_by
-    if segment_by not in (None, "label") and not (
-            segment_by.startswith("meta.") and len(segment_by) > 5):
+    if segment_by not in (None, "label") and not re.fullmatch(r"meta\.[A-Za-z0-9_]+",
+                                                              segment_by):
         _die(f"--segment-by expects label, meta.FIELD or none, got {args.segment_by!r}")
     result = _audit(judge, rows, args, dataset_meta)
     done = result.completeness
@@ -261,7 +262,7 @@ def main(argv: list[str] | None = None) -> None:
             _die(str(e))
         except (OSError, ValueError, KeyError) as e:
             _die(f"cannot use baseline {args.baseline}: {e}")
-        failures += check_safe_rate(result.certificate, minimums)
+        gate_failures = check_safe_rate(result.certificate, minimums)
         stale = _stale_baseline(args.baseline, result.certificate)
         for note in stale:
             print(f"{lead}note: {note}", file=sys.stderr)
@@ -274,7 +275,8 @@ def main(argv: list[str] | None = None) -> None:
             _write_json(args.json, result.to_dict())
         if args.drift:
             _write_json(args.drift,
-                        {"ok": not failures, "failures": failures, "ece": result.ece,
+                        {"ok": not failures and not gate_failures, "failures": failures,
+                         "gate_failures": gate_failures, "ece": result.ece,
                          "accuracy": result.accuracy, "n": result.n,
                          "baseline": args.baseline,
                          "max_ece_drift": args.max_ece_drift,
@@ -282,10 +284,16 @@ def main(argv: list[str] | None = None) -> None:
                          "min_safe_rate": [{"risk": r, "share": sh} for r, sh in minimums],
                          "baseline_rate_stale": stale,
                          "certificate": result.certificate})
-        if failures:
-            print(f"{lead}DRIFT DETECTED:", file=sys.stderr)
-            for fl in failures:
-                print(f"  - {fl}", file=sys.stderr)
+        if failures or gate_failures:
+            if failures:
+                print(f"{lead}DRIFT DETECTED:", file=sys.stderr)
+                for fl in failures:
+                    print(f"  - {fl}", file=sys.stderr)
+            if gate_failures:
+                print(f"{lead}BELOW THE MINIMUM (no drift involved; the gate you set):",
+                      file=sys.stderr)
+                for fl in gate_failures:
+                    print(f"  - {fl}", file=sys.stderr)
             sys.exit(1)
         ece = fmt4(result.ece)
         print(f"{lead}OK: no drift (ece={ece}, accuracy={result.accuracy:.1%}, "

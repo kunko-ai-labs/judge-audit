@@ -393,7 +393,7 @@ def test_the_cli_line_and_the_check_gate(labels_path, tmp_path):
     r = _cli("run", str(labels_path), "--judge", "simulated", "--json", "base.json",
              cwd=tmp_path)
     assert r.returncode == 0, r.stderr
-    assert "safe_automation@5%=0.0%" in r.stdout
+    assert "safe_automation@5%=none" in r.stdout
     base = ["check", str(labels_path), "--judge", "simulated", "--baseline", "base.json"]
     ok = _cli(*base, "--min-safe-rate", "0.10:0", "--drift", "d.json", cwd=tmp_path)
     assert ok.returncode == 0, ok.stderr
@@ -461,3 +461,112 @@ def test_the_pr_comment_escapes_what_the_certificate_quotes():
     md = _pr_comment().build(res)
     assert "**forged**" not in md and "\\*\\*forged\\*\\*" in md
     assert "![i](" not in md
+
+
+# --- the reviewer's findings on #123: exact gate, "none", escaping, wording ---------------
+
+
+def _cert_with(**target):
+    """A hand-written certificate with one target, for the gate and the summary."""
+    t = {"target_risk": 0.05, "primary": True, "threshold": 0.5, "coverage": 0.4,
+         "automated": 40, "n": 100, "errors": 0, "reason": None, **target}
+    return {"questions": [{"question": "q", "targets": [t]}]}
+
+
+def test_the_gate_compares_the_exact_share_not_the_rounded_one():
+    """39,998 of 100,000 rounds to 0.4 in the JSON, and it is below a minimum of 40 %."""
+    cert = _cert_with(automated=39_998, n=100_000, coverage=0.4)
+    (msg,) = check_safe_rate(cert, [(0.05, 0.40)])
+    assert "39.998%" in msg and "minimum 40.000%" in msg       # never "40.0% (minimum 40.0%)"
+    assert check_safe_rate(_cert_with(automated=40_000, n=100_000), [(0.05, 0.40)]) == []
+    assert check_safe_rate(_cert_with(automated=40, n=100, coverage=0.4), [(0.05, 0.40)]) == []
+
+
+def test_the_summary_line_says_none_when_no_threshold_passes():
+    from judge_audit.report import certificate_summary
+    none = _cert_with(threshold=None, automated=0, coverage=0.0, reason="needs 59")
+    assert certificate_summary({"certificate": none}) == "safe_automation@5%=none"
+    assert certificate_summary({"certificate": _cert_with()}) == "safe_automation@5%=40.0%"
+
+
+def test_the_reason_says_what_is_missing_without_the_word_certify():
+    r = certify_threshold(desc(200), [True] * 200, 0.01, start_errors=2)
+    assert "to bound the error at 1%" in r["reason"] and "certify" not in r["reason"]
+    t = next(t for t in automation_certificate(
+        [rec(i, c, True) for i, c in enumerate(desc(200))])["questions"][0]["targets"]
+        if t["target_risk"] == 0.01)
+    assert "to bound the error" in t["reason"] and "certify" not in t["reason"]
+
+
+def test_a_quoted_name_cannot_open_a_heading_or_a_row_in_the_report():
+    hostile = "x`\n# Injected heading\n| forged | row |"
+    r = _result(question=hostile)
+    r.certificate["questions"].append(dict(r.certificate["questions"][0]))
+    r.certificate["segment_by"] = "meta.a\n## Forged"
+    t = r.certificate["questions"][0]["targets"][2]
+    t["worst_segment"] = {"segment": hostile, "errors": 1, "automated": 40, "rate": 0.025,
+                          "risk_upper": 0.1}
+    t["segments"] = [t["worst_segment"]]
+    r.certificate["scope"]["judge"] = hostile
+    md = render_markdown(r)
+    assert not [ln for ln in md.splitlines() if ln.startswith(("# Injected", "## Forged"))]
+    quoted = [ln for ln in md.splitlines() if "forged" in ln]
+    assert quoted                                   # the name is still shown, on one line
+    assert not [ln for ln in quoted if ln.startswith(("| forged", "# ", "## ", "- "))]
+    assert all(ln.startswith("### `x'") for ln in quoted if ln.startswith("#"))  # our own
+    assert "\n# Injected" not in md and "\n| forged" not in md
+
+
+def test_the_cli_refuses_a_segment_field_that_is_not_a_plain_name(labels_path, tmp_path):
+    base = ["run", str(labels_path), "--judge", "simulated"]
+    for bad in ("meta.a b", "meta.x\n## y", "meta.a`b"):
+        assert _cli(*base, "--segment-by", bad, cwd=tmp_path).returncode == 2, bad
+    assert _cli(*base, "--segment-by", "meta.lang_2", cwd=tmp_path).returncode == 0
+
+
+def test_a_missed_minimum_is_not_called_drift(labels_path, tmp_path):
+    _cli("run", str(labels_path), "--judge", "simulated", "--json", "base.json", cwd=tmp_path)
+    r = _cli("check", str(labels_path), "--judge", "simulated", "--baseline", "base.json",
+             "--min-safe-rate", "0.10:0.5", "--drift", "d.json", cwd=tmp_path)
+    assert r.returncode == 1 and "DRIFT DETECTED" not in r.stderr
+    assert "BELOW THE MINIMUM" in r.stderr
+    v = json.loads((tmp_path / "d.json").read_text())
+    assert v["ok"] is False and v["failures"] == [] and len(v["gate_failures"]) == 1
+    md = _pr_comment().build(_result().to_dict(), v)
+    assert "Drift detected" not in md and "Below the minimum" in md
+
+
+def test_the_per_text_line_is_not_sold_as_always_the_cautious_reading():
+    """One text, five copies, all wrong, at five confidences, among 200 right texts: 5
+    errors as decisions, 1 as a text. Per text is the smaller count here."""
+    recs = [rec(i, 0.5 - i / 100, False) for i in range(5)] + [
+        rec(5 + i, c, True) for i, c in enumerate(desc(300))]
+    groups = ["same"] * 5 + [f"t{i}" for i in range(300)]
+    q = automation_certificate(recs, groups)["questions"][0]
+    t10 = next(t for t in q["targets"] if t["target_risk"] == 0.10)
+    assert t10["errors"] == 5 and t10["per_text"]["errors"] == 1
+    from judge_audit.report import per_text_line
+    line = per_text_line(t10, q)
+    assert "not always the more cautious reading" in line
+    assert "conservative" not in line
+
+
+def test_errors_in_segments_too_small_to_rank_are_counted_not_hidden():
+    recs = [{**rec(i, c, True), "segment": "big"} for i, c in enumerate(desc(300))]
+    recs += [{**rec(300 + k, 0.999 - k / 1000, k < 3), "segment": "rare"} for k in range(5)]
+    cert = automation_certificate(recs, None, segment_by="label")
+    t = next(t for t in cert["questions"][0]["targets"] if t["target_risk"] == 0.10)
+    assert t["worst_segment"]["segment"] == "big" and t["worst_segment"]["errors"] == 0
+    assert t["errors_in_small_segments"] == 2 and t["segments_too_small"] == 1
+    from judge_audit.report import worst_segment_line
+    line = worst_segment_line(t, cert)
+    assert "2 of the 2 errors above the threshold sit in segments too small to rank" in line
+
+
+def test_the_note_does_not_claim_the_target_was_fixed_before_a_regenerated_run():
+    from judge_audit.report import certificate_note
+    assert "not fixed in advance" not in certificate_note(_result().certificate)
+    old = {"recomputed_utc": "2026-09-19T09:09:12+00:00", "judge": {"name": "demo"}}
+    note = certificate_note(_result(run=old).certificate)
+    assert "was set before the run" not in note
+    assert "regenerated from an archived checkpoint" in note and "not fixed in advance" in note

@@ -205,7 +205,8 @@
       "dataset": "docs/runs/jury/router-bare/gemini-3-flash.r2.input.jsonl",
       "dataset_sha256": "c651876c4619cdfb50e39f3c791bc7af2f0d4a9f50635402e5a2e2160c0be07a",
       "measured_utc": "2026-09-21T18:54:18+00:00",
-      "review_by": "2026-12-20"
+      "review_by": "2026-12-20",
+      "regenerated": false
     },
     "disclaimer": "Statistical evidence on the labelled decisions, not a conformity assessment or a certification by a notified body.",
     "questions": [
@@ -226,7 +227,7 @@
             "errors": 0,
             "risk_upper": null,
             "min_units": 628,
-            "reason": "needs 628 decisions with a confidence to certify 1%; has 120",
+            "reason": "needs 628 decisions with a confidence to bound the error at 1%; has 120",
             "out_of_sample": {
               "n": 120,
               "seed": 0,
@@ -247,6 +248,7 @@
             "segments": [],
             "worst_segment": null,
             "segments_too_small": 0,
+            "errors_in_small_segments": 0,
             "per_text": {
               "n": 61,
               "automated": 0,
@@ -254,7 +256,7 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "needs 628 texts with a confidence to certify 1%; has 61"
+              "reason": "needs 628 texts with a confidence to bound the error at 1%; has 61"
             }
           },
           {
@@ -268,7 +270,7 @@
             "errors": 0,
             "risk_upper": null,
             "min_units": 313,
-            "reason": "needs 313 decisions with a confidence to certify 2%; has 120",
+            "reason": "needs 313 decisions with a confidence to bound the error at 2%; has 120",
             "out_of_sample": {
               "n": 120,
               "seed": 0,
@@ -289,6 +291,7 @@
             "segments": [],
             "worst_segment": null,
             "segments_too_small": 0,
+            "errors_in_small_segments": 0,
             "per_text": {
               "n": 61,
               "automated": 0,
@@ -296,7 +299,7 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "needs 313 texts with a confidence to certify 2%; has 61"
+              "reason": "needs 313 texts with a confidence to bound the error at 2%; has 61"
             }
           },
           {
@@ -310,7 +313,7 @@
             "errors": 0,
             "risk_upper": null,
             "min_units": 124,
-            "reason": "needs 124 decisions with a confidence to certify 5%; has 120",
+            "reason": "needs 124 decisions with a confidence to bound the error at 5%; has 120",
             "out_of_sample": {
               "n": 120,
               "seed": 0,
@@ -331,6 +334,7 @@
             "segments": [],
             "worst_segment": null,
             "segments_too_small": 0,
+            "errors_in_small_segments": 0,
             "per_text": {
               "n": 61,
               "automated": 0,
@@ -338,7 +342,7 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "needs 124 texts with a confidence to certify 5%; has 61"
+              "reason": "needs 124 texts with a confidence to bound the error at 5%; has 61"
             }
           },
           {
@@ -373,6 +377,7 @@
             "segments": [],
             "worst_segment": null,
             "segments_too_small": 0,
+            "errors_in_small_segments": 0,
             "per_text": {
               "n": 61,
               "automated": 0,
@@ -388,7 +393,7 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-04T07:03:39+00:00",
+    "utc": "2026-10-04T09:30:59+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/jury/router-bare/gemini-3-flash.r2.ckpt.jsonl",

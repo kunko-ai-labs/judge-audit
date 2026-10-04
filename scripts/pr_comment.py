@@ -131,7 +131,10 @@ def _certificate(result: dict) -> list[str]:
                 lines += [f"Worst segment above that threshold: `{_md(w.get('segment'))}`, "
                           f"{int(w['errors'])} of {int(w['automated'])} automated wrong "
                           f"({float(w['rate']):.1%}; its own error bound "
-                          f"{float(w['risk_upper']):.1%}).", ""]
+                          f"{float(w['risk_upper']):.1%})."
+                          + (f" {int(p['errors_in_small_segments'])} of the "
+                             f"{int(p['errors'])} errors sit in segments too small to rank."
+                             if p.get("errors_in_small_segments") else ""), ""]
         lines += ["| at most this error | in plain words | safe automation rate | "
                   "deploy at confidence ≥ | checked out of sample |",
                   "|---|---|---|---|---|"]
@@ -196,8 +199,12 @@ def build(result: dict, drift: dict | None = None, artifact_url: str = "",
                       f"(ECE drift ≤ {_md(drift.get('max_ece_drift'))}, "
                       f"accuracy drop ≤ {_md(drift.get('max_acc_drop'))}{mins})."]
         else:
-            lines += [f"❌ **Drift detected** vs `{base}`:", ""]
-            lines += [f"- {_md(f)}" for f in drift.get("failures", [])]
+            if drift.get("failures"):
+                lines += [f"❌ **Drift detected** vs `{base}`:", ""]
+                lines += [f"- {_md(f)}" for f in drift["failures"]]
+            if drift.get("gate_failures"):
+                lines += ["", "❌ **Below the minimum you set** (no drift involved):", ""]
+                lines += [f"- {_md(f)}" for f in drift["gate_failures"]]
         for note in drift.get("baseline_rate_stale") or []:
             lines += ["", f"⚠️ {_md(note)}"]
         lines.append("")

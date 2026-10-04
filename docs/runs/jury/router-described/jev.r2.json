@@ -240,7 +240,8 @@
       "dataset": "docs/runs/jury/router-described/jev.r2.input.jsonl",
       "dataset_sha256": "399ce7c0220acea6903a8d5907e2717d1f241757f6443b179477583cf6742e7e",
       "measured_utc": "2026-09-21T19:06:02+00:00",
-      "review_by": "2026-12-20"
+      "review_by": "2026-12-20",
+      "regenerated": false
     },
     "disclaimer": "Statistical evidence on the labelled decisions, not a conformity assessment or a certification by a notified body.",
     "questions": [
@@ -261,7 +262,7 @@
             "errors": 0,
             "risk_upper": null,
             "min_units": 628,
-            "reason": "needs 628 decisions with a confidence to certify 1%; has 120",
+            "reason": "needs 628 decisions with a confidence to bound the error at 1%; has 120",
             "out_of_sample": {
               "n": 120,
               "seed": 0,
@@ -282,6 +283,7 @@
             "segments": [],
             "worst_segment": null,
             "segments_too_small": 0,
+            "errors_in_small_segments": 0,
             "per_text": {
               "n": 61,
               "automated": 0,
@@ -289,7 +291,7 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "needs 628 texts with a confidence to certify 1%; has 61"
+              "reason": "needs 628 texts with a confidence to bound the error at 1%; has 61"
             }
           },
           {
@@ -303,7 +305,7 @@
             "errors": 0,
             "risk_upper": null,
             "min_units": 313,
-            "reason": "needs 313 decisions with a confidence to certify 2%; has 120",
+            "reason": "needs 313 decisions with a confidence to bound the error at 2%; has 120",
             "out_of_sample": {
               "n": 120,
               "seed": 0,
@@ -324,6 +326,7 @@
             "segments": [],
             "worst_segment": null,
             "segments_too_small": 0,
+            "errors_in_small_segments": 0,
             "per_text": {
               "n": 61,
               "automated": 0,
@@ -331,7 +334,7 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "needs 313 texts with a confidence to certify 2%; has 61"
+              "reason": "needs 313 texts with a confidence to bound the error at 2%; has 61"
             }
           },
           {
@@ -345,7 +348,7 @@
             "errors": 0,
             "risk_upper": null,
             "min_units": 124,
-            "reason": "needs 124 decisions with a confidence to certify 5%; has 120",
+            "reason": "needs 124 decisions with a confidence to bound the error at 5%; has 120",
             "out_of_sample": {
               "n": 120,
               "seed": 0,
@@ -366,6 +369,7 @@
             "segments": [],
             "worst_segment": null,
             "segments_too_small": 0,
+            "errors_in_small_segments": 0,
             "per_text": {
               "n": 61,
               "automated": 0,
@@ -373,7 +377,7 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "needs 124 texts with a confidence to certify 5%; has 61"
+              "reason": "needs 124 texts with a confidence to bound the error at 5%; has 61"
             }
           },
           {
@@ -429,6 +433,7 @@
               "risk_upper": 0.072158
             },
             "segments_too_small": 0,
+            "errors_in_small_segments": 0,
             "per_text": {
               "n": 61,
               "automated": 61,
@@ -444,7 +449,7 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-04T07:03:39+00:00",
+    "utc": "2026-10-04T09:30:59+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/jury/router-described/jev.r2.ckpt.jsonl",
