@@ -37,48 +37,133 @@ def _pct_of(x: float) -> str:
 
 
 def threshold_text(t: float) -> str:
-    """A deploy threshold as it must be applied: the exact value when it is short, else
-    six significant digits and `…` (the exact value is in the result JSON)."""
+    """A deploy threshold as it can be applied: the exact value when it is short, else
+    rounded **up** to six significant digits and marked `↑` (deploying at the printed value
+    then automates no decision the bound did not cover; the exact value is in the JSON)."""
+    import decimal
+
     exact = repr(float(t))
-    return exact if len(exact) <= 8 else f"{t:.6g}…"
+    if len(exact) <= 8:
+        return exact
+    d = decimal.Decimal(exact)
+    q = decimal.Decimal(1).scaleb(d.adjusted() - 5)            # six significant digits
+    up = d.quantize(q, rounding=decimal.ROUND_CEILING)
+    return f"{up.normalize():f}↑"
 
 
 def certificate_cells(t: dict, unit: str) -> tuple[str, str, str]:
-    """(automate, deploy threshold, out-of-sample) for one target of a certificate."""
+    """(safe automation rate, deploy threshold, out-of-sample) for one target."""
     if t["threshold"] is None:
-        what = t.get("reason") or "nothing certified"
-        return f"not certified: {what}", "—", "—"
-    bound = f", bound {t['risk_upper']:.1%}" if t.get("risk_upper") is not None else ""
-    automate = (f"{t['coverage']:.1%} ({t['automated']:,} of {t['n']:,} {unit}s; "
-                f"{t['errors']} wrong{bound})")
+        return f"none: {t.get('reason') or 'no threshold passes'}", "—", "—"
+    bound = f", error bound {t['risk_upper']:.1%}" if t.get("risk_upper") is not None else ""
+    rate = (f"{t['coverage']:.1%} ({t['automated']:,} of {t['n']:,} {unit}s; "
+            f"{t['errors']} wrong{bound})")
     o = t["out_of_sample"]
     if o.get("reason") and not o["automated"]:
-        return automate, threshold_text(t["threshold"]), f"not checkable: {o['reason']}"
+        return rate, threshold_text(t["threshold"]), f"not checkable: {o['reason']}"
+    lo, hi = o.get("spread_coverage") or (None, None)
+    spread = (f" (seeds {o['spread_seeds'][0]}–{o['spread_seeds'][1]}: {lo:.1%}–{hi:.1%})"
+              if lo is not None and o.get("spread_seeds") else "")
     oos = (f"{o['coverage']:.1%} automated"
-           + (f", {o['risk']:.1%} wrong" if o.get("risk") is not None else ""))
-    return automate, threshold_text(t["threshold"]), oos
+           + (f", {o['risk']:.1%} wrong" if o.get("risk") is not None else "") + spread)
+    return rate, threshold_text(t["threshold"]), oos
+
+
+def certificate_headline(t: dict, unit: str) -> str:
+    """The primary target in one sentence (markdown bold on the number)."""
+    head = f"Safe automation rate at ≤ {_pct_of(t['target_risk'])} error"
+    if t["threshold"] is None:
+        return f"**{head}: none** — {t.get('reason') or 'no threshold passes'}."
+    rate, thr, oos = certificate_cells(t, unit)
+    return (f"**{head}: {t['coverage']:.1%}** of the labelled {unit}s "
+            f"({t['automated']:,} of {t['n']:,}; {t['errors']} wrong, error bound "
+            f"{t['risk_upper']:.1%}), deploying at confidence ≥ {thr}. Checked out of "
+            f"sample, with the threshold chosen on half the data: {oos}.")
+
+
+def per_text_line(t: dict, q: dict) -> str:
+    """When the labelled set repeats texts: the rate counting each text once."""
+    p = t.get("per_text")
+    if not p:
+        return ""
+    head = (f"This labelled set repeats texts ({q['n']:,} decisions, {q['texts']:,} distinct "
+            "texts). The bound above treats the decisions as a random sample of your "
+            "traffic, repeats included as they occur there. If the repeats were copied in "
+            "instead, count each text once")
+    if p["threshold"] is None:
+        return f"{head}: at this target, none ({p.get('reason') or 'no threshold passes'})."
+    return (f"{head}: {p['coverage']:.1%} of the texts ({p['automated']:,} of {p['n']:,}; "
+            f"{p['errors']} counted wrong, error bound {p['risk_upper']:.1%}), at confidence "
+            f"≥ {threshold_text(p['threshold'])}.")
+
+
+def worst_segment_line(t: dict, c: dict) -> str:
+    """The worst segment above the primary threshold, or why none is ranked."""
+    if t["threshold"] is None or not t.get("segments"):
+        return ""
+    by = "true label" if c.get("segment_by") == "label" else f"`{c.get('segment_by')}`"
+    small = t.get("segments_too_small", 0)
+    tail = (f" {small} segment{'s' if small != 1 else ''} with fewer than "
+            f"{c['min_segment']} automated {c['unit']}s {'are' if small != 1 else 'is'} not "
+            "ranked." if small else "")
+    w = t.get("worst_segment")
+    if w is None:
+        return (f"Segments ({by}): none has {c['min_segment']} automated {c['unit']}s, so "
+                f"none is ranked.{tail}")
+    return (f"Worst segment above that threshold ({by}): `{w['segment']}`, {w['errors']} of "
+            f"{w['automated']} automated {c['unit']}s wrong ({w['rate']:.1%}; its own error "
+            f"bound {w['risk_upper']:.1%}). The overall bound does not cover a segment.{tail}")
+
+
+def scope_line(c: dict) -> str:
+    """What the rate is valid for, and when to review it."""
+    s = c.get("scope") or {}
+    parts = [f"judge `{s['judge']}`" if s.get("judge") else None,
+             f"model `{s['model']}`" if s.get("model") else None,
+             f"revision `{str(s['revision'])[:12]}`" if s.get("revision") else None,
+             f"prompt `{str(s['prompt_sha256'])[:8]}…`" if s.get("prompt_sha256") else None,
+             f"served `{', '.join(s['served'])}`" if s.get("served") else None,
+             f"data `{s['dataset']}`" if s.get("dataset") else None,
+             (f"sha256 `{str(s['dataset_sha256'])[:12]}…`" if s.get("dataset_sha256")
+              else None),
+             f"measured {s['measured_utc']}" if s.get("measured_utc") else None]
+    what = " · ".join(p for p in parts if p) or "this run"
+    review = (f"Review by {s['review_by']}, and measure again as soon as any of these "
+              "changes." if s.get("review_by") else
+              "Measure again as soon as any of these changes.")
+    return f"Valid only for: {what}. {review}"
 
 
 def certificate_note(c: dict) -> str:
     level = 1 - c["delta"]
+    k = len(c.get("targets") or [])
+    joint = (f"; the {k} rows hold together with probability at least "
+             f"{max(0.0, 1 - k * c['delta']):.0%}" if k > 1 else "")
     return (f"With {level:.0%} confidence, the error rate among decisions at or above the "
             "threshold is at most the target — on traffic drawn like these labelled "
-            f"{c['unit']}s (same mix, same judge version), with the labels taken as right: a "
-            "label error counts as a judge error. Each row is its own "
-            f"{level:.0%} statement; choose the target before reading the table. \"Automate\" "
-            "is the share of the labelled "
-            f"{c['unit']}s the threshold covers; \"out of sample\" is the same procedure with "
-            f"the threshold chosen on half of them and applied to the other half (seed "
-            f"{c['seed']}), the estimate to plan with. One unit per distinct {c['unit']}; a "
-            "decision without a confidence is never automated. Exact one-sided binomial "
-            "bound, fixed-sequence walk from the most confident down, starting at the cut "
-            f"that certifies with {c['start_errors']} errors (docs/judges.md § The automation "
-            "certificate).")
+            "decisions (a random sample of it, each decision an independent draw), judged by "
+            "the judge and prompt above, with the labels taken as right. Label errors cut "
+            "both ways: a wrong label the judge disagrees with counts as a judge error, one "
+            "it agrees with hides an error. The primary target was set before the run "
+            f"(`--target`, here {_pct_of(c['primary_target'])}); every row is its own "
+            f"{level:.0%} statement{joint}; keeping the best-looking row after reading them is "
+            "neither. The rate is the share of the labelled decisions the threshold covers; "
+            "the out-of-sample check chooses the threshold on half of them (split by distinct "
+            f"text, seed {c['seed']}, spread over other seeds in brackets) and applies it to "
+            "the other half, a conservative check rather than a forecast. A decision without "
+            "a confidence is never automated. Exact one-sided binomial bound, fixed-sequence "
+            "walk from the most confident down, starting at the cut that bounds the error "
+            f"with {c['start_errors']} errors (docs/judges.md § The safe automation rate). "
+            f"{c.get('disclaimer', '')}").rstrip()
+
+
+def _primary(q: dict) -> dict:
+    return next((t for t in q["targets"] if t.get("primary")), q["targets"][0])
 
 
 def certificate_lines(d: dict) -> list[str]:
-    """The "Can I automate this?" tables, one per question; [] for a result without a
-    certificate (JSON written before it existed)."""
+    """The "Can I automate this?" section; [] for a result without a certificate (JSON
+    written before it existed)."""
     c = d.get("certificate")
     if not c or not c.get("questions"):
         return []
@@ -86,16 +171,22 @@ def certificate_lines(d: dict) -> list[str]:
     several = len(c["questions"]) > 1
     for q in c["questions"]:
         if several:
-            lines += [f"**`{q['question']}`**", ""]
-        lines += ["| at most this error | in plain words | automate (certified) | "
+            lines += [f"### `{q['question']}`", ""]
+        p = _primary(q)
+        lines += [certificate_headline(p, c["unit"]), ""]
+        for extra in (per_text_line(p, q), worst_segment_line(p, c)):
+            if extra:
+                lines += [extra, ""]
+        lines += ["| at most this error | in plain words | safe automation rate | "
                   "deploy at confidence ≥ | checked out of sample |",
                   "|---|---|---|---|---|"]
         for t in q["targets"]:
-            automate, thr, oos = certificate_cells(t, c["unit"])
-            lines.append(f"| {_pct_of(t['target_risk'])} | {t['plain'].removeprefix('at most ')} | "
-                         f"{automate} | {thr} | {oos} |")
+            rate, thr, oos = certificate_cells(t, c["unit"])
+            mark = " (primary)" if t.get("primary") else ""
+            lines.append(f"| {_pct_of(t['target_risk'])}{mark} | {t['plain']} | {rate} | "
+                         f"{thr} | {oos} |")
         lines.append("")
-    lines.append(f"_{certificate_note(c)}_")
+    lines += [f"_{scope_line(c)}_", "", f"_{certificate_note(c)}_"]
     return lines
 
 
@@ -104,33 +195,48 @@ def certificate_html(d: dict) -> str:
     c = d.get("certificate")
     if not c or not c.get("questions"):
         return ""
+
+    def text(s: str) -> str:            # our markdown → escaped HTML (bold and code only)
+        out = html.escape(s)
+        while out.count("**") >= 2:
+            out = out.replace("**", "<b>", 1).replace("**", "</b>", 1)
+        while out.count("`") >= 2:
+            out = out.replace("`", "<code>", 1).replace("`", "</code>", 1)
+        return out
+
     out = []
     for q in c["questions"]:
         if len(c["questions"]) > 1:
             out.append(f"<h3><code>{html.escape(str(q['question']))}</code></h3>")
+        p = _primary(q)
+        out.append(f"<p>{text(certificate_headline(p, c['unit']))}</p>")
+        for extra in (per_text_line(p, q), worst_segment_line(p, c)):
+            if extra:
+                out.append(f"<p>{text(extra)}</p>")
         rows = "".join(
             "<tr>" + "".join(f"<td>{html.escape(x)}</td>" for x in (
-                _pct_of(t["target_risk"]), t["plain"].removeprefix("at most "),
-                *certificate_cells(t, c["unit"]))) + "</tr>"
+                _pct_of(t["target_risk"]) + (" (primary)" if t.get("primary") else ""),
+                t["plain"], *certificate_cells(t, c["unit"]))) + "</tr>"
             for t in q["targets"])
         out.append("<table><tr><th>at most this error</th><th>in plain words</th>"
-                   "<th>automate (certified)</th><th>deploy at confidence ≥</th>"
+                   "<th>safe automation rate</th><th>deploy at confidence ≥</th>"
                    f"<th>checked out of sample</th></tr>{rows}</table>")
-    out.append(f'<p class="prov">{html.escape(certificate_note(c))}</p>')
+    out.append(f'<p class="prov">{text(scope_line(c))}</p>')
+    out.append(f'<p class="prov">{text(certificate_note(c))}</p>')
     return "\n".join(out)
 
 
 def certificate_summary(d: dict) -> str:
-    """`certified=1%:0.0%,5%:41.0%` for the CLI line (per question when several)."""
+    """`safe_automation@5%=41.0%` for the CLI line: the primary target, per question when
+    several."""
     c = d.get("certificate")
     if not c or not c.get("questions"):
         return ""
     parts = []
     for q in c["questions"]:
-        body = ",".join(f"{_pct_of(t['target_risk'])}:{t['coverage']:.1%}"
-                        for t in q["targets"])
+        p = _primary(q)
         name = f"[{q['question']}]" if len(c["questions"]) > 1 else ""
-        parts.append(f"certified{name}={body}")
+        parts.append(f"safe_automation{name}@{_pct_of(p['target_risk'])}={p['coverage']:.1%}")
     return " ".join(parts)
 
 
@@ -444,24 +550,24 @@ cost {fmt_cost(d.get('total_cost_usd'), ("<b>", "</b>"))} · p50 <b>{d['p50_late
 """
 
 
-def parse_min_coverage(spec: str) -> tuple[float, float]:
-    """`0.05:0.40` → (0.05, 0.40): at a certified error of at most 5 %, at least 40 % of
-    the decisions must be automatable. Raises ValueError on anything else."""
+def parse_min_safe_rate(spec: str) -> tuple[float, float]:
+    """`0.05:0.40` → (0.05, 0.40): at an error of at most 5 %, the safe automation rate
+    must be at least 40 %. Raises ValueError on anything else."""
     risk_s, sep, share_s = spec.partition(":")
     try:
         risk, share = float(risk_s), float(share_s)
     except ValueError:
-        raise ValueError(f"--min-coverage expects RISK:SHARE such as 0.05:0.40, "
+        raise ValueError(f"--min-safe-rate expects RISK:SHARE such as 0.05:0.40, "
                          f"got {spec!r}") from None
     if not sep or not (0 < risk < 1 and math.isfinite(risk)) or not 0 <= share <= 1:
-        raise ValueError(f"--min-coverage expects 0 < RISK < 1 and 0 <= SHARE <= 1, "
+        raise ValueError(f"--min-safe-rate expects 0 < RISK < 1 and 0 <= SHARE <= 1, "
                          f"got {spec!r}")
     return risk, share
 
 
-def check_coverage(certificate: dict, minimums: list[tuple[float, float]]) -> list[str]:
-    """The certificate gate: one failure per question and minimum whose certified share
-    at that risk is below the minimum. Every risk must be in the certificate."""
+def check_safe_rate(certificate: dict, minimums: list[tuple[float, float]]) -> list[str]:
+    """The gate: one failure per question and minimum whose safe automation rate at that
+    risk is below the minimum. Every risk must be in the certificate."""
     failures = []
     for risk, share in minimums:
         for q in certificate.get("questions", []):
@@ -471,9 +577,8 @@ def check_coverage(certificate: dict, minimums: list[tuple[float, float]]) -> li
             if t["coverage"] < share:
                 why = f" ({t['reason']})" if t.get("reason") else ""
                 failures.append(
-                    f"At a certified error of at most {_pct_of(risk)}, the judge can automate "
-                    f"{t['coverage']:.1%} of `{q['question']}` decisions (minimum "
-                    f"{share:.1%}){why}.")
+                    f"Safe automation rate at ≤ {_pct_of(risk)} error: {t['coverage']:.1%} of "
+                    f"`{q['question']}` decisions (minimum {share:.1%}){why}.")
     return failures
 
 

@@ -217,7 +217,8 @@
     "seed": 0
   },
   "certificate": {
-    "unit": "text",
+    "name": "safe automation rate",
+    "unit": "decision",
     "delta": 0.05,
     "start_errors": 2,
     "seed": 0,
@@ -227,90 +228,215 @@
       0.05,
       0.1
     ],
+    "primary_target": 0.05,
+    "segment_by": "label",
+    "min_segment": 30,
+    "scope": {
+      "judge": "jev",
+      "model": "jev-latest",
+      "revision": null,
+      "prompt_sha256": null,
+      "served": null,
+      "dataset": "docs/runs/jury/router-described/jev.r2.input.jsonl",
+      "dataset_sha256": "399ce7c0220acea6903a8d5907e2717d1f241757f6443b179477583cf6742e7e",
+      "measured_utc": "2026-09-21T19:06:02+00:00",
+      "review_by": "2026-12-20"
+    },
+    "disclaimer": "Statistical evidence on the labelled decisions, not a conformity assessment or a certification by a notified body.",
     "questions": [
       {
         "question": "route",
-        "n": 61,
-        "scored": 61,
+        "n": 120,
+        "scored": 120,
+        "texts": 61,
         "targets": [
           {
             "target_risk": 0.01,
             "plain": "at most 1 in 100 automated decisions wrong",
+            "primary": false,
             "threshold": null,
-            "n": 61,
+            "n": 120,
             "automated": 0,
             "coverage": 0.0,
             "errors": 0,
             "risk_upper": null,
             "min_units": 628,
-            "reason": "needs 628 texts with a confidence to certify 1%; has 61",
+            "reason": "needs 628 decisions with a confidence to certify 1%; has 120",
             "out_of_sample": {
-              "n": 61,
+              "n": 120,
+              "seed": 0,
               "automated": 0,
               "errors": 0,
               "coverage": 0.0,
               "risk": null,
-              "reason": "a half holds at most 31 texts with a confidence; the target needs 628"
+              "spread_seeds": [
+                0,
+                9
+              ],
+              "spread_coverage": [
+                0.0,
+                0.0
+              ],
+              "reason": "a half holds at most 64 decisions with a confidence; the target needs 628"
+            },
+            "segments": [],
+            "worst_segment": null,
+            "segments_too_small": 0,
+            "per_text": {
+              "n": 61,
+              "automated": 0,
+              "errors": 0,
+              "coverage": 0.0,
+              "threshold": null,
+              "risk_upper": null,
+              "reason": "needs 628 texts with a confidence to certify 1%; has 61"
             }
           },
           {
             "target_risk": 0.02,
             "plain": "at most 1 in 50 automated decisions wrong",
+            "primary": false,
             "threshold": null,
-            "n": 61,
+            "n": 120,
             "automated": 0,
             "coverage": 0.0,
             "errors": 0,
             "risk_upper": null,
             "min_units": 313,
-            "reason": "needs 313 texts with a confidence to certify 2%; has 61",
+            "reason": "needs 313 decisions with a confidence to certify 2%; has 120",
             "out_of_sample": {
-              "n": 61,
+              "n": 120,
+              "seed": 0,
               "automated": 0,
               "errors": 0,
               "coverage": 0.0,
               "risk": null,
-              "reason": "a half holds at most 31 texts with a confidence; the target needs 313"
+              "spread_seeds": [
+                0,
+                9
+              ],
+              "spread_coverage": [
+                0.0,
+                0.0
+              ],
+              "reason": "a half holds at most 64 decisions with a confidence; the target needs 313"
+            },
+            "segments": [],
+            "worst_segment": null,
+            "segments_too_small": 0,
+            "per_text": {
+              "n": 61,
+              "automated": 0,
+              "errors": 0,
+              "coverage": 0.0,
+              "threshold": null,
+              "risk_upper": null,
+              "reason": "needs 313 texts with a confidence to certify 2%; has 61"
             }
           },
           {
             "target_risk": 0.05,
             "plain": "at most 1 in 20 automated decisions wrong",
+            "primary": true,
             "threshold": null,
-            "n": 61,
+            "n": 120,
             "automated": 0,
             "coverage": 0.0,
             "errors": 0,
             "risk_upper": null,
             "min_units": 124,
-            "reason": "needs 124 texts with a confidence to certify 5%; has 61",
+            "reason": "needs 124 decisions with a confidence to certify 5%; has 120",
             "out_of_sample": {
-              "n": 61,
+              "n": 120,
+              "seed": 0,
               "automated": 0,
               "errors": 0,
               "coverage": 0.0,
               "risk": null,
-              "reason": "a half holds at most 31 texts with a confidence; the target needs 124"
+              "spread_seeds": [
+                0,
+                9
+              ],
+              "spread_coverage": [
+                0.0,
+                0.0
+              ],
+              "reason": "a half holds at most 64 decisions with a confidence; the target needs 124"
+            },
+            "segments": [],
+            "worst_segment": null,
+            "segments_too_small": 0,
+            "per_text": {
+              "n": 61,
+              "automated": 0,
+              "errors": 0,
+              "coverage": 0.0,
+              "threshold": null,
+              "risk_upper": null,
+              "reason": "needs 124 texts with a confidence to certify 5%; has 61"
             }
           },
           {
             "target_risk": 0.1,
             "plain": "at most 1 in 10 automated decisions wrong",
+            "primary": false,
             "threshold": 0.63,
-            "n": 61,
-            "automated": 61,
+            "n": 120,
+            "automated": 120,
             "coverage": 1.0,
             "errors": 0,
-            "risk_upper": 0.04792395210660738,
+            "risk_upper": 0.024656,
             "min_units": 61,
             "reason": null,
             "out_of_sample": {
-              "n": 61,
-              "automated": 0,
+              "n": 120,
+              "seed": 0,
+              "automated": 56,
               "errors": 0,
-              "coverage": 0.0,
-              "risk": null,
-              "reason": "a half holds at most 31 texts with a confidence; the target needs 61"
+              "coverage": 0.4667,
+              "risk": 0.0,
+              "spread_seeds": [
+                0,
+                9
+              ],
+              "spread_coverage": [
+                0.0,
+                0.4917
+              ],
+              "reason": null
+            },
+            "segments": [
+              {
+                "segment": "route_strong",
+                "automated": 40,
+                "errors": 0,
+                "rate": 0.0,
+                "risk_upper": 0.072158
+              },
+              {
+                "segment": "route_easy",
+                "automated": 80,
+                "errors": 0,
+                "rate": 0.0,
+                "risk_upper": 0.036755
+              }
+            ],
+            "worst_segment": {
+              "segment": "route_strong",
+              "automated": 40,
+              "errors": 0,
+              "rate": 0.0,
+              "risk_upper": 0.072158
+            },
+            "segments_too_small": 0,
+            "per_text": {
+              "n": 61,
+              "automated": 61,
+              "errors": 0,
+              "coverage": 1.0,
+              "threshold": 0.76,
+              "risk_upper": 0.047924,
+              "reason": null
             }
           }
         ]
@@ -318,7 +444,7 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-03T17:18:07+00:00",
+    "utc": "2026-10-04T07:03:39+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/jury/router-described/jev.r2.ckpt.jsonl",

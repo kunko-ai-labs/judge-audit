@@ -5,7 +5,7 @@
 
 _judge `llm:gemini-3-flash-preview` · model `gemini-3-flash-preview` · run 2026-09-21T10:23:13+00:00 · judge-audit 0.3.2_
 _dataset `examples/email-routing-adversarial/labels.jsonl` · 200 rows · sha256 `74741868f533…`_
-_regenerated 2026-10-03T17:18:07+00:00 from `docs/runs/arena/gemini-3-flash/email-adversarial.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-10-04T07:03:39+00:00 from `docs/runs/arena/gemini-3-flash/email-adversarial.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic and seeded: 60 clean controls plus 140 attacked rows built from the same templates; the label is the category of the underlying clean email by design; _meta.target is what the attacker wanted; measures resistance to attacks on synthetic mail, not accuracy on real mail**
 
@@ -14,14 +14,20 @@ _**†** exact 95 % Clopper–Pearson (binomial) interval, published where the e
 
 ## Can I automate this?
 
-| at most this error | in plain words | automate (certified) | deploy at confidence ≥ | checked out of sample |
-|---|---|---|---|---|
-| 1% | 1 in 100 automated decisions wrong | not certified: needs 628 texts with a confidence to certify 1%; has 189 | — | — |
-| 2% | 1 in 50 automated decisions wrong | not certified: needs 313 texts with a confidence to certify 2%; has 189 | — | — |
-| 5% | 1 in 20 automated decisions wrong | not certified: no threshold passes: the first cut tested holds 125 texts with 5 errors (bound 8.2% > 5%) | — | — |
-| 10% | 1 in 10 automated decisions wrong | 100.0% (189 of 189 texts; 6 wrong, bound 6.2%) | 0.8 | 48.7% automated, 3.3% wrong |
+**Safe automation rate at ≤ 5% error: none** — no threshold passes: the first cut tested holds 125 decisions with 5 errors (bound 8.2% > 5%).
 
-_With 95% confidence, the error rate among decisions at or above the threshold is at most the target — on traffic drawn like these labelled texts (same mix, same judge version), with the labels taken as right: a label error counts as a judge error. Each row is its own 95% statement; choose the target before reading the table. "Automate" is the share of the labelled texts the threshold covers; "out of sample" is the same procedure with the threshold chosen on half of them and applied to the other half (seed 0), the estimate to plan with. One unit per distinct text; a decision without a confidence is never automated. Exact one-sided binomial bound, fixed-sequence walk from the most confident down, starting at the cut that certifies with 2 errors (docs/judges.md § The automation certificate)._
+This labelled set repeats texts (200 decisions, 189 distinct texts). The bound above treats the decisions as a random sample of your traffic, repeats included as they occur there. If the repeats were copied in instead, count each text once: at this target, none (no threshold passes: the first cut tested holds 125 texts with 5 errors (bound 8.2% > 5%)).
+
+| at most this error | in plain words | safe automation rate | deploy at confidence ≥ | checked out of sample |
+|---|---|---|---|---|
+| 1% | at most 1 in 100 automated decisions wrong | none: needs 628 decisions with a confidence to certify 1%; has 200 | — | — |
+| 2% | at most 1 in 50 automated decisions wrong | none: needs 313 decisions with a confidence to certify 2%; has 200 | — | — |
+| 5% (primary) | at most 1 in 20 automated decisions wrong | none: no threshold passes: the first cut tested holds 125 decisions with 5 errors (bound 8.2% > 5%) | — | — |
+| 10% | at most 1 in 10 automated decisions wrong | 100.0% (200 of 200 decisions; 6 wrong, error bound 5.8%) | 0.8 | 49.0% automated, 4.1% wrong (seeds 0–9: 48.5%–51.0%) |
+
+_Valid only for: judge `llm:gemini-3-flash-preview` · model `gemini-3-flash-preview` · data `examples/email-routing-adversarial/labels.jsonl` · sha256 `74741868f533…` · measured 2026-09-21T10:23:13+00:00. Review by 2026-12-20, and measure again as soon as any of these changes._
+
+_With 95% confidence, the error rate among decisions at or above the threshold is at most the target — on traffic drawn like these labelled decisions (a random sample of it, each decision an independent draw), judged by the judge and prompt above, with the labels taken as right. Label errors cut both ways: a wrong label the judge disagrees with counts as a judge error, one it agrees with hides an error. The primary target was set before the run (`--target`, here 5%); every row is its own 95% statement; the 4 rows hold together with probability at least 80%; keeping the best-looking row after reading them is neither. The rate is the share of the labelled decisions the threshold covers; the out-of-sample check chooses the threshold on half of them (split by distinct text, seed 0, spread over other seeds in brackets) and applies it to the other half, a conservative check rather than a forecast. A decision without a confidence is never automated. Exact one-sided binomial bound, fixed-sequence walk from the most confident down, starting at the cut that bounds the error with 2 errors (docs/judges.md § The safe automation rate). Statistical evidence on the labelled decisions, not a conformity assessment or a certification by a notified body._
 
 Zero observed errors through the most confident **0.0%** [0.0, 1.8]† (0 decisions, confidence ≥ None).
 Retrospective on this dataset — not a production guarantee.

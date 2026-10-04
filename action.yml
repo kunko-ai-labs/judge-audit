@@ -29,8 +29,16 @@ inputs:
     description: "Fail when accuracy drops by more than this vs the baseline (check mode)"
     required: false
     default: "0.01"
-  min-coverage:
-    description: "Check mode: space-separated RISK:SHARE minimums for the automation certificate, e.g. '0.05:0.40' fails when, at a certified error of at most 5 %, the judge can automate less than 40 % of the decisions. Empty = no minimum"
+  target:
+    description: "The error rate the safe automation rate is headlined at, chosen before the run (e.g. '0.05' = at most 1 in 20 automated decisions wrong). 1, 2, 5 and 10 % are always shown as context"
+    required: false
+    default: "0.05"
+  segment-by:
+    description: "Segments the deployed threshold is checked on, to name the worst one: 'label' (the true label), 'meta.FIELD' (a field of the rows' _meta, e.g. 'meta.lang') or 'none'"
+    required: false
+    default: "label"
+  min-safe-rate:
+    description: "Check mode: space-separated RISK:SHARE minimums, e.g. '0.05:0.40' fails when the safe automation rate at an error of at most 5 % is below 40 %. Empty = no minimum"
     required: false
     default: ""
   allow-incompatible:
@@ -71,9 +79,12 @@ outputs:
   n:
     description: "Number of judged decisions"
     value: ${{ steps.read.outputs.n }}
-  certified-coverage:
-    description: "Automation certificate of the first question: the certified share per target error, e.g. '1%=0.0 2%=0.0 5%=0.41 10%=0.7226'"
-    value: ${{ steps.read.outputs.certified_coverage }}
+  safe-automation-rate:
+    description: "Safe automation rate of the first question at the target error (a share in [0, 1]); '' when the result carries none"
+    value: ${{ steps.read.outputs.safe_automation_rate }}
+  safe-automation-rates:
+    description: "The same at every target error, e.g. '1%=0.0 2%=0.0 5%=0.41 10%=0.7226'"
+    value: ${{ steps.read.outputs.safe_automation_rates }}
   drift:
     description: "'true' when check mode detected drift vs the baseline, 'false' otherwise ('' in run mode)"
     value: ${{ steps.read.outputs.drift }}
@@ -123,7 +134,9 @@ runs:
         MAX_ECE_DRIFT: ${{ inputs.max-ece-drift }}
         MAX_ACC_DROP: ${{ inputs.max-acc-drop }}
         ALLOW_INCOMPATIBLE: ${{ inputs.allow-incompatible }}
-        MIN_COVERAGE: ${{ inputs.min-coverage }}
+        MIN_SAFE_RATE: ${{ inputs.min-safe-rate }}
+        TARGET: ${{ inputs.target }}
+        SEGMENT_BY: ${{ inputs.segment-by }}
       # One step builds the argv array and runs it: no command file, no eval, no string
       # that bash has to re-parse. `mode` is checked against an allowlist first.
       run: |
@@ -145,19 +158,30 @@ runs:
                  --drift judge-audit-drift.json)
             if [ "$ALLOW_INCOMPATIBLE" = "true" ]; then cmd+=(--allow-incompatible); fi
             # each minimum is checked against a strict pattern, then passed as one argv item
-            read -r -a mins <<< "$MIN_COVERAGE"
-            for m in "${mins[@]}"; do
+            # a multi-line input is several minimums, not one line and a silent rest
+            read -r -a mins <<< "${MIN_SAFE_RATE//[$'\n\r']/ }"
+            for m in ${mins[@]+"${mins[@]}"}; do
               if ! [[ "$m" =~ ^0?\.[0-9]+:(0?\.[0-9]+|0|1|1\.0+)$ ]]; then
-                echo "::error::min-coverage expects RISK:SHARE such as 0.05:0.40 (got '$m')"
+                echo "::error::min-safe-rate expects RISK:SHARE such as 0.05:0.40 (got '$m')"
                 exit 2
               fi
-              cmd+=(--min-coverage "$m")
+              cmd+=(--min-safe-rate "$m")
             done ;;
           *)
             echo "::error::unknown mode '$MODE' (run | check)"
             exit 2 ;;
         esac
 
+        # target and segments: strict patterns, then one argv item each, in both modes
+        if ! [[ "$TARGET" =~ ^0?\.[0-9]+$ ]]; then
+          echo "::error::target expects an error rate such as 0.05 (got '$TARGET')"
+          exit 2
+        fi
+        if ! [[ "$SEGMENT_BY" =~ ^(label|none|meta\.[A-Za-z0-9_]+)$ ]]; then
+          echo "::error::segment-by expects label, none or meta.FIELD (got '$SEGMENT_BY')"
+          exit 2
+        fi
+        cmd+=(--target "$TARGET" --segment-by "$SEGMENT_BY")
         # The runner's shell adds -e, and a drift verdict is exit 1, not a crash:
         # take the code without aborting the step.
         code=0
@@ -187,9 +211,11 @@ runs:
         print(f"zero_error_coverage={r['zero_error_coverage']['coverage']}")
         print(f"n={r['n']}")
         qs = (r.get("certificate") or {}).get("questions") or []
-        print("certified_coverage=" + (" ".join(
-            f"{t['target_risk'] * 100:g}%={t['coverage']}" for t in qs[0]["targets"])
-            if qs else ""))
+        ts = qs[0]["targets"] if qs else []
+        print("safe_automation_rate=" + next(
+            (str(t["coverage"]) for t in ts if t.get("primary")), ""))
+        print("safe_automation_rates=" + " ".join(
+            f"{t['target_risk'] * 100:g}%={t['coverage']}" for t in ts))
         drift = ""
         if os.path.exists("judge-audit-drift.json"):
             drift = "false" if json.load(open("judge-audit-drift.json"))["ok"] else "true"
@@ -235,7 +261,7 @@ runs:
         marker="<!-- judge-audit:${LABELS} -->"
         drift=(); [ -f judge-audit-drift.json ] && drift=(--drift judge-audit-drift.json)
         python3 "${ACTION_PATH}/scripts/pr_comment.py" judge-audit-result.json \
-          "${drift[@]}" --artifact-url "$RUN_URL" --marker "$marker" > judge-audit-comment.md
+          ${drift[@]+"${drift[@]}"} --artifact-url "$RUN_URL" --marker "$marker" > judge-audit-comment.md
         id=$(MARKER="$marker" gh api "repos/$REPO/issues/$PR/comments" --paginate \
               --jq '.[] | select(.body | startswith(env.MARKER)) | .id' | head -1 || true)
         if [ -n "$id" ]; then
@@ -251,5 +277,5 @@ runs:
       env:
         BASELINE: ${{ inputs.baseline }}
       run: |
-        echo "judge-audit: the judge drifted vs ${BASELINE}, or fell below a min-coverage minimum (see the job summary)." >&2
+        echo "judge-audit: the judge drifted vs ${BASELINE}, or fell below a min-safe-rate minimum (see the job summary)." >&2
         exit 1

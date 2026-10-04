@@ -166,7 +166,8 @@
     "seed": 0
   },
   "certificate": {
-    "unit": "text",
+    "name": "safe automation rate",
+    "unit": "decision",
     "delta": 0.05,
     "start_errors": 2,
     "seed": 0,
@@ -176,89 +177,193 @@
       0.05,
       0.1
     ],
+    "primary_target": 0.05,
+    "segment_by": "label",
+    "min_segment": 30,
+    "scope": {
+      "judge": "llm:llama3.2:3b",
+      "model": "llama3.2:3b",
+      "revision": null,
+      "prompt_sha256": null,
+      "served": null,
+      "dataset": "examples/email-routing/labels.jsonl",
+      "dataset_sha256": "c5b4c111290aa657236ea520a8043b14ce23e9b26af01a6c5e7ec9b87082e1cf",
+      "measured_utc": "2026-09-20T17:00:06+00:00",
+      "review_by": "2026-12-19"
+    },
+    "disclaimer": "Statistical evidence on the labelled decisions, not a conformity assessment or a certification by a notified body.",
     "questions": [
       {
         "question": "category",
-        "n": 161,
-        "scored": 161,
+        "n": 200,
+        "scored": 200,
+        "texts": 161,
         "targets": [
           {
             "target_risk": 0.01,
             "plain": "at most 1 in 100 automated decisions wrong",
+            "primary": false,
             "threshold": null,
-            "n": 161,
+            "n": 200,
             "automated": 0,
             "coverage": 0.0,
             "errors": 0,
             "risk_upper": null,
             "min_units": 628,
-            "reason": "needs 628 texts with a confidence to certify 1%; has 161",
+            "reason": "needs 628 decisions with a confidence to certify 1%; has 200",
             "out_of_sample": {
-              "n": 161,
+              "n": 200,
+              "seed": 0,
               "automated": 0,
               "errors": 0,
               "coverage": 0.0,
               "risk": null,
-              "reason": "a half holds at most 81 texts with a confidence; the target needs 628"
+              "spread_seeds": [
+                0,
+                9
+              ],
+              "spread_coverage": [
+                0.0,
+                0.0
+              ],
+              "reason": "a half holds at most 110 decisions with a confidence; the target needs 628"
+            },
+            "segments": [],
+            "worst_segment": null,
+            "segments_too_small": 0,
+            "per_text": {
+              "n": 161,
+              "automated": 0,
+              "errors": 0,
+              "coverage": 0.0,
+              "threshold": null,
+              "risk_upper": null,
+              "reason": "needs 628 texts with a confidence to certify 1%; has 161"
             }
           },
           {
             "target_risk": 0.02,
             "plain": "at most 1 in 50 automated decisions wrong",
+            "primary": false,
             "threshold": null,
-            "n": 161,
+            "n": 200,
             "automated": 0,
             "coverage": 0.0,
             "errors": 0,
             "risk_upper": null,
             "min_units": 313,
-            "reason": "needs 313 texts with a confidence to certify 2%; has 161",
+            "reason": "needs 313 decisions with a confidence to certify 2%; has 200",
             "out_of_sample": {
-              "n": 161,
+              "n": 200,
+              "seed": 0,
               "automated": 0,
               "errors": 0,
               "coverage": 0.0,
               "risk": null,
-              "reason": "a half holds at most 81 texts with a confidence; the target needs 313"
+              "spread_seeds": [
+                0,
+                9
+              ],
+              "spread_coverage": [
+                0.0,
+                0.0
+              ],
+              "reason": "a half holds at most 110 decisions with a confidence; the target needs 313"
+            },
+            "segments": [],
+            "worst_segment": null,
+            "segments_too_small": 0,
+            "per_text": {
+              "n": 161,
+              "automated": 0,
+              "errors": 0,
+              "coverage": 0.0,
+              "threshold": null,
+              "risk_upper": null,
+              "reason": "needs 313 texts with a confidence to certify 2%; has 161"
             }
           },
           {
             "target_risk": 0.05,
             "plain": "at most 1 in 20 automated decisions wrong",
-            "threshold": 0.8,
-            "n": 161,
-            "automated": 161,
-            "coverage": 1.0,
-            "errors": 2,
-            "risk_upper": 0.038585872548314304,
+            "primary": true,
+            "threshold": null,
+            "n": 200,
+            "automated": 0,
+            "coverage": 0.0,
+            "errors": 0,
+            "risk_upper": null,
             "min_units": 124,
-            "reason": null,
+            "reason": "no threshold passes: the first cut tested holds 132 decisions with 9 errors (bound 11.6% > 5%)",
             "out_of_sample": {
-              "n": 161,
+              "n": 200,
+              "seed": 0,
               "automated": 0,
               "errors": 0,
               "coverage": 0.0,
               "risk": null,
-              "reason": "a half holds at most 81 texts with a confidence; the target needs 124"
+              "spread_seeds": [
+                0,
+                9
+              ],
+              "spread_coverage": [
+                0.0,
+                0.0
+              ],
+              "reason": "a half holds at most 110 decisions with a confidence; the target needs 124"
+            },
+            "segments": [],
+            "worst_segment": null,
+            "segments_too_small": 0,
+            "per_text": {
+              "n": 161,
+              "automated": 161,
+              "errors": 2,
+              "coverage": 1.0,
+              "threshold": 0.8,
+              "risk_upper": 0.038586,
+              "reason": null
             }
           },
           {
             "target_risk": 0.1,
             "plain": "at most 1 in 10 automated decisions wrong",
-            "threshold": 0.8,
-            "n": 161,
-            "automated": 161,
-            "coverage": 1.0,
-            "errors": 2,
-            "risk_upper": 0.038585872548314304,
+            "primary": false,
+            "threshold": null,
+            "n": 200,
+            "automated": 0,
+            "coverage": 0.0,
+            "errors": 0,
+            "risk_upper": null,
             "min_units": 61,
-            "reason": null,
+            "reason": "no threshold passes: the first cut tested holds 132 decisions with 9 errors (bound 11.6% > 10%)",
             "out_of_sample": {
+              "n": 200,
+              "seed": 0,
+              "automated": 110,
+              "errors": 20,
+              "coverage": 0.55,
+              "risk": 0.1818,
+              "spread_seeds": [
+                0,
+                9
+              ],
+              "spread_coverage": [
+                0.335,
+                0.585
+              ],
+              "reason": null
+            },
+            "segments": [],
+            "worst_segment": null,
+            "segments_too_small": 0,
+            "per_text": {
               "n": 161,
               "automated": 161,
               "errors": 2,
               "coverage": 1.0,
-              "risk": 0.0124,
+              "threshold": 0.8,
+              "risk_upper": 0.038586,
               "reason": null
             }
           }
@@ -267,7 +372,7 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-03T17:18:07+00:00",
+    "utc": "2026-10-04T07:03:39+00:00",
     "judge_audit_version": "0.4.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/llama32/email-clean.ckpt.jsonl",

@@ -5,7 +5,7 @@
 
 _judge `llm:llama-3.3-70b` · model `llama-3.3-70b` · run 2026-09-20T19:02:12+00:00 · judge-audit 0.3.1_
 _dataset `examples/email-routing/labels.jsonl` · 200 rows · sha256 `c5b4c111290a…`_
-_regenerated 2026-10-03T17:18:07+00:00 from `docs/runs/arena/llama-3.3-70b/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-10-04T07:03:39+00:00 from `docs/runs/arena/llama-3.3-70b/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic: seeded templates with item and number fills, not real mail; the label is the template's category by design; no human checked it; 100 % here is the floor a judge must clear, not evidence of production routing accuracy**
 
@@ -14,14 +14,22 @@ _**†** exact 95 % Clopper–Pearson (binomial) interval, published where the e
 
 ## Can I automate this?
 
-| at most this error | in plain words | automate (certified) | deploy at confidence ≥ | checked out of sample |
-|---|---|---|---|---|
-| 1% | 1 in 100 automated decisions wrong | not certified: needs 628 texts with a confidence to certify 1%; has 161 | — | — |
-| 2% | 1 in 50 automated decisions wrong | not certified: needs 313 texts with a confidence to certify 2%; has 161 | — | — |
-| 5% | 1 in 20 automated decisions wrong | 100.0% (161 of 161 texts; 0 wrong, bound 1.8%) | 0.8 | not checkable: a half holds at most 81 texts with a confidence; the target needs 124 |
-| 10% | 1 in 10 automated decisions wrong | 100.0% (161 of 161 texts; 0 wrong, bound 1.8%) | 0.8 | 98.1% automated, 0.0% wrong |
+**Safe automation rate at ≤ 5% error: 100.0%** of the labelled decisions (200 of 200; 0 wrong, error bound 1.5%), deploying at confidence ≥ 0.8. Checked out of sample, with the threshold chosen on half the data: not checkable: a half holds at most 110 decisions with a confidence; the target needs 124.
 
-_With 95% confidence, the error rate among decisions at or above the threshold is at most the target — on traffic drawn like these labelled texts (same mix, same judge version), with the labels taken as right: a label error counts as a judge error. Each row is its own 95% statement; choose the target before reading the table. "Automate" is the share of the labelled texts the threshold covers; "out of sample" is the same procedure with the threshold chosen on half of them and applied to the other half (seed 0), the estimate to plan with. One unit per distinct text; a decision without a confidence is never automated. Exact one-sided binomial bound, fixed-sequence walk from the most confident down, starting at the cut that certifies with 2 errors (docs/judges.md § The automation certificate)._
+This labelled set repeats texts (200 decisions, 161 distinct texts). The bound above treats the decisions as a random sample of your traffic, repeats included as they occur there. If the repeats were copied in instead, count each text once: 100.0% of the texts (161 of 161; 0 counted wrong, error bound 1.8%), at confidence ≥ 0.8.
+
+Segments (true label): none has 30 automated decisions, so none is ranked. 10 segments with fewer than 30 automated decisions are not ranked.
+
+| at most this error | in plain words | safe automation rate | deploy at confidence ≥ | checked out of sample |
+|---|---|---|---|---|
+| 1% | at most 1 in 100 automated decisions wrong | none: needs 628 decisions with a confidence to certify 1%; has 200 | — | — |
+| 2% | at most 1 in 50 automated decisions wrong | none: needs 313 decisions with a confidence to certify 2%; has 200 | — | — |
+| 5% (primary) | at most 1 in 20 automated decisions wrong | 100.0% (200 of 200 decisions; 0 wrong, error bound 1.5%) | 0.8 | not checkable: a half holds at most 110 decisions with a confidence; the target needs 124 |
+| 10% | at most 1 in 10 automated decisions wrong | 100.0% (200 of 200 decisions; 0 wrong, error bound 1.5%) | 0.8 | 100.0% automated, 0.0% wrong (seeds 0–9: 98.0%–100.0%) |
+
+_Valid only for: judge `llm:llama-3.3-70b` · model `llama-3.3-70b` · data `examples/email-routing/labels.jsonl` · sha256 `c5b4c111290a…` · measured 2026-09-20T19:02:12+00:00. Review by 2026-12-19, and measure again as soon as any of these changes._
+
+_With 95% confidence, the error rate among decisions at or above the threshold is at most the target — on traffic drawn like these labelled decisions (a random sample of it, each decision an independent draw), judged by the judge and prompt above, with the labels taken as right. Label errors cut both ways: a wrong label the judge disagrees with counts as a judge error, one it agrees with hides an error. The primary target was set before the run (`--target`, here 5%); every row is its own 95% statement; the 4 rows hold together with probability at least 80%; keeping the best-looking row after reading them is neither. The rate is the share of the labelled decisions the threshold covers; the out-of-sample check chooses the threshold on half of them (split by distinct text, seed 0, spread over other seeds in brackets) and applies it to the other half, a conservative check rather than a forecast. A decision without a confidence is never automated. Exact one-sided binomial bound, fixed-sequence walk from the most confident down, starting at the cut that bounds the error with 2 errors (docs/judges.md § The safe automation rate). Statistical evidence on the labelled decisions, not a conformity assessment or a certification by a notified body._
 
 Zero observed errors through the most confident **100.0%** [98.2, 100.0]† (200 decisions, confidence ≥ 0.8).
 Retrospective on this dataset — not a production guarantee.

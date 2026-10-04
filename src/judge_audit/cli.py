@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import datetime
 import json
 import os
 import sys
@@ -13,7 +14,7 @@ import tempfile
 from typing import NoReturn
 
 from . import __version__
-from .certificate import DEFAULT_TARGETS
+from .certificate import DEFAULT_TARGETS, PRIMARY_TARGET, scope_changes
 from .ground_truth import ground_truth_of
 from .judges.finetuned import FinetunedJudge
 from .judges.jev import JevJudge
@@ -25,11 +26,11 @@ from .judges.simulated import SIMULATED_TAG, SimulatedJudge
 from .report import (
     IncompatibleBaseline,
     certificate_summary,
-    check_coverage,
     check_drift,
+    check_safe_rate,
     fmt4,
     interval,
-    parse_min_coverage,
+    parse_min_safe_rate,
     render_html,
     render_markdown,
 )
@@ -114,6 +115,7 @@ def _parser() -> argparse.ArgumentParser:
                    help="per-decision evidence (JSONL); pass '' to skip")
     r.add_argument("--no-ci", action="store_true",
                    help="skip the bootstrap confidence intervals (also JUDGE_AUDIT_BOOTSTRAP=0)")
+    _rate_options(r)
 
     c = sub.add_parser("check", help="CI gate: fail if drifted vs baseline")
     c.add_argument("labels")
@@ -121,10 +123,10 @@ def _parser() -> argparse.ArgumentParser:
     c.add_argument("--baseline", required=True, help="audit-result.json of a previous run")
     c.add_argument("--max-ece-drift", type=float, default=0.02)
     c.add_argument("--max-acc-drop", type=float, default=0.01)
-    c.add_argument("--min-coverage", action="append", default=[], metavar="RISK:SHARE",
-                   help="fail when, at a certified error of at most RISK, the judge can "
-                        "automate less than SHARE of the decisions (e.g. 0.05:0.40); "
-                        "repeatable; see the report's 'Can I automate this?'")
+    c.add_argument("--min-safe-rate", action="append", default=[], metavar="RISK:SHARE",
+                   help="fail when the safe automation rate at an error of at most RISK is "
+                        "below SHARE (e.g. 0.05:0.40); repeatable; see the report's 'Can I "
+                        "automate this?'")
     c.add_argument("--out", default=None, help="also write the markdown report here")
     c.add_argument("--json", default=None, help="also write metrics + run metadata here")
     c.add_argument("--drift", default=None,
@@ -134,7 +136,37 @@ def _parser() -> argparse.ArgumentParser:
                         "or n (refused with exit 2 otherwise)")
     c.add_argument("--no-ci", action="store_true",
                    help="skip the bootstrap confidence intervals (also JUDGE_AUDIT_BOOTSTRAP=0)")
+    _rate_options(c)
     return ap
+
+
+def _rate_options(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--target", type=float, default=PRIMARY_TARGET, metavar="RISK",
+                   help="the error rate the safe automation rate is headlined at, chosen "
+                        f"before the run (default {PRIMARY_TARGET}); 1, 2, 5 and 10 %% are "
+                        "always shown as context")
+    p.add_argument("--segment-by", default="label", metavar="label|meta.FIELD|none",
+                   help="segments the deployed threshold is checked on, to name the worst: "
+                        "the true label (default), a field of the rows' _meta, or none")
+
+
+def _stale_baseline(path: str, current: dict) -> list[str]:
+    """Why the baseline's safe automation rate no longer applies: its scope differs from
+    this run's, or its review date has passed. [] when it still applies or it has none."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            old = (json.load(f).get("certificate") or {}).get("scope") or {}
+    except (OSError, ValueError, AttributeError):
+        return []
+    notes = []
+    changes = scope_changes(old, current.get("scope") or {})
+    if changes:
+        notes.append("the baseline's safe automation rate no longer applies (" +
+                     "; ".join(changes) + "); this run's rate replaces it")
+    review = old.get("review_by")
+    if review and review < datetime.date.today().isoformat():
+        notes.append(f"the baseline's safe automation rate was due for review by {review}")
+    return notes
 
 
 def _audit(judge, rows: list[dict], args, dataset_meta: dict):
@@ -164,20 +196,27 @@ def main(argv: list[str] | None = None) -> None:
     lead = f"{tag} · " if tag else ""  # the line that gets copied says it is simulated
 
     minimums: list[tuple[float, float]] = []
-    for spec in getattr(args, "min_coverage", []):
+    for spec in getattr(args, "min_safe_rate", []):
         try:
-            minimums.append(parse_min_coverage(spec))
+            minimums.append(parse_min_safe_rate(spec))
         except ValueError as e:
             _die(str(e))
+    if not 0 < args.target < 1:
+        _die(f"--target must be between 0 and 1, got {args.target}")
+    segment_by = None if args.segment_by == "none" else args.segment_by
+    if segment_by not in (None, "label") and not (
+            segment_by.startswith("meta.") and len(segment_by) > 5):
+        _die(f"--segment-by expects label, meta.FIELD or none, got {args.segment_by!r}")
     result = _audit(judge, rows, args, dataset_meta)
     done = result.completeness
-    extra = [r for r, _ in minimums
-             if not any(abs(r - t) < 1e-12 for t in DEFAULT_TARGETS)]
-    if extra:
-        # a gate on a target the default certificate does not carry: certify it too
+    wanted = [args.target, *(r for r, _ in minimums)]
+    extra = [r for r in wanted if not any(abs(r - t) < 1e-12 for t in DEFAULT_TARGETS)]
+    if extra or args.target != PRIMARY_TARGET or segment_by != "label":
+        # a target, a gate or segments the default certificate does not carry
         result.certificate = certificate_of(
             result.records, groups_of(result.records, rows),
-            targets=sorted({*DEFAULT_TARGETS, *extra}))
+            targets=sorted({*DEFAULT_TARGETS, *extra}), run=result.run,
+            primary=args.target, segment_by=segment_by)
 
     if args.cmd == "run":
         fmt = args.format
@@ -222,7 +261,10 @@ def main(argv: list[str] | None = None) -> None:
             _die(str(e))
         except (OSError, ValueError, KeyError) as e:
             _die(f"cannot use baseline {args.baseline}: {e}")
-        failures += check_coverage(result.certificate, minimums)
+        failures += check_safe_rate(result.certificate, minimums)
+        stale = _stale_baseline(args.baseline, result.certificate)
+        for note in stale:
+            print(f"{lead}note: {note}", file=sys.stderr)
         if args.out:
             content = render_markdown(result)
             if tag:
@@ -237,7 +279,8 @@ def main(argv: list[str] | None = None) -> None:
                          "baseline": args.baseline,
                          "max_ece_drift": args.max_ece_drift,
                          "max_acc_drop": args.max_acc_drop,
-                         "min_coverage": [{"risk": r, "share": sh} for r, sh in minimums],
+                         "min_safe_rate": [{"risk": r, "share": sh} for r, sh in minimums],
+                         "baseline_rate_stale": stale,
                          "certificate": result.certificate})
         if failures:
             print(f"{lead}DRIFT DETECTED:", file=sys.stderr)
