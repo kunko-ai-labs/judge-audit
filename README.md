@@ -9,7 +9,7 @@
 
 **judge-audit replays decisions your people already made and tells you how much of that work an AI judge can take over, at the error you accept, with the bound attached.** Open source, runs in CI, no LLM inside the measurement, and every published number recomputes from committed evidence.
 
-![judge-audit in 27 seconds: run the audit, the report's answer, every error tolerance, the results on real data, the CI gate](docs/demo.gif)
+![judge-audit in 25 seconds: the question, the audit run, the share each judge can decide alone on 3,080 real banking queries, the CI gate failing below the minimum](docs/demo.gif)
 
 | | |
 |---|---|
