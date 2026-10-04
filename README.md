@@ -164,7 +164,7 @@ Accuracy tells you who wins a benchmark. Calibration tells you what you can auto
 
 ## Roadmap
 
-v0.5: a benchmark on real data — human-labelled public datasets with ≥ 1,000 rows per task and a hidden held-out slice, current models including OpenAI's, confidence measured three ways (verbalized, token log-probability, self-consistency), repeats for every judge, all pre-registered — plus MCE (the worst bin, not the average; our proposal for AI Act evidence, not a legal requirement) → v0.6: a public leaderboard with a submission spec and the AI Act evidence dossier. Details and reasons in [docs/ROADMAP.md](docs/ROADMAP.md); the live backlog is the issues.
+v0.5: a benchmark on real data — human-labelled public datasets with ≥ 1,000 rows per task and a hidden held-out slice, current models including OpenAI's, confidence measured three ways (verbalized, token log-probability, self-consistency), repeats for every judge, all pre-registered — plus MCE (the worst bin, not the average; our proposal for AI Act evidence, not a legal requirement) → v0.6: a public leaderboard with a submission spec. Details and reasons in [docs/ROADMAP.md](docs/ROADMAP.md); the live backlog is the issues.
 
 ## FAQ
 
