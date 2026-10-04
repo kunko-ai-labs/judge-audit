@@ -1,15 +1,19 @@
-"""Create labels + roadmap issues (5 epics, 11 stories) for kunko-ai-labs/judge-audit."""
+"""Create labels + roadmap issues (5 epics, 10 stories) for kunko-ai-labs/judge-audit.
+
+  python scripts/make_issues.py --dry-run   # print the labels and issue titles, no network
+  python scripts/make_issues.py             # create them (needs the GitHub credential helper)
+"""
+import argparse
 import json
 import sys
 import urllib.request
-
-sys.path.insert(0, "/opt/hatch/skills/skill-creator/bin")
-from dynamic_credentials import add_surrogate_to_request, read_json_response
 
 API = "https://api.github.com"
 REPO = "kunko-ai-labs/judge-audit"
 
 def call(method, path, body=None):
+    sys.path.insert(0, "/opt/hatch/skills/skill-creator/bin")
+    from dynamic_credentials import add_surrogate_to_request, read_json_response
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(API + path, data=data, method=method,
         headers={"Accept": "application/vnd.github+json",
@@ -41,14 +45,6 @@ LABELS = [
     ("area:ci", "1d76db", "CI gates"),
     ("good-first-issue", "7057ff", "Good for newcomers"),
 ]
-for name, color, desc in LABELS:
-    try:
-        call("POST", f"/repos/{REPO}/labels",
-             {"name": name, "color": color, "description": desc})
-        print("label ok:", name)
-    except Exception:
-        print("label exists:", name)
-
 # ---------- issues ----------
 def story(sid, epic, title, priority, area, persona, estimate, milestone,
           as_a, want, so_that, criteria, notes="", deps="None", extra_labels=()):
@@ -235,40 +231,23 @@ story("US-002-002", "EP-002 — First real audit", "Publish first independent Je
       criteria=("- [ ] **Given** the live audit **when** published **then** it reports ECE, accuracy-coverage, cost/1k and p99 measured by us — with the dataset and command to reproduce\n- [ ] **Given** the post **when** read **then** vendor claims are cited as vendor claims, ours as measured"),
       notes="- Depends on: US-002-001", deps="US-002-001"),
 
-epic("EP-003", "AI Act evidence pack",
+epic("EP-003", "Worst-case calibration (MCE)",
      bet="next", persona="Auditor", milestone="v0.3.0",
-     metric="One command produces the evidence bundle an auditor asks for: receipts + calibration report + declared metrics",
-     guardrail="`adapted` positioning — never 'certified' or 'compliant'",
+     metric="MCE, the worst calibration bin, reported next to the ECE",
+     guardrail="Statistical evidence on the labelled data — never 'certified' or 'compliant'",
      out_of_scope="Legal advice; hosting customer data",
-     description=("EU deployers of AI judges will need evidence for AI Act Art. 12 (logging), Art. 14 (human oversight) "
-                  "and Art. 15 (declared accuracy). This epic turns the audit into a shippable evidence pack. "
-                  "See `docs/landscape-brief.md` §3."),
-     goals="- [ ] Per-decision receipt (Art. 12)\n- [ ] MCE metric (worst-case, what regulators ask)\n- [ ] Evidence dossier export",
-     stories=[("US-003-001", "Decision receipt per judgment (Art. 12 logging)"),
-              ("US-003-002", "MCE metric (worst-case calibration)"),
-              ("US-003-003", "Evidence dossier export")]),
+     description=("The ECE averages over bins and can hide one badly calibrated region. "
+                  "This epic adds the worst bin next to the average."),
+     goals="- [ ] MCE metric (worst-case calibration)",
+     stories=[("US-003-002", "MCE metric (worst-case calibration)")]),
 
-story("US-003-001", "EP-003 — AI Act evidence", "Decision receipt per judgment (Art. 12 logging)",
-      "high", "runner", "Auditor", "2 days", "v0.3.0",
-      as_a="an auditor", want="every judgment to emit a signed receipt",
-      so_that="the deployer has Art. 12 logging material: input hash, decision, confidence, threshold, timestamp, model version, escalation.",
-      criteria=("- [ ] **Given** an audit run with `--receipts` **when** it finishes **then** one JSONL receipt per judgment exists with: sha256(state), decision, confidence, threshold applied, timestamp, judge name+version, escalated_to_human bool\n- [ ] **Given** a receipt **when** inspected **then** it contains no raw personal data — only the hash"),
-      notes="- Entry point: `src/judge_audit/runner.py`\n- See docs/landscape-brief.md §3 (Art. 12)"),
-
-story("US-003-002", "EP-003 — AI Act evidence", "MCE metric (worst-case calibration for regulators)",
+story("US-003-002", "EP-003 — Worst-case calibration", "MCE metric (worst-case calibration)",
       "medium", "metrics", "Auditor", "1 day", "v0.3.0",
       as_a="an auditor", want="Maximum Calibration Error next to ECE",
-      so_that="I can answer the regulator's question: not the average case, the worst bin.",
+      so_that="I can read the worst bin, not only the average case.",
       criteria=("- [ ] **Given** confidences+labels **when** I call the new function **then** MCE = max over bins |accuracy − confidence| is returned\n- [ ] **Given** the report **when** rendered **then** MCE appears next to ECE"),
       notes="- Entry point: `src/judge_audit/metrics/calibration.py` (next to `expected_calibration_error`)\n- Pure function, fully unit-testable",
       extra_labels=("good-first-issue",)),
-
-story("US-003-003", "EP-003 — AI Act evidence", "Evidence dossier export (MD bundle)",
-      "medium", "report", "Auditor", "3 days", "v0.3.0",
-      as_a="a CISO", want="`judge-audit dossier` to bundle receipts + calibration report + declared metrics",
-      so_that="I can hand one folder to an auditor for the conformity assessment.",
-      criteria=("- [ ] **Given** a completed audit **when** I run the dossier command **then** a folder contains: receipts JSONL, calibration report (MD+HTML), declared-metrics sheet, and a README mapping each file to its AI Act article\n- [ ] **Given** the dossier README **when** read **then** it says 'adapted, not certified' — no compliance claim"),
-      notes="- Entry point: new `dossier` subcommand in `src/judge_audit/cli.py`\n- Depends on: US-003-001", deps="US-003-001"),
 
 epic("EP-004", "Judge Arena MVP: honesty leaderboard",
      bet="later", persona="Developer", milestone="v0.4.0",
@@ -276,8 +255,8 @@ epic("EP-004", "Judge Arena MVP: honesty leaderboard",
      guardrail="Submissions are reproducible (dataset + command published); no pay-to-rank",
      out_of_scope="Hosted execution of judges; private datasets",
      description=("A public, continuously updated leaderboard ranking judges by calibration — the 'honesty leaderboard'. "
-                  "Leaderboards are distribution machines; every participant contributes (opt-in, anonymized) to the "
-                  "shared benchmark, which becomes the data moat. Nobody has built this: JudgeBench ranks accuracy, "
+                  "Every submission is reproducible from its dataset and command, so anyone can recompute a row. "
+                  "Nobody has built this: JudgeBench ranks accuracy, "
                   "not calibration."),
      goals="- [ ] Submission spec (dataset + audit-result.json + reproduce command)\n- [ ] Static leaderboard page generated from submissions",
      stories=[("US-004-001", "Leaderboard submission spec + static page")]),
@@ -307,10 +286,34 @@ story("US-005-001", "EP-005 — LLM-as-judge adapter", "Generic LLM judge adapte
       notes="- Entry point: `src/judge_audit/judges/llm.py` (new)\n- House rule applies doubly here: heuristic confidence must never look measured"),
 ]
 
-created = []
-for title, labels, body in ISSUES:
-    st, data = call("POST", f"/repos/{REPO}/issues",
-                    {"title": title, "body": body, "labels": labels})
-    created.append((data["number"], title))
-    print("issue ok:", data["number"], title[:60])
-print("TOTAL:", len(created))
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--dry-run", action="store_true",
+                    help="print the labels and issues that would be created; no network call")
+    args = ap.parse_args(argv)
+    if args.dry_run:
+        for name, _, _ in LABELS:
+            print("label:", name)
+        for title, labels, _ in ISSUES:
+            print("issue:", title, labels)
+        print("TOTAL:", len(ISSUES), "issues (dry run)")
+        return
+    for name, color, desc in LABELS:
+        try:
+            call("POST", f"/repos/{REPO}/labels",
+                 {"name": name, "color": color, "description": desc})
+            print("label ok:", name)
+        except Exception:
+            print("label exists:", name)
+    created = []
+    for title, labels, body in ISSUES:
+        st, data = call("POST", f"/repos/{REPO}/issues",
+                        {"title": title, "body": body, "labels": labels})
+        created.append((data["number"], title))
+        print("issue ok:", data["number"], title[:60])
+    print("TOTAL:", len(created))
+
+
+if __name__ == "__main__":
+    main()

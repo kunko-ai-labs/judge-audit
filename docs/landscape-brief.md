@@ -14,7 +14,7 @@ Analogy: there are labs that sell thermometers, but no body that checks the
 thermometers measure correctly.
 
 - Galileo: metrics and guardrails on proprietary Luna models (black box —
-  you cannot audit the auditor). Enterprise pricing.
+  you cannot audit the auditor).
 - Patronus: Lynx and Glider are open source (auditable), but no calibration reports.
 - Braintrust: aggregates scores, no calibration curves; short retention (30 days on Pro).
 - DeepEval: open-source framework, ideal to *build* the calibration module on —
@@ -46,8 +46,8 @@ Requirements enter into force on **2 Dec 2027** → a window of ~15 months to be
 de facto standard before it becomes mandatory.
 
 - **Art. 12 (record-keeping):** automatic logs over the whole lifetime of the system.
-  → Every judgment must emit a "receipt": input hash, decision, confidence,
-  threshold applied, timestamp, model version, whether it escalated to a human.
+  → An audit run records, per decision, the decision, its confidence, latency,
+  cost and the model version served; what a deployer logs in production is theirs.
 - **Art. 14 (human oversight):** the overseer must understand the system's capabilities
   and *limitations* and be able to override decisions.
   → The calibration report is the evidence: "below 70 % confidence it fails half
@@ -58,10 +58,10 @@ de facto standard before it becomes mandatory.
   benchmarks and measurement methodologies*.
   → Art. 15(2) is an explicit regulatory invitation to build this.
 
-The minimum "evidence dossier": (i) per-decision receipts, (ii) a calibration
-report that justifies the escalation threshold, (iii) declared metrics,
-(iv) a production drift monitor, (v) technical documentation per Art. 11 / Annex IV.
-*(Interpretation from the articles — legal validation pending.)*
+What a calibration audit can contribute: a report that states the escalation
+threshold's measured error, declared metrics with their intervals, and a drift
+check in CI. It is statistical evidence on labelled data, not a conformity
+assessment. *(Our reading of the articles, not legal advice.)*
 
 Sources: https://ai-act-service-desk.ec.europa.eu/en/ai-act/article-14 ·
 https://artificialintelligenceact.eu/article/15/
@@ -84,5 +84,4 @@ publicly.)
 - If Galileo/Braintrust add "calibration reports", they compete from above.
   Defence: open source, portable (CI-first, no data lock-in) and European
   (EU residency, AI Act narrative).
-- Still to verify: official Galileo/Confident AI pricing; conformal prediction
-  as a standard; exact composition of the dossier (lawyer).
+- Still to verify: conformal prediction as a standard.

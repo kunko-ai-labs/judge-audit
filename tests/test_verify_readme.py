@@ -227,3 +227,71 @@ def test_the_robustness_verdicts_are_read_from_their_reports(monkeypatch, name, 
 def test_rewording_the_robustness_sentence_fails_instead_of_skipping():
     assert any("robustness" in f for f in check(edit(
         "Two robustness checks back the Jev–Gemini gap", "Two checks back the gap")).failures)
+
+
+# ---------- v0.5 findings and the quickstart ----------
+
+@pytest.mark.parametrize(
+    "old,new",
+    [
+        ("BANKING77 test (3,080 rows)", "BANKING77 test (3,081 rows)"),
+        ("CLINC150 subset (1,900 rows)", "CLINC150 subset (1,800 rows)"),
+        ("4 of the 8 tests are resolved", "5 of the 8 tests are resolved"),
+        ("6 of the 8 came out as predicted", "7 of the 8 came out as predicted"),
+        ("T7 +0.107 [+0.062, +0.151]", "T7 +0.108 [+0.062, +0.151]"),
+        ("T8 +0.477 [+0.428, +0.524]", "T8 +0.477 [+0.428, +0.534]"),
+        ("T8 re-read +0.001 [-0.037, +0.041]", "T8 re-read +0.001 [-0.036, +0.041]"),
+        ("T1 +0.098 [+0.078, +0.119]", "T1 +0.098 [+0.079, +0.119]"),
+        ("T2 -0.046 [-0.089, -0.003]", "T2 -0.046 [-0.089, -0.004]"),
+        ("T3 -0.070 [-0.091, -0.049]", "T3 -0.071 [-0.091, -0.049]"),
+        ("T4 -0.220 [-0.255, -0.184]", "T4 -0.220 [-0.256, -0.184]"),
+        ("T5 -0.144 [-0.169, -0.119]", "T5 -0.144 [-0.169, -0.118]"),
+        ("T6 +0.363 [+0.318, +0.406]", "T6 +0.363 [+0.319, +0.406]"),
+        ("T6 re-read -0.281 [-0.343, -0.215]", "T6 re-read -0.281 [-0.343, -0.216]"),
+        ("the BANKING77 gap of T1 is +0.022", "the BANKING77 gap of T1 is +0.023"),
+        ("Qwen3-8B k = 10, gemini-3.6-flash k = 5", "Qwen3-8B k = 9, gemini-3.6-flash k = 5"),
+        ("in 3 of the 4 tests", "in 4 of the 4 tests"),
+        ("41.0 % at ≤ 5 % (37 errors", "42.0 % at ≤ 5 % (37 errors"),
+        ("(37 errors / 1263 automated)", "(36 errors / 1263 automated)"),
+        ("72.3 % at ≤ 10 % (182 / 2225)", "72.3 % at ≤ 10 % (182 / 2226)"),
+        ("27.0 %–45.1 % and 72.0 %–73.4 %", "27.0 %–45.1 % and 72.0 %–74.4 %"),
+        ("14.3 % at ≤ 5 % (6 errors", "14.3 % at ≤ 5 % (7 errors"),
+        ("45.5 % at ≤ 10 % (59 / 1402)", "45.5 % at ≤ 10 % (59 / 1412)"),
+        ("12.5 % at ≤ 10 % (19 / 384)", "12.6 % at ≤ 10 % (19 / 384)"),
+        # verdicts and caveats are read too
+        ("H2 is supported for Qwen3-8B", "H2 is strongly supported for Qwen3-8B"),
+        ("H1-lp is not supported for Qwen3-8B", "H1-lp is supported for Qwen3-8B"),
+        ("T8 depends on the scoring rule", "T8 is robust to the scoring rule"),
+        ("label noise was not measured", "label noise was measured"),
+        ("the held-out slice was not run", "the held-out slice was run"),
+        # the quickstart's simulated line and its figure in the prose
+        ("safe_automation@10%=65.5% …", "safe_automation@10%=66.5% …"),
+        ("its 65.5 % says nothing", "its 64.5 % says nothing"),
+        ("safe_automation@5%=none", "safe_automation@5%=12.0%"),
+    ],
+)
+def test_a_one_digit_edit_of_a_v05_figure_is_caught(old, new):
+    assert any(f.startswith(("v0.5", "quickstart")) for f in check(edit(old, new)).failures)
+
+
+def test_a_second_copy_of_a_v05_figure_fails():
+    ck = check(README + "\nT7 +0.107 [+0.062, +0.151]\n")
+    assert any("v0.5" in f and "2 times" in f for f in ck.failures)
+
+
+def test_a_v05_figure_follows_the_json(monkeypatch):
+    import copy
+
+    import verify_readme
+
+    real = verify_readme.load
+
+    def patched(name):
+        d = real(name)
+        if name == "v05-results.json":
+            d = copy.deepcopy(d)
+            d["tests"]["strict"]["T7"]["difference"] = 0.2
+        return d
+
+    monkeypatch.setattr(verify_readme, "load", patched)
+    assert any(f.startswith("v0.5") and "T7" in f for f in check(README).failures)
