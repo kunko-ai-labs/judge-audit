@@ -417,13 +417,21 @@ def confidence_coverage(d: dict) -> dict:
     return {"known": int(d["n"]), "total": int(d["n"])}
 
 
+def zero_error_tail(zero: dict) -> str:
+    """The parenthesis after the zero-error share: its count and threshold, or, when the
+    covered prefix is empty (the threshold is None), why nothing is covered."""
+    if not zero.get("n"):
+        return "(none: the most confident group of decisions already holds an error)"
+    return f"({zero['n']} decisions, confidence ≥ {zero['threshold']})"
+
+
 def zero_error_sentence(d: dict, zec_ci: str = "") -> str:
     """Human-readable selective prediction result, including the no-confidence case."""
     zero = d["zero_error_coverage"]
     if zero.get("coverage") is None:
         return "Zero-error coverage is **unknown**: no decisions have known confidence."
     return (f"Zero observed errors through the most confident **{zero['coverage']:.1%}**"
-            f"{zec_ci} ({zero['n']} decisions, confidence ≥ {zero['threshold']}).")
+            f"{zec_ci} {zero_error_tail(zero)}.")
 
 
 def calibration_numbers(d: dict, bold: tuple[str, str] = ("**", "**")) -> str:
@@ -521,7 +529,7 @@ def render_html(result: AuditResult, tag: str = "") -> str:
     zero_html = ("Zero-error coverage is <b>unknown</b>: no decisions have known confidence."
                  if zero.get("coverage") is None else
                  f"Zero observed errors through the most confident <b>{zero['coverage']:.1%}</b>"
-                 f"{zec_ci} ({zero['n']} decisions, confidence ≥ {zero['threshold']}).")
+                 f"{zec_ci} {html.escape(zero_error_tail(zero))}.")
     ci_note = "".join(f"<p class=\"prov\">{html.escape(line.strip('_'))}</p>"
                       for line in ci_lines(d) if line)
     rel = png_to_data_uri(reliability_diagram_png(result))
