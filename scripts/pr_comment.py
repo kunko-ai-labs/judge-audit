@@ -69,6 +69,11 @@ def _ground_truth(run: dict) -> tuple[str, str]:
     return cell, f"Ground truth: {cell} — {tail}"
 
 
+TABLE_HEADER = ("| at most this error | in plain words | safe automation rate | "
+                + "deploy at confidence ≥ | checked out of sample |")
+TABLE_RULE = "|---|---|---|---|---|"
+
+
 def _pct(x: float) -> str:
     return f"{x * 100:g}%"
 
@@ -135,9 +140,7 @@ def _certificate(result: dict) -> list[str]:
                           + (f" {int(p['errors_in_small_segments'])} of the "
                              f"{int(p['errors'])} errors sit in segments too small to rank."
                              if p.get("errors_in_small_segments") else ""), ""]
-        lines += ["| at most this error | in plain words | safe automation rate | "
-                  "deploy at confidence ≥ | checked out of sample |",
-                  "|---|---|---|---|---|"]
+        lines += [TABLE_HEADER, TABLE_RULE]
         for t in targets:
             rate, thr, oos = _cells(t, unit)
             mark = " (primary)" if t.get("primary") else ""

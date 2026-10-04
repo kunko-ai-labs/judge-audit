@@ -33,6 +33,11 @@ THREE_NUMBERS_NOTE = (
     "would impute one.")
 
 
+TABLE_HEADER = ("| at most this error | in plain words | safe automation rate | "
+                + "deploy at confidence ≥ | checked out of sample |")
+TABLE_RULE = "|---|---|---|---|---|"
+
+
 def _pct_of(x: float) -> str:
     return f"{x * 100:g}%"
 
@@ -197,9 +202,7 @@ def certificate_lines(d: dict) -> list[str]:
         for extra in (per_text_line(p, q), worst_segment_line(p, c)):
             if extra:
                 lines += [extra, ""]
-        lines += ["| at most this error | in plain words | safe automation rate | "
-                  "deploy at confidence ≥ | checked out of sample |",
-                  "|---|---|---|---|---|"]
+        lines += [TABLE_HEADER, TABLE_RULE]
         for t in q["targets"]:
             rate, thr, oos = certificate_cells(t, c["unit"])
             mark = " (primary)" if t.get("primary") else ""
