@@ -192,7 +192,7 @@ The numbers above ask whether a stated 0.9 is right 90 % of the time. A deployme
 - **Check** it on a test split: the threshold is applied unchanged and the test rows' coverage, errors, observed risk and its own bound are reported. No test row influences the threshold.
 - `coverage_at_risk_crossfit` does both ways over two halves of one dataset, split by distinct text (`split_by_group`: every copy of a text on one side; the partition depends on the texts and the seed, not on row order), and pools the two test halves, so every unit is judged once against a threshold it did not help choose. With `groups`, each half is reduced to one unit per text before testing (`aggregate_by_group`: its lowest confidence, wrong if any of its rows is wrong), so coverage and risk are shares of distinct texts. The seed is pre-registered, or the spread over seeds is reported.
 
-When nothing passes, nothing is automated and the threshold is `None`: zero errors in 100 rows bound the risk at 2.95 %, so a perfect judge on 100 rows cannot certify 2 %.
+When nothing passes, nothing is automated and the threshold is `None`: zero errors in 100 rows bound the risk at 2.95 %, so a perfect judge on 100 rows cannot bound the error at 2 %.
 
 ### The safe automation rate
 

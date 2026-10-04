@@ -58,6 +58,8 @@ def test_simulated_judge_is_deterministic(labels_path):
     a = run_audit(SimulatedJudge(rows), rows).to_dict()
     b = run_audit(SimulatedJudge(rows), rows).to_dict()
     a.pop("run"), b.pop("run")
+    # the certificate's scope copies the run's timestamp and a review date derived from it
+    a["certificate"].pop("scope"), b["certificate"].pop("scope")
     assert a == b
 
 

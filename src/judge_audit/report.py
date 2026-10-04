@@ -150,14 +150,14 @@ def scope_line(c: dict) -> str:
     return f"Valid only for: {what}. {review}"
 
 
-def certificate_note(c: dict) -> str:
+def certificate_note(c: dict, regenerated: bool = False) -> str:
     level = 1 - c["delta"]
     k = len(c.get("targets") or [])
     joint = (f"; the {k} rows hold together with probability at least "
              f"{max(0.0, 1 - k * c['delta']):.0%}" if k > 1 else "")
-    regenerated = (" (this report was regenerated from an archived checkpoint with the "
-                   "default target: the target was not fixed in advance)"
-                   if (c.get("scope") or {}).get("regenerated") else "")
+    regen = (" (this report was regenerated from an archived checkpoint with the "
+             "default target: the target was not fixed in advance)"
+             if regenerated or (c.get("scope") or {}).get("regenerated") else "")
     return (f"With {level:.0%} confidence, the error rate among decisions at or above the "
             "threshold is at most the target — on traffic drawn like these labelled "
             "decisions (a random sample of it, each decision an independent draw), judged by "
@@ -165,7 +165,7 @@ def certificate_note(c: dict) -> str:
             "both ways: a wrong label the judge disagrees with counts as a judge error, one "
             "it agrees with hides an error. The primary target is the one passed with "
             f"`--target` (here {_pct_of(c['primary_target'])}), to be chosen before the run"
-            f"{regenerated}; every row is its own "
+            f"{regen}; every row is its own "
             f"{level:.0%} statement{joint}; keeping the best-looking row after reading them is "
             "neither. The rate is the share of the labelled decisions the threshold covers; "
             "the out-of-sample check chooses the threshold on half of them (split by distinct "
@@ -206,7 +206,8 @@ def certificate_lines(d: dict) -> list[str]:
             lines.append(f"| {_pct_of(t['target_risk'])}{mark} | {t['plain']} | {rate} | "
                          f"{thr} | {oos} |")
         lines.append("")
-    lines += [f"_{scope_line(c)}_", "", f"_{certificate_note(c)}_"]
+    lines += [f"_{scope_line(c)}_", "",
+              f"_{certificate_note(c, bool(d.get('regenerated')))}_"]
     return lines
 
 
@@ -242,7 +243,7 @@ def certificate_html(d: dict) -> str:
                    "<th>safe automation rate</th><th>deploy at confidence ≥</th>"
                    f"<th>checked out of sample</th></tr>{rows}</table>")
     out.append(f'<p class="prov">{text(scope_line(c))}</p>')
-    out.append(f'<p class="prov">{text(certificate_note(c))}</p>')
+    out.append(f'<p class="prov">{text(certificate_note(c, bool(d.get("regenerated"))))}</p>')
     return "\n".join(out)
 
 

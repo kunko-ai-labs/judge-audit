@@ -570,3 +570,14 @@ def test_the_note_does_not_claim_the_target_was_fixed_before_a_regenerated_run()
     note = certificate_note(_result(run=old).certificate)
     assert "was set before the run" not in note
     assert "regenerated from an archived checkpoint" in note and "not fixed in advance" in note
+
+
+def test_a_report_with_a_regenerated_block_says_the_target_was_not_fixed_in_advance():
+    """The archived reports keep their original timestamp_utc and carry the regeneration in
+    the result's own `regenerated` block: the note must read that, not the run block."""
+    r = _result()                                   # RUN has timestamp_utc, no recomputed_utc
+    assert "not fixed in advance" not in render_markdown(r)
+    r.regenerated = {"utc": "2026-10-04T10:00:00+00:00", "checkpoint": "docs/runs/x.ckpt.jsonl",
+                     "script": "scripts/runs_report.py", "judge_audit_version": "0.5.0"}
+    assert "not fixed in advance" in render_markdown(r)
+    assert "not fixed in advance" in render_html(r)
