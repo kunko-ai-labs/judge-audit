@@ -484,7 +484,38 @@ def _test(t: dict, label: str) -> str:
 
 
 def _and(items: list[str]) -> str:
+    if not items:   # a sentence the README cannot hold: a named mismatch, not an IndexError
+        return "(none in docs/v05-results.json)"
     return items[0] if len(items) == 1 else f"{', '.join(items[:-1])} and {items[-1]}"
+
+
+def _by_model(verdicts: list[dict]) -> str:
+    """'H1-sc and H2 for gemini-3.6-flash': the hypotheses grouped by model, in JSON order."""
+    models: dict[str, list[str]] = {}
+    for v in verdicts:
+        models.setdefault(v["model"], []).append(v["hypothesis"])
+    return "; ".join(f"{_and(h)} for {m}" for m, h in models.items())
+
+
+def _scoring_rule(verdicts: list[dict]) -> str:
+    """How many verdicts carry the JSON's `depends_on_scoring_rule` flag, and which of them
+    change verdict between the two readings (`strict != reread`)."""
+    flagged = [v for v in verdicts if v["depends_on_scoring_rule"]]
+    flips = [v for v in verdicts if v["strict"] != v["reread"]]
+    if not flagged:
+        head = 'none carries "depends on the scoring rule"'
+    else:
+        verb = "carries" if len(flagged) == 1 else "carry"
+        head = f'{len(flagged)} {verb} "depends on the scoring rule" ({_by_model(flagged)})'
+    if not flips:
+        tail = "none of them changes verdict under the re-reading"
+    elif any(not v["depends_on_scoring_rule"] for v in flips):
+        tail = f"{_by_model(flips)} changes verdict without the flag"
+    elif len(flips) == 1:
+        tail = f"one of them, {_by_model(flips)}, changes verdict under the re-reading"
+    else:
+        tail = f"{len(flips)} of them, {_by_model(flips)}, change verdict under the re-reading"
+    return f"{head}, and {tail}"
 
 
 # The datasets' publication years: not in the JSON, so pinned here; every v0.5 caveat cites them.
@@ -512,8 +543,6 @@ def v05_expected(d: dict) -> dict[str, list[str]]:
               if t["as_predicted"] and not t["resolved"] and t["opposite_sign"]]
     n_v = len(d["verdicts"])
     n_sup = sum(v["strict"] for v in d["verdicts"])
-    flips = [v for v in d["verdicts"] if v["strict"] != v["reread"]]
-    flip_names = ", ".join(f"{v['hypothesis']} for {v['model']}" for v in flips)
     sc = ["T3", "T4", "T5", "T6"]
     worse = sum(strict[t]["opposite_sign"] for t in sc)
     sc_word = ("worse" if all(strict[t]["difference"] < 0 for t in sc if strict[t]["opposite_sign"])
@@ -566,12 +595,13 @@ def v05_expected(d: dict) -> dict[str, list[str]]:
             f"a test is resolved only at Holm-adjusted p below {alpha} with the predicted sign",
         ],
         "**Pre-registered confirmatory tests.**": [
-            f"of the {len(strict)} tests {len(resolved)} are resolved ({', '.join(resolved)}) and "
+            f"of the {n_v} hypothesis verdicts {n_sup} are supported and {n_v - n_sup} are not "
+            f"supported; {_scoring_rule(d['verdicts'])}",
+            f"Of the {len(strict)} tests {len(resolved)} are resolved "
+            f"({', '.join(resolved) or _and([])}) and "
             f"{predicted} match their pre-registered prediction",
             f"{_and(hollow)} count as matched only because they were predicted not resolved, and "
             f"each was significant in the opposite direction (Holm p < {alpha})",
-            f"Of the {n_v} hypothesis verdicts {n_sup} are supported and {n_v - n_sup} are not "
-            f"supported; {len(flips)} depends on the scoring rule ({flip_names})",
             f"H2 is {_verdict(h2q, 'strict')} for Qwen3-8B",
             _test(strict["T7"], "T7"),
             f"H2 is {_verdict(h2g, 'strict')} for gemini-3.6-flash ({_test(strict['T8'], 'T8')})",

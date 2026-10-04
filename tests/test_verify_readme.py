@@ -238,8 +238,8 @@ def test_rewording_the_robustness_sentence_fails_instead_of_skipping():
         ("CLINC150 subset (1,900 rows)", "CLINC150 subset (1,800 rows)"),
         ("4 are resolved (T1, T6, T7, T8)", "5 are resolved (T1, T6, T7, T8)"),
         ("6 match their pre-registered prediction", "7 match their pre-registered prediction"),
-        ("Of the 5 hypothesis verdicts 2 are supported",
-         "Of the 5 hypothesis verdicts 3 are supported"),
+        ("of the 5 hypothesis verdicts 2 are supported",
+         "of the 5 hypothesis verdicts 3 are supported"),
         ("T2 -0.046 [-0.089, -0.003], Holm p 0.036)", "T2 -0.046 [-0.089, -0.003], Holm p 0.030)"),
         ("(Holm p 0.072)", "(Holm p 0.036)"),
         ("T7 +0.107 [+0.062, +0.151]", "T7 +0.108 [+0.062, +0.151]"),
@@ -365,3 +365,67 @@ def test_a_v05_figure_follows_the_json(monkeypatch):
 
     monkeypatch.setattr(verify_readme, "load", patched)
     assert any(f.startswith("v0.5") and "T7" in f for f in check(README).failures)
+
+
+def patch_v05(monkeypatch, edit_json):
+    """Serve a deep copy of docs/v05-results.json edited by `edit_json`."""
+    import copy
+
+    import verify_readme
+
+    real = verify_readme.load
+
+    def patched(name):
+        d = real(name)
+        if name == "v05-results.json":
+            d = copy.deepcopy(d)
+            edit_json(d)
+        return d
+
+    monkeypatch.setattr(verify_readme, "load", patched)
+
+
+@pytest.mark.parametrize(
+    "old,new",
+    [
+        ('2 carry "depends on the scoring rule"', '1 carries "depends on the scoring rule"'),
+        ('2 carry "depends on the scoring rule"', '3 carry "depends on the scoring rule"'),
+        ("(H1-sc and H2 for gemini-3.6-flash)", "(H2 for gemini-3.6-flash)"),
+        ("one of them, H2 for gemini-3.6-flash, changes verdict",
+         "both of them change verdict"),
+    ],
+)
+def test_the_scoring_rule_count_is_the_flag_in_the_json(old, new):
+    assert any(f.startswith("v0.5") for f in check(edit_in(TESTS, old, new)).failures)
+
+
+def test_the_scoring_rule_count_follows_the_flag_not_the_flips(monkeypatch):
+    # clearing H1-sc's flag changes no verdict, so a count built from flips would still pass
+    def clear(d):
+        for v in d["verdicts"]:
+            if v["hypothesis"] == "H1-sc":
+                v["depends_on_scoring_rule"] = False
+
+    patch_v05(monkeypatch, clear)
+    assert any(f.startswith("v0.5") and "scoring rule" in f for f in check(README).failures)
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["opposite_sign", "depends_on_scoring_rule", "flips"],
+)
+def test_an_empty_list_from_the_json_is_a_named_mismatch_not_a_crash(monkeypatch, field):
+    def empty(d):
+        if field == "opposite_sign":
+            for t in d["tests"]["strict"].values():
+                t["opposite_sign"] = False
+        elif field == "depends_on_scoring_rule":
+            for v in d["verdicts"]:
+                v["depends_on_scoring_rule"] = False
+        else:
+            for v in d["verdicts"]:
+                v["reread"] = v["strict"]
+
+    patch_v05(monkeypatch, empty)
+    failures = check(README).failures   # must not raise
+    assert any(f.startswith("v0.5") and "not found word for word" in f for f in failures)
