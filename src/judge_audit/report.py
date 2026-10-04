@@ -243,9 +243,9 @@ def certificate_html(d: dict) -> str:
                 _pct_of(t["target_risk"]) + (" (primary)" if t.get("primary") else ""),
                 t["plain"], *certificate_cells(t, c["unit"]))) + "</tr>"
             for t in q["targets"])
-        out.append("<table><tr><th>At most this error</th><th>In plain words</th>"
-                   "<th>Safe automation rate</th><th>Deploy at confidence ≥</th>"
-                   f"<th>Checked out of sample</th></tr>{rows}</table>")
+        out.append("<table><tr><th scope='col'>At most this error</th><th scope='col'>In plain words</th>"
+                   "<th scope='col'>Safe automation rate</th><th scope='col'>Deploy at confidence ≥</th>"
+                   f"<th scope='col'>Checked out of sample</th></tr>{rows}</table>")
     out.append(f'<p class="prov">{text(scope_line(c))}</p>')
     out.append(f'<p class="prov">{text(certificate_note(c, bool(d.get("regenerated"))))}</p>')
     return "\n".join(out)
@@ -324,11 +324,11 @@ def provenance_lines(run: dict) -> list[str]:
         return []
     j = run.get("judge", {})
     ds = run.get("dataset", {})
-    parts = [f"judge `{j.get('name', '?')}`"]
+    parts = [f"judge `{inline(j.get('name', '?'))}`"]
     if j.get("model"):
-        parts.append(f"model `{j['model']}`")
+        parts.append(f"model `{inline(j['model'])}`")
     if j.get("backend"):
-        parts.append(f"backend `{j['backend']}`")
+        parts.append(f"backend `{inline(j['backend'])}`")
     if j.get("seed") is not None:
         parts.append(f"seed {j['seed']}")
     if run.get("timestamp_utc"):
@@ -341,14 +341,14 @@ def provenance_lines(run: dict) -> list[str]:
     served = run.get("served")
     if served:
         versions = ", ".join(
-            f"`{v.get('model') or '?'}`"
+            f"`{inline(v.get('model') or '?')}`"
             + (f" (fingerprint `{v['system_fingerprint']}`)" if v.get("system_fingerprint") else "")
             + f" × {v['decisions']} decisions" for v in served.get("versions", []))
         lines.append(f"_served as reported by the provider: {versions or 'no version reported'}"
                      + (f" · {served['decisions_without_version']} decisions without a version"
                         if served.get("decisions_without_version") else "") + "_")
     if ds.get("path"):
-        lines.append(f"_dataset `{ds.get('path')}` · {ds.get('rows')} rows · "
+        lines.append(f"_dataset `{inline(ds.get('path'))}` · {ds.get('rows')} rows · "
                      f"sha256 `{str(ds.get('sha256', ''))[:12]}…`_")
     return lines
 
@@ -520,11 +520,18 @@ def ci_lines(d: dict) -> list[str]:
 
 def _md_inline(text: str) -> str:
     """One line of our report markdown (the `_..._` wrapper, **bold**, `code`, *italics*)
-    as HTML. Escaped first, so a value from the data can never become markup."""
-    out = html.escape(text.strip().strip("_"))
-    out = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", out)
-    out = re.sub(r"`([^`]+)`", r"<code>\1</code>", out)
-    return re.sub(r"(?<![\w*])\*(?=\S)([^*]+?)\*(?![\w*])", r"<em>\1</em>", out)
+    as HTML. Escaped first, so a value from the data can never inject HTML; code spans are
+    taken verbatim (no bold or italics inside them), and the values our lines put in code
+    spans have already passed through `inline()`, so they cannot close their span."""
+    parts = re.split(r"(`[^`]+`)", html.escape(text.strip().strip("_")))
+    out = []
+    for part in parts:
+        if part.startswith("`") and part.endswith("`") and len(part) > 1:
+            out.append(f"<code>{part[1:-1]}</code>")
+            continue
+        part = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", part)
+        out.append(re.sub(r"(?<![\w*])\*(?=\S)([^*]+?)\*(?![\w*])", r"<em>\1</em>", part))
+    return "".join(out)
 
 
 def _kpi(label: str, value: str, sub: str = "", lead: bool = False) -> str:
@@ -544,7 +551,9 @@ def _key_figures(d: dict, acc_ci: str, ece_ci: str) -> str:
         t = _primary(q)
         label = f"Safe automation rate at ≤ {html.escape(_pct_of(t['target_risk']))} error"
         if len(c["questions"]) > 1:
-            label += f" · <code>{html.escape(str(q['question']))}</code>"
+            label += (f" · <code>{html.escape(str(q['question']))}</code> · "
+                      f"{len(c['questions']) - 1} more decision type"
+                      f"{'s' if len(c['questions']) > 2 else ''} in section 1")
         if t["threshold"] is None:
             cards.append(_kpi(label, "none", html.escape(t.get("reason") or
                                                          "no threshold passes"), lead=True))
@@ -553,10 +562,11 @@ def _key_figures(d: dict, acc_ci: str, ece_ci: str) -> str:
             cards.append(_kpi(label, f"{t['coverage']:.1%}",
                               f"deploy at confidence ≥ {html.escape(thr)} · out of sample: "
                               f"{html.escape(oos)}", lead=True))
-    cards.append(_kpi("Accuracy", f"{d['accuracy']:.1%}",
-                      f"95% interval{html.escape(acc_ci)} · n = {d['n']:,}"))
-    cards.append(_kpi("Calibration error (ECE)", html.escape(fmt4(d.get("ece"))),
-                      f"95% interval{html.escape(ece_ci)} · 0 = confidence matches accuracy"))
+    acc_sub = (f"95% interval{html.escape(acc_ci)} · " if acc_ci else "") + f"n = {d['n']:,}"
+    ece_sub = ((f"95% interval{html.escape(ece_ci)} · " if ece_ci else "")
+               + "0 = confidence matches accuracy")
+    cards.append(_kpi("Accuracy", f"{d['accuracy']:.1%}", acc_sub))
+    cards.append(_kpi("Calibration error (ECE)", html.escape(fmt4(d.get("ece"))), ece_sub))
     cards.append(_kpi("Cost · latency", fmt_cost(d.get("total_cost_usd"), ("", "")),
                       f"p50 {d['p50_latency_s']}s · p99 {d['p99_latency_s']}s"))
     return '<div class="kpis">' + "".join(cards) + "</div>"
@@ -620,7 +630,7 @@ footer{margin-top:40px;padding-top:12px;border-top:3px solid var(--navy)}
 @page{size:A4;margin:18mm 16mm}
 @media print{body{background:#fff}.page{box-shadow:none;margin:0;padding:0;max-width:none}
 h2{break-after:avoid;page-break-after:avoid}
-table,.kpis,.callout,img{break-inside:avoid;page-break-inside:avoid}
+table,.kpis,.callout,img,.fig{break-inside:avoid;page-break-inside:avoid}
 th,.kpi,.callout,.metric,tr:nth-child(even) td,.banner{-webkit-print-color-adjust:exact;
 print-color-adjust:exact}}
 @media (max-width:700px){.page{padding:28px 18px;margin:0}.kpis{grid-template-columns:1fr}
@@ -663,6 +673,11 @@ def render_html(result: AuditResult, tag: str = "") -> str:
         f"<tr><td>{b['bin']}</td><td>{b['avg_confidence']:.3f}</td>"
         f"<td>{b['accuracy']:.1%}</td><td>{b['n']}</td></tr>"
         for b in d["reliability_bins"] if b["n"])
+    marks_note = ("".join(f'<p class="prov">{_md_inline(line)}</p>' for line in ci_lines(d)
+                          if line and ("†" in line or "‡" in line))
+                  if ("†" in acc_ci + ece_ci or "‡" in acc_ci + ece_ci) else "")
+    footer_evidence = (" · every number recomputes from the per-decision checkpoint named above"
+                       if d.get("regenerated") else "")
     complete = (f'<p class="metric">{completeness_line(d, ("<b>", "</b>"))}</p>'
                 if d.get("completeness") else "")
     return f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
@@ -676,19 +691,20 @@ def render_html(result: AuditResult, tag: str = "") -> str:
 <div class="meta">{prov}</div>
 <h2 class="plain">Key figures</h2>
 {_key_figures(d, acc_ci, ece_ci)}
+{marks_note}
 <div class="callout"><span class="tag">Data and ground truth</span>{gt}</div>
 <h2>Can I automate this?</h2>
 {certificate_html(d)}
 <p>{zero_html}<br>
 <em>Retrospective on this dataset — not a production guarantee.</em></p>
-<h2>Reliability diagram</h2>
+<div class="fig"><h2>Reliability diagram</h2>
 <p class="note">A perfectly honest judge sits on the diagonal: in every bin, average confidence equals accuracy.</p>
-<img src="{rel}" alt="reliability diagram">
+<img src="{rel}" alt="Reliability diagram: average stated confidence against observed accuracy in each confidence bin, with the diagonal of a perfectly honest judge"></div>
 <h2>Accuracy vs coverage</h2>
-<img src="{acc}" alt="accuracy coverage curve">
-<table class="num"><tr><th>Coverage</th><th>Accuracy</th><th>Min confidence</th><th>n</th></tr>{curve_rows}</table>
+<img src="{acc}" alt="Accuracy against coverage: accuracy among the decisions above each confidence threshold, by the share of decisions above it">
+<table class="num"><tr><th scope="col">Coverage</th><th scope="col">Accuracy</th><th scope="col">Min confidence</th><th scope="col">n</th></tr>{curve_rows}</table>
 <h2>Calibration bins</h2>
-<table class="num"><tr><th>Bin</th><th>Avg confidence</th><th>Accuracy</th><th>n</th></tr>{bin_rows}</table>
+<table class="num"><tr><th scope="col">Bin</th><th scope="col">Avg confidence</th><th scope="col">Accuracy</th><th scope="col">n</th></tr>{bin_rows}</table>
 <p><em>A perfectly honest judge sits on the diagonal: avg confidence == accuracy in every bin.</em></p>
 <h2>All metrics and method notes</h2>
 <p class="metric"><b>{d['n']}</b> decisions · accuracy <b>{d['accuracy']:.1%}</b>{acc_ci} · confidence known <b>{confidence['known']}/{confidence['total']}</b> · ECE <b>{fmt4(d.get('ece'))}</b>{ece_ci}{calibration_numbers(d, ("<b>", "</b>"))}<br>
@@ -696,7 +712,7 @@ cost {fmt_cost(d.get('total_cost_usd'), ("<b>", "</b>"))} · p50 <b>{d['p50_late
 {complete}
 {ci_note}
 <footer><p>{html.escape(THREE_NUMBERS_NOTE)}</p>
-<p>Generated by judge-audit {html.escape(__version__)} · every number recomputes from the per-decision checkpoint named above · statistical evidence on labelled decisions, not a conformity assessment.</p></footer>
+<p>Generated by judge-audit {html.escape(__version__)}{footer_evidence} · statistical evidence on labelled decisions, not a conformity assessment.</p></footer>
 </div></body></html>
 """
 
