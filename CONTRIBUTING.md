@@ -28,7 +28,7 @@ A published audit is three files that agree with each other: the dataset (`examp
 
 ```bash
 git clone https://github.com/kunko-ai-labs/judge-audit && cd judge-audit
-python -m venv .venv && . .venv/bin/activate
+python3 -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
 ruff check src tests scripts examples && mypy && pytest -q
 python scripts/verify_published.py && python scripts/verify_readme.py
@@ -57,7 +57,7 @@ Use the templates: 🐛 bug report, or 💡 proposal for a judge, a dataset or a
 
 ## Review
 
-This is a single-maintainer repository, and branch protection does **not** require a GitHub approving review: GitHub does not let an author approve their own pull request, so with one maintainer a required approval could only be satisfied by an admin bypass on every merge, which on classic branch protection also skips failing CI. Instead, every change gets an independent, adversarial review that recomputes the statistics and checks each claim against the diff, a clean-room install and smoke test of the CLI, MCP server and Action on every supported Python, and the maintainer's own read, before a squash-merge on green CI. That is not a second person's approval, and we do not claim it is; when an external reviewer joins, `required_approving_review_count` in `scripts/protect_main.sh` goes to 1.
+This is a single-maintainer repository, and branch protection does **not** require a GitHub approving review: GitHub does not let an author approve their own pull request, so with one maintainer a required approval could only be satisfied by an admin bypass on every merge, which on classic branch protection also skips failing CI. Instead, every pull request that changes code, data or reports gets an independent, adversarial review that recomputes the statistics and checks each claim against the diff, a clean-room install with the tests on every supported Python and a smoke test of the CLI, the MCP server and the Action, and the maintainer's own read, before a squash-merge on green CI. Dependency bumps get CI and the maintainer's read. That is not a second person's approval, and we do not claim it is; when an external reviewer joins, `required_approving_review_count` in `scripts/protect_main.sh` goes to 1.
 
 ## Branches
 
