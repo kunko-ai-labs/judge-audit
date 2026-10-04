@@ -7,16 +7,28 @@ panel) and the hero chart's caption and alt text, finds the JSON field behind ev
 and fails if a figure is anything but that field rounded to the digits shown, or printed
 coarser than its column. Every expected row must appear exactly once. In the caption, the
 judges named as separated from Jev (below or above it) or not are recomputed from the 95 %
-intervals. A figure may be rounded; it may never be changed. Other README prose is not read.
+intervals. A figure may be rounded; it may never be changed. Other README prose is not read,
+except the "v0.5 findings" section: each of its sentences that carries a figure or a verdict is
+rebuilt from docs/v05-results.json and must appear word for word, exactly once, in its paragraph
+next to that paragraph's caveats. Those sentences carry their direction words (beat / lost to,
+worse / better, rebuilt from the signs), the Holm threshold (from the JSON's alpha), the
+dataset years and the single-run caveat, so an edit to any of them fails. The quickstart's
+simulated figures and its `check --min-safe-rate` gate (the share, its "below N %", and the
+exit codes claimed) are checked against a fresh simulated run and check (seeded, no API key,
+a few seconds).
 
   python scripts/verify_readme.py            # exit 1 on any mismatch, listing them
 """
 from __future__ import annotations
 
+import functools
 import json
+import os
 import re
 import statistics
+import subprocess
 import sys
+import tempfile
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
@@ -455,6 +467,341 @@ def check_robustness(ck: Checker, md: str) -> None:
           load("robustness-distinct-2026-09.json")["headline"]["separated"], True)
 
 
+# ---------- v0.5 findings (docs/v05-results.json) ----------
+
+def _d(x: float) -> str:
+    """A signed AUROC difference as docs/v05-results.md prints it: +0.098, -0.046."""
+    return f"{x:+.3f}"
+
+
+def _pc(x: float) -> str:
+    return f"{x * 100:.1f} %"
+
+
+def _test(t: dict, label: str) -> str:
+    lo, hi = t["ci"]
+    return f"{label} {_d(t['difference'])} [{_d(lo)}, {_d(hi)}]"
+
+
+def _and(items: list[str]) -> str:
+    if not items:   # a sentence the README cannot hold: a named mismatch, not an IndexError
+        return "(none in docs/v05-results.json)"
+    return items[0] if len(items) == 1 else f"{', '.join(items[:-1])} and {items[-1]}"
+
+
+def _by_model(verdicts: list[dict]) -> str:
+    """'H1-sc and H2 for gemini-3.6-flash': the hypotheses grouped by model, in JSON order."""
+    models: dict[str, list[str]] = {}
+    for v in verdicts:
+        models.setdefault(v["model"], []).append(v["hypothesis"])
+    return "; ".join(f"{_and(h)} for {m}" for m, h in models.items())
+
+
+def _scoring_rule(verdicts: list[dict]) -> str:
+    """How many verdicts carry the JSON's `depends_on_scoring_rule` flag, and which of them
+    change verdict between the two readings (`strict != reread`)."""
+    flagged = [v for v in verdicts if v["depends_on_scoring_rule"]]
+    flips = [v for v in verdicts if v["strict"] != v["reread"]]
+    if not flagged:
+        head = 'none carries "depends on the scoring rule"'
+    else:
+        verb = "carries" if len(flagged) == 1 else "carry"
+        head = f'{len(flagged)} {verb} "depends on the scoring rule" ({_by_model(flagged)})'
+    if not flips:
+        tail = "none of them changes verdict under the re-reading"
+    elif any(not v["depends_on_scoring_rule"] for v in flips):
+        tail = f"{_by_model(flips)} changes verdict without the flag"
+    elif len(flips) == 1:
+        tail = f"one of them, {_by_model(flips)}, changes verdict under the re-reading"
+    else:
+        tail = f"{len(flips)} of them, {_by_model(flips)}, change verdict under the re-reading"
+    return f"{head}, and {tail}"
+
+
+# The datasets' publication years: not in the JSON, so pinned here; every v0.5 caveat cites them.
+DATASET_YEARS = "BANKING77 (2020) and CLINC150 (2019)"
+
+
+def _verdict(v: dict, reading: str) -> str:
+    return "supported" if v[reading] else "not supported"
+
+
+def v05_expected(d: dict) -> dict[str, list[str]]:
+    """Paragraph opening -> the sentences it must hold, each rebuilt from the results JSON."""
+    strict, reread = d["tests"]["strict"], d["tests"]["reread"]
+    verdicts = {(v["hypothesis"], v["model"]): v for v in d["verdicts"]}
+    m, prov = d["metrics"], d["provenance"]
+    n_b, n_c = m["banking77/jev"]["strict"]["n"], m["clinc150/jev"]["strict"]["n"]
+    h2q, h2g = verdicts[("H2", "Qwen3-8B")], verdicts[("H2", "gemini-3.6-flash")]
+    h1lp = verdicts[("H1-lp", "Qwen3-8B")]
+    h1q, h1g = verdicts[("H1-sc", "Qwen3-8B")], verdicts[("H1-sc", "gemini-3.6-flash")]
+    alpha = f"{d['alpha']:g}"
+    resolved = [k for k, t in strict.items() if t["resolved"]]
+    predicted = sum(t["as_predicted"] for t in strict.values())
+    # tests that "match" only because a not-resolved prediction met an opposite-sign result
+    hollow = [k for k, t in strict.items()
+              if t["as_predicted"] and not t["resolved"] and t["opposite_sign"]]
+    n_v = len(d["verdicts"])
+    n_sup = sum(v["strict"] for v in d["verdicts"])
+    sc = ["T3", "T4", "T5", "T6"]
+    worse = sum(strict[t]["opposite_sign"] for t in sc)
+    opposed = [t for t in sc if strict[t]["opposite_sign"]]
+    # all([]) is True: with no opposite-sign test the word is neither "worse" nor "better"
+    sc_word = ("no differently" if not opposed
+               else "worse" if all(strict[t]["difference"] < 0 for t in opposed) else "better")
+    worse_rr = sum(reread[t]["opposite_sign"] for t in sc)
+    t1, t2, t2r = strict["T1"], strict["T2"], reread["T2"]
+    w1 = "beat" if t1["difference"] > 0 else "lost to"
+    w2 = "beat" if t2["difference"] > 0 else "lost to"
+    if t2["opposite_sign"] and not t2r["opposite_sign"] and not t2r["resolved"]:
+        t2_text = [f"{w2} it on CLINC150 only under the pre-registered rule "
+                   f"({_test(t2, 'T2')}, Holm p {t2['p_holm']:.3f})",
+                   f"T2 is not resolved under the re-reading (Holm p {t2r['p_holm']:.3f})"]
+    else:   # the README's qualifier no longer describes T2: fail until it is rewritten
+        t2_text = [f"{w2} it on CLINC150 ({_test(t2, 'T2')}, Holm p {t2['p_holm']:.3f} under "
+                   f"the pre-registered rule, {t2r['p_holm']:.3f} under the re-reading)"]
+    repeat_names = {"jev": "Jev", "llm-qwen3-8b": "Qwen3-8B verbalized"}
+    repeated = " and ".join(repeat_names[r["runs"][0]] for r in d["repeats"])
+    caveat = ("*Caveats:* the data are public datasets, " + DATASET_YEARS + ", probably in the "
+              "judges' pretraining data; each confirmatory run ran once (repeats only for "
+              f"{repeated} on BANKING77); ")
+    e1 = (m["banking77/logprob-qwen3-8b-prompt-v2"]["strict"]["auroc"]
+          - m["banking77/llm-qwen3-8b-prompt-v2"]["strict"]["auroc"])
+    depends = {t: "depends on the scoring rule" if strict[t].get("depends_on_scoring_rule")
+               else "does not depend on the scoring rule" for t in ("T6", "T8")}
+    k_q, k_g = prov["banking77/llm-qwen3-8b-sc10"]["samples"], prov[
+        "banking77/llm-gemini-3.6-flash-sc5"]["samples"]
+    if h1q["strict"] or h1g["strict"]:
+        h1sc = (f"H1-sc is {_verdict(h1q, 'strict')} for Qwen3-8B and {_verdict(h1g, 'strict')} "
+                "for gemini-3.6-flash.")
+    else:
+        h1sc = "H1-sc is not supported for Qwen3-8B or for gemini-3.6-flash."
+
+    def cert(run: str, target: str, long: bool) -> str:
+        p = m[f"banking77/{run}"]["strict"]["certification"][target]["pooled"]
+        tail = (f"({p['errors']} errors / {p['covered']} automated)" if long
+                else f"({p['errors']} / {p['covered']})")
+        return f"{_pc(p['coverage'])} at ≤ {round(float(target) * 100)} % {tail}"
+
+    jev10 = m["banking77/jev"]["strict"]["certification"]
+    s5, s10 = jev10["0.05"]["spread_coverage"], jev10["0.1"]["spread_coverage"]
+    seeds = jev10["0.05"]["spread_seeds"]
+    nothing_low = all(r["strict"]["certification"][t]["pooled"]["covered"] == 0
+                      for k, r in m.items() if k.startswith("banking77/") for t in ("0.01", "0.02"))
+    no_reviewer = "no external human reviewer read the plan before the study ran"
+    flips = [v for v in d["verdicts"] if v["strict"] != v["reread"]]
+    flip_text = ("no verdict changes" if not flips else
+                 f"one verdict ({_by_model(flips)}) changes" if len(flips) == 1 else
+                 f"{len(flips)} verdicts ({_by_model(flips)}) change")
+
+    def rate(run: str) -> str:
+        c = m[f"banking77/{run}"]["strict"]["certification"]["0.05"]
+        lo, hi = c["spread_coverage"]
+        share = _pc(c["pooled"]["coverage"]) if c["pooled"]["covered"] else "none"
+        return f"{share} ({_pc(lo)}–{_pc(hi)}"
+
+    def spread5(run: str) -> tuple[float, float]:
+        lo, hi = m[f"banking77/{run}"]["strict"]["certification"]["0.05"]["spread_coverage"]
+        return lo, hi
+
+
+    noise = "label noise was not measured"
+    return {
+        "**In short.**": [
+            f"counting the votes ranked their errors {sc_word} than their own verbalized number "
+            f"in {worse} of {len(sc)} tests under the pre-registered rule ({worse_rr} of {len(sc)} "
+            "under the re-reading)",
+            f"{flip_text} with how an answer that copies an option's description is scored",
+            f"On BANKING77 at ≤ 5 % error, Jev native probability can decide {rate('jev')} over "
+            f"split seeds {seeds[0]}–{seeds[1]}) of the texts alone, gemini-3.6-flash verbalized "
+            f"{rate('llm-gemini-3.6-flash')}), Qwen3-8B token log-probability "
+            f"{rate('logprob-qwen3-8b')})",
+            "probably seen in pretraining",
+            f"one run each, except {repeated} on BANKING77 ({len(d['repeats'][0]['runs'])} runs)",
+            "label noise not measured",
+            "the held-out slice not run (#106)",
+        ],
+        "A pre-registered study": [
+            f"BANKING77 test ({n_b:,} rows) and a CLINC150 subset ({n_c:,} rows)",
+            f"the {len(strict)} confirmatory tests and their predictions were frozen",
+            "[docs/v05-plan.md](docs/v05-plan.md)", "[docs/v05-results.md](docs/v05-results.md)",
+            f"a test is resolved only at Holm-adjusted p below {alpha} with the predicted sign",
+        ],
+        "**Pre-registered confirmatory tests.**": [
+            f"of the {n_v} hypothesis verdicts {n_sup} are supported and {n_v - n_sup} are not "
+            f"supported; {_scoring_rule(d['verdicts'])}",
+            f"Of the {len(strict)} tests {len(resolved)} are resolved "
+            f"({', '.join(resolved) or _and([])}) and "
+            f"{predicted} match their pre-registered prediction",
+            f"{_and(hollow)} count as matched only because they were predicted not resolved, and "
+            f"each was significant in the opposite direction (Holm p < {alpha})",
+            f"H2 is {_verdict(h2q, 'strict')} for Qwen3-8B",
+            _test(strict["T7"], "T7"),
+            f"H2 is {_verdict(h2g, 'strict')} for gemini-3.6-flash ({_test(strict['T8'], 'T8')})",
+            f"T8 {depends['T8']}",
+            _test(reread["T8"], "T8 re-read"),
+            f"H2 is {_verdict(h2g, 'reread')} for gemini-3.6-flash under the re-reading",
+            f"H1-lp is {_verdict(h1lp, 'strict')} for Qwen3-8B",
+            f"token log-probability {w1} verbalized confidence on BANKING77 ({_test(t1, 'T1')})",
+            *t2_text,
+            f"the BANKING77 gap of T1 is {_d(e1)}, against {_d(strict['T1']['difference'])}",
+            caveat + no_reviewer, noise,
+        ],
+        "**Self-consistency against verbalized confidence.**": [
+            f"(Qwen3-8B k = {k_q}, gemini-3.6-flash k = {k_g})",
+            f"ranked errors {sc_word} than the model's own verbalized number in {worse} of the "
+            f"{len(sc)} tests",
+            f"each the opposite sign at Holm p < {alpha}",
+            _test(strict["T3"], "T3"), _test(strict["T4"], "T4"), _test(strict["T5"], "T5"),
+            h1sc, f"T6 (gemini-3.6-flash, CLINC150), {depends['T6']}",
+            _test(strict["T6"], "T6"), _test(reread["T6"], "T6 re-read"),
+            caveat + no_reviewer, noise,
+        ],
+        "**Safe automation rate on BANKING77.**": [
+            # one split seed; its spread over the other seeds in the same sentence
+            f"Jev native probability {cert('jev', '0.05', True)[:-1]}; split seed {d['seed']}, "
+            f"{_pc(s5[0])}–{_pc(s5[1])} over seeds {seeds[0]}–{seeds[1]}) and "
+            f"{cert('jev', '0.1', False)[:-1]}; {_pc(s10[0])}–{_pc(s10[1])} over the same seeds)",
+            f"gemini-3.6-flash verbalized {cert('llm-gemini-3.6-flash', '0.05', True)[:-1]}; "
+            f"{_pc(spread5('llm-gemini-3.6-flash')[0])}–{_pc(spread5('llm-gemini-3.6-flash')[1])} "
+            f"over the same seeds) and {cert('llm-gemini-3.6-flash', '0.1', False)}",
+            f"Qwen3-8B token log-probability {cert('logprob-qwen3-8b', '0.05', True)[:-1]}; "
+            f"{_pc(spread5('logprob-qwen3-8b')[0])}–{_pc(spread5('logprob-qwen3-8b')[1])} over the "
+            f"same seeds) and {cert('logprob-qwen3-8b', '0.1', False)}",
+            *(["On BANKING77 no run automates anything at ≤ 1 % or ≤ 2 %"] if nothing_low else []),
+            caveat + "every bound includes the datasets' own label errors, because label noise "
+            + "was not measured",
+            "the held-out slice was not run (#106)",
+            "not a conformity assessment",
+        ],
+    }
+
+
+def paragraph(md: str, opening: str) -> list[str]:
+    return [p for p in md.split("\n\n") if p.startswith(opening)]
+
+
+def check_v05(ck: Checker, md: str) -> None:
+    """Every sentence with a v0.5 figure or verdict, rebuilt from the JSON: word for word, once
+    in the README, inside its own paragraph (so its caveats travel with it)."""
+    section = md.split("## v0.5 findings", 1)
+    if len(section) != 2:
+        ck.failures.append("v0.5 findings: the section is missing")
+        return
+    body = section[1].split("\n## ", 1)[0]
+    for opening, needed in v05_expected(load("v05-results.json")).items():
+        paras = paragraph(body.lstrip("\n"), opening)
+        ck.checked += 1
+        if len(paras) != 1:
+            ck.failures.append(f"v0.5 findings: paragraph {opening!r} appears {len(paras)} times")
+            continue
+        for text in needed:
+            ck.checked += 1
+            if text not in paras[0]:
+                ck.failures.append(f"v0.5 findings / {opening}: expected {text!r} (from "
+                                   "docs/v05-results.json), not found word for word")
+            elif (md.count(text) != 1 and re.search(r"\d", text)
+                  and not text.startswith("*Caveats:*")):   # the caveat repeats by design
+                ck.failures.append(f"v0.5 findings: {text!r} appears {md.count(text)} times")
+    ck.checked += 1
+    if "python scripts/v05_study.py --check" not in body:
+        ck.failures.append("v0.5 findings: the reproduce command is missing")
+
+
+# ---------- quickstart: a fresh simulated run ----------
+
+QUICKSTART_RUN = ("judge-audit run examples/email-routing/labels.jsonl --judge simulated "
+                  "--target 0.10")
+
+
+@functools.cache
+def simulated_line(target: str | None) -> str:
+    """The first line `judge-audit run` prints for the simulated judge (seeded, no API key)."""
+    args = [sys.executable, "-m", "judge_audit.cli", "run",
+            str(ROOT / "examples/email-routing/labels.jsonl"), "--judge", "simulated"]
+    if target:
+        args += ["--target", target]
+    env = {**os.environ, "PYTHONPATH": os.pathsep.join(
+        [str(ROOT / "src"), os.environ.get("PYTHONPATH", "")])}
+    with tempfile.TemporaryDirectory() as tmp:
+        out = subprocess.run(args, cwd=tmp, env=env, capture_output=True, text=True,
+                             check=True, timeout=120)
+    return out.stdout.splitlines()[0]
+
+
+@functools.cache
+def simulated_check(share: str) -> int:
+    """The exit code of the quickstart's `check --target 0.10 --min-safe-rate 0.10:SHARE`, on a
+    baseline from a fresh simulated `run --target 0.10` (seeded, no API key)."""
+    labels = str(ROOT / "examples/email-routing/labels.jsonl")
+    cli = [sys.executable, "-m", "judge_audit.cli"]
+    env = {**os.environ, "PYTHONPATH": os.pathsep.join(
+        [str(ROOT / "src"), os.environ.get("PYTHONPATH", "")])}
+    with tempfile.TemporaryDirectory() as tmp:
+        subprocess.run([*cli, "run", labels, "--judge", "simulated", "--target", "0.10"],
+                       cwd=tmp, env=env, capture_output=True, check=True, timeout=120)
+        out = subprocess.run([*cli, "check", labels, "--judge", "simulated", "--baseline",
+                              "audit-result.json", "--target", "0.10", "--min-safe-rate",
+                              f"0.10:{share}"], cwd=tmp, env=env, capture_output=True,
+                             timeout=120)
+    return out.returncode
+
+
+GATE = re.compile(r"--target 0\.10 --min-safe-rate 0\.10:(\d\.\d+)\n")
+GATE_PROSE = re.compile(r"`check --min-safe-rate 0\.10:(\d\.\d+)` exits (\d) here and exits (\d) "
+                        r"if that share falls below (\d+) %")
+
+
+def check_gate(ck: Checker, md: str) -> None:
+    """The quickstart's `check --min-safe-rate` gate: the command and the prose name the same
+    share, the prose's percentage is that share, and the exit codes it claims are a fresh
+    `check`'s — 0 at the share, 1 just above the fresh run's own rate."""
+    ck.checked += 4
+    cmd, prose = GATE.search(md), GATE_PROSE.search(md)
+    if not cmd or not prose:
+        ck.failures.append("quickstart: the `check --min-safe-rate` command or its sentence "
+                           "(`… exits 0 here and exits 1 if that share falls below N %`) is "
+                           "missing or reworded")
+        return
+    share = cmd.group(1)
+    if prose.group(1) != share:
+        ck.failures.append(f"quickstart: the command gates at {share}, the prose at "
+                           f"{prose.group(1)}")
+    if Decimal(prose.group(4)) != Decimal(share) * 100:
+        ck.failures.append(f"quickstart: the prose says below {prose.group(4)} %, the command "
+                           f"gates at {share}")
+    rc_here = simulated_check(share)
+    if prose.group(2) != str(rc_here):
+        ck.failures.append(f"quickstart: the prose says the gate exits {prose.group(2)} here, a "
+                           f"fresh check exits {rc_here}")
+    rate = re.search(r"safe_automation@10%=([\d.]+)%", simulated_line("0.10"))
+    above = f"{float(rate.group(1)) / 100 + 0.01:.3f}" if rate else "1.0"
+    rc_above = simulated_check(above)
+    if prose.group(3) != str(rc_above) or rc_above != 1:
+        ck.failures.append(f"quickstart: the prose says the gate exits {prose.group(3)} when "
+                           f"the share falls short, a fresh check at {above} exits {rc_above}")
+
+
+def check_quickstart(ck: Checker, md: str) -> None:
+    """The quickstart's printed line and the figures quoted from it are a fresh simulated run's."""
+    ck.checked += 3
+    if QUICKSTART_RUN not in md:
+        ck.failures.append("quickstart: the simulated `run --target 0.10` command is missing")
+        return
+    shown = re.search(r"```text\n(SIMULATED[^\n]*?) …\n```", md)
+    line = simulated_line("0.10")
+    if not shown or not line.startswith(shown.group(1)):
+        ck.failures.append(f"quickstart: the printed line is not the start of a fresh run: {line!r}")
+    rate = re.search(r"safe_automation@10%=(\S+)", line)
+    value = rate.group(1).rstrip("%") if rate else "?"
+    if f"its {value} % says nothing" not in md:
+        ck.failures.append(f"quickstart: the prose's figure is not the fresh run's {value} %")
+    default = re.search(r"safe_automation@5%=\S+", simulated_line(None))
+    if not default or f"the line reads `{default.group(0)}`" not in md:
+        ck.failures.append("quickstart: the default-target figure is not a fresh run's "
+                           f"({default and default.group(0)})")
+
+
 def check(md: str) -> Checker:
     ck, all_tables = Checker(), tables(md)
     check_hero(ck, md)
@@ -462,6 +809,9 @@ def check(md: str) -> Checker:
     check_jev_audits(ck, all_tables)
     check_arena(ck, all_tables)
     check_consensus(ck, all_tables)
+    check_v05(ck, md)
+    check_quickstart(ck, md)
+    check_gate(ck, md)
     return ck
 
 
