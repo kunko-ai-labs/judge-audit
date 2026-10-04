@@ -243,9 +243,9 @@ def certificate_html(d: dict) -> str:
                 _pct_of(t["target_risk"]) + (" (primary)" if t.get("primary") else ""),
                 t["plain"], *certificate_cells(t, c["unit"]))) + "</tr>"
             for t in q["targets"])
-        out.append("<table><tr><th>at most this error</th><th>in plain words</th>"
-                   "<th>safe automation rate</th><th>deploy at confidence ≥</th>"
-                   f"<th>checked out of sample</th></tr>{rows}</table>")
+        out.append("<table><tr><th>At most this error</th><th>In plain words</th>"
+                   "<th>Safe automation rate</th><th>Deploy at confidence ≥</th>"
+                   f"<th>Checked out of sample</th></tr>{rows}</table>")
     out.append(f'<p class="prov">{text(scope_line(c))}</p>')
     out.append(f'<p class="prov">{text(certificate_note(c, bool(d.get("regenerated"))))}</p>')
     return "\n".join(out)
@@ -570,30 +570,31 @@ REPORT_CSS = """
 *{box-sizing:border-box}
 body{margin:0;background:var(--desk);color:var(--ink);font:var(--t-body)/1.55 var(--f);
 counter-reset:section}
-p,li{font-size:var(--t-body);margin:0 0 10px}
-.page{max-width:900px;margin:32px auto;background:var(--paper);padding:52px 60px 36px;
+p,li{font-size:var(--t-body);margin:0 0 12px}
+li:last-child{margin-bottom:0}
+.page{max-width:880px;margin:40px auto;background:var(--paper);padding:56px 64px 40px;
 box-shadow:0 2px 18px rgba(19,41,75,.12)}
 h1,h2,h3{font-family:var(--f);color:var(--navy);font-weight:700;line-height:1.25}
 .eyebrow{font-size:var(--t-small);letter-spacing:.12em;text-transform:uppercase;
 color:var(--accent);font-weight:700;border-bottom:3px solid var(--navy);padding-bottom:10px;
 display:flex;justify-content:space-between;gap:16px}
-h1{font-size:var(--t-h1);margin:22px 0 4px}
+h1{font-size:var(--t-h1);margin:24px 0 8px}
 .subtitle{color:var(--muted);margin:0 0 16px}
 .meta,.meta p,.prov,.note,footer,footer p{font-size:var(--t-small);color:var(--muted)}
 .meta{border-left:3px solid var(--rule);padding:2px 0 2px 12px}.meta p{margin:2px 0}
 .banner{background:var(--warn);border:1px solid var(--warnline);border-left:6px solid
 var(--warnline);padding:10px 14px;font-weight:700;margin:16px 0 0}
-h2{font-size:var(--t-h2);margin:40px 0 12px;padding-bottom:6px;border-bottom:1px solid
+h2{font-size:var(--t-h2);margin:40px 0 16px;padding-bottom:8px;border-bottom:1px solid
 var(--rule);counter-increment:section}
 h2:not(.plain)::before{content:counter(section) ". ";color:var(--accent)}
 h2.plain{counter-increment:none}
-h3{font-size:var(--t-h3);margin:22px 0 8px}
-.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:8px 0 16px}
+h3{font-size:var(--t-h3);margin:24px 0 12px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0 0 24px}
 .kpi{border:1px solid var(--rule);border-top:3px solid var(--accent);padding:12px 14px;
 background:var(--soft)}
 .kpi.lead{grid-column:1/-1;border-top-color:var(--navy);background:var(--paper)}
 .kpi-label{font-size:var(--t-small);text-transform:uppercase;letter-spacing:.06em;
-color:var(--muted);font-weight:700}
+color:var(--muted);font-weight:700;min-height:1.4em}
 .kpi-value{font-size:26px;font-weight:700;color:var(--navy);margin:2px 0}
 .kpi.lead .kpi-value{font-size:34px}
 .kpi-sub{font-size:var(--t-small);color:var(--muted)}
@@ -601,21 +602,22 @@ color:var(--muted);font-weight:700}
 border:1px solid var(--rule)}
 .metric b{color:var(--ink)}
 .callout{border:1px solid var(--rule);border-left:4px solid var(--navy);background:var(--soft);
-padding:10px 14px;font-size:var(--t-small);margin:14px 0}
+padding:12px 16px;font-size:var(--t-small);margin:16px 0 24px}
 .callout .tag{display:block;font-size:var(--t-small);text-transform:uppercase;
 letter-spacing:.08em;color:var(--navy);font-weight:700;margin-bottom:2px}
-table{border-collapse:collapse;width:100%;margin:10px 0 6px;font:var(--t-table)/1.4 var(--f)}
-th{background:var(--navy);color:#fff;font-weight:600;text-align:left;padding:5px 8px;
-vertical-align:bottom}
-td{border-bottom:1px solid var(--rule);padding:4px 8px;text-align:left;vertical-align:top}
+table{border-collapse:collapse;width:100%;margin:16px 0 8px;font:var(--t-table)/1.4 var(--f)}
+table + p,table + .prov{margin-top:12px}
+th{background:var(--navy);color:#fff;font-weight:600;text-align:left;padding:6px 10px;
+vertical-align:bottom;line-height:1.3}
+td{border-bottom:1px solid var(--rule);padding:5px 10px;text-align:left;vertical-align:top}
 tr:nth-child(even) td{background:var(--soft)}
 table.num{width:auto;min-width:50%}
 table.num td,table.num th{text-align:right;font-variant-numeric:tabular-nums}
 code{font:inherit;color:var(--navy);background:#eef2f7;padding:0 4px;border-radius:3px}
 em{font-style:italic}
-img{display:block;max-width:78%;margin:10px auto;border:1px solid var(--rule)}
+img{display:block;max-width:72%;margin:16px auto 24px;border:1px solid var(--rule)}
 footer{margin-top:40px;padding-top:12px;border-top:3px solid var(--navy)}
-@page{size:A4;margin:16mm 14mm}
+@page{size:A4;margin:18mm 16mm}
 @media print{body{background:#fff}.page{box-shadow:none;margin:0;padding:0;max-width:none}
 h2{break-after:avoid;page-break-after:avoid}
 table,.kpis,.callout,img{break-inside:avoid;page-break-inside:avoid}
@@ -684,9 +686,9 @@ def render_html(result: AuditResult, tag: str = "") -> str:
 <img src="{rel}" alt="reliability diagram">
 <h2>Accuracy vs coverage</h2>
 <img src="{acc}" alt="accuracy coverage curve">
-<table class="num"><tr><th>coverage</th><th>accuracy</th><th>min confidence</th><th>n</th></tr>{curve_rows}</table>
+<table class="num"><tr><th>Coverage</th><th>Accuracy</th><th>Min confidence</th><th>n</th></tr>{curve_rows}</table>
 <h2>Calibration bins</h2>
-<table class="num"><tr><th>bin</th><th>avg confidence</th><th>accuracy</th><th>n</th></tr>{bin_rows}</table>
+<table class="num"><tr><th>Bin</th><th>Avg confidence</th><th>Accuracy</th><th>n</th></tr>{bin_rows}</table>
 <p><em>A perfectly honest judge sits on the diagonal: avg confidence == accuracy in every bin.</em></p>
 <h2>All metrics and method notes</h2>
 <p class="metric"><b>{d['n']}</b> decisions · accuracy <b>{d['accuracy']:.1%}</b>{acc_ci} · confidence known <b>{confidence['known']}/{confidence['total']}</b> · ECE <b>{fmt4(d.get('ece'))}</b>{ece_ci}{calibration_numbers(d, ("<b>", "</b>"))}<br>
