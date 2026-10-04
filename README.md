@@ -9,6 +9,8 @@
 
 ## v0.5 findings
 
+**In short.** How a judge's confidence is read matters as much as which judge it is: asking a model several times and counting the votes ranked its errors worse than its own verbalized number in 3 of 4 tests, and one verdict (H2 for gemini-3.6-flash) changes with how an answer that copies an option's description is scored. On BANKING77 at ≤ 5 % error, Jev native probability can decide 41.0 % of the texts alone, gemini-3.6-flash verbalized 14.3 %, Qwen3-8B token log-probability none. Both datasets are public and probably seen in pretraining: the number to act on is the same audit on your own decisions.
+
 A pre-registered study on two human-labelled public datasets, BANKING77 test (3,080 rows) and a CLINC150 subset (1,900 rows): the protocol, the 8 confirmatory tests and their predictions were frozen in [docs/v05-plan.md](docs/v05-plan.md) (tag `v05-plan-freeze`) before the first model call, and every result is published whether or not its prediction held ([docs/v05-results.md](docs/v05-results.md)). Each test compares two confidence methods by AUROC, how well the confidence ranks the judge's own errors; a test is resolved only at Holm-adjusted p below 0.05 with the predicted sign.
 
 **Pre-registered confirmatory tests.** Under the pre-registered scoring rule (the verdict of record), of the 5 hypothesis verdicts 2 are supported and 3 are not supported; 2 carry "depends on the scoring rule" (H1-sc and H2 for gemini-3.6-flash), and one of them, H2 for gemini-3.6-flash, changes verdict under the re-reading. Of the 8 tests 4 are resolved (T1, T6, T7, T8) and 6 match their pre-registered prediction; T3, T4 and T5 count as matched only because they were predicted not resolved, and each was significant in the opposite direction (Holm p < 0.05). H2 is supported for Qwen3-8B: Jev native probability ranks its errors better than Qwen3-8B token log-probability on CLINC150 (T7 +0.107 [+0.062, +0.151]). H2 is supported for gemini-3.6-flash (T8 +0.477 [+0.428, +0.524]), but T8 depends on the scoring rule: under amendment 2's re-reading of answers that copy an option with its description it is T8 re-read +0.001 [-0.037, +0.041], not resolved, and H2 is not supported for gemini-3.6-flash under the re-reading. H1-lp is not supported for Qwen3-8B: token log-probability beat verbalized confidence on BANKING77 (T1 +0.098 [+0.078, +0.119]) and lost to it on CLINC150 only under the pre-registered rule (T2 -0.046 [-0.089, -0.003], Holm p 0.036); T2 is not resolved under the re-reading (Holm p 0.072). *Caveats:* the data are public datasets, BANKING77 (2020) and CLINC150 (2019), probably in the judges' pretraining data; each confirmatory run ran once (repeats only for Jev and Qwen3-8B verbalized on BANKING77); no external human reviewer read the plan before the study ran; label noise was not measured, so a label error counts as a judge error; with a second prompt wording (exploratory) the BANKING77 gap of T1 is +0.022, against +0.098.
@@ -28,7 +30,7 @@ Teams are shipping judgment models — TypeSafe's Jev, LLM-as-judge, guardrails,
 | Question | Metric | Why a buyer cares |
 |---|---|---|
 | When it says 80 % confident, is it right 80 % of the time? | ECE, reliability diagram | A confident-and-wrong judge automates its own mistakes |
-| What share of the work can I automate at zero observed errors? | accuracy-coverage curve, zero-error coverage | The ROI number — with its error bar attached, and the tier of the labels behind it |
+| What share of the work can it decide alone at a bounded error? | safe automation rate, accuracy-coverage curve | The ROI number — with its error bound, the threshold to deploy, and the labels behind it |
 | What does it really cost, and how bad is the latency tail? | $ per decision, p50 / p99 | The demo is cheap; the tail is what pages you |
 | Has it drifted since last week? | `judge-audit check` CI gate | Vendors update models without telling you |
 
@@ -46,7 +48,7 @@ The start of the `run` line, **SIMULATED**:
 SIMULATED — not a real vendor audit · judge=simulated n=200 accuracy=85.5% [75.1, 93.7] safe_automation@10%=65.5% …
 ```
 
-`simulated` is a seeded simulator so you can see the whole pipeline in ten seconds; every report it touches is stamped **SIMULATED**, and its 65.5 % says nothing about any real judge. `safe_automation@10%` is the share of decisions the judge could take alone with the error bounded at 10 %; at the default target, 5 %, the simulator reaches no threshold and the line reads `safe_automation@5%=none`. `check --min-safe-rate 0.10:0.60` exits 0 here and exits 1 if that share falls below 60 %. `--target` and `--min-safe-rate` ship with v0.5.0; until it is tagged, install from this repository. To audit a real vendor, see [docs/real-audits.md](docs/real-audits.md).
+`simulated` is a seeded simulator so you can see the whole pipeline in ten seconds; every report it touches is stamped **SIMULATED**, and its 65.5 % says nothing about any real judge. `safe_automation@10%` is the share of decisions the judge could take alone with the error bounded at 10 %; at the default target, 5 %, the simulator reaches no threshold and the line reads `safe_automation@5%=none`. `check --min-safe-rate 0.10:0.60` exits 0 here and exits 1 if that share falls below 60 %. To audit a real vendor, see [docs/real-audits.md](docs/real-audits.md).
 
 In the [GitHub Action](docs/integrations.md#github-action) the same controls are inputs: `target` (the error rate the safe automation rate is headlined at, default `0.05`), `segment-by` (where to look for the worst segment: `label`, `meta.FIELD` or `none`) and `min-safe-rate` (`RISK:SHARE` minimums that fail the job). It returns `safe-automation-rate` (at the target) and `safe-automation-rates` (every target) as outputs.
 
@@ -152,7 +154,7 @@ Exit codes: `0` ok · `1` drift detected · `2` usage or configuration error (th
 **In CI:** the [GitHub Action](docs/integrations.md#github-action) runs the audit on every push or pull request and fails the build on drift:
 
 ```yaml
-- uses: kunko-ai-labs/judge-audit@v0.5      # resolves once v0.5.0 is tagged; or pin the release's commit SHA
+- uses: kunko-ai-labs/judge-audit@v0.5      # or pin the release's commit SHA
   with: { labels: audits/labels.jsonl, judge: jev, baseline: audits/baseline.json,
           target: "0.05", segment-by: label, min-safe-rate: "0.05:0.40" }
   env: { AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }} }

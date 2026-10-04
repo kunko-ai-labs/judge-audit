@@ -586,8 +586,26 @@ def v05_expected(d: dict) -> dict[str, list[str]]:
     nothing_low = all(r["strict"]["certification"][t]["pooled"]["covered"] == 0
                       for k, r in m.items() if k.startswith("banking77/") for t in ("0.01", "0.02"))
     no_reviewer = "no external human reviewer read the plan before the study ran"
+    flips = [v for v in d["verdicts"] if v["strict"] != v["reread"]]
+    flip_text = ("no verdict changes" if not flips else
+                 f"one verdict ({_by_model(flips)}) changes" if len(flips) == 1 else
+                 f"{len(flips)} verdicts ({_by_model(flips)}) change")
+
+    def rate(run: str) -> str:
+        p = m[f"banking77/{run}"]["strict"]["certification"]["0.05"]["pooled"]
+        return _pc(p["coverage"]) if p["covered"] else "none"
+
     noise = "label noise was not measured"
     return {
+        "**In short.**": [
+            f"counting the votes ranked its errors {sc_word} than its own verbalized number in "
+            f"{worse} of {len(sc)} tests",
+            f"{flip_text} with how an answer that copies an option's description is scored",
+            f"On BANKING77 at ≤ 5 % error, Jev native probability can decide {rate('jev')} of the "
+            f"texts alone, gemini-3.6-flash verbalized {rate('llm-gemini-3.6-flash')}, Qwen3-8B "
+            f"token log-probability {rate('logprob-qwen3-8b')}",
+            "probably seen in pretraining",
+        ],
         "A pre-registered study": [
             f"BANKING77 test ({n_b:,} rows) and a CLINC150 subset ({n_c:,} rows)",
             f"the {len(strict)} confirmatory tests and their predictions were frozen",

@@ -429,3 +429,32 @@ def test_an_empty_list_from_the_json_is_a_named_mismatch_not_a_crash(monkeypatch
     patch_v05(monkeypatch, empty)
     failures = check(README).failures   # must not raise
     assert any(f.startswith("v0.5") and "not found word for word" in f for f in failures)
+
+
+SHORT = "**In short.**"
+
+
+@pytest.mark.parametrize(
+    "old,new",
+    [
+        ("ranked its errors worse than", "ranked its errors better than"),
+        ("in 3 of 4 tests", "in 4 of 4 tests"),
+        ("one verdict (H2 for gemini-3.6-flash) changes", "no verdict changes"),
+        ("can decide 41.0 % of the", "can decide 42.0 % of the"),
+        ("gemini-3.6-flash verbalized 14.3 %,", "gemini-3.6-flash verbalized 15.3 %,"),
+        ("token log-probability none.", "token log-probability 1.0 %."),
+        ("probably seen in pretraining", "not seen in pretraining"),
+    ],
+)
+def test_the_in_short_summary_is_checked_like_the_findings(old, new):
+    assert any(f.startswith("v0.5") for f in check(edit_in(SHORT, old, new)).failures)
+
+
+def test_the_in_short_none_follows_the_json(monkeypatch):
+    # a run that automates something at 5 % must print its share, not "none"
+    def automate(d):
+        p = d["metrics"]["banking77/logprob-qwen3-8b"]["strict"]["certification"]["0.05"]["pooled"]
+        p["covered"], p["coverage"] = 30, 0.01
+
+    patch_v05(monkeypatch, automate)
+    assert any(f.startswith("v0.5 findings / **In short.**") for f in check(README).failures)
