@@ -8,9 +8,10 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 
-from verify_readme import ROOT, check, rounded  # noqa: E402
+import verify_readme as _vr  # noqa: E402
+from verify_readme import check, rounded  # noqa: E402
 
-README = (ROOT / "README.md").read_text(encoding="utf-8")
+README = _vr.corpus()   # the README and the per-version results pages, checked as one text
 
 
 def test_the_committed_readme_matches_its_json():

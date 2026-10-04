@@ -183,7 +183,7 @@ def check_jev_audits(ck: Checker, all_tables) -> None:
 
 
 def check_jev_row(ck: Checker, row: list[str], seen: list[str]) -> None:
-    report = re.search(r"\((docs/[^)]+)\)", row[-1])
+    report = re.search(r"\(((?:docs/|\.\./)[^)]+)\)", row[-1])
     name = Path(report.group(1)).name if report else ""
     if name not in JEV_AUDITS:
         ck.failures.append(f"Jev audits: unknown report link in row {row[0]!r}")
@@ -398,7 +398,8 @@ def check_hero(ck: Checker, md: str) -> None:
     """The hero chart's caption and alt text: their figures, and which gaps the 95 %
     intervals separate — read from the prose, recomputed from the JSON."""
     m = re.search(r"\*\*Read this chart with its limits\.\*\*(.+)", md)
-    alt = re.search(r'<img alt="(200 emails under attack[^"]+)" src="docs/assets/hero-arena', md)
+    alt = re.search(r'<img alt="(200 emails under attack[^"]+)" src="(?:docs/|\.\./)assets/hero-arena',
+                    md)
     if not m or not alt:
         ck.failures.append("hero chart: caption or alt text not found")
         return
@@ -624,7 +625,7 @@ def v05_expected(d: dict) -> dict[str, list[str]]:
         "A pre-registered study": [
             f"BANKING77 test ({n_b:,} rows) and a CLINC150 subset ({n_c:,} rows)",
             f"the {len(strict)} confirmatory tests and their predictions were frozen",
-            "[docs/v05-plan.md](docs/v05-plan.md)", "[docs/v05-results.md](docs/v05-results.md)",
+            "[docs/v05-plan.md](../v05-plan.md)", "[docs/v05-results.md](../v05-results.md)",
             f"a test is resolved only at Holm-adjusted p below {alpha} with the predicted sign",
         ],
         "**Pre-registered confirmatory tests.**": [
@@ -725,11 +726,14 @@ def paragraph(md: str, opening: str) -> list[str]:
 def check_v05(ck: Checker, md: str) -> None:
     """Every sentence with a v0.5 figure or verdict, rebuilt from the JSON: word for word, once
     in the README, inside its own paragraph (so its caveats travel with it)."""
-    section = md.split("## v0.5 findings", 1)
-    if len(section) != 2:
+    # the summary sits in the README, the detail in docs/results/v0.5.md: every section whose
+    # heading starts "## v0.5 findings" is read as one body
+    parts = md.split("\n## v0.5 findings")[1:] or (
+        [md.split("## v0.5 findings", 1)[1]] if md.startswith("## v0.5 findings") else [])
+    if not parts:
         ck.failures.append("v0.5 findings: the section is missing")
         return
-    body = section[1].split("\n## ", 1)[0]
+    body = "\n\n".join(p.split("\n", 1)[1].split("\n## ", 1)[0] for p in parts)
     for opening, needed in v05_expected(load("v05-results.json")).items():
         paras = paragraph(body.lstrip("\n"), opening)
         ck.checked += 1
@@ -857,8 +861,16 @@ def check(md: str) -> Checker:
     return ck
 
 
+# The README and the per-version results pages it links: one text, checked as a whole.
+SOURCES = ("README.md", "docs/results/v0.5.md", "docs/results/v0.4.md")
+
+
+def corpus() -> str:
+    return "\n\n".join((ROOT / f).read_text(encoding="utf-8") for f in SOURCES)
+
+
 def main() -> None:
-    ck = check((ROOT / "README.md").read_text(encoding="utf-8"))
+    ck = check(corpus())
     for f in ck.failures:
         print(f"MISMATCH {f}")
     print(f"{ck.checked} README figures checked, {len(ck.failures)} mismatch(es)")

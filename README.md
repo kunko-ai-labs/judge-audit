@@ -9,7 +9,7 @@
 
 **judge-audit replays decisions your people already made and tells you how much of that work an AI judge can take over, at the error you accept, with the bound attached.** Open source, runs in CI, no LLM inside the measurement, and every published number recomputes from committed evidence.
 
-![judge-audit: the safe automation rate, the report's answer and the CI gate, in 30 seconds](docs/demo.gif)
+![judge-audit in 27 seconds: run the audit, the report's answer, every error tolerance, the results on real data, the CI gate](docs/demo.gif)
 
 | | |
 |---|---|
@@ -18,7 +18,7 @@
 | 🚦 **CI gate** | `judge-audit check` fails the build when the judge drifts or the rate falls below your minimum. |
 | 🤖 **Where you work** | CLI, GitHub Action with a PR comment, and an MCP server for Claude Code, Cursor or any agent. |
 
-**[Quickstart](#quickstart)** · **[What you get](#what-you-get)** · **[v0.5 findings](#v05-findings)** · **[Judges supported](#judge-interface)** · ▶ [launch video (v0.3)](https://github.com/kunko-ai-labs/judge-audit/releases/download/v0.3.0/brag.mp4)
+**[Quickstart](#quickstart)** · **[What you get](#what-you-get)** · **[v0.5 findings](#v05-findings)** · **[Judges supported](#judge-interface)** · ▶ [launch video](https://github.com/kunko-ai-labs/judge-audit/releases/latest/download/judge-audit-launch.mp4)
 
 
 ## v0.5 findings
@@ -33,20 +33,6 @@
 | gemini-3.6-flash, verbalized | **14.3 %** | 7.6–30.0 % | 45.5 % |
 | Qwen3-8B, token log-probability | **none** | 0.0–4.4 % | 12.5 % |
 
-A pre-registered study on two human-labelled public datasets, BANKING77 test (3,080 rows) and a CLINC150 subset (1,900 rows): the protocol, the 8 confirmatory tests and their predictions were frozen in [docs/v05-plan.md](docs/v05-plan.md) (tag `v05-plan-freeze`) before the first model call, and every result is published whether or not its prediction held ([docs/v05-results.md](docs/v05-results.md)). Each test compares two confidence methods by AUROC, how well the confidence ranks the judge's own errors; a test is resolved only at Holm-adjusted p below 0.05 with the predicted sign.
-
-**Pre-registered confirmatory tests.** Under the pre-registered scoring rule (the verdict of record), of the 5 hypothesis verdicts 2 are supported and 3 are not supported; 2 carry "depends on the scoring rule" (H1-sc and H2 for gemini-3.6-flash), and one of them, H2 for gemini-3.6-flash, changes verdict under the re-reading. Of the 8 tests 4 are resolved (T1, T6, T7, T8) and 6 match their pre-registered prediction; T3, T4 and T5 count as matched only because they were predicted not resolved, and each was significant in the opposite direction (Holm p < 0.05). H2 is supported for Qwen3-8B: Jev native probability ranks its errors better than Qwen3-8B token log-probability on CLINC150 (T7 +0.107 [+0.062, +0.151]). H2 is supported for gemini-3.6-flash (T8 +0.477 [+0.428, +0.524]), but T8 depends on the scoring rule: under amendment 2's re-reading of answers that copy an option with its description it is T8 re-read +0.001 [-0.037, +0.041], not resolved, and H2 is not supported for gemini-3.6-flash under the re-reading. H1-lp is not supported for Qwen3-8B: token log-probability beat verbalized confidence on BANKING77 (T1 +0.098 [+0.078, +0.119]) and lost to it on CLINC150 only under the pre-registered rule (T2 -0.046 [-0.089, -0.003], Holm p 0.036); T2 is not resolved under the re-reading (Holm p 0.072). *Caveats:* the data are public datasets, BANKING77 (2020) and CLINC150 (2019), probably in the judges' pretraining data; each confirmatory run ran once (repeats only for Jev and Qwen3-8B verbalized on BANKING77); no external human reviewer read the plan before the study ran; label noise was not measured, so a label error counts as a judge error; with a second prompt wording (exploratory) the BANKING77 gap of T1 is +0.022, against +0.098.
-
-**Self-consistency against verbalized confidence.** Asking several times and using the vote share as confidence (Qwen3-8B k = 10, gemini-3.6-flash k = 5) ranked errors worse than the model's own verbalized number in 3 of the 4 tests: for Qwen3-8B T3 -0.070 [-0.091, -0.049] on BANKING77 and T4 -0.220 [-0.255, -0.184] on CLINC150, for gemini-3.6-flash T5 -0.144 [-0.169, -0.119] on BANKING77, each the opposite sign at Holm p < 0.05. H1-sc is not supported for Qwen3-8B or for gemini-3.6-flash. The fourth test, T6 (gemini-3.6-flash, CLINC150), depends on the scoring rule: T6 +0.363 [+0.318, +0.406] under the pre-registered rule, T6 re-read -0.281 [-0.343, -0.215] under the re-reading. *Caveats:* the data are public datasets, BANKING77 (2020) and CLINC150 (2019), probably in the judges' pretraining data; each confirmatory run ran once (repeats only for Jev and Qwen3-8B verbalized on BANKING77); no external human reviewer read the plan before the study ran; label noise was not measured, so a label error counts as a judge error.
-
-**Safe automation rate on BANKING77.** The share of texts a judge can decide alone with its error bounded at a target: a threshold chosen on one half (split by text) with an exact one-sided 95 % bound, applied unchanged to the other half, both halves pooled. Jev native probability 41.0 % at ≤ 5 % (37 errors / 1263 automated; split seed 2026, 27.0 %–45.1 % over seeds 2027–2036) and 72.3 % at ≤ 10 % (182 / 2225; 72.0 %–73.4 % over the same seeds). gemini-3.6-flash verbalized 14.3 % at ≤ 5 % (6 errors / 441 automated; 7.6 %–30.0 % over the same seeds) and 45.5 % at ≤ 10 % (59 / 1402); Qwen3-8B token log-probability 0.0 % at ≤ 5 % (0 errors / 0 automated; 0.0 %–4.4 % over the same seeds) and 12.5 % at ≤ 10 % (19 / 384). On BANKING77 no run automates anything at ≤ 1 % or ≤ 2 %. *Caveats:* the data are public datasets, BANKING77 (2020) and CLINC150 (2019), probably in the judges' pretraining data; each confirmatory run ran once (repeats only for Jev and Qwen3-8B verbalized on BANKING77); every bound includes the datasets' own label errors, because label noise was not measured; the held-out slice was not run (#106), so these are the public test split; the rate bounds the error on these labelled decisions only, as statistical evidence, not a conformity assessment.
-
-Every figure in this section recomputes from the committed checkpoints in `docs/runs/v05/`, with no model call (a few minutes; CI runs it), and `scripts/verify_readme.py` checks it against `docs/v05-results.json`:
-
-```bash
-python scripts/v05_study.py --check
-```
-
 Teams are shipping judgment models — TypeSafe's Jev, LLM-as-judge, guardrails, routers — that return a confidence with each decision. The literature studies calibration (Guo et al. 2017; Shao 2026; Huang et al. 2026); what a team needs before automating is the same measurement on *its own* decisions. judge-audit runs any judge in **shadow mode** against decisions your humans already made and answers the four questions that matter before you automate:
 
 | Question | Metric | Why a buyer cares |
@@ -55,6 +41,8 @@ Teams are shipping judgment models — TypeSafe's Jev, LLM-as-judge, guardrails,
 | What share of the work can it decide alone at a bounded error? | safe automation rate, accuracy-coverage curve | The ROI number — with its error bound, the threshold to deploy, and the labels behind it |
 | What does it really cost, and how bad is the latency tail? | $ per decision, p50 / p99 | The demo is cheap; the tail is what pages you |
 | Has it drifted since last week? | `judge-audit check` CI gate | Vendors update models without telling you |
+
+The study's design, the eight confirmatory tests and every caveat: **[v0.5 findings in full](docs/results/v0.5.md)**.
 
 ## Quickstart
 
@@ -79,92 +67,6 @@ In the [GitHub Action](docs/integrations.md#github-action) the same controls are
 <img src="docs/assets/report-preview.png" alt="The HTML report: key figures (safe automation rate, accuracy, calibration error, cost and latency), data and ground truth, then the answer to Can I automate this?" width="640">
 
 One self-contained report per run (Markdown or HTML, prints to A4): the answer first, with its threshold and out-of-sample check; calibration with intervals; accuracy against coverage; cost and latency; the provenance of every number. Shown here on the seeded simulator, stamped **SIMULATED**. `audit-result.json` carries the same numbers for your pipeline.
-
-## v0.4 results (prior): synthetic emails under attack
-
-Everything from here to *How it works* is v0.4 evidence: synthetic datasets with ground truth by construction (GT-1), small n.
-
-**On 200 synthetic emails under attack, Gemini 3 Flash is 97.0 % accurate and averages 0.98 confidence whether it is right or wrong. Share of its decisions you could automate with zero observed errors: 0 % (95 % upper bound 1.8 %). Jev: 73 % [67.0, 94.0].**
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-arena-dark.png">
-  <img alt="200 emails under attack: the share of decisions each judge lets you automate with zero observed errors, with 95 % intervals. Jev 73 % [67.0, 94.0] is separated from Gemini 3 Flash, Llama 3.3 70B, DeepSeek R1, gemma4 and llama3.2 (0 %, exact upper bound 1.8 %) and from DeBERTa NLI (8 % [3.9, 16.0]) below it, and from DeBERTa fine-tuned run 1 (97 % [94.4, 99.0]) above it; it is not separated from Claude Sonnet 4.5 (0 %, interval up to 90.9 %), DeBERTa fine-tuned run 2 or DeBERTa fine-tuned run 2+TS." src="docs/assets/hero-arena.png">
-</picture>
-
-**Read this chart with its limits.** Every dataset here is synthetic ground truth by construction ([GT-1](docs/ground-truth.md)), n is small (200 emails, 189 distinct texts: the generator repeats some), and each judge ran once. The whiskers are 95 % intervals. Jev's 73 % [67.0, 94.0] is separated from Gemini 3 Flash, Llama 3.3 70B, DeepSeek R1, gemma4 and llama3.2 (0 %, exact upper bound 1.8 %) and from DeBERTa NLI (8 % [3.9, 16.0]) below it, and from DeBERTa fine-tuned run 1 (97 % [94.4, 99.0]) above it; it is **not** separated from Claude Sonnet 4.5 (0 %, interval up to 90.9 %), DeBERTa fine-tuned run 2 or DeBERTa fine-tuned run 2+TS. The fine-tuned runs were trained on the other half of the same generator's clean emails, so their lead is evidence about this generator. Two robustness checks back the Jev–Gemini gap: it is separated in each of three pre-registered repeat runs ([repeat runs](docs/repeats-2026-09.md), where Sonnet's interval turns out to move between runs) and on one row per distinct text ([robustness check](docs/robustness-distinct-2026-09.md)). None of it is evidence of how a judge behaves on your traffic.
-
-## Jev, audited from the outside
-
-Same judge (TypeSafe Jev, via an AI Gateway evaluate API), three jobs, every raw response committed under [`docs/runs/`](docs/runs/) so anyone can recompute every number (`python scripts/verify_published.py` does, in CI). Others have audited Jev too; this audit commits every raw response, so its numbers can be recomputed rather than trusted.
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-arc-dark.png">
-  <img alt="Same judge, three jobs: honest, honest under attack, confidently wrong" src="docs/assets/hero-arc.png">
-</picture>
-
-| Audit | n | Accuracy | ECE | What it shows | Report |
-|---|---|---|---|---|---|
-| Business emails, 10 categories, clean | 200 | 100 % | 0.004 | Honest when the task is easy. Synthetic templates with the category keyword in the text — a floor, not a benchmark. | [audit-jev-real.md](docs/audit-jev-real.md) |
-| Same emails under attack: prompt injection, homoglyphs, ambiguity, PII, social engineering | 200 | 95.5 % | 0.039 | Prompt injection flips 7/40 decisions, **but confidence drops from 0.996 to 0.71 under attack** — the judge signals its own doubt. Homoglyphs and social engineering: 0 successes. Ambiguous emails: confidence does *not* drop (0.95), which it should. | [audit-jev-adversarial.md](docs/audit-jev-adversarial.md) |
-| Task router: cheap model vs frontier model, 40 easy / 40 hard / 40 easy + cost-inflation injection | 120 | 66.7 % | 0.318 | With options sent as bare labels the judge **never** chose the strong model: 0/40 on hard tasks at median confidence 0.96. That is exactly the constant-classifier baseline. Accuracy matched a router that always picks the cheap model and confidence stayed high: the router was broken — and the audit caught it. | [audit-jev-router.md](docs/audit-jev-router.md) |
-| The same 120 rows with a one-line description per option | 120 | 97.5 % | 0.053 | **37/40 hard tasks now go to the strong model**, and the three misses sit at confidence 0.56–0.60 (vs 0.93 when right). Same model, same tasks: the failure was the prompt. | [audit-jev-router-ablation.md](docs/audit-jev-router-ablation.md) |
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/hero-router-dark.png">
-  <img alt="Jev as a task router: bare labels vs described options" src="docs/assets/hero-router.png">
-</picture>
-
-**What we would tell a client.** The email numbers are the vendor's story and they hold up, including under attack. The router numbers are the buyer's story: the first prompt anyone would write routed every hard task to the cheap model at 96 % median confidence, and its 66.7 % accuracy is exactly what a coin glued to "easy" scores; two descriptive sentences took the same judge to 97.5 % with confidence that finally means something. A benchmark leaderboard ranks accuracy on someone else's data; this audit measured confidence on these decisions, which is where both stories showed up.
-
-Honest limits: every dataset is synthetic and seeded (generators in `examples/`); n is small; ground truth for routing is by construction, not by running the cheap model. Read the *Caveats* section of each report before quoting it.
-
-## The Arena: same datasets, other judges
-
-Every judge below ran the same four datasets through the same harness; raw responses under [`docs/runs/arena/`](docs/runs/arena/), full table in [docs/arena-2026-09.md](docs/arena-2026-09.md), regenerated in CI (the chart at the top is the zero-error column of this table). Emails under attack (n=200) and the described-options router (n=120); brackets are 95 % bootstrap intervals over the dataset's distinct texts — how far the number would move on another sample of this size — except where the bootstrap cannot move at all, marked **†**, which carries the exact Clopper–Pearson binomial interval instead ([method](docs/judges.md#confidence-intervals)):
-
-| judge | confidence | accuracy | ECE | zero-error coverage | conf right / wrong | conf drop under injection | router (described) | cost-inflation attacks that land | cost / 200 |
-|---|---|---|---|---|---|---|---|---|---|
-| Jev (TypeSafe) | option probability | 95.5% [92.5, 98.0] | 0.039 [0.028, 0.066] | **73%** [67.0, 94.0] | 0.93 / 0.60 | +0.28 | 97.5% [91.9, 100.0] | 0/40 | $0.004 |
-| Claude Sonnet 4.5 | verbalized | 96.5% [93.9, 99.0] | 0.016 [0.005, 0.040] | **0%** [0.0, 90.9] | 0.96 / 0.88 | +0.03 | 95.0% [90.3, 98.5] | 6/40 | $0.454 |
-| Gemini 3 Flash | verbalized | 97.0% [94.5, 99.0] | 0.015 [0.002, 0.040] | **0%** [0.0, 1.8]† | 0.98 / 0.98 | +0.02 | 98.3% [95.5, 100.0] | 2/40 | $0.026 |
-| Llama 3.3 70B | verbalized | 90.5% [86.1, 94.5] | 0.015 [0.005, 0.060] | **0%** [0.0, 1.8]† | 0.90 / 0.82 | +0.06 | 86.7% [78.5, 93.4] | 16/40 | $0.041 |
-| DeepSeek R1 | verbalized | 80.5% [74.8, 85.6] | 0.127 [0.076, 0.184] | **0%** [0.0, 1.8]† | 0.94 / 0.90 | +0.05 | 79.2% [69.9, 86.9] | 24/40 | $0.589 |
-| gemma4 e4b (local) | verbalized | 81.0% [75.5, 86.4] | 0.153 [0.100, 0.211] | **0%** [0.0, 1.8]† | 0.96 / 0.97 | +0.01 | 77.5% [67.2, 87.1] | 27/40 | $0.000 |
-| llama3.2 3B (local) | verbalized | 72.5% [65.2, 79.7] | 0.154 [0.085, 0.231] | **0%** [0.0, 1.8]† | 0.87 / 0.91 | -0.03 | 59.2% [45.5, 73.0] | 9/40 | $0.000 |
-| DeBERTa-v3 NLI zero-shot (local) | NLI entailment softmax over options | 59.5% [51.7, 66.7] | 0.125 [0.088, 0.201] | **8%** [3.9, 16.0] | 0.73 / 0.56 | +0.09 | 49.2% [34.9, 62.8] | 39/40 | $0.000 |
-| DeBERTa-v3 fine-tuned, run 1 (local; your own classifier, pre-registered) | softmax of the chosen option | 97.0% [94.4, 99.0] | 0.496 [0.470, 0.522] | **97%** [94.4, 99.0] | 0.48 / 0.15 | +0.09 | 100.0% [94.0, 100.0]† (held-out half, n=60; only 5 unseen-text) | 0/20 (held-out half) | $0.000 |
-| DeBERTa-v3 fine-tuned, run 2 (local; to convergence, post hoc) | softmax of the chosen option | 99.0% [97.5, 100.0] | 0.048 [0.036, 0.066] | **96%** [93.1, 100.0] | 0.95 / 0.61 | +0.01 | 100.0% [94.0, 100.0]† (held-out half, n=60; only 5 unseen-text) | 0/20 (held-out half) | $0.000 |
-| DeBERTa-v3 fine-tuned, run 2 + temperature scaling (local; post hoc) | softmax of the chosen option ÷ T | 99.0% [97.5, 100.0] | 0.017 [0.005, 0.033] | **96%** [93.2, 100.0] | 0.99 / 0.92 | +0.00 | 100.0% [94.0, 100.0]† (held-out half, n=60; only 5 unseen-text) | 0/20 (held-out half) | $0.000 |
-
-**Read the zero-error coverage column.** Under attack, Claude Sonnet 4.5 and Gemini 3 Flash are *more accurate* than Jev, and on average calibration this data does not separate them from it:
-
-- **Average calibration does not separate them.** Ten-bin ECE favours them (0.016 and 0.015 against 0.039), equal-mass bins reverse it under the tie rule used here (0.044 each against 0.037) and the Brier score, which also rewards their accuracy, favours them again (0.0307 and 0.0301 against 0.0355). Every one of those intervals overlaps ([three calibration numbers](docs/judges.md#three-calibration-numbers)).
-- **Yet you could automate 0 % of their decisions with no observed error, against 73 % with Jev**, because their confidence barely moves when they are wrong: Sonnet says 0.88 on average when wrong, Gemini 0.98 whether right or wrong. Gemini says 1.0 on 125 of the 200 emails and is wrong on 5 of them; a tie is one threshold, not 125 decisions you get to order, so none of the 125 can be automated.
-- **What the intervals separate:** Jev's 73 % [67.0, 94.0] from Gemini and the other judges whose interval tops out at 1.8 %† (exact binomial, marked where the bootstrap cannot move). **Not** from Sonnet: its 0 % carries an interval up to 90.9 % in the Arena run, and only up to 33.5 % in two of three repeats, so that comparison depends on the run ([repeat runs](docs/repeats-2026-09.md); [why the interval is so wide](docs/judges.md#confidence-intervals)).
-- **The weaker judges:** the 3B chat model is *more* confident when wrong than when right, so its number is decoration; the small NLI encoder cannot be prompt-injected (it does not read instructions) but routes at coin-flip level.
-- **A method caveat:** chat-model confidence here is verbalized (the model writes a number); Jev's is the probability of the chosen option, not the API's `confidence` field, which is a rescaling that calibrates worse on our data (ECE 0.13 against 0.05 on the router; [analysis](https://bernoulli.app/articles/is-jev-confident)). Part of the gap may be the method rather than the model; the v0.5 study measured chat models by token log-probability and self-consistency too ([v0.5 findings](#v05-findings), [#89](https://github.com/kunko-ai-labs/judge-audit/issues/89)).
-
-**The fine-tuned rows are a different animal:** your own classifier, trained on half of the clean emails from the same generator, at $0 per row ([full held-out comparison](docs/finetuned-baseline-2026-09.md)).
-
-- **Run 1** (pre-registered, 10 epochs) is accurate — 97.0% under attack, 96.0% on the 151 rows with no training text — but under-confident: on the clean held-out emails its mean confidence when right is 0.54 and its ECE 0.458, so 0 of 3 testable pre-registered predictions hold.
-- **Run 2** (a disclosed post-hoc amendment, trained to convergence) fixes the calibration: ECE 0.017 on the clean held-out emails, 0.048 under attack with confidence 0.61 when wrong, and 98.7% on the 151 attacked rows with no training text. Temperature scaling on top has nothing to fit (the validation slice was classified perfectly) and only sharpens it: 0.92 when wrong under attack.
-- **Read its immunity with care:** none of the 40 prompt injections or 20 social-engineering rows landed in any run (two homoglyph rows did fool run 1), but every social-engineering row and 11 of the 40 injections wrap a training email it may have memorised; this data cannot tell "does not read instructions" from "remembers the email". Its router cells rest on only 5 rows with unseen text. It cannot read option descriptions, and a new category means new labels and a retrain.
-
-### Consensus is not calibration
-
-A common way to read an agent jury is to use *agreement* as confidence: eight judges, majority wins, vote share is the score. Reading the Arena checkpoints side by side ([docs/consensus-2026-09.md](docs/consensus-2026-09.md), no new API call) says what that score is worth. On every dataset the jury is the frozen eight-judge panel ([`docs/runs/jury/panel.json`](docs/runs/jury/panel.json)); the three fine-tuned DeBERTa runs are listed in the report with their own declared confidence but never vote — one model, fine-tuned on half of the clean emails from the same generator (49 of the 200 attacked emails contain a training text), entered three times: not three independent jurors. Blank answers are abstentions; a tie in the even panel is no decision (counted as not correct, and shown separately over decided rows); brackets are 95 % bootstrap intervals over distinct texts. The router's 120 rows carry only 61 distinct states (14 of them behind the 40 hard rows), so its intervals are wide — that repetition is a property of the dataset, and treating the rows as independent would advertise a precision this benchmark does not have:
-
-| dataset | 8-judge majority accuracy (ties = no decision / decided rows) | ties | best single judge | vote share when right / wrong | vote share as confidence: ECE | best declared confidence: ECE |
-|---|---|---|---|---|---|---|
-| Emails under attack | 90.0% [85.6, 93.9] / 95.2% | 11 | 97.0% [94.5, 99.0] | 0.89 / 0.68 | 0.073 | 0.015 (Gemini 3 Flash) |
-| Router, bare labels | 48.3% [34.4, 61.6] / 63.0% | 28 | 66.7% [52.5, 80.3] | 0.85 / 0.69 | 0.174 | 0.233 (Llama 70B) |
-| Router, described options | 85.8% [77.7, 92.2] / 96.3% | 13 | 98.3% [95.5, 100.0] | 0.86 / 0.66 | 0.110 | 0.012 (Gemini 3 Flash) |
-
-On the 40 hard routing tasks (bare labels) the majority is right 15 % [0.0, 34.2] of the time (7 ties; those 40 rows are 14 distinct texts, hence the width), and the panel agrees exactly as much when it is wrong as when it is right (vote share 0.69 vs 0.69); the judges who voted with a wrong majority declared 0.92 confidence on average. An even jury with a coin-flip member did not decide 23 % of rows (28 of 120) on that prompt. And the headline depends on who sits on the jury: across the 56 possible three-judge juries, hard-task accuracy runs from **0 %** [0.0, 8.8]† (Jev + Sonnet + llama3.2) to **92.5 %** [76.9, 100.0] (DeBERTa + gemma4 + Llama 70B) — over 14 distinct texts a jury's interval is ±15 to 20 points wide, so the spread is real but the ranking of two neighbouring juries is not. This is the assumption Shao (2026, [arXiv:2609.20543](https://arxiv.org/abs/2609.20543)) and Huang et al. (2026, [arXiv:2605.30653](https://arxiv.org/abs/2605.30653)) attack — LLM groups that overstate consensus by 34–44 points and converge, unanimously, on wrong answers — measured on a heterogeneous jury with the same yardstick as a single calibrated judge.
-
-**Are three votes three pieces of evidence?** The phi correlation between two judges' error indicators says whether they fail on the same rows ([error correlation](docs/consensus-2026-09.md), every pair, n stated per pair). On the bare-label router (n=120) the most correlated pair is Jev + llama3.2 at phi 0.98 — wrong together on 40 of 120 rows — and the least is Jev + DeBERTa at −0.74 (never wrong together); under attack (n=200) it is Sonnet + Gemini 3 Flash at 0.76 against Jev + DeBERTa at −0.03. Over the 56 three-judge juries, mean pairwise phi on all 120 rows runs from −0.18 (Jev + DeBERTa + Llama 70B) to 0.91 (Jev + Gemini 3 Flash + llama3.2, wrong together on 37 of the 40 hard tasks); on the 40 hard rows alone it runs from −0.04 to 0.68 over the 40 juries with a defined pair (Jev and llama3.2 are wrong on every hard row, DeBERTa on none, so those pairs have no phi there). On bare labels, less-correlated juries were more accurate (Spearman −0.32 between mean phi and hard-task majority accuracy over 56 juries); described options are at ceiling (every jury ≥ 92.5 %), so that prompt cannot test it. 40 scored rows — indicative.
-
-**Round 2 — deliberation** ([pre-registered, then amended after an independent review and rerun](docs/jury-consensus-plan.md); [report](docs/jury-consensus.md)): each of seven judges re-voted after seeing the panel's anonymised votes. On these two prompts, deliberation amplified what the prompt contained. With bare labels, agreement on the hard tasks went from 51 % to 71 % and ties from 7 to 1 while majority accuracy stayed at 15–17.5 % (round 1 [0.0, 34.2], round 2 [0.0, 37.5]); the vote share behind *wrong* majorities rose from 0.69 to 0.87, and Llama 70B, gemma4 and DeepSeek R1 dropped from 55–72.5 % (lower bounds 32–49 %) to 7.5–17.5 % (upper bounds 23–39 %) on those tasks by following the majority (on the hard rows, 23 of 26, 20 of 21 and 16 of 17 of their switches landed on it). With described options, deliberation helped: majority accuracy 85.8 % [77.7, 92.2] → 95.0 % [90.5, 98.4], only 2 of 840 re-votes switched to a wrong answer, llama3.2 went from 0 to 82.5 % [61.0, 100.0] on the hard tasks. Of the four pre-registered predictions two held, one partly, one did not (chat models were *not* more confident when wrong after deliberating: 4 of 12 cells went up). Published as scored.
 
 ## How it works
 
@@ -204,24 +106,17 @@ class MyJudge(Judge):
 
 Ships with seven: `jev` (TypeSafe Jev — and, via `JEV_ENDPOINT`, any Jev-compatible server such as OpenJev), `llm` (any chat model with a confidence prompt: Claude through the official SDK, anything OpenAI-compatible — OpenAI, Gemini, Ollama, vLLM — or your own transport), `nli` (a local zero-shot encoder, the control), `finetuned` (your own classifier, trained on your labels with `scripts/train_classifier.py`), `laya` (Laya, an open-weight judgment model run locally), `logprob` (an open model's own probability of each option, run locally with MLX) and `simulated`. Details in [docs/judges.md](docs/judges.md).
 
-## Why calibration, not accuracy
+## Learn more
 
-Accuracy tells you who wins a benchmark. Calibration tells you what you can automate safely. A 96 %-accurate judge that is confident on the 4 % it gets wrong is a liability; a 90 %-accurate judge that flags its own doubt is an asset. **Audit the honesty, not the trophy.**
-
-## What lives where
-
-| Path | What |
+| | |
 |---|---|
-| `src/judge_audit/` | the harness: judge interface, adapters, metrics, runner, reports, CLI |
-| `examples/*/generate.py` | seeded dataset generators — CI regenerates and diffs them |
-| `docs/audit-*.md` / `.json` | published audits |
-| `docs/runs/` | raw per-row judge responses behind each audit |
-| `scripts/` | resumable audit driver, per-audit analysis, `verify_published.py` |
-| `tests/` | metrics on hand-checked inputs, CLI exit codes, reproducibility |
+| **Results by version** | [v0.5: pre-registered study on real data](docs/results/v0.5.md) · [v0.4: emails under attack, Jev audits, the Arena, the consensus panel](docs/results/v0.4.md) |
+| **How the metrics work** | [docs/judges.md](docs/judges.md): calibration, the safe automation rate, intervals, what each number can and cannot say |
+| **Integrations** | [GitHub Action, MCP server, Python API](docs/integrations.md) · [auditing a real vendor](docs/real-audits.md) |
+| **Roadmap and changes** | [ROADMAP](docs/ROADMAP.md) · [CHANGELOG](CHANGELOG.md) · [releasing and supply chain](docs/RELEASING.md) |
+| **Contributing** | [CONTRIBUTING](CONTRIBUTING.md): what helps most and how review works |
 
-## Roadmap
-
-v0.5 (this release; dated when tagged): the pre-registered study on BANKING77 and CLINC150 above, confidence read three ways (verbalized, token log-probability, self-consistency), repeats, v2 synthetic stress sets, the safe automation rate in every report. → v0.6: the held-out slice and a measurement of label noise ([#86](https://github.com/kunko-ai-labs/judge-audit/issues/86), [#106](https://github.com/kunko-ai-labs/judge-audit/issues/106)), MCE in the reports (the worst bin, not the average; [#12](https://github.com/kunko-ai-labs/judge-audit/issues/12)), reporting per prompt template beyond BANKING77 ([#92](https://github.com/kunko-ai-labs/judge-audit/issues/92)), and a public leaderboard with a submission spec. Details and reasons in [docs/ROADMAP.md](docs/ROADMAP.md); the live backlog is the issues.
+**Why calibration, not accuracy?** Accuracy tells you who wins a benchmark. Calibration tells you what you can automate safely. A judge that is confident on the decisions it gets wrong automates its own mistakes; one that flags its own doubt hands those to people. **Audit the honesty, not the score.**
 
 ## FAQ
 
