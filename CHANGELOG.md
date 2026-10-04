@@ -3,6 +3,11 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
+## [Unreleased]
+
+### Changed
+- **The public tree is for contributors.** `CONTRIBUTING.md` says what helps most (a reproducible metric bug, a judge adapter, a labelled dataset, an audit with its checkpoint), the evidence rules, the development commands and how review works; two issue templates (bug report, proposal for a judge, dataset or audit) and a pull-request template replace the planning templates. The maintainer's editor and agent configuration (`CLAUDE.md`, `.claude/`), the launch-video sources (`docs/launch/`; the videos stay attached to the v0.3.0 release), the positioning brief and the backlog script (`scripts/make_issues.py`) leave the tree and are git-ignored; no code, metric, report or test of the package changes.
+
 ## [0.5.0] — 2026-10-04
 
 ### Added

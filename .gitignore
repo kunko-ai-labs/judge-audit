@@ -11,6 +11,12 @@ docs/.frames/
 .env
 .claude/worktrees/
 
+# The maintainer's local tooling (editor and agent configuration), not part of the project
+/.claude/
+/CLAUDE.md
+/AGENTS.md
+/docs/launch/
+
 # Local review notes, not part of the project
 *.local.md
 auditoria*.md

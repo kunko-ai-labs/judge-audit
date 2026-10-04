@@ -5,4 +5,4 @@ contact_links:
     about: Fabricated metrics, logged or committed API keys, secrets anywhere they should not be. Never a public issue.
   - name: 📚 Documentation
     url: https://github.com/kunko-ai-labs/judge-audit/tree/main/docs
-    about: Vision, landscape brief, how the metrics work.
+    about: How the metrics work, the published audits, the roadmap.
