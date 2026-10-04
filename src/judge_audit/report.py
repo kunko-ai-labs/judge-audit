@@ -4,6 +4,7 @@ from __future__ import annotations
 import html
 import json
 import math
+import re
 import warnings
 from fractions import Fraction
 
@@ -517,8 +518,120 @@ def ci_lines(d: dict) -> list[str]:
             *[f"_{note}_" for note in interval_notes(marks)]]
 
 
+def _md_inline(text: str) -> str:
+    """One line of our report markdown (the `_..._` wrapper, **bold**, `code`, *italics*)
+    as HTML. Escaped first, so a value from the data can never become markup."""
+    out = html.escape(text.strip().strip("_"))
+    out = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", out)
+    out = re.sub(r"`([^`]+)`", r"<code>\1</code>", out)
+    return re.sub(r"(?<![\w*])\*(?=\S)([^*]+?)\*(?![\w*])", r"<em>\1</em>", out)
+
+
+def _kpi(label: str, value: str, sub: str = "", lead: bool = False) -> str:
+    """One key-figure card; every argument is already-escaped HTML."""
+    return (f'<div class="kpi{" lead" if lead else ""}"><div class="kpi-label">{label}</div>'
+            f'<div class="kpi-value">{value}</div>'
+            + (f'<div class="kpi-sub">{sub}</div>' if sub else "") + "</div>")
+
+
+def _key_figures(d: dict, acc_ci: str, ece_ci: str) -> str:
+    """The cover's cards: the safe automation rate at the primary target (first question),
+    accuracy, calibration, cost and latency. Numbers only from the result."""
+    cards = []
+    c = d.get("certificate") or {}
+    if c.get("questions"):
+        q = c["questions"][0]
+        t = _primary(q)
+        label = f"Safe automation rate at ≤ {html.escape(_pct_of(t['target_risk']))} error"
+        if len(c["questions"]) > 1:
+            label += f" · <code>{html.escape(str(q['question']))}</code>"
+        if t["threshold"] is None:
+            cards.append(_kpi(label, "none", html.escape(t.get("reason") or
+                                                         "no threshold passes"), lead=True))
+        else:
+            _, thr, oos = certificate_cells(t, c["unit"])
+            cards.append(_kpi(label, f"{t['coverage']:.1%}",
+                              f"deploy at confidence ≥ {html.escape(thr)} · out of sample: "
+                              f"{html.escape(oos)}", lead=True))
+    cards.append(_kpi("Accuracy", f"{d['accuracy']:.1%}",
+                      f"95% interval{html.escape(acc_ci)} · n = {d['n']:,}"))
+    cards.append(_kpi("Calibration error (ECE)", html.escape(fmt4(d.get("ece"))),
+                      f"95% interval{html.escape(ece_ci)} · 0 = confidence matches accuracy"))
+    cards.append(_kpi("Cost · latency", fmt_cost(d.get("total_cost_usd"), ("", "")),
+                      f"p50 {d['p50_latency_s']}s · p99 {d['p99_latency_s']}s"))
+    return '<div class="kpis">' + "".join(cards) + "</div>"
+
+
+REPORT_CSS = """
+:root{--ink:#14213d;--navy:#13294b;--accent:#0a7c86;--muted:#5b6573;--rule:#d9dee5;
+--paper:#fff;--desk:#eef1f5;--soft:#f5f7fa;--warn:#fff4d6;--warnline:#d39b00;
+--f:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;--t-body:14px;--t-small:12px;
+--t-table:12.5px;--t-h1:28px;--t-h2:19px;--t-h3:15px}
+*{box-sizing:border-box}
+body{margin:0;background:var(--desk);color:var(--ink);font:var(--t-body)/1.55 var(--f);
+counter-reset:section}
+p,li{font-size:var(--t-body);margin:0 0 10px}
+.page{max-width:900px;margin:32px auto;background:var(--paper);padding:52px 60px 36px;
+box-shadow:0 2px 18px rgba(19,41,75,.12)}
+h1,h2,h3{font-family:var(--f);color:var(--navy);font-weight:700;line-height:1.25}
+.eyebrow{font-size:var(--t-small);letter-spacing:.12em;text-transform:uppercase;
+color:var(--accent);font-weight:700;border-bottom:3px solid var(--navy);padding-bottom:10px;
+display:flex;justify-content:space-between;gap:16px}
+h1{font-size:var(--t-h1);margin:22px 0 4px}
+.subtitle{color:var(--muted);margin:0 0 16px}
+.meta,.meta p,.prov,.note,footer,footer p{font-size:var(--t-small);color:var(--muted)}
+.meta{border-left:3px solid var(--rule);padding:2px 0 2px 12px}.meta p{margin:2px 0}
+.banner{background:var(--warn);border:1px solid var(--warnline);border-left:6px solid
+var(--warnline);padding:10px 14px;font-weight:700;margin:16px 0 0}
+h2{font-size:var(--t-h2);margin:40px 0 12px;padding-bottom:6px;border-bottom:1px solid
+var(--rule);counter-increment:section}
+h2:not(.plain)::before{content:counter(section) ". ";color:var(--accent)}
+h2.plain{counter-increment:none}
+h3{font-size:var(--t-h3);margin:22px 0 8px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:8px 0 16px}
+.kpi{border:1px solid var(--rule);border-top:3px solid var(--accent);padding:12px 14px;
+background:var(--soft)}
+.kpi.lead{grid-column:1/-1;border-top-color:var(--navy);background:var(--paper)}
+.kpi-label{font-size:var(--t-small);text-transform:uppercase;letter-spacing:.06em;
+color:var(--muted);font-weight:700}
+.kpi-value{font-size:26px;font-weight:700;color:var(--navy);margin:2px 0}
+.kpi.lead .kpi-value{font-size:34px}
+.kpi-sub{font-size:var(--t-small);color:var(--muted)}
+.metric{font-size:var(--t-small);color:var(--muted);background:var(--soft);padding:8px 12px;
+border:1px solid var(--rule)}
+.metric b{color:var(--ink)}
+.callout{border:1px solid var(--rule);border-left:4px solid var(--navy);background:var(--soft);
+padding:10px 14px;font-size:var(--t-small);margin:14px 0}
+.callout .tag{display:block;font-size:var(--t-small);text-transform:uppercase;
+letter-spacing:.08em;color:var(--navy);font-weight:700;margin-bottom:2px}
+table{border-collapse:collapse;width:100%;margin:10px 0 6px;font:var(--t-table)/1.4 var(--f)}
+th{background:var(--navy);color:#fff;font-weight:600;text-align:left;padding:5px 8px;
+vertical-align:bottom}
+td{border-bottom:1px solid var(--rule);padding:4px 8px;text-align:left;vertical-align:top}
+tr:nth-child(even) td{background:var(--soft)}
+table.num{width:auto;min-width:50%}
+table.num td,table.num th{text-align:right;font-variant-numeric:tabular-nums}
+code{font:inherit;color:var(--navy);background:#eef2f7;padding:0 4px;border-radius:3px}
+em{font-style:italic}
+img{display:block;max-width:78%;margin:10px auto;border:1px solid var(--rule)}
+footer{margin-top:40px;padding-top:12px;border-top:3px solid var(--navy)}
+@page{size:A4;margin:16mm 14mm}
+@media print{body{background:#fff}.page{box-shadow:none;margin:0;padding:0;max-width:none}
+h2{break-after:avoid;page-break-after:avoid}
+table,.kpis,.callout,img{break-inside:avoid;page-break-inside:avoid}
+th,.kpi,.callout,.metric,tr:nth-child(even) td,.banner{-webkit-print-color-adjust:exact;
+print-color-adjust:exact}}
+@media (max-width:700px){.page{padding:28px 18px;margin:0}.kpis{grid-template-columns:1fr}
+img{max-width:100%}}
+"""
+
+
 def render_html(result: AuditResult, tag: str = "") -> str:
-    """Self-contained HTML report with base64-embedded charts. No network needed."""
+    """Self-contained HTML report with base64-embedded charts. No network needed.
+
+    Laid out as a printable document (A4 via the browser's "Save as PDF"): a cover with
+    scope and key figures, numbered sections, and the method notes at the end."""
+    from . import __version__
     from .charts import accuracy_coverage_png, png_to_data_uri, reliability_diagram_png
     d = result.to_dict()
     acc_ci = interval_of(d, "accuracy_ci", pct=True)
@@ -530,16 +643,14 @@ def render_html(result: AuditResult, tag: str = "") -> str:
                  if zero.get("coverage") is None else
                  f"Zero observed errors through the most confident <b>{zero['coverage']:.1%}</b>"
                  f"{zec_ci} {html.escape(zero_error_tail(zero))}.")
-    ci_note = "".join(f"<p class=\"prov\">{html.escape(line.strip('_'))}</p>"
-                      for line in ci_lines(d) if line)
+    ci_note = "".join(f'<p class="prov">{_md_inline(line)}</p>' for line in ci_lines(d) if line)
     rel = png_to_data_uri(reliability_diagram_png(result))
     acc = png_to_data_uri(accuracy_coverage_png(result))
     # Everything below is provenance a caller controls — model names, dataset paths, a
     # judge's tag — so it is escaped before it reaches the page, not trusted as markup.
     banner = f'<div class="banner">⚠️ {html.escape(tag)}</div>' if tag else ""
-    prov = "<br>".join(html.escape(line.strip("_"))
-                       for line in [*provenance_lines(d.get("run", {})),
-                                    *regeneration_lines(d)])
+    prov = "".join(f"<p>{_md_inline(line)}</p>"
+                   for line in [*provenance_lines(d.get("run", {})), *regeneration_lines(d)])
     gt = html.escape(ground_truth_line(ground_truth_source(d)))
     judge = html.escape(str(d["judge"]))
     curve_rows = "".join(
@@ -550,36 +661,41 @@ def render_html(result: AuditResult, tag: str = "") -> str:
         f"<tr><td>{b['bin']}</td><td>{b['avg_confidence']:.3f}</td>"
         f"<td>{b['accuracy']:.1%}</td><td>{b['n']}</td></tr>"
         for b in d["reliability_bins"] if b["n"])
+    complete = (f'<p class="metric">{completeness_line(d, ("<b>", "</b>"))}</p>'
+                if d.get("completeness") else "")
     return f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Audit report — {judge}</title>
-<style>body{{font-family:system-ui,sans-serif;max-width:900px;margin:2rem auto;padding:0 1rem;color:#1a1a1a}}
-.banner{{background:#fff3cd;border:1px solid #e6a800;padding:.75rem;border-radius:8px;font-weight:600}}
-.metric{{font-size:1.1rem}}.metric b{{font-size:1.6rem}}
-table{{border-collapse:collapse;width:100%;margin:1rem 0}}td,th{{border:1px solid #ddd;padding:.4rem .6rem;text-align:right}}
-th{{background:#f5f5f5}}img{{max-width:100%;border:1px solid #eee;border-radius:8px;margin:1rem 0}}
-h2{{margin-top:2.5rem}}.prov{{color:#666;font-size:.9rem}}</style></head><body>
+<style>{REPORT_CSS}</style></head><body><div class="page">
+<div class="eyebrow"><span>judge-audit · Calibration audit</span><span>Statistical evidence, not a conformity assessment</span></div>
 {banner}
 <h1>Audit report — {judge}</h1>
-<p class="metric"><b>{d['n']}</b> decisions · accuracy <b>{d['accuracy']:.1%}</b>{acc_ci} · confidence known <b>{confidence['known']}/{confidence['total']}</b> · ECE <b>{fmt4(d.get('ece'))}</b>{ece_ci}{calibration_numbers(d, ("<b>", "</b>"))}<br>
-cost {fmt_cost(d.get('total_cost_usd'), ("<b>", "</b>"))} · p50 <b>{d['p50_latency_s']}s</b> · p99 <b>{d['p99_latency_s']}s</b>{slowest(d, ("<b>", "</b>"))}</p>
-{f'<p class="complete">{completeness_line(d, ("<b>", "</b>"))}</p>' if d.get("completeness") else ""}
-<p class="prov">{prov}</p>
-<p class="gt"><b>{gt}</b></p>
-{ci_note}
+<p class="subtitle">How far this judge's confidence can be trusted on these labelled decisions, and how much it could decide alone.</p>
+<div class="meta">{prov}</div>
+<h2 class="plain">Key figures</h2>
+{_key_figures(d, acc_ci, ece_ci)}
+<div class="callout"><span class="tag">Data and ground truth</span>{gt}</div>
 <h2>Can I automate this?</h2>
 {certificate_html(d)}
 <p>{zero_html}<br>
 <em>Retrospective on this dataset — not a production guarantee.</em></p>
 <h2>Reliability diagram</h2>
+<p class="note">A perfectly honest judge sits on the diagonal: in every bin, average confidence equals accuracy.</p>
 <img src="{rel}" alt="reliability diagram">
 <h2>Accuracy vs coverage</h2>
 <img src="{acc}" alt="accuracy coverage curve">
-<table><tr><th>coverage</th><th>accuracy</th><th>min confidence</th><th>n</th></tr>{curve_rows}</table>
+<table class="num"><tr><th>coverage</th><th>accuracy</th><th>min confidence</th><th>n</th></tr>{curve_rows}</table>
 <h2>Calibration bins</h2>
-<table><tr><th>bin</th><th>avg confidence</th><th>accuracy</th><th>n</th></tr>{bin_rows}</table>
+<table class="num"><tr><th>bin</th><th>avg confidence</th><th>accuracy</th><th>n</th></tr>{bin_rows}</table>
 <p><em>A perfectly honest judge sits on the diagonal: avg confidence == accuracy in every bin.</em></p>
-<p class="prov">{html.escape(THREE_NUMBERS_NOTE)}</p>
-</body></html>
+<h2>All metrics and method notes</h2>
+<p class="metric"><b>{d['n']}</b> decisions · accuracy <b>{d['accuracy']:.1%}</b>{acc_ci} · confidence known <b>{confidence['known']}/{confidence['total']}</b> · ECE <b>{fmt4(d.get('ece'))}</b>{ece_ci}{calibration_numbers(d, ("<b>", "</b>"))}<br>
+cost {fmt_cost(d.get('total_cost_usd'), ("<b>", "</b>"))} · p50 <b>{d['p50_latency_s']}s</b> · p99 <b>{d['p99_latency_s']}s</b>{slowest(d, ("<b>", "</b>"))}</p>
+{complete}
+{ci_note}
+<footer><p>{html.escape(THREE_NUMBERS_NOTE)}</p>
+<p>Generated by judge-audit {html.escape(__version__)} · every number recomputes from the per-decision checkpoint named above · statistical evidence on labelled decisions, not a conformity assessment.</p></footer>
+</div></body></html>
 """
 
 
