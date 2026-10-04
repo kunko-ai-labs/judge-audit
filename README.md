@@ -5,11 +5,33 @@
 
 [![CI](https://github.com/kunko-ai-labs/judge-audit/actions/workflows/ci.yml/badge.svg)](https://github.com/kunko-ai-labs/judge-audit/actions/workflows/ci.yml) [![Release](https://github.com/kunko-ai-labs/judge-audit/actions/workflows/release.yml/badge.svg)](https://github.com/kunko-ai-labs/judge-audit/actions/workflows/release.yml) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE) [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
 
-**Independent calibration audits for AI judges. When a judge says 90 %, is it right 90 % of the time?**
+## Can your AI judge decide alone?
+
+**judge-audit replays decisions your people already made and tells you how much of that work an AI judge can take over, at the error you accept, with the bound attached.** Open source, runs in CI, no LLM inside the measurement, and every published number recomputes from committed evidence.
+
+![judge-audit: the safe automation rate, the report's answer and the CI gate, in 30 seconds](docs/demo.gif)
+
+| | |
+|---|---|
+| 🎯 **Safe automation rate** | The share of decisions a judge can take alone at the error you accept (1, 2, 5, 10 %), the confidence threshold to deploy, and an out-of-sample check. |
+| 🌡️ **Calibration** | When it says 90 %, is it right 90 % of the time? ECE, worst bin, reliability diagram, with intervals. |
+| 🚦 **CI gate** | `judge-audit check` fails the build when the judge drifts or the rate falls below your minimum. |
+| 🤖 **Where you work** | CLI, GitHub Action with a PR comment, and an MCP server for Claude Code, Cursor or any agent. |
+
+**[Quickstart](#quickstart)** · **[What you get](#what-you-get)** · **[v0.5 findings](#v05-findings)** · **[Judges supported](#judge-interface)** · ▶ [launch video (v0.3)](https://github.com/kunko-ai-labs/judge-audit/releases/download/v0.3.0/brag.mp4)
+
 
 ## v0.5 findings
 
 **In short.** Asking Qwen3-8B and gemini-3.6-flash several times and counting the votes ranked their errors worse than their own verbalized number in 3 of 4 tests under the pre-registered rule (4 of 4 under the re-reading), and one verdict (H2 for gemini-3.6-flash) changes with how an answer that copies an option's description is scored. On BANKING77 at ≤ 5 % error, Jev native probability can decide 41.0 % (27.0 %–45.1 % over split seeds 2027–2036) of the texts alone, gemini-3.6-flash verbalized 14.3 % (7.6 %–30.0 %), Qwen3-8B token log-probability none (0.0 %–4.4 %). *Caveats:* public datasets, probably seen in pretraining; one run each, except Jev and Qwen3-8B verbalized on BANKING77 (3 runs); label noise not measured; the held-out slice not run (#106). The number to act on is the same audit on your own decisions.
+
+**At a glance: BANKING77, 3,080 human-labelled banking queries, decided alone at an error of at most 5 %.**
+
+| Judge and confidence | Decides alone at ≤ 5 % error | Range over split seeds | At ≤ 10 % error |
+|---|---|---|---|
+| Jev, native probability | **41.0 %** | 27.0–45.1 % | 72.3 % |
+| gemini-3.6-flash, verbalized | **14.3 %** | 7.6–30.0 % | 45.5 % |
+| Qwen3-8B, token log-probability | **none** | 0.0–4.4 % | 12.5 % |
 
 A pre-registered study on two human-labelled public datasets, BANKING77 test (3,080 rows) and a CLINC150 subset (1,900 rows): the protocol, the 8 confirmatory tests and their predictions were frozen in [docs/v05-plan.md](docs/v05-plan.md) (tag `v05-plan-freeze`) before the first model call, and every result is published whether or not its prediction held ([docs/v05-results.md](docs/v05-results.md)). Each test compares two confidence methods by AUROC, how well the confidence ranks the judge's own errors; a test is resolved only at Holm-adjusted p below 0.05 with the predicted sign.
 
@@ -52,9 +74,11 @@ SIMULATED — not a real vendor audit · judge=simulated n=200 accuracy=85.5% [7
 
 In the [GitHub Action](docs/integrations.md#github-action) the same controls are inputs: `target` (the error rate the safe automation rate is headlined at, default `0.05`), `segment-by` (where to look for the worst segment: `label`, `meta.FIELD` or `none`) and `min-safe-rate` (`RISK:SHARE` minimums that fail the job). It returns `safe-automation-rate` (at the target) and `safe-automation-rates` (every target) as outputs.
 
-![judge-audit run on a labeled dataset, then the CI gate](docs/demo.gif)
+## What you get
 
-▶ [24-second launch video](https://github.com/kunko-ai-labs/judge-audit/releases/download/v0.3.0/brag.mp4) · [vertical cut](https://github.com/kunko-ai-labs/judge-audit/releases/download/v0.3.0/brag-vertical.mp4)
+<img src="docs/assets/report-preview.png" alt="The HTML report: key figures (safe automation rate, accuracy, calibration error, cost and latency), data and ground truth, then the answer to Can I automate this?" width="640">
+
+One self-contained report per run (Markdown or HTML, prints to A4): the answer first, with its threshold and out-of-sample check; calibration with intervals; accuracy against coverage; cost and latency; the provenance of every number. Shown here on the seeded simulator, stamped **SIMULATED**. `audit-result.json` carries the same numbers for your pipeline.
 
 ## v0.4 results (prior): synthetic emails under attack
 

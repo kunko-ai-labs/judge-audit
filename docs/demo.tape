@@ -17,25 +17,26 @@ Type "source .venv/bin/activate; rm -rf /tmp/demo && mkdir /tmp/demo && cd /tmp/
 Enter
 Show
 
-Type "# Audit a judge in shadow mode: it decides, humans already decided, we compare"
+Type "# Can this AI judge decide alone? Replay decisions people already made (seeded simulator, no key)"
 Enter
-Type "judge-audit run $JA/examples/email-routing/labels.jsonl --judge simulated"
-Enter
-Sleep 2.5s
-Type "# The three questions a buyer asks, answered from the evidence"
-Enter
-Type "sed -n '3,12p' audit-report.md"
-Enter
-Sleep 4s
-Type "clear"
-Enter
-Type "# Same datasets, seven judges (raw responses committed): who earns an automation budget?"
-Enter
-Type "grep -A 9 'under attack' $JA/docs/arena-2026-09.md | cut -d'|' -f2,4-7 | sed 's/ (model-reported probability)//'"
-Enter
-Sleep 7s
-Type "# CI gate: fail the build when the judge gets less honest than the baseline"
-Enter
-Type "judge-audit check $JA/examples/email-routing/labels.jsonl --judge simulated --baseline audit-result.json; echo exit=$?"
+Type "judge-audit run $JA/examples/email-routing/labels.jsonl --judge simulated --target 0.10 | cut -c1-150"
 Enter
 Sleep 3s
+Type "# The report opens with the answer: what share it can take, at what error, from what threshold"
+Enter
+Type "awk '/## Can I automate this/{f=1} f&&n++<3' audit-report.md | fold -s -w 140"
+Enter
+Sleep 6s
+Type "clear"
+Enter
+Type "# CI gate: fail the build when the judge can no longer take 60 % of the work at <= 10 % error"
+Enter
+Type "judge-audit check $JA/examples/email-routing/labels.jsonl --judge simulated --baseline audit-result.json --target 0.10 --min-safe-rate 0.10:0.60 >/dev/null; echo exit=$?"
+Enter
+Sleep 3s
+Type "judge-audit check $JA/examples/email-routing/labels.jsonl --judge simulated --baseline audit-result.json --target 0.10 --min-safe-rate 0.10:0.70 2>&1 | tail -1 | cut -c1-140; echo exit=$?"
+Enter
+Sleep 4s
+Type "# Same engine in your agent: claude mcp add judge-audit -- judge-audit-mcp"
+Enter
+Sleep 2.5s

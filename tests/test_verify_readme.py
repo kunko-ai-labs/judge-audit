@@ -480,3 +480,25 @@ def test_no_opposite_sign_test_does_not_read_as_worse(monkeypatch):
     failures = check(README).failures
     assert any("ranked their errors no differently" in f for f in failures)
     assert not any("ranked their errors worse" in f and "in 0 of" in f for f in failures)
+
+
+@pytest.mark.parametrize(
+    "old,new",
+    [
+        ("| Jev, native probability | **41.0 %** |", "| Jev, native probability | **42.0 %** |"),
+        ("| 27.0–45.1 % | 72.3 % |", "| 27.0–46.1 % | 72.3 % |"),
+        ("| 7.6–30.0 % | 45.5 % |", "| 7.6–30.0 % | 46.5 % |"),
+        ("| Qwen3-8B, token log-probability | **none** |",
+         "| Qwen3-8B, token log-probability | **1.0 %** |"),
+        ("BANKING77, 3,080 human-labelled", "BANKING77, 3,081 human-labelled"),
+    ],
+)
+def test_the_at_a_glance_table_is_checked_cell_by_cell(old, new):
+    assert any(f.startswith("v0.5 at a glance") for f in check(edit(old, new)).failures)
+
+
+def test_a_dropped_row_of_the_at_a_glance_table_is_caught():
+    row = "| gemini-3.6-flash, verbalized | **14.3 %** | 7.6–30.0 % | 45.5 % |\n"
+    assert row in README
+    assert any("gemini-3.6-flash, verbalized" in f and "0 times" in f
+               for f in check(README.replace(row, "")).failures)

@@ -677,6 +677,47 @@ def v05_expected(d: dict) -> dict[str, list[str]]:
     }
 
 
+GLANCE_ROWS = {"Jev, native probability": "jev",
+               "gemini-3.6-flash, verbalized": "llm-gemini-3.6-flash",
+               "Qwen3-8B, token log-probability": "logprob-qwen3-8b"}
+GLANCE_HEAD = "| Judge and confidence | Decides alone at ≤ 5 % error | Range over split seeds |"
+
+
+def check_v05_glance(ck: Checker, md: str) -> None:
+    """The "At a glance" table of the v0.5 findings: one row per run, every cell rebuilt from
+    docs/v05-results.json (the pooled cross-fit rate at 5 %, its spread over split seeds, the
+    rate at 10 %), and the caption's row count."""
+    d = load("v05-results.json")
+    m = d["metrics"]
+    cap = re.search(r"\*\*At a glance: BANKING77, ([\d,]+) human-labelled banking queries", md)
+    ck.eq("v0.5 at a glance / rows", cap and cap.group(1), f"{m['banking77/jev']['strict']['n']:,}")
+    if GLANCE_HEAD not in md:
+        ck.failures.append("v0.5 at a glance: the table is missing")
+        return
+    table = md.split(GLANCE_HEAD, 1)[1].split("\n\n", 1)[0]
+    rows = [cells(line) for line in table.splitlines() if line.startswith("| ") and "---" not in line]
+    seen = [r[0] for r in rows]
+    for label, run in GLANCE_ROWS.items():
+        ck.checked += 1
+        if seen.count(label) != 1:
+            ck.failures.append(f"v0.5 at a glance: row {label!r} appears {seen.count(label)} times")
+            continue
+        r = rows[seen.index(label)]
+        if len(r) != 4:
+            ck.failures.append(f"v0.5 at a glance: row {label!r} has {len(r)} cells, not 4")
+            continue
+        c = m[f"banking77/{run}"]["strict"]["certification"]
+        five, ten = c["0.05"]["pooled"], c["0.1"]["pooled"]
+        lo, hi = c["0.05"]["spread_coverage"]
+        want = [f"**{_pc(five['coverage']) if five['covered'] else 'none'}**",
+                f"{lo * 100:.1f}–{hi * 100:.1f} %",
+                _pc(ten["coverage"]) if ten["covered"] else "none"]
+        for where, got, exp in zip(("at 5 %", "spread", "at 10 %"), r[1:4], want, strict=True):
+            ck.eq(f"v0.5 at a glance / {label} / {where}", got, exp)
+    for extra in set(seen) - set(GLANCE_ROWS):
+        ck.failures.append(f"v0.5 at a glance: unknown row {extra!r}")
+
+
 def paragraph(md: str, opening: str) -> list[str]:
     return [p for p in md.split("\n\n") if p.startswith(opening)]
 
@@ -703,6 +744,7 @@ def check_v05(ck: Checker, md: str) -> None:
             elif (md.count(text) != 1 and re.search(r"\d", text)
                   and not text.startswith("*Caveats:*")):   # the caveat repeats by design
                 ck.failures.append(f"v0.5 findings: {text!r} appears {md.count(text)} times")
+    check_v05_glance(ck, md)
     ck.checked += 1
     if "python scripts/v05_study.py --check" not in body:
         ck.failures.append("v0.5 findings: the reproduce command is missing")
