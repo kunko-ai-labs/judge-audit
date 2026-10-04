@@ -43,7 +43,7 @@ All notable changes to this project are documented here. The format follows
 - `github/codeql-action` bumped to v4.38.1 as one set across the CodeQL and Scorecard workflows, and grouped in Dependabot (#96).
 
 ### Not in this release
-Moved to v0.6: the held-out slice and the label-noise measurement (#86, #106); MCE in the reports, the second criterion of #12 (the metric itself shipped above); reporting per prompt template beyond BANKING77 (#92).
+Moved to v0.6: the held-out slice and the label-noise measurement (#86, #106); MCE in the reports, the second criterion of #12 (the metric itself shipped above); reporting per prompt template beyond BANKING77 (#92); current OpenAI and Claude models and a guardrail classifier (#88); every confidence method for every model that exposes it (#89); repeats for every judge (#90); the literature and the other public Jev audits compared (#93).
 
 ### Fixed
 - **`logprob_selfcheck.py` gates on what it was meant to guard** (v0.5 plan, amendment 1). Its gate is now the trimmed cache against a fresh cache per option (`option_logprobs(..., fresh=True)`, the same computation step for step); the full forward pass is still run and its spread printed as the model's bfloat16 noise, not a failure. On BANKING77 test rows the frozen check failed (0.051 on one near-tie, 1 decision changed) while the trimmed and fresh caches agreed exactly (`docs/runs/v05/logprob-selfcheck-diagnosis.txt`).

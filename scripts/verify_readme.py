@@ -545,8 +545,11 @@ def v05_expected(d: dict) -> dict[str, list[str]]:
     n_sup = sum(v["strict"] for v in d["verdicts"])
     sc = ["T3", "T4", "T5", "T6"]
     worse = sum(strict[t]["opposite_sign"] for t in sc)
-    sc_word = ("worse" if all(strict[t]["difference"] < 0 for t in sc if strict[t]["opposite_sign"])
-               else "better")
+    opposed = [t for t in sc if strict[t]["opposite_sign"]]
+    # all([]) is True: with no opposite-sign test the word is neither "worse" nor "better"
+    sc_word = ("no differently" if not opposed
+               else "worse" if all(strict[t]["difference"] < 0 for t in opposed) else "better")
+    worse_rr = sum(reread[t]["opposite_sign"] for t in sc)
     t1, t2, t2r = strict["T1"], strict["T2"], reread["T2"]
     w1 = "beat" if t1["difference"] > 0 else "lost to"
     w2 = "beat" if t2["difference"] > 0 else "lost to"
@@ -592,19 +595,32 @@ def v05_expected(d: dict) -> dict[str, list[str]]:
                  f"{len(flips)} verdicts ({_by_model(flips)}) change")
 
     def rate(run: str) -> str:
-        p = m[f"banking77/{run}"]["strict"]["certification"]["0.05"]["pooled"]
-        return _pc(p["coverage"]) if p["covered"] else "none"
+        c = m[f"banking77/{run}"]["strict"]["certification"]["0.05"]
+        lo, hi = c["spread_coverage"]
+        share = _pc(c["pooled"]["coverage"]) if c["pooled"]["covered"] else "none"
+        return f"{share} ({_pc(lo)}–{_pc(hi)}"
+
+    def spread5(run: str) -> tuple[float, float]:
+        lo, hi = m[f"banking77/{run}"]["strict"]["certification"]["0.05"]["spread_coverage"]
+        return lo, hi
+
+    overlap = ("overlap" if spread5("jev")[0] <= spread5("llm-gemini-3.6-flash")[1]
+               else "do not overlap")
 
     noise = "label noise was not measured"
     return {
         "**In short.**": [
-            f"counting the votes ranked its errors {sc_word} than its own verbalized number in "
-            f"{worse} of {len(sc)} tests",
+            f"counting the votes ranked their errors {sc_word} than their own verbalized number "
+            f"in {worse} of {len(sc)} tests under the pre-registered rule ({worse_rr} of {len(sc)} "
+            "under the re-reading)",
             f"{flip_text} with how an answer that copies an option's description is scored",
-            f"On BANKING77 at ≤ 5 % error, Jev native probability can decide {rate('jev')} of the "
-            f"texts alone, gemini-3.6-flash verbalized {rate('llm-gemini-3.6-flash')}, Qwen3-8B "
-            f"token log-probability {rate('logprob-qwen3-8b')}",
-            "probably seen in pretraining",
+            f"On BANKING77 at ≤ 5 % error, Jev native probability can decide {rate('jev')} over "
+            f"split seeds {seeds[0]}–{seeds[1]}) of the texts alone, gemini-3.6-flash verbalized "
+            f"{rate('llm-gemini-3.6-flash')}), Qwen3-8B token log-probability "
+            f"{rate('logprob-qwen3-8b')})",
+            f"the ranges of Jev and gemini-3.6-flash {overlap}",
+            "probably seen in pretraining", "one run each", "label noise not measured",
+            "the held-out slice not run (#106)",
         ],
         "A pre-registered study": [
             f"BANKING77 test ({n_b:,} rows) and a CLINC150 subset ({n_c:,} rows)",
@@ -647,10 +663,12 @@ def v05_expected(d: dict) -> dict[str, list[str]]:
             f"Jev native probability {cert('jev', '0.05', True)[:-1]}; split seed {d['seed']}, "
             f"{_pc(s5[0])}–{_pc(s5[1])} over seeds {seeds[0]}–{seeds[1]}) and "
             f"{cert('jev', '0.1', False)[:-1]}; {_pc(s10[0])}–{_pc(s10[1])} over the same seeds)",
-            f"gemini-3.6-flash verbalized {cert('llm-gemini-3.6-flash', '0.05', True)} and "
-            f"{cert('llm-gemini-3.6-flash', '0.1', False)}",
-            f"Qwen3-8B token log-probability {cert('logprob-qwen3-8b', '0.05', True)} and "
-            f"{cert('logprob-qwen3-8b', '0.1', False)}",
+            f"gemini-3.6-flash verbalized {cert('llm-gemini-3.6-flash', '0.05', True)[:-1]}; "
+            f"{_pc(spread5('llm-gemini-3.6-flash')[0])}–{_pc(spread5('llm-gemini-3.6-flash')[1])} "
+            f"over the same seeds) and {cert('llm-gemini-3.6-flash', '0.1', False)}",
+            f"Qwen3-8B token log-probability {cert('logprob-qwen3-8b', '0.05', True)[:-1]}; "
+            f"{_pc(spread5('logprob-qwen3-8b')[0])}–{_pc(spread5('logprob-qwen3-8b')[1])} over the "
+            f"same seeds) and {cert('logprob-qwen3-8b', '0.1', False)}",
             *(["On BANKING77 no run automates anything at ≤ 1 % or ≤ 2 %"] if nothing_low else []),
             caveat + "every bound includes the datasets' own label errors, because label noise "
             + "was not measured",

@@ -2,13 +2,13 @@
 
 Research to position judge-audit. Sources with URLs in each section.
 
-## 1. The category is empty
+## 1. What the evaluation platforms publish
 
 Judges keep getting cheaper (Jev, Patronus's Glider, Galileo's Luna) and
-platforms keep using them (Galileo, Patronus AI, Braintrust, Arize Phoenix,
-DeepEval, Ragas). **None of them publishes a calibration audit of the judges it uses.**
-All of them evaluate applications *using* judges; nobody publishes "is your
-judge's confidence honest?".
+evaluation platforms keep using them (Galileo, Patronus AI, Braintrust, DeepEval).
+**As of this brief, none of these four publishes a calibration audit of the judges it uses**:
+they evaluate applications *using* judges. Independent calibration audits of single
+judges do exist, Jev's among them; comparing them with ours is open work (#93).
 
 Analogy: there are labs that sell thermometers, but no body that checks the
 thermometers measure correctly.

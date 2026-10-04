@@ -263,6 +263,8 @@ def test_rewording_the_robustness_sentence_fails_instead_of_skipping():
         ("split seed 2026", "split seed 2027"),
         ("14.3 % at ≤ 5 % (6 errors", "14.3 % at ≤ 5 % (7 errors"),
         ("45.5 % at ≤ 10 % (59 / 1402)", "45.5 % at ≤ 10 % (59 / 1412)"),
+        ("441 automated; 7.6 %–30.0 % over", "441 automated; 7.6 %–31.0 % over"),
+        ("0 automated; 0.0 %–4.4 % over", "0 automated; 0.0 %–4.5 % over"),
         ("12.5 % at ≤ 10 % (19 / 384)", "12.6 % at ≤ 10 % (19 / 384)"),
         # verdicts and caveats are read too
         ("H2 is supported for Qwen3-8B", "H2 is strongly supported for Qwen3-8B"),
@@ -437,12 +439,20 @@ SHORT = "**In short.**"
 @pytest.mark.parametrize(
     "old,new",
     [
-        ("ranked its errors worse than", "ranked its errors better than"),
+        ("ranked their errors worse than", "ranked their errors better than"),
         ("in 3 of 4 tests", "in 4 of 4 tests"),
         ("one verdict (H2 for gemini-3.6-flash) changes", "no verdict changes"),
-        ("can decide 41.0 % of the", "can decide 42.0 % of the"),
-        ("gemini-3.6-flash verbalized 14.3 %,", "gemini-3.6-flash verbalized 15.3 %,"),
-        ("token log-probability none.", "token log-probability 1.0 %."),
+        ("can decide 41.0 % (27.0 %", "can decide 42.0 % (27.0 %"),
+        ("(27.0 %–45.1 % over split seeds", "(27.0 %–46.1 % over split seeds"),
+        ("verbalized 14.3 % (7.6 %–30.0 %)", "verbalized 14.3 % (7.6 %–31.0 %)"),
+        ("none (0.0 %–4.4 %)", "none (0.0 %–5.4 %)"),
+        ("(4 of 4 under the re-reading)", "(3 of 4 under the re-reading)"),
+        ("gemini-3.6-flash overlap, so", "gemini-3.6-flash do not overlap, so"),
+        ("one run each", "three runs each"),
+        ("label noise not measured", "label noise measured"),
+        ("the held-out slice not run (#106)", "the held-out slice run (#106)"),
+        ("gemini-3.6-flash verbalized 14.3 % (7.6", "gemini-3.6-flash verbalized 15.3 % (7.6"),
+        ("token log-probability none (", "token log-probability 1.0 % ("),
         ("probably seen in pretraining", "not seen in pretraining"),
     ],
 )
@@ -458,3 +468,15 @@ def test_the_in_short_none_follows_the_json(monkeypatch):
 
     patch_v05(monkeypatch, automate)
     assert any(f.startswith("v0.5 findings / **In short.**") for f in check(README).failures)
+
+
+def test_no_opposite_sign_test_does_not_read_as_worse(monkeypatch):
+    # all([]) is True: with no opposite-sign test, the rebuilt sentence must not say "worse"
+    def none_opposed(d):
+        for t in d["tests"]["strict"].values():
+            t["opposite_sign"] = False
+
+    patch_v05(monkeypatch, none_opposed)
+    failures = check(README).failures
+    assert any("ranked their errors no differently" in f for f in failures)
+    assert not any("ranked their errors worse" in f and "in 0 of" in f for f in failures)
