@@ -39,6 +39,7 @@ from __future__ import annotations
 import datetime as _dt
 import math
 from collections.abc import Hashable, Sequence
+from typing import Any
 
 from .metrics.selective import certify_threshold, risk_upper_bound, split_by_group
 
@@ -149,10 +150,11 @@ def _segments(segs: list, conf: list[float | None], ok: list[bool],
         if c is not None and c >= threshold:
             s[0] += 1
             s[1] += 0 if o else 1
-    rows = [{"segment": k, "automated": a, "errors": e,
-             "rate": round(e / a, 4) if a else None,
-             "risk_upper": _up(risk_upper_bound(e, a, delta)) if a else None}
-            for k, (a, e) in seen.items()]
+    rows: list[dict[str, Any]] = [
+        {"segment": k, "automated": a, "errors": e,
+         "rate": round(e / a, 4) if a else None,
+         "risk_upper": _up(risk_upper_bound(e, a, delta)) if a else None}
+        for k, (a, e) in seen.items()]
     rows.sort(key=lambda s: (-(s["rate"] or 0.0), -(s["risk_upper"] or 0.0), s["segment"]))
     ranked = [s for s in rows if s["automated"] >= MIN_SEGMENT]
     return {"segments": rows, "worst_segment": ranked[0] if ranked else None,
@@ -175,8 +177,8 @@ def automation_certificate(records: list[dict], groups: Sequence[Hashable] | Non
     if not any(math.isclose(primary, t) for t in targets):
         raise ValueError(f"the primary target {primary:g} is not among the targets")
     by_q: dict[str, list[int]] = {}
-    for i, r in enumerate(records):
-        by_q.setdefault(str(r["question"]), []).append(i)
+    for i, rec in enumerate(records):
+        by_q.setdefault(str(rec["question"]), []).append(i)
     questions = []
     for question, idx in by_q.items():
         n = len(idx)
@@ -188,7 +190,7 @@ def automation_certificate(records: list[dict], groups: Sequence[Hashable] | Non
         if any(c is not None and not math.isfinite(c) for c in conf_all):
             raise ValueError(f"question {question!r}: a confidence is not finite")
         have = [k for k, c in enumerate(conf_all) if c is not None]
-        conf = [conf_all[k] for k in have]
+        conf = [float(conf_all[k]) for k in have]  # type: ignore[arg-type]
         ok = [ok_all[k] for k in have]
         keys = [keys_all[k] for k in have]
         n_texts = len(set(keys_all))
