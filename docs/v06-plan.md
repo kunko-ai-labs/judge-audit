@@ -1,6 +1,6 @@
 # v0.6 study — pre-registered plan (DRAFT)
 
-**Issue:** [#132](https://github.com/kunko-ai-labs/judge-audit/issues/132) · Epic [#130](https://github.com/kunko-ai-labs/judge-audit/issues/130) · **Status: DRAFT, not frozen.** Nothing here governs a run until the maintainer settles the decisions at the end, the pilot (§9) has sized the study, and the plan is tagged `v06-plan-freeze` before the study's first call. Until then no judge is run on any test row of the datasets below.
+**Issue:** [#132](https://github.com/kunko-ai-labs/judge-audit/issues/132) · Epic [#130](https://github.com/kunko-ai-labs/judge-audit/issues/130) · **Status: DRAFT, not frozen.** The maintainer settled D1–D6 on 2026-10-05 (table at the end). Nothing here governs a run until the pilot (§9) has sized the study, and the plan is tagged `v06-plan-freeze` before the study's first call. Until then no judge is run on any test row of the datasets below.
 
 Method notes carried over from v0.5: [v05-plan.md](v05-plan.md) (rows without a usable answer, certification, resampling), [docs/v05/](v05/README.md).
 
@@ -38,8 +38,8 @@ Results are published whether or not the predictions hold; a difference the test
 | Decision 2.0 Kai-0.6B, pinned `cd49ea3813fd8ba0928a9a23ef6c9a0f2f0cd764` (#131) | maintainer's 16 GB machine | P(chosen option); the `confidence` field kept for E1 | H1, H2, E1 |
 | Laya multilingual (mmBERT backbone), pinned at freeze | maintainer's machine | P(chosen option) | H1, H2 |
 | Jev (`jev-latest`, TypeSafe endpoint) | hosted | native P(chosen option) | H1, H2 |
-| decider-2b, Strands Decider 2B, Clef-flash (#137) | 16 / 24 GB machines | P(chosen option) | D2: primary or exploratory |
-| a chat model (verbalized confidence) | hosted | verbalized | D4 |
+| decider-2b, Strands Decider 2B, Clef-flash (#137) | 16 / 24 GB machines, or the vendor's own API for Clef-flash | P(chosen option) | exploratory (D2) |
+| `gemini-3.6-flash` (verbalized, T = 0, v0.5 prompt) | hosted | verbalized | exploratory (D4) |
 
 Every local model is pinned to a revision sha recorded in its checkpoint header; a model the vendor changes after the freeze is not updated without an amendment. A model run quantized to fit is labelled as that variant.
 
@@ -90,13 +90,13 @@ As v0.5 §10: local runs first, then hosted; `scripts/audit_resumable.py`; check
 
 Dated amendments, committed before the call they govern.
 
-## Decisions for the maintainer (open)
+## Decisions (settled by the maintainer, 2026-10-05)
 
-| id | question | recommendation |
+| id | question | decision |
 |---|---|---|
-| D1 | primary target error for H1 | 5 % (certifiable at about 1,487 items per half; 1 % and 2 % stay secondary) |
-| D2 | decider-2b, Strands Decider, Clef-flash: primary or exploratory | exploratory in this study; primary in the next, once their adapters are reviewed |
-| D3 | a translated-criteria arm | exploratory, Spanish only, translated by the maintainer and marked as such; Catalan only with a native reviewer |
-| D4 | a chat model with verbalized confidence | one, exploratory (gemini-3.6-flash, as in v0.5), so decision models are read against a known reference |
-| D5 | 27B models (Vega-27B, Clef) | out of this study; a later amendment with a rented GPU in bf16, or a labelled quantized variant on the 24 GB machine |
-| D6 | external human reviewer | sought before the freeze; if none reads it, the report says so |
+| D1 | primary target error for H1 | **5 %** (certifiable at about 1,487 items per half); 1 %, 2 % and 10 % stay secondary |
+| D2 | decider-2b, Strands Decider 2B, Clef-flash | **exploratory** in this study, reported with "exploratory" next to every number; primary in the next study once their adapters are reviewed |
+| D3 | a translated-criteria arm | **exploratory, Spanish only**, translated by the maintainer and marked as such in the criteria `origin`; Catalan only with a native reviewer |
+| D4 | a chat model with verbalized confidence | **one, exploratory: `gemini-3.6-flash`**, as in v0.5, as a known reference |
+| D5 | 27B models (Vega-27B, Clef) | **out of this study**; a later amendment (rented GPU in bf16, the vendor's own API, or a quantized variant labelled as such) |
+| D6 | external human reviewer | **sought before the freeze**; if none reads the plan, the report says so |
