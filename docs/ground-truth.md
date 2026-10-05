@@ -42,6 +42,15 @@ is ready for two annotators blind to the label (`scripts/relabel.py`). Once scor
 the share of rows both annotators label differently from the dataset, with a Wilson 95 %
 interval; the adjudicated sample is what can be reported as GT-4.
 
+MASSIVE 1.1 in English, Spanish and Catalan (`examples/massive/`, [#133](https://github.com/kunko-ai-labs/judge-audit/issues/133))
+is **GT-3** too, with one more caveat that travels with its numbers: **translated parallel
+data, not native traffic; labels from SLURP annotation carried over by localisation.** The
+`es-ES` and `ca-ES` utterances are localisations of SLURP's English ones and keep the English
+label; nobody labelled them again. What MASSIVE does publish is a check on the translation:
+up to three workers of the locale answered "Does the sentence match the intent?" for each
+localised utterance, and the files keep those answers (`_meta.intent_judgments`) so that a
+report can set aside the rows where they said no. Its label noise is not measured.
+
 ### The v2 synthetic stress sets ([#87](https://github.com/kunko-ai-labs/judge-audit/issues/87))
 
 The v1 synthetic files stay as they are: the published audits were run on them, so they
