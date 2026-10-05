@@ -130,15 +130,35 @@ def test_fit_problems_by_hand():
     assert "the options run past max_len=64" in fit_problems(5, [10] * 10, 1, 64, 192)
 
 
-def test_a_question_that_does_not_fit_is_refused_before_laya_reads_it():
+def test_a_question_that_does_not_fit_is_no_answer_not_sent_and_the_run_goes_on():
     agent = FakeAgent({})
 
     def too_many(agent, state, qdef):
         return 20, [4] * 77, 30
 
-    with pytest.raises(ValueError, match="does not fit Laya's token budgets.*cut to 3 tokens"):
-        LayaJudge(agent=agent, token_counts=too_many).decide("x", [CHOICE])
-    assert agent.calls == []
+    (out,) = LayaJudge(agent=agent, token_counts=too_many).decide("x", [CHOICE])
+    assert agent.calls == []                                   # never read truncated
+    assert out.parse_status == "no_answer" and out.confidence is None and out.decision == ""
+    assert out.raw["error"] == "max_length_exceeded"
+    assert "the 77 options need 385 of head_max_len=192 tokens: 77 would be cut to 3 tokens" \
+        in out.raw["problems"]
+    assert out.raw["max_len"] == 512 and out.raw["head_max_len"] == 192
+
+
+def test_only_the_questions_that_do_not_fit_are_withheld():
+    other = Question(name="team", type=QuestionType.CHOICE, instructions="Which team?",
+                     options=["billing", "cards"])
+    agent = FakeAgent({"team": {"type": "choice", "choice": "cards",
+                                "probabilities": {"billing": 0.2, "cards": 0.8}}})
+
+
+    def counts(agent, state, qdef):
+        return (5, [60, 3], 10) if "card_arrival" in qdef["criteria"] else (5, [3, 3], 10)
+
+    intent, team = LayaJudge(agent=agent, token_counts=counts).decide("x", [CHOICE, other])
+    assert list(agent.calls[0][1]) == ["team"]                 # the misfit is not sent
+    assert intent.parse_status == "no_answer" and intent.raw["error"] == "max_length_exceeded"
+    assert team.decision == "cards" and team.confidence == 0.8
 
 
 # --- against the real package, where it is installed -----------------------------------------

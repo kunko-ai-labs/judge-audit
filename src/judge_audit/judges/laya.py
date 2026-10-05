@@ -22,8 +22,9 @@ What is recorded, and why:
   together leave fewer than 16 of `head_max_len` tokens, the instructions to what is left,
   the state to `max_len`. A cut option can become identical to another. Before each call
   this adapter redoes that arithmetic with Laya's own tokenizer and rendering
-  (`fit_problems`) and raises, naming what would be cut, instead of scoring a question
-  the model would read truncated.
+  (`fit_problems`). A question the model would read truncated is not sent: it is recorded
+  as no answer (`max_length_exceeded`, what would be cut in `raw.problems`), counts against
+  the judge, and the run goes on, the rule every local decision model follows.
 - **The act head.** Laya's `act_probability` is kept in `raw` and not analysed: Laya's own
   README says it carries no usable signal yet.
 - **The revision loaded.** The checkpoint is downloaded here at LAYA_REVISION (Laya's own
@@ -207,29 +208,38 @@ class LayaJudge(Judge):
             "device_requested": self.device,
         }
 
-    def _check_fit(self, state: str, payload: dict[str, dict]) -> None:
+    def _misfits(self, state: str, payload: dict[str, dict]) -> dict[str, list[str]]:
+        """Question -> what Laya would cut to fit it in this run's budgets; only the misfits."""
         max_len, head_max_len = self._budgets()
+        out: dict[str, list[str]] = {}
         for name, qdef in payload.items():
             problems = fit_problems(*self._token_counts(self._agent, state, qdef),
                                     max_len=max_len, head_max_len=head_max_len)
             if problems:
-                raise ValueError(
-                    f"question '{name}' does not fit Laya's token budgets (max_len={max_len}, "
-                    f"head_max_len={head_max_len}): {'; '.join(problems)}. Laya would read it "
-                    "truncated; raise LAYA_HEAD_MAX_LEN / LAYA_MAX_LEN or shortlist the options "
-                    "(a pre-registration decision) instead")
+                out[name] = problems
+        return out
 
     def decide(self, state: str, questions: list[Question]) -> list[Judgment]:
         payload = {q.name: laya_question(q) for q in questions}
-        self._check_fit(state, payload)
+        # A question Laya would read truncated is not sent: no answer, counted, run goes on.
+        misfits = self._misfits(state, payload)
+        send = {k: v for k, v in payload.items() if k not in misfits}
         kwargs = {k: v for k, v in (("max_len", self.max_len),
                                     ("head_max_len", self.head_max_len)) if v is not None}
         t0 = time.monotonic()
-        result = self._agent.predict(state, payload, **kwargs)
-        latency = (time.monotonic() - t0) / max(len(questions), 1)
+        result = self._agent.predict(state, send, **kwargs) if send else {}
+        latency = (time.monotonic() - t0) / max(len(send), 1) if send else 0.0
         answers = result.get("answers", {})
+        max_len, head_max_len = self._budgets()
         out: list[Judgment] = []
         for q in questions:
+            if q.name in misfits:
+                out.append(Judgment(question=q.name, decision="", confidence=None,
+                                    latency_s=0.0, cost_usd=0.0, parse_status="no_answer",
+                                    raw={"error": "max_length_exceeded",
+                                         "problems": misfits[q.name], "max_len": max_len,
+                                         "head_max_len": head_max_len}))
+                continue
             ans = answers.get(q.name)
             if not isinstance(ans, dict):
                 out.append(Judgment(question=q.name, decision="", confidence=None,

@@ -3,6 +3,11 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
+## [Unreleased]
+
+### Changed
+- **`laya`: an over-length question is no answer, not an aborted run.** A question Laya 0.3.20 would read truncated (`fit_problems`: an option, the instructions or the state cut to fit `max_len` / `head_max_len`) is no longer a `ValueError` that stops the run: it is not sent, and is recorded as no answer (`raw.error` `max_length_exceeded`, what would be cut in `raw.problems`, the budgets used), counted against the judge like any unanswered question; the run goes on. The same rule as the local decision models. No published number moves: Laya raised before, so no committed checkpoint holds such a row (`verify_published.py` and the report regeneration show 0 changes).
+
 ## [0.5.1] — 2026-10-05
 
 ### Changed
