@@ -41,6 +41,8 @@ Results are published whether or not the predictions hold; a difference the test
 | decider-2b, Strands Decider 2B, Clef-flash (#137) | 16 / 24 GB machines, or the vendor's own API for Clef-flash | P(chosen option) | exploratory (D2) |
 | `gemini-3.6-flash` (verbalized, T = 0, v0.5 prompt) | hosted | verbalized | exploratory (D4) |
 
+**Device and precision are fixed per model at the freeze** and recorded in every checkpoint: decisions can depend on them (decider-2b's own card example picks a different option in fp16 on the laptop GPU than in bf16 on CPU; Decision 2.0 autocasts to bf16 on CUDA only). **Training-data overlap** with MASSIVE / SLURP is checked from each model card before the freeze and stated next to that model's numbers (decider's and Strands Decider's cards list BANKING77, Strands also CLINC150: relevant to v0.5's datasets, not to MASSIVE, unless the check finds otherwise).
+
 Every local model is pinned to a revision sha recorded in its checkpoint header; a model the vendor changes after the freeze is not updated without an amendment. A model run quantized to fit is labelled as that variant.
 
 ## 5. Repeats
