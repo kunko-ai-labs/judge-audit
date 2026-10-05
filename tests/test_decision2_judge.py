@@ -25,7 +25,8 @@ class FakeModel:
 
     def __init__(self, answers=None, reference=None):
         self.answers = answers or {}
-        self.reference = reference if reference is not None else REFERENCE_OUTPUTS[(KAI, KAI_SHA)]
+        self.reference = (reference if reference is not None
+                          else REFERENCE_OUTPUTS[(KAI, KAI_SHA, "mps")])
         self.calls: list[tuple] = []
 
     def system_one(self, *, state, questions):
@@ -118,7 +119,7 @@ def test_provenance_records_the_revision_warnings_and_both_checks():
 
 
 def test_the_reference_check_refuses_a_model_that_answers_differently():
-    ref = REFERENCE_OUTPUTS[(KAI, KAI_SHA)]
+    ref = REFERENCE_OUTPUTS[(KAI, KAI_SHA, "mps")]
     drifted = {**ref, "route": {**ref["route"], "probabilities": {
         "returns": 0.90, "billing": 0.05, "technical": 0.05}}}
     with pytest.raises(RuntimeError, match="differs from the reference.*route"):
@@ -129,7 +130,7 @@ def test_the_reference_check_refuses_a_model_that_answers_differently():
 
 
 def test_check_reference_by_hand():
-    ref = REFERENCE_OUTPUTS[(KAI, KAI_SHA)]
+    ref = REFERENCE_OUTPUTS[(KAI, KAI_SHA, "mps")]
     close = {**ref, "receipt": {"type": "noul", "noul": ref["receipt"]["noul"] + 5e-5}}
     status = check_reference(close, ref)
     assert status["status"] == "passed" and status["max_abs_diff"] == pytest.approx(5e-5)
@@ -142,6 +143,13 @@ def test_a_revision_without_reference_outputs_is_recorded_as_unchecked():
     j = Decision2Judge(model_id=KAI, revision=other, system=FakeModel(),
                        info={**INFO, "loaded_revision": other})
     assert j.describe()["reference_check"]["status"] == "unchecked"
+
+
+def test_outputs_are_checked_only_on_the_kind_of_device_they_were_recorded_on():
+    # CPU and MPS run FP32 (recorded); CUDA runs BF16 autocast (not recorded yet)
+    for device, status in (("cpu", "passed"), ("mps", "passed"), ("cuda:0", "unchecked")):
+        j = Decision2Judge(model_id=KAI, system=FakeModel(), info={**INFO, "device": device})
+        assert j.describe()["reference_check"]["status"] == status
 
 
 def test_known_models_default_to_their_pinned_revision_and_unknown_ones_need_a_pin(monkeypatch):
@@ -187,7 +195,8 @@ def test_smoke_kai_06b_loads_pinned_and_matches_the_model_card_reference():
     j = Decision2Judge(model_id=KAI)
     d = j.describe()
     assert d["loaded_revision"] == KAI_SHA
-    assert d["reference_check"]["status"] == "passed"
+    assert d["reference_check"]["status"] == (
+        "unchecked" if d["device"].startswith("cuda") else "passed")
     assert d["tokenizer_check"]["matches_tokenizer_json"] is True
     out = j.decide(decision2.REFERENCE_STATE, [
         Question(name="route", type=QuestionType.CHOICE,
@@ -198,5 +207,5 @@ def test_smoke_kai_06b_loads_pinned_and_matches_the_model_card_reference():
                                "technical": "Product setup and faults"})])
     assert out[0].decision == "returns"
     assert out[0].confidence == pytest.approx(
-        REFERENCE_OUTPUTS[(KAI, KAI_SHA)]["route"]["probabilities"]["returns"], abs=1e-4)
+        REFERENCE_OUTPUTS[(KAI, KAI_SHA, "mps")]["route"]["probabilities"]["returns"], abs=1e-4)
     assert sum(out[0].raw["probabilities"].values()) == pytest.approx(1.0)

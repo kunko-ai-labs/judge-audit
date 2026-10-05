@@ -23,9 +23,11 @@ What is recorded, and why:
   `transformers_version`, as a possible Mistral tokenizer; no fix is applied unless asked).
   Every warning the load emits is recorded. Then (1) the tokenizer the runtime uses must
   encode probe texts exactly as the package's own `tokenizer.json` does, and (2) the model
-  card's example must give the outputs recorded in `REFERENCE_OUTPUTS` for that revision,
-  within `REFERENCE_TOLERANCE`; either difference raises. A revision without recorded outputs
-  is loaded and marked `unchecked` in the provenance.
+  card's example must give the outputs recorded in `REFERENCE_OUTPUTS` for that revision and
+  kind of device, within `REFERENCE_TOLERANCE`; either difference raises. The runtime computes
+  in FP32 on CPU and MPS but in BF16 autocast on a CUDA GPU, so outputs are recorded per kind
+  of device; a revision or device without recorded outputs is loaded and marked `unchecked`
+  in the provenance.
 - **Over-length input is not truncated.** The runtime answers `max_length_exceeded` instead;
   the adapter records it as no answer, with the error in `raw`.
 
@@ -75,10 +77,10 @@ REFERENCE_QUESTIONS = {
     "urgency": {"type": "score", "instructions": "How urgent is this request?",
                 "criteria": ["Routine", "Soon", "Today"]},
 }
-# Its answers, recorded with transformers 5.17.0 and torch 2.14.0 on Apple MPS (FP32); the
-# same run on CPU differs by at most 5e-7.
-REFERENCE_OUTPUTS: dict[tuple[str, str], dict[str, Any]] = {
-    (KAI, PINNED_REVISIONS[KAI]): {
+# Its answers by (model, revision, kind of device), recorded with transformers 5.17.0 and torch
+# 2.14.0 on Apple MPS; the runtime computes in FP32 there and on CPU, where the same run
+# differs by at most 5e-7. On CUDA it uses BF16 autocast: no outputs are recorded for it yet.
+_KAI_FP32 = {
         "route": {"type": "choice", "choice": "returns",
                   "probabilities": {"returns": 0.962132, "billing": 0.013547,
                                     "technical": 0.024320},
@@ -87,7 +89,10 @@ REFERENCE_OUTPUTS: dict[tuple[str, str], dict[str, Any]] = {
         "urgency": {"type": "score", "score": 1.475152,
                     "probabilities": {"0": 0.164247, "1": 0.196354, "2": 0.639399},
                     "confidence": 0.178708},
-    },
+}
+REFERENCE_OUTPUTS: dict[tuple[str, str, str], dict[str, Any]] = {
+    (KAI, PINNED_REVISIONS[KAI], "mps"): _KAI_FP32,
+    (KAI, PINNED_REVISIONS[KAI], "cpu"): _KAI_FP32,
 }
 REFERENCE_TOLERANCE = 1e-4          # the stored values are rounded to 1e-6
 # Probe texts for the tokenizer check: punctuation, digits, accents, curly quotes, newlines.
@@ -260,10 +265,13 @@ class Decision2Judge(Judge):
         self.info["reference_check"] = self._check_reference()
 
     def _check_reference(self) -> dict:
-        expected = REFERENCE_OUTPUTS.get((self.model_id, str(self.info.get("loaded_revision"))))
+        device_kind = str(self.info.get("device") or "").split(":")[0]
+        expected = REFERENCE_OUTPUTS.get(
+            (self.model_id, str(self.info.get("loaded_revision")), device_kind))
         if expected is None:
             return {"status": "unchecked",
-                    "reason": "no reference outputs recorded for this model and revision"}
+                    "reason": "no reference outputs recorded for this model, revision and "
+                              f"kind of device ({device_kind or 'unknown'})"}
         got = self._system.system_one(state=REFERENCE_STATE, questions=REFERENCE_QUESTIONS)
         status = check_reference(got.get("answers") or {}, expected)
         if status["status"] != "passed":
