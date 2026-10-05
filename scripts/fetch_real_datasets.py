@@ -156,6 +156,20 @@ def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _get(url: str, timeout: int) -> bytes:
+    for attempt in range(1, DOWNLOAD_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(url, timeout=timeout) as r:
+                return r.read()
+        except OSError:                           # URLError, timeouts, resets
+            time.sleep(5 * 2 ** (attempt - 1))
+    try:                                          # the last attempt
+        with urllib.request.urlopen(url, timeout=timeout) as r:
+            return r.read()
+    except OSError as exc:
+        raise SystemExit(f"{url}: {exc} after {DOWNLOAD_ATTEMPTS} attempts") from exc
+
+
 def download(url: str, want: str, cached: Path | None = None, timeout: int = 300) -> bytes:
     """The bytes at `url`, verified against `want`. A network failure is retried with
     backoff; a sha256 mismatch is not (the pin, not the network, is wrong). With `cached`,
@@ -165,15 +179,7 @@ def download(url: str, want: str, cached: Path | None = None, timeout: int = 300
         data = cached.read_bytes()
         if sha256_bytes(data) == want:
             return data
-    for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
-        try:
-            with urllib.request.urlopen(url, timeout=timeout) as r:
-                data = r.read()
-            break
-        except OSError as exc:                    # URLError, timeouts, resets
-            if attempt == DOWNLOAD_ATTEMPTS:
-                raise SystemExit(f"{url}: {exc} after {DOWNLOAD_ATTEMPTS} attempts") from exc
-            time.sleep(5 * 2 ** (attempt - 1))
+    data = _get(url, timeout)
     got = sha256_bytes(data)
     if got != want:
         raise SystemExit(f"{url}: sha256 {got} != pinned {want}")
