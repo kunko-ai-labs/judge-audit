@@ -1,6 +1,6 @@
 # Judges: what plugs in and how
 
-judge-audit audits anything that maps `(state, questions) -> (decision, confidence)`. Eight adapters ship; writing a ninth is ~30 lines.
+judge-audit audits anything that maps `(state, questions) -> (decision, confidence)`. Eleven adapters ship; writing a twelfth is ~30 lines.
 
 | `--judge` | What it audits | Confidence comes from | Needs |
 |---|---|---|---|
@@ -12,6 +12,9 @@ judge-audit audits anything that maps `(state, questions) -> (decision, confiden
 | `logprob` | an open-weight chat model run locally with MLX (Apple silicon, or Linux CPU), asked to answer with an option's name | **token log-probability**: the model's own probability of answering each option (its tokens, then the end of turn), normalised over the options; nothing is sampled | `pip install 'kunko-judge-audit[mlx]'` + `LOGPROB_MODEL`; `LOGPROB_REVISION` recommended; optional `LOGPROB_LABEL`, `LOGPROB_CHAT_KWARGS`, `LOGPROB_PROMPT_TEMPLATE` |
 | `laya` | Laya, an open-weight judgment model (Convai Innovations, Apache-2.0) run locally: an encoder that scores every option in one forward pass | **the probability of the chosen option**, after the checkpoint's softmax temperature; never Laya's entropy-based `confidence` field | `pip install 'kunko-judge-audit[laya]'`; `LAYA_REVISION` recommended; optional `LAYA_MODEL`, `LAYA_DEVICE`, `LAYA_MAX_LEN`, `LAYA_HEAD_MAX_LEN` |
 | `decision2` | Decision 2.0 (vLLM Semantic Router, Apache-2.0, 0.6B to 27B), an open decision model run locally through its own runtime, at a pinned revision | **the probability of the chosen option** from the per-option probabilities (yes/no: of the answer given); never the model's entropy-based `confidence` field | `pip install 'kunko-judge-audit[decision2]'`; optional `DECISION2_MODEL` (default Kai-0.6B), `DECISION2_REVISION` (pinned by default for the six released models), `DECISION2_DEVICE` |
+| `decider` | decider (Mapika, Apache-2.0; 0.8B, 2B, 4B), an open decision model run locally with the code shipped in its repository, at a pinned revision | **the probability of the chosen option**; never its TypeSafe-style `confidence` or its `certainty` | `pip install 'kunko-judge-audit[decider]'`; optional `DECIDER_MODEL` (default decider-2b), `DECIDER_REVISION`, `DECIDER_DEVICE` |
+| `strands` | Strands Decider (Apache-2.0), a LoRA adapter and readout head on Qwen3.5-2B-Base, run locally; checkpoint and base pinned | **the probability of the chosen option**; never its derived `confidence` | `pip install 'kunko-judge-audit[strands]'`; optional `STRANDS_MODEL`, `STRANDS_REVISION`, `STRANDS_BASE_REVISION`, `STRANDS_DEVICE` |
+| `clef` | Clef and Clef-flash (Apache-2.0; 27B and 9B, multimodal), run locally in bfloat16 with the code in their repositories, at a pinned revision; Clef-flash needs about 19 GB | **the probability of the chosen option** | `pip install 'kunko-judge-audit[clef]'`; optional `CLEF_MODEL` (default clef-flash), `CLEF_REVISION`, `CLEF_DEVICE` |
 | `simulated` | nothing real — a seeded simulator to see the pipeline | drawn from a distribution | nothing; output is stamped SIMULATED |
 
 ## Same dataset, several judges = the Arena
@@ -68,6 +71,21 @@ Jev is one judgment model; a result about "judgment models" needs more than one.
 - **The exact path.** The runtime's optional shared-context mode, whose answers can differ slightly, is left off (`share_context` false in the provenance).
 
 No metric from this judge is published before the v0.6 pre-registration (#132).
+
+## decider, Strands Decider, Clef: the other open decision models
+
+Four families of open decision models were released within three weeks of each other, all Apache-2.0, all returning a probability per option for Jev's System One request (a state and typed questions): Decision 2.0 (above), decider, Strands Decider and Clef. Several of their model cards say their calibration was fitted on their own held-out data and should be measured on yours. The three adapters below share the base of `decision2` (`judges/systemone.py`):
+
+- **Confidence is the probability of the chosen option**, read from the per-option probabilities exactly as for `decision2` (yes/no: of the answer given; score: of the most probable level, mapped back to the option). Each family's own `confidence` field is kept in `raw` under a name that says what it is, never audited: decider's and Strands Decider's is TypeSafe's choice confidence, (n · p_max − 1)/(n − 1) (`raw.typesafe_confidence`; 0.769 where P(chosen) is 0.846 on Strands Decider's card), decider's `certainty` a normalized entropy (`raw.entropy_confidence`); Clef's is P(chosen) itself (`raw.native_confidence`).
+- **Pinned revisions.** Each adapter pins the commit of every released size it knows (2026-10-05); `<FAMILY>_REVISION` overrides it and any other Hub id needs one. decider and Clef ship their inference code inside the model repository, and the adapter imports it from the snapshot it downloads, at the commit of the weights. Strands Decider's checkpoint names its base model without a revision: the adapter loads the base at the revision the checkpoint's own `provenance.json` records (its publisher notes that revision was inferred, not pinned at training; `STRANDS_BASE_REVISION` overrides it), and records both commits.
+- **A reference request before any decision**, against outputs recorded per kind of device. Strands Decider is checked against the outputs its model card prints (3 decimals; tolerance 0.005; on an Apple laptop the largest difference is 0.0005 on MPS in bfloat16 and 0.0025 on CPU, where the package upcasts to float32). decider-2b is checked against outputs recorded here at its pinned commit, separately for MPS (float16, decider's default there) and CPU (bfloat16): **the two precisions choose differently on decider's own model-card example** (billing at 0.516 on MPS; returns on CPU, where returns and billing both round to 0.495). A run's device and dtype are part of what it measures, and both are in the provenance. Clef has no recorded outputs (`unchecked`).
+- **No truncated input.** decider cuts the state at 32,768 tokens, Strands Decider fits a request into 4,096 tokens by cutting a long question from the front and the state from the end, Clef cuts the state to fit 16,384 tokens. Each adapter measures the request with the runtime's own tokenizer and rendering and raises instead, as `laya` does.
+- **Rounded probabilities.** All three runtimes round each probability to 4 decimals (`probability_resolution` in the provenance); with 77 options the rounded probabilities sum to 1 within about 0.001.
+- **Clef reads the question ID.** Its prompt includes each question's name (`ID: <name>`), unlike the other models: renaming a question can change an answer.
+
+What ran where (plumbing only, no metric): decider-2b and Strands Decider ran on a 16 GB Apple laptop (MPS and CPU) through `judge-audit run` on five BANKING77 train rows. Clef-flash's weights take about 19 GB in bfloat16 and Clef's about 55 GB, so neither ran here: the `clef` adapter is tested with a stubbed model only, and no quantized variant is offered. **Training data:** decider's and Strands Decider's model cards list BANKING77 (and Strands Decider CLINC150) among their training sets, and Clef's card reports BANKING77 and CLINC150 scores; a benchmark on those datasets measures these models on data they may have seen, which the v0.6 pre-registration (#132) has to address. No metric from these judges is published before it.
+
+**Laya's multilingual checkpoint** (`convaiinnovations/laya-multilingual`, an mmBERT-base encoder) loads through the existing `laya` judge, no new code: `LAYA_MODEL=convaiinnovations/laya-multilingual LAYA_REVISION=1720e3e3357cfe1e281542e223f8273b0890ca34`. Its shipped budget is `max_len` 1,024 and `head_max_len` 256 (Laya's README: pass `LAYA_MAX_LEN=8192` for long documents), and it ships no softmax temperature (1.0 for every type).
 
 ## Why an NLI control
 

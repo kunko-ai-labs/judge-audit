@@ -52,6 +52,10 @@ mlx = ["mlx-lm>=0.31", "mlx-lm[cpu]>=0.31; platform_system == 'Linux'"]
 laya = ["laya>=0.3.20,<0.4"]
 # The model's runtime ships with its weights (trust_remote_code); its manifest tests 5.17-5.18.
 decision2 = ["transformers>=5.17", "torch>=2.2", "safetensors", "tokenizers"]
+# decider and Clef run the code shipped in their model repositories; Strands needs its package.
+decider = ["transformers>=5.17", "torch>=2.2", "huggingface_hub"]
+strands = ["strands-decider>=0.1,<0.2"]
+clef = ["transformers>=5.10", "torch>=2.2", "huggingface_hub", "pillow"]
 dev = ["pytest>=8.0", "ruff>=0.5", "mypy>=1.10", "matplotlib>=3.7", "mcp>=2.0", "PyYAML>=6.0"]
 
 [build-system]

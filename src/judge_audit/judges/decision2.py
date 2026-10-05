@@ -40,18 +40,12 @@ Install: pip install 'kunko-judge-audit[decision2]'
 """
 from __future__ import annotations
 
-import logging
-import os
-import re
-import time
-import warnings
 from pathlib import Path
 from typing import Any
 
-from .base import Judge, Judgment, Question, QuestionType, served_of
-
-# What the judge is shown is `decision2_question`; bump when its shape changes.
-CRITERIA_VERSION = 1
+from .base import Question
+from .systemone import LocalSystemOneJudge, captured_warnings, systemone_question
+from .systemone import check_reference as _check_reference
 
 KAI = "vllm-sr/Decision-2.0-Kai-0.6B"
 DEFAULT_MODEL = KAI
@@ -102,36 +96,11 @@ TOKENIZER_PROBES = (REFERENCE_STATE,
                     '{"amount": 1200.5, "currency": "EUR", "items": [1, 2, 3]}')
 
 
-def _numbers(answer: dict) -> dict[str, float]:
-    """The probabilities an answer declares, flat: per option, or P(true) for yes/no."""
-    if answer.get("type") == "noul" and "noul" in answer:
-        return {"noul": float(answer["noul"])}
-    return {str(k): float(v) for k, v in (answer.get("probabilities") or {}).items()}
-
-
 def check_reference(got: dict, expected: dict,
                     tolerance: float = REFERENCE_TOLERANCE) -> dict:
     """Compare the model card example's answers with the recorded ones: same decisions, every
     declared probability within `tolerance`."""
-    problems: list[str] = []
-    worst = 0.0
-    for qid, exp in expected.items():
-        ans = got.get(qid)
-        if not isinstance(ans, dict) or "error" in ans:
-            problems.append(f"{qid}: no answer ({(ans or {}).get('error') if ans else None})")
-            continue
-        if exp.get("type") == "choice" and ans.get("choice") != exp["choice"]:
-            problems.append(f"{qid}: chose {ans.get('choice')!r}, reference {exp['choice']!r}")
-        a, e = _numbers(ans), _numbers(exp)
-        if set(a) != set(e):
-            problems.append(f"{qid}: options {sorted(a)}, reference {sorted(e)}")
-            continue
-        diff = max(abs(a[k] - e[k]) for k in e)
-        worst = max(worst, diff)
-        if diff > tolerance:
-            problems.append(f"{qid}: probabilities differ by up to {diff:.6f}")
-    return {"status": "failed" if problems else "passed", "max_abs_diff": round(worst, 7),
-            "tolerance": tolerance, "problems": problems}
+    return _check_reference(got, expected, tolerance)
 
 
 def tokenizer_check(tokenizer, tokenizer_json: Path) -> dict:
@@ -146,23 +115,6 @@ def tokenizer_check(tokenizer, tokenizer_json: Path) -> dict:
             "differing_probes": differ}
 
 
-class _Captured(logging.Handler):
-    def __init__(self) -> None:
-        super().__init__(logging.WARNING)
-        self.messages: list[str] = []
-
-    def emit(self, record: logging.LogRecord) -> None:
-        self.messages.append(f"{record.name}: {record.getMessage()}")
-
-
-def _tidy(message: str) -> str:
-    """A loader message for the provenance: the home directory and the runtime's temporary
-    directory name hidden (they change between machines and loads), one line, bounded."""
-    message = re.sub(r"\.decision2-view-[^/'\s]+", ".decision2-view-*",
-                     message.replace(str(Path.home()), "~"))
-    return " ".join(message.split())[:400]
-
-
 def _load(model_id: str, revision: str | None, device: str | None):
     """(the loaded model, its provenance), the load's warnings captured."""
     try:
@@ -172,19 +124,11 @@ def _load(model_id: str, revision: str | None, device: str | None):
     except ImportError as e:
         raise RuntimeError("the decision2 judge needs: "
                            "pip install 'kunko-judge-audit[decision2]'") from e
-    handler = _Captured()
-    hf_logger = logging.getLogger("transformers")
-    hf_logger.addHandler(handler)
-    try:
-        with warnings.catch_warnings(record=True) as caught:
-            warnings.simplefilter("always")
-            kwargs: dict = {"revision": revision} if revision else {}
-            if device:
-                kwargs["device"] = device
-            model = AutoModel.from_pretrained(model_id, trust_remote_code=True, **kwargs)
-    finally:
-        hf_logger.removeHandler(handler)
-    messages = handler.messages + [f"{w.category.__name__}: {w.message}" for w in caught]
+    kwargs: dict = {"revision": revision} if revision else {}
+    if device:
+        kwargs["device"] = device
+    with captured_warnings("transformers") as messages:
+        model = AutoModel.from_pretrained(model_id, trust_remote_code=True, **kwargs)
     source = Path(model._source)
     loaded = (source.name if source.parent.name == "snapshots"
               else getattr(model.config, "_commit_hash", None))
@@ -203,7 +147,7 @@ def _load(model_id: str, revision: str | None, device: str | None):
         "transformers_version": transformers.__version__,
         "torch_version": torch.__version__,
         "runtime_tested_transformers": (manifest.get("remote_code") or {}).get("tested"),
-        "loader_warnings": [_tidy(m) for m in messages],
+        "loader_warnings": messages,
         "tokenizer_check": tokenizer_check(backend.tokenizer, source / "tokenizer.json"),
     }
     return model, info
@@ -211,112 +155,28 @@ def _load(model_id: str, revision: str | None, device: str | None):
 
 def decision2_question(q: Question) -> dict:
     """One judge-audit question in Decision 2.0's System One format."""
-    base: dict = {"type": q.type.value, "instructions": q.instructions}
-    if q.type is QuestionType.CHOICE:
-        if not q.options:
-            raise RuntimeError(f"choice question '{q.name}' has no options")
-        # An option without a description is sent as None: the model sees the bare label.
-        base["criteria"] = {opt: q.descriptions.get(opt) for opt in q.options}
-    elif q.type is QuestionType.SCORE:
-        if not 2 <= len(q.options) <= 10:
-            raise RuntimeError(f"score question '{q.name}' needs 2 to 10 levels, "
-                               f"has {len(q.options)}")
-        # Levels in order; the model returns their indices.
-        base["criteria"] = [q.descriptions.get(opt) or opt for opt in q.options]
-    return base
+    return systemone_question(q)
 
 
-def _read(q: Question, ans: dict) -> tuple[str, float, dict]:
-    """(decision, confidence, the answer's probabilities) from one parsed answer."""
-    if q.type is QuestionType.NOUL:
-        p = float(ans["noul"])
-        return ("true" if p >= 0.5 else "false"), max(p, 1 - p), {"true": p, "false": 1 - p}
-    probs = {str(k): float(v) for k, v in ans["probabilities"].items()}
-    if q.type is QuestionType.CHOICE:
-        decision = str(ans["choice"])
-        return decision, probs[decision], probs
-    best = max(probs, key=lambda k: (probs[k], -int(k)))       # the first level on a tie
-    return q.options[int(best)], probs[best], probs
+class Decision2Judge(LocalSystemOneJudge):
+    name = family = "decision2"
+    env = "DECISION2"
+    default_model = DEFAULT_MODEL
+    pinned = PINNED_REVISIONS
+    reference_state = REFERENCE_STATE
+    reference_questions = REFERENCE_QUESTIONS
+    reference_outputs = REFERENCE_OUTPUTS
+    reference_tolerance = REFERENCE_TOLERANCE
+    raw_fields = {"confidence": "entropy_confidence", "score": "expected_level"}
+    native_confidence = ("the model's `confidence` field, a normalized entropy 1 - H(p)/log K; "
+                         "kept in raw as entropy_confidence, not audited")
 
+    def load(self, model_id: str, revision: str | None, device: str | None):
+        return _load(model_id, revision, device)
 
-class Decision2Judge(Judge):
-    name = "decision2"
-
-    def __init__(self, model_id: str | None = None, revision: str | None = None,
-                 device: str | None = None, system=None, info: dict | None = None):
-        self.model_id = model_id or os.environ.get("DECISION2_MODEL", DEFAULT_MODEL)
-        self.requested_revision = (revision or os.environ.get("DECISION2_REVISION")
-                                   or PINNED_REVISIONS.get(self.model_id))
-        if self.requested_revision is None and not Path(self.model_id).exists():
-            raise ValueError(f"{self.model_id} has no pinned revision: set DECISION2_REVISION "
-                             "to a Hub commit (the runtime code ships with the weights, so an "
-                             "unpinned run is not reproducible)")
-        self.device = device or os.environ.get("DECISION2_DEVICE") or None
-        if system is None:
-            system, info = _load(self.model_id, self.requested_revision, self.device)
-        self._system = system
-        self.info = dict(info or {})
-        self.label = self.model_id.rstrip("/").split("/")[-1]
-        self.name = f"decision2:{self.label}"
-        if self.info.get("tokenizer_check", {}).get("matches_tokenizer_json") is False:
-            raise RuntimeError(f"{self.label}: the tokenizer loaded encodes "
-                               f"{self.info['tokenizer_check']['differing_probes']} differently "
-                               "from the package's tokenizer.json; outputs would change")
-        self.info["reference_check"] = self._check_reference()
-
-    def _check_reference(self) -> dict:
-        device_kind = str(self.info.get("device") or "").split(":")[0]
-        expected = REFERENCE_OUTPUTS.get(
-            (self.model_id, str(self.info.get("loaded_revision")), device_kind))
-        if expected is None:
-            return {"status": "unchecked",
-                    "reason": "no reference outputs recorded for this model, revision and "
-                              f"kind of device ({device_kind or 'unknown'})"}
-        got = self._system.system_one(state=REFERENCE_STATE, questions=REFERENCE_QUESTIONS)
-        status = check_reference(got.get("answers") or {}, expected)
-        if status["status"] != "passed":
-            raise RuntimeError(f"{self.label} differs from the reference outputs of the model "
-                               f"card's example: {'; '.join(status['problems'])}")
-        return status
-
-    def describe(self) -> dict:
-        return {
-            "name": self.name, "provider": "local", "model": self.label,
-            "model_id": self.model_id, "revision": self.requested_revision,
-            **self.info,
-            "device_requested": self.device,
-            "criteria_version": CRITERIA_VERSION,
-            "confidence_method": "probability of the chosen option (yes/no: of the answer "
-                                 "given) from the model's per-option probabilities",
-            "native_confidence": "the model's `confidence` field, a normalized entropy "
-                                 "1 - H(p)/log K; kept in raw as entropy_confidence, not "
-                                 "audited",
-            # nothing is sampled; the softmax temperatures are recorded above
-            "temperature": "n/a",
-        }
-
-    def decide(self, state: str, questions: list[Question]) -> list[Judgment]:
-        payload = {q.name: decision2_question(q) for q in questions}
-        t0 = time.monotonic()
-        result = self._system.system_one(state=state, questions=payload)
-        latency = (time.monotonic() - t0) / max(len(questions), 1)
-        answers = result.get("answers") or {}
-        served = served_of({"model": result.get("model")})
-        out: list[Judgment] = []
-        for q in questions:
-            ans = answers.get(q.name)
-            if not isinstance(ans, dict) or "error" in ans:
-                out.append(Judgment(question=q.name, decision="", confidence=None,
-                                    latency_s=latency, cost_usd=0.0,
-                                    raw={"error": (ans or {}).get("error") if ans else None,
-                                         "answer": ans, "served": served},
-                                    parse_status="no_answer"))
-                continue
-            decision, confidence, probs = _read(q, ans)
-            raw = {"probabilities": probs, "entropy_confidence": ans.get("confidence"),
-                   "usage": result.get("usage"), "served": served}
-            if q.type is QuestionType.SCORE:
-                raw["expected_level"] = ans.get("score")
-            out.append(Judgment(question=q.name, decision=decision, confidence=confidence,
-                                latency_s=latency, cost_usd=0.0, raw=raw))
-        return out
+    def preflight(self) -> None:
+        check = self.info.get("tokenizer_check") or {}
+        if check.get("matches_tokenizer_json") is False:
+            raise RuntimeError(f"{self.label}: the tokenizer loaded encodes probes "
+                               f"{check['differing_probes']} differently from the package's "
+                               "tokenizer.json; outputs would change")

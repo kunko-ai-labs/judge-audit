@@ -7,7 +7,8 @@ from pathlib import Path
 
 from judge_audit.cli import JUDGES
 
-WORDS = {4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight", 9: "nine", 10: "ten"}
+WORDS = {4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight", 9: "nine", 10: "ten",
+         11: "eleven", 12: "twelve"}
 README = Path(__file__).resolve().parent.parent / "README.md"
 
 

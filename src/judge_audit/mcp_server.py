@@ -101,6 +101,27 @@ JUDGE_INFO: dict[str, dict[str, object]] = {
         "env": ["extra [decision2]", "DECISION2_MODEL, DECISION2_REVISION (pinned by default "
                 "for the six released models), DECISION2_DEVICE (optional)"],
     },
+    "decider": {
+        "description": "decider (Mapika), an open decision model run locally at a pinned "
+                       "revision with the code shipped in its repository. Confidence is "
+                       "P(chosen option), never its TypeSafe-style confidence field.",
+        "env": ["extra [decider]", "DECIDER_MODEL, DECIDER_REVISION (pinned by default for "
+                "decider-0.8b, -2b, -4b), DECIDER_DEVICE (optional)"],
+    },
+    "strands": {
+        "description": "Strands Decider, an open decision model (LoRA on Qwen3.5-2B-Base) run "
+                       "locally, checkpoint and base pinned. Confidence is P(chosen option); "
+                       "the model card's example is checked before any decision.",
+        "env": ["extra [strands]", "STRANDS_MODEL, STRANDS_REVISION, STRANDS_BASE_REVISION, "
+                "STRANDS_DEVICE (optional; pinned by default)"],
+    },
+    "clef": {
+        "description": "Clef / Clef-flash, open multimodal decision models run locally in "
+                       "bfloat16 at a pinned revision (Clef-flash needs about 19 GB). "
+                       "Confidence is P(chosen option).",
+        "env": ["extra [clef]", "CLEF_MODEL, CLEF_REVISION, CLEF_DEVICE (optional; pinned by "
+                "default)"],
+    },
     "simulated": {
         "description": "Seeded simulator to see the pipeline without a key. Not a real "
                        "vendor audit; every result is tagged SIMULATED.",
