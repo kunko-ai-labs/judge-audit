@@ -5,6 +5,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- **MASSIVE 1.1 in English, Spanish and Catalan** (#133; `examples/massive/`). The 2,974-utterance test split of `en-US`, `es-ES` and `ca-ES` (60 intents, CC BY 4.0), the same items in the same order in every locale (`_meta.id`), plus a 230-utterance pilot from the dev split; `scripts/fetch_real_datasets.py` fetches the pinned release archive, refuses a locale that lacks an id or relabels one, and `--massive-full DIR` writes the whole train and dev splits outside the repository. Test rows mark texts also in train or dev (`_meta.text_in_train_or_dev`), pilot rows texts also in test (`_meta.text_in_test`); a translated-criteria arm writes files with a `.criteria-<language>-<digest>` suffix, never over the English ones. Downloads are retried with backoff (network errors and bodies cut off mid-transfer) and, with `--cache DIR` (used by CI), kept and reused once verified against their pins. Questions in English in every locale, with the header's `criteria` saying who wrote them; the caveat "translated parallel data, not native traffic; labels from SLURP annotation carried over by localisation" is in every file's header. No judge has been run on these files.
+
 ### Changed
 - **`laya`: an over-length question is no answer, not an aborted run.** A question Laya 0.3.20 would read truncated (`fit_problems`: an option, the instructions or the state cut to fit `max_len` / `head_max_len`) is no longer a `ValueError` that stops the run: it is not sent, and is recorded as no answer (`raw.error` `max_length_exceeded`, what would be cut in `raw.problems`, the budgets used), counted against the judge like any unanswered question; the run goes on. The same rule as the local decision models. No published number moves: Laya raised before, so no committed checkpoint holds such a row (`verify_published.py` and the report regeneration show 0 changes).
 
