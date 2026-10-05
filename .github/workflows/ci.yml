@@ -121,8 +121,17 @@ jobs:
             (cd examples/$d && python generate.py >/dev/null)
           done
           git diff --exit-code -- examples/
+      # The pinned upstream files (MASSIVE's archive is 40 MB) are cached between runs;
+      # every file read from the cache is still checked against its sha256 pin, and a
+      # download that fails is retried with backoff.
+      - name: Cache the pinned upstream files
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/judge-audit/upstream
+          key: upstream-${{ hashFiles('scripts/fetch_real_datasets.py') }}
+          restore-keys: upstream-
       - name: Third-party datasets regenerate from their pinned upstream files
-        run: python scripts/fetch_real_datasets.py --check
+        run: python scripts/fetch_real_datasets.py --check --cache ~/.cache/judge-audit/upstream
       - name: Pre-registered held-out split regenerates byte-identical
         run: |
           pip install -e .
