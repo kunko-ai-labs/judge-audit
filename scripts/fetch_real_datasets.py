@@ -33,6 +33,7 @@ drafts until the v0.6 pre-registration (#132) fixes them.
   python scripts/fetch_real_datasets.py --check        # exit 1 naming any file that differs
   python scripts/fetch_real_datasets.py --src DIR      # read the upstream files from DIR
                                                        # (DIR/<repo name>/<path>) offline
+  python scripts/fetch_real_datasets.py --cache DIR    # reuse verified downloads kept in DIR
   python scripts/fetch_real_datasets.py --massive-full DIR
                                                        # also write MASSIVE's whole train and
                                                        # dev splits to DIR (not committed)
@@ -47,12 +48,14 @@ import json
 import random
 import sys
 import tarfile
+import time
 import urllib.request
 from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SEED = 2026
+DOWNLOAD_ATTEMPTS = 4                              # 1 + 3 retries, 5 s, 10 s, 20 s apart
 PILOT_PER_INTENT = 4
 
 SOURCES = {
@@ -153,14 +156,43 @@ def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def fetch(source: dict, path: str, src_dir: Path | None) -> bytes:
-    """One upstream file at the pinned commit, verified against its recorded sha256."""
-    if src_dir is not None:
-        data = (src_dir / source["repo"].split("/")[1] / path).read_bytes()
-    else:
+def download(url: str, want: str, cached: Path | None = None, timeout: int = 300) -> bytes:
+    """The bytes at `url`, verified against `want`. A network failure is retried with
+    backoff; a sha256 mismatch is not (the pin, not the network, is wrong). With `cached`,
+    a file there that matches the pin is used without the network, and verified bytes
+    are written there."""
+    if cached is not None and cached.exists():
+        data = cached.read_bytes()
+        if sha256_bytes(data) == want:
+            return data
+    for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
+        try:
+            with urllib.request.urlopen(url, timeout=timeout) as r:
+                data = r.read()
+            break
+        except OSError as exc:                    # URLError, timeouts, resets
+            if attempt == DOWNLOAD_ATTEMPTS:
+                raise SystemExit(f"{url}: {exc} after {DOWNLOAD_ATTEMPTS} attempts") from exc
+            time.sleep(5 * 2 ** (attempt - 1))
+    got = sha256_bytes(data)
+    if got != want:
+        raise SystemExit(f"{url}: sha256 {got} != pinned {want}")
+    if cached is not None:
+        cached.parent.mkdir(parents=True, exist_ok=True)
+        cached.write_bytes(data)
+    return data
+
+
+def fetch(source: dict, path: str, src_dir: Path | None,
+          cache_dir: Path | None = None) -> bytes:
+    """One upstream file at the pinned commit, verified against its recorded sha256
+    (cached as DIR/<repo name>/<path>, the layout --src reads)."""
+    local = Path(source["repo"].split("/")[1]) / path
+    if src_dir is None:
         url = f"https://raw.githubusercontent.com/{source['repo']}/{source['commit']}/{path}"
-        with urllib.request.urlopen(url, timeout=60) as r:
-            data = r.read()
+        return download(url, source["files"][path],
+                        cache_dir / local if cache_dir is not None else None, timeout=60)
+    data = (src_dir / local).read_bytes()
     got, want = sha256_bytes(data), source["files"][path]
     if got != want:
         raise SystemExit(f"{source['repo']}/{path}: sha256 {got} != pinned {want}")
@@ -330,15 +362,17 @@ MASSIVE_TRANSLATION_CAVEAT = ("translated parallel data, not native traffic; lab
 MASSIVE_INTENT_SCORE = {0: "No", 1: "Yes", 2: "It is a reasonable interpretation of the goal"}
 
 
-def fetch_archive(source: dict, src_dir: Path | None) -> dict[str, bytes]:
+def fetch_archive(source: dict, src_dir: Path | None,
+                  cache_dir: Path | None = None) -> dict[str, bytes]:
     """The pinned members of a release archive, the archive and each member verified
-    against their recorded sha256 (offline: DIR/<repo name>/<archive file name>)."""
+    against their recorded sha256 (offline or cached: DIR/<repo name>/<archive file name>)."""
     name = source["archive"].rsplit("/", 1)[1]
+    local = Path(source["repo"].split("/")[1]) / name
     if src_dir is not None:
-        data = (src_dir / source["repo"].split("/")[1] / name).read_bytes()
+        data = (src_dir / local).read_bytes()
     else:
-        with urllib.request.urlopen(source["archive"], timeout=300) as r:
-            data = r.read()
+        data = download(source["archive"], source["archive_sha256"],
+                        cache_dir / local if cache_dir is not None else None)
     got = sha256_bytes(data)
     if got != source["archive_sha256"]:
         raise SystemExit(f"{name}: sha256 {got} != pinned {source['archive_sha256']}")
@@ -564,22 +598,23 @@ def massive_full_splits(locales: dict[str, list[dict]],
     return out
 
 
-def build(src_dir: Path | None) -> dict[str, str]:
+def build(src_dir: Path | None, cache_dir: Path | None = None) -> dict[str, str]:
     b = SOURCES["banking77"]
-    intents = json.loads(fetch(b, "banking_data/categories.json", src_dir))
-    fetch(b, "LICENSE", src_dir)
-    out = banking77(read_csv(fetch(b, "banking_data/test.csv", src_dir)),
-                    read_csv(fetch(b, "banking_data/train.csv", src_dir)), intents)
+    intents = json.loads(fetch(b, "banking_data/categories.json", src_dir, cache_dir))
+    fetch(b, "LICENSE", src_dir, cache_dir)
+    out = banking77(read_csv(fetch(b, "banking_data/test.csv", src_dir, cache_dir)),
+                    read_csv(fetch(b, "banking_data/train.csv", src_dir, cache_dir)), intents)
     c = SOURCES["clinc150"]
-    fetch(c, "LICENSE", src_dir)
-    out.update(clinc150(json.loads(fetch(c, "data/data_full.json", src_dir)),
-                        json.loads(fetch(c, "data/domains.json", src_dir))))
-    out.update(massive(massive_locales(src_dir)))
+    fetch(c, "LICENSE", src_dir, cache_dir)
+    out.update(clinc150(json.loads(fetch(c, "data/data_full.json", src_dir, cache_dir)),
+                        json.loads(fetch(c, "data/domains.json", src_dir, cache_dir))))
+    out.update(massive(massive_locales(src_dir, cache_dir)))
     return out
 
 
-def massive_locales(src_dir: Path | None) -> dict[str, list[dict]]:
-    files = fetch_archive(SOURCES["massive"], src_dir)
+def massive_locales(src_dir: Path | None,
+                    cache_dir: Path | None = None) -> dict[str, list[dict]]:
+    files = fetch_archive(SOURCES["massive"], src_dir, cache_dir)
     return {loc: read_jsonl(files[f"1.1/data/{loc}.jsonl"]) for loc in MASSIVE_LOCALES}
 
 
@@ -590,13 +625,16 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--src", type=Path, default=None,
                     help=("read upstream files from DIR/<repo name>/<path> (MASSIVE: "
                           "DIR/massive/<archive file name>) instead of fetching"))
+    ap.add_argument("--cache", type=Path, default=None, metavar="DIR",
+                    help=("keep verified downloads in DIR (the --src layout) and reuse them; "
+                          "a cached file that no longer matches its pin is fetched again"))
     ap.add_argument("--massive-full", type=Path, default=None, metavar="DIR",
                     help="also write MASSIVE's whole train and dev splits to DIR")
     args = ap.parse_args(argv)
-    files = build(args.src)
+    files = build(args.src, args.cache)
     if args.massive_full is not None:
         args.massive_full.mkdir(parents=True, exist_ok=True)
-        for name, text in massive_full_splits(massive_locales(args.src)).items():
+        for name, text in massive_full_splits(massive_locales(args.src, args.cache)).items():
             (args.massive_full / name).write_text(text, encoding="utf-8")
             print(f"wrote: {args.massive_full / name}")
     changed = []

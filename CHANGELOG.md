@@ -6,7 +6,7 @@ All notable changes to this project are documented here. The format follows
 ## [Unreleased]
 
 ### Added
-- **MASSIVE 1.1 in English, Spanish and Catalan** (#133; `examples/massive/`). The 2,974-utterance test split of `en-US`, `es-ES` and `ca-ES` (60 intents, CC BY 4.0), the same items in the same order in every locale (`_meta.id`), plus a 230-utterance pilot from the dev split; `scripts/fetch_real_datasets.py` fetches the pinned release archive, refuses a locale that lacks an id or relabels one, and `--massive-full DIR` writes the whole train and dev splits outside the repository. Questions in English in every locale, with the header's `criteria` saying who wrote them; the caveat "translated parallel data, not native traffic; labels from SLURP annotation carried over by localisation" is in every file's header. No judge has been run on these files.
+- **MASSIVE 1.1 in English, Spanish and Catalan** (#133; `examples/massive/`). The 2,974-utterance test split of `en-US`, `es-ES` and `ca-ES` (60 intents, CC BY 4.0), the same items in the same order in every locale (`_meta.id`), plus a 230-utterance pilot from the dev split; `scripts/fetch_real_datasets.py` fetches the pinned release archive, refuses a locale that lacks an id or relabels one, and `--massive-full DIR` writes the whole train and dev splits outside the repository. Downloads are retried with backoff and, with `--cache DIR` (used by CI), kept and reused once verified against their pins. Questions in English in every locale, with the header's `criteria` saying who wrote them; the caveat "translated parallel data, not native traffic; labels from SLURP annotation carried over by localisation" is in every file's header. No judge has been run on these files.
 
 ## [0.5.1] — 2026-10-05
 

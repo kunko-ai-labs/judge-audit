@@ -258,3 +258,70 @@ def test_the_dataset_card_names_the_sha256_of_every_committed_and_upstream_file(
     src = fetch.SOURCES["massive"]
     for digest in [src["archive_sha256"], *src["files"].values()]:
         assert digest in card
+
+
+# --- downloads: retried, cached, verified ------------------------------------------------
+
+
+class _Response(io.BytesIO):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+def _flaky(data: bytes, failures: int, calls: list):
+    def urlopen(url, timeout):
+        calls.append(url)
+        if len(calls) <= failures:
+            raise OSError("connection reset")
+        return _Response(data)
+    return urlopen
+
+
+def test_download_retries_a_failed_fetch_then_caches_the_verified_bytes(tmp_path, monkeypatch):
+    data, calls = b"upstream bytes", []
+    monkeypatch.setattr(fetch.urllib.request, "urlopen", _flaky(data, 2, calls))
+    monkeypatch.setattr(fetch.time, "sleep", lambda s: None)
+    want = hashlib.sha256(data).hexdigest()
+    cached = tmp_path / "repo" / "f.bin"
+    assert fetch.download("https://example.invalid/f.bin", want, cached) == data
+    assert len(calls) == 3 and cached.read_bytes() == data
+    assert fetch.download("https://example.invalid/f.bin", want, cached) == data
+    assert len(calls) == 3                                  # served from the cache
+
+
+def test_download_replaces_a_cached_file_that_no_longer_matches_the_pin(tmp_path, monkeypatch):
+    data, calls = b"upstream bytes", []
+    monkeypatch.setattr(fetch.urllib.request, "urlopen", _flaky(data, 0, calls))
+    cached = tmp_path / "f.bin"
+    cached.write_bytes(b"truncated")
+    assert fetch.download("u", hashlib.sha256(data).hexdigest(), cached) == data
+    assert len(calls) == 1 and cached.read_bytes() == data
+
+
+def test_download_gives_up_after_its_attempts_and_never_caches_wrong_bytes(tmp_path,
+                                                                           monkeypatch):
+    calls: list = []
+    monkeypatch.setattr(fetch.urllib.request, "urlopen", _flaky(b"x", 99, calls))
+    monkeypatch.setattr(fetch.time, "sleep", lambda s: None)
+    with pytest.raises(SystemExit, match="https://example.invalid/f.bin: .*attempts"):
+        fetch.download("https://example.invalid/f.bin", "0" * 64, tmp_path / "f.bin")
+    assert len(calls) == fetch.DOWNLOAD_ATTEMPTS
+    monkeypatch.setattr(fetch.urllib.request, "urlopen", _flaky(b"changed", 0, []))
+    with pytest.raises(SystemExit, match="sha256"):
+        fetch.download("u", "0" * 64, tmp_path / "f.bin")
+    assert not (tmp_path / "f.bin").exists()
+
+
+def test_fetch_archive_reads_a_cached_archive_without_the_network(tmp_path, monkeypatch):
+    members = {"1.1/LICENSE": b"licence"}
+    archive = _tarball(members)
+    (tmp_path / "massive").mkdir()
+    (tmp_path / "massive" / "m.tar.gz").write_bytes(archive)
+    source = {"repo": "alexa/massive", "archive": "https://example.invalid/m.tar.gz",
+              "archive_sha256": hashlib.sha256(archive).hexdigest(),
+              "files": {"1.1/LICENSE": hashlib.sha256(b"licence").hexdigest()}}
+    monkeypatch.setattr(fetch.urllib.request, "urlopen", _flaky(b"", 99, []))
+    assert fetch.fetch_archive(source, None, cache_dir=tmp_path) == members
