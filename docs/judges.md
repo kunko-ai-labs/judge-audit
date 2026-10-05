@@ -1,6 +1,6 @@
 # Judges: what plugs in and how
 
-judge-audit audits anything that maps `(state, questions) -> (decision, confidence)`. Seven adapters ship; writing an eighth is ~30 lines.
+judge-audit audits anything that maps `(state, questions) -> (decision, confidence)`. Eight adapters ship; writing a ninth is ~30 lines.
 
 | `--judge` | What it audits | Confidence comes from | Needs |
 |---|---|---|---|
@@ -11,6 +11,7 @@ judge-audit audits anything that maps `(state, questions) -> (decision, confiden
 | `finetuned` | **your own classifier**: a DeBERTa-class encoder fine-tuned on your labelled rows (`scripts/train_classifier.py`) — the "isn't a judgment model just a classifier?" row | **softmax probability of the chosen option** from the classification head; reads only the state text | `pip install 'kunko-judge-audit[nli]'` + `FINETUNED_MODEL_DIR`; optional `FINETUNED_DEVICE`, `FINETUNED_MAX_LEN` |
 | `logprob` | an open-weight chat model run locally with MLX (Apple silicon, or Linux CPU), asked to answer with an option's name | **token log-probability**: the model's own probability of answering each option (its tokens, then the end of turn), normalised over the options; nothing is sampled | `pip install 'kunko-judge-audit[mlx]'` + `LOGPROB_MODEL`; `LOGPROB_REVISION` recommended; optional `LOGPROB_LABEL`, `LOGPROB_CHAT_KWARGS`, `LOGPROB_PROMPT_TEMPLATE` |
 | `laya` | Laya, an open-weight judgment model (Convai Innovations, Apache-2.0) run locally: an encoder that scores every option in one forward pass | **the probability of the chosen option**, after the checkpoint's softmax temperature; never Laya's entropy-based `confidence` field | `pip install 'kunko-judge-audit[laya]'`; `LAYA_REVISION` recommended; optional `LAYA_MODEL`, `LAYA_DEVICE`, `LAYA_MAX_LEN`, `LAYA_HEAD_MAX_LEN` |
+| `decision2` | Decision 2.0 (vLLM Semantic Router, Apache-2.0, 0.6B to 27B), an open decision model run locally through its own runtime, at a pinned revision | **the probability of the chosen option** from the per-option probabilities (yes/no: of the answer given); never the model's entropy-based `confidence` field | `pip install 'kunko-judge-audit[decision2]'`; optional `DECISION2_MODEL` (default Kai-0.6B), `DECISION2_REVISION` (pinned by default for the six released models), `DECISION2_DEVICE` |
 | `simulated` | nothing real — a seeded simulator to see the pipeline | drawn from a distribution | nothing; output is stamped SIMULATED |
 
 ## Same dataset, several judges = the Arena
@@ -55,6 +56,18 @@ Jev is one judgment model; a result about "judgment models" needs more than one.
 - **The act head.** `act_probability` is kept in `raw` and not analysed: Laya's README says it "carries no usable signal yet" (it reads 1.0 for almost every input).
 - **What was loaded, where.** Laya's own loader takes no revision, so the adapter downloads the checkpoint at `LAYA_REVISION` itself and records the Hub commit loaded (`loaded_revision`), pinned or not, and the device Laya actually runs on, which can fall back to the CPU (`device`, next to `device_requested`).
 - **Choice questions only.** Yes/no (noul) questions depend on how Laya maps its labels, which the adapter has not verified; they are refused.
+
+## Decision 2.0: open decision models at a pinned revision
+
+`decision2` runs a [Decision 2.0](https://huggingface.co/collections/vllm-sr/decision-20-6ab7cf7bdfb506bf8269cb00) model (vLLM Semantic Router, Apache-2.0) on your machine: a Qwen-based decision model that answers choice, yes/no and score questions with a probability per option, in one pass and without generating text. Six sizes are released, Kai-0.6B to Vega-27B; Kai-0.6B runs on a 16 GB laptop, Vega-27B does not. The model loads through its own runtime, which ships in the repository with the weights (`trust_remote_code`). What the adapter records, from that runtime's code:
+
+- **Confidence is `probabilities[choice]`**, the probability of the chosen option. The model's `confidence` field is a normalized entropy, 1 − H(p)/log K, on another scale (0.83 where P(chosen) is 0.96 on the model card's example); it is kept in `raw` as `entropy_confidence` and never audited. A yes/no answer is P(true): the decision is `true` from 0.5 and its confidence max(p, 1 − p), as for Jev. A score answer's decision is its most probable level, mapped back to the option name, with that level's probability; the expected level the model also returns is kept in `raw.expected_level`.
+- **The revision.** The six repositories were changed on 2026-10-03, after release, and the runtime code is part of each repository, so an unpinned run is not reproducible. A released model loads at the commit pinned in the adapter (2026-10-05) unless `DECISION2_REVISION` names another; any other Hub id needs `DECISION2_REVISION`. Provenance records the commit requested and loaded, the package's own weight identity (`model_sha256`), its profile, calibration file and the softmax temperature it applies per question type (Kai-0.6B ships no calibration file: temperature 1, raw probabilities), the device, and the transformers and torch versions next to the ones the package says it was tested with.
+- **Loader warnings and two checks before any decision.** Every warning the load emits is recorded (`loader_warnings`). With transformers 5.17 that includes "The tokenizer you are loading … with an incorrect regex pattern": transformers reads the package's `config.json`, which has no `transformers_version`, as a possible Mistral tokenizer and warns, but applies no change unless asked. The adapter checks that the tokenizer the runtime loaded encodes probe texts exactly as the package's own `tokenizer.json` does (`tokenizer_check`), and runs the model card's example request against outputs recorded for that revision (`reference_check`, tolerance 1e-4 per probability, same decisions); a difference in either raises before the first decision. Outputs are recorded for Kai-0.6B at its pinned commit (`REFERENCE_OUTPUTS` in the adapter; transformers 5.17.0, torch 2.14.0, MPS), and the opt-in smoke test (`JUDGE_AUDIT_SMOKE_DECISION2=1 pytest tests/test_decision2_judge.py`) reruns them. Another size or revision loads with `reference_check.status` "unchecked" until its outputs are recorded.
+- **Nothing is truncated.** Input over the model's budget (8,192 tokens for Kai-0.6B) is answered `max_length_exceeded` by the runtime; the adapter records it as no answer, with the error in `raw`, and it counts against the judge like any unanswered question.
+- **The exact path.** The runtime's optional shared-context mode, whose answers can differ slightly, is left off (`share_context` false in the provenance).
+
+No metric from this judge is published before the v0.6 pre-registration (#132).
 
 ## Why an NLI control
 

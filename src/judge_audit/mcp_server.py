@@ -93,6 +93,14 @@ JUDGE_INFO: dict[str, dict[str, object]] = {
         "env": ["extra [laya]", ("LAYA_MODEL, LAYA_REVISION (recommended), LAYA_DEVICE, "
                                  "LAYA_MAX_LEN, LAYA_HEAD_MAX_LEN (optional)")],
     },
+    "decision2": {
+        "description": "Decision 2.0 (vLLM Semantic Router), an open decision model run "
+                       "locally at a pinned revision. Confidence is P(chosen option), never its "
+                       "entropy-based confidence field; the model card's example is checked "
+                       "against recorded outputs before any decision.",
+        "env": ["extra [decision2]", "DECISION2_MODEL, DECISION2_REVISION (pinned by default "
+                "for the six released models), DECISION2_DEVICE (optional)"],
+    },
     "simulated": {
         "description": "Seeded simulator to see the pipeline without a key. Not a real "
                        "vendor audit; every result is tagged SIMULATED.",
