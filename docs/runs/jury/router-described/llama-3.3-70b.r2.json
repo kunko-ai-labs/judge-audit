@@ -425,8 +425,8 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-04T09:59:40+00:00",
-    "judge_audit_version": "0.4.0",
+    "utc": "2026-10-04T19:08:48+00:00",
+    "judge_audit_version": "0.5.0",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/jury/router-described/llama-3.3-70b.r2.ckpt.jsonl",
     "labels": "docs/runs/jury/router-described/llama-3.3-70b.r2.input.jsonl"

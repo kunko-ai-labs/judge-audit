@@ -3,6 +3,14 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
+## [Unreleased]
+
+### Changed
+- **The HTML report reads as a document** (`render_html`): a cover with scope and key-figure cards (the safe automation rate at the primary target, accuracy, ECE, cost and latency), numbered sections, the data and ground-truth note as a callout before section 1, every metric and the interval notes in a closing section, and a print stylesheet so the browser's "Save as PDF" gives an A4 report. One type family and one size scale throughout; number tables compact and tabular. Markdown that used to leak into the page (backticks, `**†**`, `*lower bound*`) is converted after escaping, so no value from the data becomes markup. Same numbers, same sections; `docs/audit-jev-real.html` regenerated.
+
+### Fixed
+- **Zero-error coverage no longer prints "confidence ≥ None".** When the most confident group of decisions already holds an error the covered prefix is empty; 34 published reports said "(0 decisions, confidence ≥ None)" and now say "(none: the most confident group of decisions already holds an error)". Regenerated from their checkpoints; `runs_report.py --moved`: 0 points moved, 0 headlines changed.
+
 ## [0.5.0] — 2026-10-04
 
 ### Added
