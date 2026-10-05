@@ -15,9 +15,15 @@ What is recorded, and why:
 - **The revision.** The six repositories were changed on 2026-10-03, after release, and the
   runtime code ships with the weights. A known model loads at the commit pinned in
   `PINNED_REVISIONS` unless DECISION2_REVISION names another; any other Hub id needs one. The
-  commit loaded is recorded, with the package's own weight identity (`model_sha256`).
-- **The softmax temperatures and calibration file** the runtime applies, per question type
-  (Kai-0.6B ships none: temperature 1, raw probabilities).
+  commit loaded is recorded, with the package's own weight identity (`model_sha256`). The
+  revision must be a 40-hex commit, not a branch or tag. A local directory loads as it is,
+  without a revision: `loaded_revision` is then whatever its config records, and the reference
+  check is `unchecked`.
+- **The softmax temperatures, calibration file and score offsets** the runtime applies, per
+  question type. Kai-0.6B ships no calibration file (temperature 1) but does ship
+  `score_bias.json`: fixed per-level logit offsets added to 5-level score questions before the
+  softmax, so those probabilities are not raw. The file, its sha256 and the level counts it
+  covers are recorded (`score_bias`).
 - **Loader warnings, and two checks before any decision.** Transformers 5.17 warns that the
   tokenizer has "an incorrect regex pattern" (it reads the package's config.json, which has no
   `transformers_version`, as a possible Mistral tokenizer; no fix is applied unless asked).
@@ -53,6 +59,7 @@ from .base import Judge, Judgment, Question, QuestionType, served_of
 # What the judge is shown is `decision2_question`; bump when its shape changes.
 CRITERIA_VERSION = 1
 
+COMMIT = re.compile(r"[0-9a-f]{40}")
 KAI = "vllm-sr/Decision-2.0-Kai-0.6B"
 DEFAULT_MODEL = KAI
 # Hub commits pinned on 2026-10-05; every repository was modified on 2026-10-03.
@@ -134,6 +141,17 @@ def check_reference(got: dict, expected: dict,
             "tolerance": tolerance, "problems": problems}
 
 
+def score_bias_of(manifest: dict, applied) -> dict | None:
+    """The fixed per-level logit offsets the runtime adds to score questions before the softmax
+    (Kai-0.6B: 5-level scores), as the manifest names them; None when the package has none."""
+    entry = manifest.get("score_bias")
+    if not entry:
+        return None
+    return {"file": entry.get("file"), "sha256": entry.get("sha256"),
+            "levels": sorted(int(k) for k in (entry.get("offsets") or {})),
+            "offsets": entry.get("offsets"), "applied": applied is not None}
+
+
 def tokenizer_check(tokenizer, tokenizer_json: Path) -> dict:
     """Does the tokenizer the runtime loaded encode the probes as the package's tokenizer.json?"""
     from tokenizers import Tokenizer
@@ -196,6 +214,7 @@ def _load(model_id: str, revision: str | None, device: str | None):
         "model_sha256": (manifest.get("identity") or {}).get("model_sha256"),
         "profile": manifest.get("profile"),
         "calibration": manifest.get("calibration"),
+        "score_bias": score_bias_of(manifest, getattr(backend, "score_bias", None)),
         "softmax_temperature": dict(getattr(backend, "temperatures", {}) or {}),
         "share_context": getattr(backend, "share_context", None),
         "device": str(getattr(backend, "device", "")) or None,
@@ -247,10 +266,12 @@ class Decision2Judge(Judge):
         self.model_id = model_id or os.environ.get("DECISION2_MODEL", DEFAULT_MODEL)
         self.requested_revision = (revision or os.environ.get("DECISION2_REVISION")
                                    or PINNED_REVISIONS.get(self.model_id))
-        if self.requested_revision is None and not Path(self.model_id).exists():
-            raise ValueError(f"{self.model_id} has no pinned revision: set DECISION2_REVISION "
-                             "to a Hub commit (the runtime code ships with the weights, so an "
-                             "unpinned run is not reproducible)")
+        local = Path(self.model_id).exists()
+        if not local and not COMMIT.fullmatch(self.requested_revision or ""):
+            raise ValueError(f"{self.model_id} needs a pinned revision: set DECISION2_REVISION "
+                             "to a 40-hex Hub commit, not a branch or tag (the runtime code "
+                             "ships with the weights, so an unpinned run is not reproducible); "
+                             f"got {self.requested_revision!r}")
         self.device = device or os.environ.get("DECISION2_DEVICE") or None
         if system is None:
             system, info = _load(self.model_id, self.requested_revision, self.device)
