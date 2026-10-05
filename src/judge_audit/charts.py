@@ -12,7 +12,7 @@ def _mpl():
         import matplotlib.pyplot as plt
         return plt
     except ImportError as e:
-        raise RuntimeError("charts need matplotlib: pip install 'judge-audit[charts]'") from e
+        raise RuntimeError("charts need matplotlib: pip install 'kunko-judge-audit[charts]'") from e
 
 
 def reliability_diagram_png(result, path: str | None = None) -> bytes:

@@ -12,6 +12,7 @@ All notable changes to this project are documented here. The format follows
 
 ### Fixed
 - **Zero-error coverage no longer prints "confidence ≥ None"** (#126). When the most confident group of decisions already holds an error the covered prefix is empty; 34 published reports said "(0 decisions, confidence ≥ None)" and now say "(none: the most confident group of decisions already holds an error)". Regenerated from their checkpoints; `runs_report.py --moved`: 0 points moved, 0 headlines changed.
+- **Install hints name the published package.** The messages for a missing optional dependency, the `llm` judge's docstring and `docs/judges.md` said `pip install 'judge-audit[charts]'` / `[anthropic]`; the package on PyPI is `kunko-judge-audit`, so they now say `pip install 'kunko-judge-audit[charts]'` / `[anthropic]`.
 
 ## [0.5.0] — 2026-10-04
 

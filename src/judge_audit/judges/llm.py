@@ -7,7 +7,7 @@ which the literature and our own audits show is often poorly calibrated — that
 the point of measuring it.
 
 Providers:
-  anthropic          official SDK (`pip install 'judge-audit[anthropic]'`), ANTHROPIC_API_KEY
+  anthropic          official SDK (`pip install 'kunko-judge-audit[anthropic]'`), ANTHROPIC_API_KEY
   openai-compatible  any /chat/completions endpoint: OpenAI, Ollama, vLLM, LM Studio, Gemini's
                      OpenAI endpoint... LLM_BASE_URL (e.g. https://api.openai.com/v1),
                      LLM_API_KEY (optional for local servers)
@@ -439,7 +439,8 @@ class LLMJudge(Judge):
                 import anthropic
             except ImportError as e:
                 raise RuntimeError(
-                    "the anthropic provider needs the SDK: pip install 'judge-audit[anthropic]'"
+                    "the anthropic provider needs the SDK: "
+                    "pip install 'kunko-judge-audit[anthropic]'"
                 ) from e
             # Credentials resolve from ANTHROPIC_API_KEY or an `ant auth login` profile.
             self._client = (anthropic.Anthropic(api_key=api_key) if api_key
