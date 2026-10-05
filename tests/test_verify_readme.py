@@ -503,3 +503,38 @@ def test_a_dropped_row_of_the_at_a_glance_table_is_caught():
     assert row in README
     assert any("gemini-3.6-flash, verbalized" in f and "0 times" in f
                for f in check(README.replace(row, "")).failures)
+
+
+@pytest.mark.parametrize(
+    "old,new",
+    [
+        ("| Range over split seeds | At ≤ 10 % error |",
+         "| Range over split seeds | At ≤ 20 % error |"),
+        ("decided alone at an error of at most 5 %.**",
+         "decided alone at an error of at most 10 %.**"),
+    ],
+)
+def test_the_at_a_glance_header_and_caption_are_checked(old, new):
+    assert any(f.startswith("v0.5 at a glance") for f in check(edit(old, new)).failures)
+
+
+def test_the_demo_figures_follow_the_json(monkeypatch, tmp_path):
+    import json
+
+    import verify_readme
+    src = verify_readme.ROOT / "docs/assets/demo-figures.json"
+    demo = json.loads(src.read_text(encoding="utf-8"))
+    demo["banking77"]["runs"]["jev"]["coverage_at_5pct"] = 0.42
+    fake = tmp_path / "docs/assets"
+    fake.mkdir(parents=True)
+    (fake / "demo-figures.json").write_text(json.dumps(demo), encoding="utf-8")
+    real_root = verify_readme.ROOT
+    monkeypatch.setattr(verify_readme, "ROOT", tmp_path)
+    monkeypatch.setattr(verify_readme, "load",
+                        lambda name: json.loads((real_root / "docs" / name).read_text()))
+    monkeypatch.setattr(verify_readme, "simulated_line", lambda target: (
+        "SIMULATED · judge=simulated n=200 accuracy=85.5% safe_automation@10%=65.5%"))
+    monkeypatch.setattr(verify_readme, "simulated_check", lambda share: 1)
+    ck = verify_readme.Checker()
+    verify_readme.check_demo_figures(ck)
+    assert any("demo / jev / rate at 5 %" in f for f in ck.failures)

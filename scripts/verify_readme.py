@@ -681,7 +681,8 @@ def v05_expected(d: dict) -> dict[str, list[str]]:
 GLANCE_ROWS = {"Jev, native probability": "jev",
                "gemini-3.6-flash, verbalized": "llm-gemini-3.6-flash",
                "Qwen3-8B, token log-probability": "logprob-qwen3-8b"}
-GLANCE_HEAD = "| Judge and confidence | Decides alone at ≤ 5 % error | Range over split seeds |"
+GLANCE_HEAD = ("| Judge and confidence | Decides alone at ≤ 5 % error | Range over split seeds | "
+               "At ≤ 10 % error |")
 
 
 def check_v05_glance(ck: Checker, md: str) -> None:
@@ -690,8 +691,10 @@ def check_v05_glance(ck: Checker, md: str) -> None:
     rate at 10 %), and the caption's row count."""
     d = load("v05-results.json")
     m = d["metrics"]
-    cap = re.search(r"\*\*At a glance: BANKING77, ([\d,]+) human-labelled banking queries", md)
+    cap = re.search(r"\*\*At a glance: BANKING77, ([\d,]+) human-labelled banking queries, decided "
+                    r"alone at an error of at most (\d+) %\.\*\*", md)
     ck.eq("v0.5 at a glance / rows", cap and cap.group(1), f"{m['banking77/jev']['strict']['n']:,}")
+    ck.eq("v0.5 at a glance / caption target", cap and cap.group(2), "5")
     if GLANCE_HEAD not in md:
         ck.failures.append("v0.5 at a glance: the table is missing")
         return
@@ -717,6 +720,32 @@ def check_v05_glance(ck: Checker, md: str) -> None:
             ck.eq(f"v0.5 at a glance / {label} / {where}", got, exp)
     for extra in set(seen) - set(GLANCE_ROWS):
         ck.failures.append(f"v0.5 at a glance: unknown row {extra!r}")
+
+
+def check_demo_figures(ck: Checker) -> None:
+    """docs/demo.gif is cut from the launch video; the figures it shows are listed in
+    docs/assets/demo-figures.json, checked here against docs/v05-results.json and a fresh
+    seeded simulated run and check (the same commands the video shows)."""
+    f = ROOT / "docs/assets/demo-figures.json"
+    if not f.exists():
+        ck.failures.append("demo: docs/assets/demo-figures.json is missing")
+        return
+    demo = json.loads(f.read_text(encoding="utf-8"))
+    m = load("v05-results.json")["metrics"]
+    b = demo["banking77"]
+    ck.eq("demo / BANKING77 rows", b["rows"], m["banking77/jev"]["strict"]["n"])
+    ck.eq("demo / target", b["target"], 0.05)
+    for run, shown in b["runs"].items():
+        c = m[f"banking77/{run}"]["strict"]["certification"]["0.05"]
+        cov = c["pooled"]["coverage"] if c["pooled"]["covered"] else None
+        ck.eq(f"demo / {run} / rate at 5 %", shown["coverage_at_5pct"], cov)
+        ck.eq(f"demo / {run} / spread", shown["spread_over_split_seeds"], c["spread_coverage"])
+    sim = demo["simulated"]
+    line = simulated_line("0.10")
+    for key, label in (("accuracy", "accuracy="), ("safe_automation_at_10pct", "safe_automation@10%=")):
+        found = re.search(re.escape(label) + r"([\d.]+%)", line)
+        ck.eq(f"demo / simulated / {key}", sim[key], found and found.group(1))
+    ck.eq("demo / simulated / check exit at 70 %", sim["check_exit"], simulated_check("0.70"))
 
 
 def paragraph(md: str, opening: str) -> list[str]:
@@ -858,6 +887,7 @@ def check(md: str) -> Checker:
     check_v05(ck, md)
     check_quickstart(ck, md)
     check_gate(ck, md)
+    check_demo_figures(ck)
     return ck
 
 

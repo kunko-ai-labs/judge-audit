@@ -1,0 +1,42 @@
+{
+  "_about": "Every figure shown in docs/demo.gif (cut from the v0.5 launch video). scripts/verify_readme.py checks the BANKING77 block against docs/v05-results.json and the simulated block against a fresh seeded run.",
+  "banking77": {
+    "rows": 3080,
+    "target": 0.05,
+    "runs": {
+      "jev": {
+        "label": "Jev, native probability",
+        "coverage_at_5pct": 0.4102,
+        "spread_over_split_seeds": [
+          0.2699,
+          0.4514
+        ]
+      },
+      "llm-gemini-3.6-flash": {
+        "label": "gemini-3.6-flash, verbalized",
+        "coverage_at_5pct": 0.1432,
+        "spread_over_split_seeds": [
+          0.076,
+          0.3004
+        ]
+      },
+      "logprob-qwen3-8b": {
+        "label": "Qwen3-8B, token log-probability",
+        "coverage_at_5pct": null,
+        "spread_over_split_seeds": [
+          0.0,
+          0.0438
+        ]
+      }
+    }
+  },
+  "simulated": {
+    "command_run": "judge-audit run labels.jsonl --judge simulated --target 0.10",
+    "command_check": "judge-audit check labels.jsonl --judge simulated --baseline audit-result.json --min-safe-rate 0.10:0.70",
+    "n": 200,
+    "accuracy": "85.5%",
+    "safe_automation_at_10pct": "65.5%",
+    "check_exit": 1,
+    "minimum": "70.0%"
+  }
+}

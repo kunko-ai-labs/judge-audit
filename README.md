@@ -14,7 +14,7 @@
 | | |
 |---|---|
 | 🎯 **Safe automation rate** | The share of decisions a judge can take alone at the error you accept (1, 2, 5, 10 %), the confidence threshold to deploy, and an out-of-sample check. |
-| 🌡️ **Calibration** | When it says 90 %, is it right 90 % of the time? ECE, worst bin, reliability diagram, with intervals. |
+| 🌡️ **Calibration** | When it says 90 %, is it right 90 % of the time? ECE, Brier score, reliability diagram, with intervals. |
 | 🚦 **CI gate** | `judge-audit check` fails the build when the judge drifts or the rate falls below your minimum. |
 | 🤖 **Where you work** | CLI, GitHub Action with a PR comment, and an MCP server for Claude Code, Cursor or any agent. |
 
