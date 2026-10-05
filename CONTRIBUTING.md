@@ -1,22 +1,40 @@
 # Contributing
 
-## What lives where
+judge-audit checks whether an AI judge's confidence can be trusted, on decisions people already labelled. Contributions that make that measurement more correct, more reproducible or easier to run are welcome.
 
-| Path | Audience | What |
-|---|---|---|
-| `src/judge_audit/` | developers | the harness: judge interface, adapters, calibration metrics, runner, reports, CLI |
-| `examples/` | users, tests | seeded synthetic datasets, each with the `generate.py` that produced it |
-| `docs/audit-*.md` / `.json` | users, buyers, auditors | published audits — every number re-derivable from `docs/runs/` |
-| `docs/runs/` | auditors | raw per-row judge responses (checkpoints) behind each published audit |
-| `docs/assets/` | readers | charts referenced by the reports and the README |
-| `scripts/` | maintainers | resumable audit driver, per-audit analysis, issue tooling |
-| `tests/` | developers | contract tests: metrics on known inputs, exit codes, report shape, reproducibility |
+## What helps most
+
+| Contribution | What to send |
+|---|---|
+| **A bug in a metric or a report** | An issue with the smallest input that reproduces it, the number you got and the number you expected, and why. A failing test is the best bug report. |
+| **A new judge adapter** | A PR adding `src/judge_audit/judges/<name>.py` (see [Adding a judge](#adding-a-judge)), with tests that mock the network. |
+| **A new labelled dataset** | A PR with a seeded `generate.py` or a pinned public source, its licence, and its ground-truth tier (see [Adding a dataset](#adding-a-dataset)). |
+| **An audit you ran** | The checkpoint (`docs/runs/…`), the command that produced it, and the report regenerated from it. Numbers without their checkpoint are not merged. |
+| **Docs** | Corrections, clearer explanations, a missing caveat. |
+
+Out of scope: building or selling a judge, ranking vendors without published evidence, features unrelated to measuring a judge. If you are unsure, open an issue first and ask.
 
 ## The house rule: no number without its evidence
 
-A published audit is three files that agree with each other: the dataset (`examples/*/labels.jsonl`), the raw checkpoint (`docs/runs/*.ckpt.jsonl`) and the report (`docs/audit-*.md` + `.json`). `scripts/verify_published.py` recomputes every report from its checkpoint and CI fails if they drift. A PR that changes a report without changing its checkpoint, or the other way round, is wrong by construction.
+A published audit is three files that agree with each other: the dataset (`examples/*/labels.jsonl`), the raw checkpoint (`docs/runs/*.ckpt.jsonl`) and the report (`docs/audit-*.md` + `.json`). `scripts/verify_published.py` recomputes every report from its checkpoint and CI fails if they drift; `scripts/verify_readme.py` does the same for every figure in the README. A PR that changes a report without its checkpoint, or the other way round, is wrong by construction.
 
-Simulated output is always labelled **SIMULATED**. Never present it as a vendor audit.
+- Simulated output is always labelled **SIMULATED**; never present it as a vendor audit.
+- No LLM inside a measurement; metrics are deterministic.
+- A judge adapter never invents a confidence; an unknown confidence is reported as unknown.
+- API keys never appear in code, logs, checkpoints or reports.
+- Hosted models are named by model, not by the platform that served them.
+
+## Development
+
+```bash
+git clone https://github.com/kunko-ai-labs/judge-audit && cd judge-audit
+python3 -m venv .venv && . .venv/bin/activate
+pip install -e ".[dev]"
+ruff check src tests scripts examples && mypy && pytest -q
+python scripts/verify_published.py && python scripts/verify_readme.py
+```
+
+Python 3.10–3.12. Tests come first: a new metric is tested on inputs whose answer you can compute by hand.
 
 ## Adding a judge
 
@@ -24,38 +42,25 @@ Implement `Judge.decide(state, questions) -> [Judgment]` in `src/judge_audit/jud
 
 ## Adding a dataset
 
-A seeded `generate.py` that writes `labels.jsonl`. Rows are `{state, questions, labels, _meta}`; `_meta` carries whatever the analysis needs (attack type, difficulty, target). State in the docstring how ground truth was obtained and what the dataset cannot show, and declare it machine-readably: the first line of the file is a dataset header with the [ground-truth tier](docs/ground-truth.md) and its caveats, which every report prints next to the accuracy. CI regenerates every dataset and fails if the committed file differs.
+A seeded `generate.py` that writes `labels.jsonl`, or a fetch script pinned to an upstream file and its hash. Rows are `{state, questions, labels, _meta}`. The first line of the file is a dataset header with the [ground-truth tier](docs/ground-truth.md) and its caveats, which every report prints next to the accuracy. CI regenerates every dataset and fails if the committed file differs.
 
 ## Issues
 
-Templates under `.github/ISSUE_TEMPLATE/`: 🎯 Epic `[EP-XXX]`, 📖 User Story `[US-XXX-YYY]`, 🐛 Bug `[BUG]`. Labels: `type:*`, `priority:*`, `status:*`, `area:*` (metrics, runner, judge, report, docs, integration).
+Use the templates: 🐛 bug report, or 💡 proposal for a judge, a dataset or an audit. Security problems (a key in a log, a fabricated confidence presented as measured) go to the [private advisory](https://github.com/kunko-ai-labs/judge-audit/security/advisories/new), never a public issue.
 
 ## Pull requests
 
-Title `type(scope): [ID] Description`. Squash-merged; the title becomes the commit. Before you push: `ruff check src tests scripts examples && pytest -q && python scripts/verify_published.py`.
+- Title `type(scope): description` (`feat`, `fix`, `docs`, `test`, `chore`, `audit`); squash-merged, so the title becomes the commit.
+- Small and focused; link the issue it closes.
+- CI green: tests on 3.10–3.12, dataset regeneration, report regeneration, CodeQL.
+- Say in the PR what you verified and how; a reviewer will recompute any number you add.
 
 ## Review
 
-This is a single-maintainer repository, and branch protection does **not** require a GitHub approving review. GitHub does not let an author approve their own pull request, so with one maintainer a required approval could only be satisfied by an admin bypass on every merge — and on classic branch protection that bypass skips failing CI as well, which is weaker than requiring the checks alone.
-
-The independent review happens outside GitHub's approval button:
-
-1. the `story-reviewer` agent — an adversarial, read-only review that recomputes the statistics by hand and checks every acceptance criterion against the diff;
-2. the `release-qa` agent — a clean-room install from the branch, CLI / MCP / Action smoke, report-regeneration diff, tests on every supported Python;
-3. a human read of the PR by the maintainer before the squash-merge.
-
-The maintainer then squash-merges, as the repository admin (`gh pr merge --squash --admin` when a merge-queue or ruleset detail would otherwise block it), and only on a head whose required checks are green: the admin bypass can skip failing checks, so "green before merge" is a rule the maintainer keeps, not one GitHub enforces on them.
-
-Before merge, the team lead who ran the agents for the story posts the `story-reviewer` and `release-qa` verdicts on the PR as a comment, so the review is on the record next to the diff. The agents themselves do not post, and nothing posts automatically. This starts with #63; earlier PRs carry no such comment.
-
-That is not the same as a second person's approval, and we do not claim it is. An external reviewer is sought; when one joins, `required_approving_review_count` in `scripts/protect_main.sh` goes to 1.
-
-## Working with Claude Code
-
-`CLAUDE.md` holds the house rules; `.claude/agents/` defines the four agents a story goes through — `story-implementer` (opens the PR), `story-reviewer` (adversarial, read-only), `release-qa` (clean-room install and smoke), `audit-runner` (paid model runs with clean provenance). None of them merges. A story is done when all three verdicts are green and a human has read the PR.
+This is a single-maintainer repository, and branch protection does **not** require a GitHub approving review: GitHub does not let an author approve their own pull request, so with one maintainer a required approval could only be satisfied by an admin bypass on every merge, which on classic branch protection also skips failing CI. Instead, every pull request that changes code, data or reports gets an independent, adversarial review that recomputes the statistics and checks each claim against the diff, a clean-room install with the tests on every supported Python and a smoke test of the CLI, the MCP server and the Action, and the maintainer's own read, before a squash-merge on green CI. Dependency bumps get CI and the maintainer's read. That is not a second person's approval, and we do not claim it is; when an external reviewer joins, `required_approving_review_count` in `scripts/protect_main.sh` goes to 1.
 
 ## Branches
 
-- `main` — releasable at all times; tags `vX.Y.Z`. Protected as `scripts/protect_main.sh` configures it: a pull request is required (the single admin can still bypass; `enforce_admins` is off), linear history, no force-push, no deletion, and the `test (3.10/3.11/3.12)`, `datasets` and CodeQL (`analyze`) checks green before merge. No GitHub approving review is required — see [Review](#review) for why and for what replaces it.
-- `release/vX.Y.Z` — one per release, off `main`; version bump + changelog; PR into `main`, then tag. See [docs/RELEASING.md](docs/RELEASING.md).
+- `main` — releasable at all times; tags `vX.Y.Z`. Protected as `scripts/protect_main.sh` configures it: pull request required, linear history, no force-push, no deletion, and the `test (3.10/3.11/3.12)`, `datasets` and CodeQL checks green before merge.
+- `release/vX.Y.Z` — one per release; see [docs/RELEASING.md](docs/RELEASING.md).
 - `feat/*`, `fix/*`, `docs/*`, `audit/*` — short-lived, PR into `main`.

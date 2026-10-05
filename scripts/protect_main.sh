@@ -11,9 +11,8 @@
 # and GitHub does not let an author approve their own pull request, so a required
 # approval would force an admin bypass on every merge — and on classic protection that
 # bypass skips red CI too, which is weaker than requiring the checks alone. The
-# independent review is the story-reviewer and release-qa agents plus the maintainer's
-# own read (CONTRIBUTING.md § Review). When an external reviewer joins, set
-# required_approving_review_count to 1.
+# independent review is the process in CONTRIBUTING.md § Review. When an external
+# reviewer joins, set required_approving_review_count to 1.
 set -euo pipefail
 repo="${1:-kunko-ai-labs/judge-audit}"
 
