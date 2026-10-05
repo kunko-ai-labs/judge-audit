@@ -26,7 +26,8 @@ What is recorded, and why (see `systemone.py` for what every local decision mode
 Environment:
   STRANDS_MODEL          Hub id or local directory (default the 2B hobson-v19 checkpoint)
   STRANDS_REVISION       Hub commit of the checkpoint (default: pinned)
-  STRANDS_BASE_REVISION  Hub commit of the base (default: the checkpoint's provenance.json)
+  STRANDS_BASE_REVISION  40-hex Hub commit of the base (default: the checkpoint's
+                         provenance.json)
   STRANDS_DEVICE         cpu | mps | cuda[:n] (default: CUDA, then MPS, then CPU)
 
 Install: pip install 'kunko-judge-audit[strands]'
@@ -40,7 +41,7 @@ import tempfile
 from importlib import metadata
 from pathlib import Path
 
-from .systemone import LocalSystemOneJudge, best_device, captured_warnings
+from .systemone import COMMIT, LocalSystemOneJudge, best_device, captured_warnings
 
 DEFAULT_MODEL = "StrandsAgents/strands-decider-2B-hobson-v19"
 # Hub commit pinned on 2026-10-05.
@@ -114,6 +115,16 @@ def _view(checkpoint: Path, base: str) -> Path:
     return view
 
 
+def base_revision_of(model_id: str, base_id: str, provenance: dict) -> str:
+    """The base commit to load: STRANDS_BASE_REVISION, else the checkpoint's provenance.json;
+    a 40-hex commit either way, never a branch or tag."""
+    rev = os.environ.get("STRANDS_BASE_REVISION") or provenance.get("base_model_revision")
+    if not isinstance(rev, str) or not COMMIT.fullmatch(rev):
+        raise ValueError(f"{model_id}: the revision of its base {base_id} must be a 40-hex Hub "
+                         f"commit; got {rev!r} (set STRANDS_BASE_REVISION)")
+    return rev
+
+
 def _load(model_id: str, revision: str | None, device: str | None):
     try:
         import torch
@@ -133,11 +144,7 @@ def _load(model_id: str, revision: str | None, device: str | None):
     config_file = next(checkpoint / n for n in CONFIG_NAMES if (checkpoint / n).exists())
     config = json.loads(config_file.read_text(encoding="utf-8"))
     base_id = config["base_model"]
-    base_revision = (os.environ.get("STRANDS_BASE_REVISION")
-                     or provenance.get("base_model_revision"))
-    if not base_revision:
-        raise ValueError(f"{model_id} records no revision for its base {base_id}: set "
-                         "STRANDS_BASE_REVISION")
+    base_revision = base_revision_of(model_id, base_id, provenance)
     base = Path(snapshot_download(base_id, revision=base_revision))
     used = best_device(device)
     view = _view(checkpoint, str(base))

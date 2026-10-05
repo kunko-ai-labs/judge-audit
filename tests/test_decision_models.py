@@ -116,19 +116,51 @@ def test_decider_state_budget_by_hand():
         "the state (32769 tokens) would be cut to 32768"]
 
 
-def test_decider_reference_outputs_are_per_device_because_precision_changes_the_choice():
+def test_decider_reference_is_enforced_on_cpu_only_mps_and_cuda_are_unchecked():
+    """CPU outputs are recorded; MPS float16 did not reproduce across two Apple M4 machines
+    (billing 0.5122 against 0.5155 on the same single question), so nothing is enforced there."""
     sha = decider.PINNED_REVISIONS["Mapika/decider-2b"]
-    mps = decider.REFERENCE_OUTPUTS[("Mapika/decider-2b", sha, "mps")]
+    assert {k[2] for k in decider.REFERENCE_OUTPUTS} == {"cpu"}
     cpu = decider.REFERENCE_OUTPUTS[("Mapika/decider-2b", sha, "cpu")]
-    assert mps["department"]["choice"] == "billing" and cpu["department"]["choice"] == "returns"
-    j, _ = make(DeciderJudge, revision_info={"loaded_revision": sha, "device": "mps"},
-                reference=mps, reference_state=decider.REFERENCE_STATE)
+    assert cpu["department"]["choice"] == "returns"
+    j, _ = make(DeciderJudge, revision_info={"loaded_revision": sha, "device": "cpu"},
+                reference=cpu, reference_state=decider.REFERENCE_STATE)
     assert j.describe()["reference_check"]["status"] == "passed"
+    mps_one_machine = {**cpu, "department": {"type": "choice", "choice": "billing",
+                                             "probabilities": {"returns": 0.479,
+                                                               "billing": 0.5122,
+                                                               "other": 0.0088}}}
     with pytest.raises(RuntimeError, match="department: chose 'billing', reference 'returns'"):
         make(DeciderJudge, revision_info={"loaded_revision": sha, "device": "cpu"},
-             reference=mps, reference_state=decider.REFERENCE_STATE)
-    j, _ = make(DeciderJudge, revision_info={"loaded_revision": sha, "device": "cuda:0"})
-    assert j.describe()["reference_check"]["status"] == "unchecked"
+             reference=mps_one_machine, reference_state=decider.REFERENCE_STATE)
+    for device in ("mps", "cuda:0"):
+        j, _ = make(DeciderJudge, revision_info={"loaded_revision": sha, "device": device},
+                    reference=mps_one_machine, reference_state=decider.REFERENCE_STATE)
+        assert j.describe()["reference_check"]["status"] == "unchecked"
+
+
+def test_decider_defaults_to_cpu_not_mps_on_apple_silicon(monkeypatch):
+    import torch
+
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
+    monkeypatch.setattr(torch.backends.mps, "is_available", lambda: True)
+    assert decider.default_device(None) == "cpu"
+    assert decider.default_device("mps") == "mps"              # only when asked
+    monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+    assert decider.default_device(None) == "cuda"
+
+
+def test_strands_base_revision_must_be_a_commit(monkeypatch):
+    monkeypatch.delenv("STRANDS_BASE_REVISION", raising=False)
+    sha = "b1485b2fa6dfa1287294f269f5fb618e03d52d7c"
+    assert strands.base_revision_of("m", "Qwen/Qwen3.5-2B-Base",
+                                    {"base_model_revision": sha}) == sha
+    for bad in ({}, {"base_model_revision": "main"}):
+        with pytest.raises(ValueError, match="40-hex Hub commit"):
+            strands.base_revision_of("m", "Qwen/Qwen3.5-2B-Base", bad)
+    monkeypatch.setenv("STRANDS_BASE_REVISION", "v1.0")
+    with pytest.raises(ValueError, match="'v1.0'"):
+        strands.base_revision_of("m", "Qwen/Qwen3.5-2B-Base", {"base_model_revision": sha})
 
 
 @pytest.mark.parametrize("cls", [DeciderJudge, StrandsJudge, ClefJudge])
@@ -320,7 +352,7 @@ def test_smoke_decider_2b():
     d = j.describe()
     assert d["loaded_revision"] == decider.PINNED_REVISIONS["Mapika/decider-2b"]
     assert d["reference_check"]["status"] == (
-        "passed" if d["device"].split(":")[0] in ("cpu", "mps") else "unchecked")
+        "passed" if d["device"].split(":")[0] == "cpu" else "unchecked")
     assert d["questions_per_request"] == (1 if d["device"].startswith("mps") else "all")
     state = "My card was charged twice for the same purchase."
     (out,) = j.decide(state, [ROUTE])

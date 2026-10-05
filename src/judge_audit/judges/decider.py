@@ -17,15 +17,18 @@ What is recorded, and why (see `systemone.py` for what every local decision mode
 - **Temperatures.** The softmax temperature per answer type comes from the repository's
   `decider_config.json` (decider-2b v11: choice 1.164, yes/no 1.624, score 1.124); the global
   and per-type values applied are recorded.
-- **Precision.** decider runs in float16 on Apple MPS and bfloat16 elsewhere; the dtype loaded
-  is recorded. The two precisions can choose differently (they do on the model card's own
-  example), so reference outputs are recorded per kind of device.
-- **One question per request on MPS.** On MPS a question's answer depends on the other
-  questions in the same request (they are padded into one float16 batch): on the model card's
-  example, `department` is billing at 0.5122 alone and 0.5155 with the other two questions,
-  where decider's own docstring says that other questions cannot change an answer. On MPS the
-  adapter therefore sends each question in its own request (`questions_per_request` 1 in the
-  provenance); on CPU and CUDA it sends them together, as decider does.
+- **CPU by default on Apple silicon.** decider runs in float16 on Apple MPS and bfloat16
+  elsewhere; the dtype loaded is recorded. The two precisions choose differently on the model
+  card's own example, and float16 on MPS does not reproduce across machines: the same single
+  question gave billing at 0.5122 on one Apple M4 and 0.5155 on another (up to 0.0034 between
+  the two, same torch and transformers; float32 on MPS agreed, 0.5149 on both). So this
+  adapter uses CUDA where present and the CPU otherwise; MPS runs only when DECIDER_DEVICE
+  asks for it, and then with its reference check `unchecked`, as on CUDA.
+- **One question per request on MPS.** On MPS a question's answer also depends on the other
+  questions in the same request (they are padded into one float16 batch), where decider's own
+  docstring says that other questions cannot change an answer. On MPS the adapter therefore
+  sends each question in its own request (`questions_per_request` 1 in the provenance); on CPU
+  and CUDA it sends them together, as decider does.
 - **One size per process.** decider's code is imported from the snapshot of the model loaded;
   a second size (another snapshot) in the same process is refused. Run each size in its own
   process (an Arena or MCP run over several sizes included).
@@ -35,7 +38,8 @@ What is recorded, and why (see `systemone.py` for what every local decision mode
 Environment:
   DECIDER_MODEL     Hub id or local directory (default Mapika/decider-2b)
   DECIDER_REVISION  Hub commit (default: the pinned one for decider-0.8b, -2b and -4b)
-  DECIDER_DEVICE    cpu | mps | cuda[:n] (default: CUDA, then MPS, then CPU)
+  DECIDER_DEVICE    cpu | mps | cuda[:n] (default: CUDA if present, else CPU; MPS only when
+                    asked, unchecked)
 
 Install: pip install 'kunko-judge-audit[decider]'
 """
@@ -45,7 +49,7 @@ import json
 import sys
 from pathlib import Path
 
-from .systemone import LocalSystemOneJudge, best_device, captured_warnings
+from .systemone import LocalSystemOneJudge, captured_warnings
 
 DEFAULT_MODEL = "Mapika/decider-2b"
 # Hub commits pinned on 2026-10-05 (decider-2b main is v11; the tags v10 and v8 are older).
@@ -72,18 +76,10 @@ REFERENCE_QUESTIONS = {
                     "criteria": ["calm", "frustrated", "very frustrated"]},
 }
 # Its answers by (model, revision, kind of device), recorded with transformers 5.17.0 and torch
-# 2.14.0 on an Apple laptop: float16 on MPS, bfloat16 on CPU (decider's defaults), each through
-# the adapter (on MPS one question per request). The two precisions choose differently on this
-# very example (billing at 0.5122 on MPS; returns on CPU, where returns and billing both round
-# to 0.4953): a run's device is part of what it measures.
+# 2.14.0 on CPU (bfloat16, decider's default there). None are recorded for MPS: float16 there
+# differed by up to 0.0034 between two Apple M4 machines on this example (department, asked
+# alone: billing 0.5122 on one, 0.5155 on the other), so no MPS value is enforced.
 REFERENCE_OUTPUTS: dict[tuple[str, str, str], dict] = {
-    (DEFAULT_MODEL, PINNED_REVISIONS[DEFAULT_MODEL], "mps"): {
-        "department": {"type": "choice", "choice": "billing",
-                       "probabilities": {"returns": 0.479, "billing": 0.5122, "other": 0.0088}},
-        "refund_requested": {"type": "noul", "noul": 0.9588},
-        "frustration": {"type": "score",
-                        "probabilities": {"0": 0.1638, "1": 0.5809, "2": 0.2553}},
-    },
     (DEFAULT_MODEL, PINNED_REVISIONS[DEFAULT_MODEL], "cpu"): {
         "department": {"type": "choice", "choice": "returns",
                        "probabilities": {"returns": 0.4953, "billing": 0.4953, "other": 0.0093}},
@@ -126,6 +122,16 @@ class _DeciderSystem:
         return []
 
 
+def default_device(requested: str | None) -> str:
+    """The device asked for, else CUDA if present, else the CPU: never MPS unasked, whose
+    float16 outputs do not reproduce across machines."""
+    if requested:
+        return requested
+    import torch
+
+    return "cuda" if torch.cuda.is_available() else "cpu"
+
+
 def _import_decider(path: Path):
     """decider's Decider and render_state from the code in the model repository at `path`."""
     loaded = sys.modules.get("decider")
@@ -155,7 +161,7 @@ def _load(model_id: str, revision: str | None, device: str | None):
         path = Path(snapshot_download(model_id, revision=revision))
         loaded = path.name                  # the cache stores a snapshot under its commit
     config = json.loads((path / "decider_config.json").read_text(encoding="utf-8"))
-    used = best_device(device)
+    used = default_device(device)
     with captured_warnings("transformers", "decider") as messages:
         Decider, render_state = _import_decider(path)
         d = Decider(str(path), device=used)
