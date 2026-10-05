@@ -21,17 +21,18 @@ All 60 intents (18 scenarios) occur in train; **dev has no `audio_volume_other`,
 
 ## The files
 
-| file | rows | distinct texts (case and whitespace ignored) | repeated texts: groups / one with two labels | test text also in train or dev | a localisation judge said the intent does not match: one / a majority | bytes | sha256 |
+| file | rows | distinct texts (case and whitespace ignored) | repeated texts: groups / one with two labels | text also in another split of the locale (test: in train or dev; pilot: in test) | a localisation judge said the intent does not match: one / a majority | bytes | sha256 |
 |---|---|---|---|---|---|---|---|
-| `labels-test-en-US.jsonl` | 2,974 | 2,970 | 4 / 0 | 26 | — | 4,374,243 | `29934c9c78208c60db4ee6520956eda2acde5f154bcd308108005f6cc216569f` |
-| `labels-test-es-ES.jsonl` | 2,974 | 2,944 | 25 / 0 | 156 | 76 / 0 | 4,484,306 | `fd039ab57059d9951348f484a4bbdc428ef5c12670d5a28e13c3295448ac46b4` |
-| `labels-test-ca-ES.jsonl` | 2,974 | 2,933 | 33 / 1 | 206 | 120 / 19 | 4,483,445 | `91daf95da295c5d6fafe2d53f66008cceea23d9a98885ba8d207b79130287d38` |
-| `labels-pilot-en-US.jsonl` | 230 | 230 | 0 / 0 | — | — | 334,736 | `76c5290c672b561eb5719826b8a916226f6007727c722a46b775a67fc191aee9` |
-| `labels-pilot-es-ES.jsonl` | 230 | 230 | 0 / 0 | — | 5 / 0 | 343,367 | `51631f6c4e77ae127a22e5399e3dcea95d9040d936e858e2778a2b6e7c852a45` |
-| `labels-pilot-ca-ES.jsonl` | 230 | 230 | 0 / 0 | — | 5 / 0 | 343,421 | `3ba8f67d17ba174c8a16095c474227902b95cb4fb9b92b121256704cf98cccb2` |
+| `labels-test-en-US.jsonl` | 2,974 | 2,970 | 4 / 0 | 26 | — | 4,395,114 | `f796d4a576d4af2faf7c150681b19ac707211ab75f24a6871bc33f814a529956` |
+| `labels-test-es-ES.jsonl` | 2,974 | 2,944 | 25 / 0 | 156 | 76 / 0 | 4,505,171 | `49cbd508616ab9e2083cbc8b5a86ad9e04eabbee08949c9a7cb43a5dd4d2af70` |
+| `labels-test-ca-ES.jsonl` | 2,974 | 2,933 | 33 / 1 | 206 | 120 / 19 | 4,504,310 | `930059fb7c096b26e216562b6b28475c8106b46795048790a5ea9ce9f8d6ce6c` |
+| `labels-pilot-en-US.jsonl` | 230 | 230 | 0 / 0 | 1 | — | 340,196 | `91332858c78227ae4aa27d20abdc312735a46815b7cff2f3081680a8e50e0889` |
+| `labels-pilot-es-ES.jsonl` | 230 | 230 | 0 / 0 | 8 | 5 / 0 | 348,814 | `0d4ccb0fc92f5e55067113eded12a28896b46a29a90c71668492987fa880a0e0` |
+| `labels-pilot-ca-ES.jsonl` | 230 | 230 | 0 / 0 | 6 | 5 / 0 | 348,870 | `7972fdec8972ea049215e36d5f120a19837f090ed4bbe8dcc56b80e238801017` |
 
 - **Repeated texts** follow the repository's one rule (`normalise`: case and whitespace ignored), within one file; each header names the rows that repeat a text, and clustered statistics must count them as one text. The Spanish and Catalan files repeat a text more often than the English one (25 and 33 groups against 4). In `ca-ES`, rows 17 and 1426 hold one text labelled `calendar_query` and `datetime_query`.
-- **Test texts also in train or dev** (same locale, same rule) are marked `_meta.text_in_train`.
+- **Test texts also in train or dev** (same locale, same rule) are marked `_meta.text_in_train_or_dev`. The name differs on purpose from BANKING77's `_meta.text_in_train`, which covers its train split only.
+- **Pilot texts also in test** (same locale, same rule) are marked `_meta.text_in_test`: 1, 8 and 6 in en-US, es-ES and ca-ES. No pilot item is a test item (different ids), but those texts are; the pilot is never scored, and must not become prompt wording or few-shot examples without dropping them.
 - **The pilot** is up to 4 `dev` utterances per intent, drawn with `random.Random(2026)` over the intents in alphabetical order, the same items in every locale; dev has fewer for four intents (`audio_volume_other` 0, `cooking_query`, `general_greet` and `music_dislikeness` 2), hence 230 rows, not 240. It comes from dev, not train, so a classifier fine-tuned on train has never seen it. It is for token counts, throughput and variance before the pre-registration fixes *n*, never to score a judge.
 - **Not committed:** the whole train and dev splits (about 51 MB and 9 MB in this format for the three locales), for fine-tuning a classifier: `python scripts/fetch_real_datasets.py --massive-full DIR` writes `labels-{train,dev}-<locale>.jsonl` to `DIR` from the same pinned archive.
 
@@ -43,7 +44,7 @@ Every file asks in English (`"Which intent does this request to a voice assistan
 
 - Public since 2022: probably in the pretraining data of the judges audited.
 - SLURP's utterances are requests to a home voice assistant collected for a research corpus, not production traffic; one intent each, and MASSIVE publishes no inter-annotator agreement on the intent labels. Label noise is not measured here.
-- `es-ES` and `ca-ES` were localised from `en-US`. The paper says professional translators did it; the upstream card names each localiser and judge by an obfuscated MTurk worker ID. `ca-ES` was added in MASSIVE 1.1, after the paper (51 languages), which does not describe its localisation.
+- `es-ES` and `ca-ES` were localised from `en-US`. The paper says professional translators did it; the upstream card names each localiser and judge by an obfuscated crowd-worker ID. Every localised test and pilot utterance was judged by three workers of its locale (one es-ES train utterance by two). `ca-ES` was added in MASSIVE 1.1, after the paper (51 languages), which does not describe its localisation.
 - The question wording, the options and the pilot are drafts until the v0.6 pre-registration ([#132](https://github.com/kunko-ai-labs/judge-audit/issues/132)) fixes them. No judge has been run on these files and no metric computed.
 
 Regenerate and verify against the pinned archive: `python scripts/fetch_real_datasets.py --check` (downloads the 40 MB archive, retrying a failed download; `--cache DIR` keeps verified downloads in `DIR` and reuses them, as CI does; `--src DIR` reads `DIR/massive/amazon-massive-dataset-1.1.tar.gz` offline).

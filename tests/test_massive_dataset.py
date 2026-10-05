@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import http.client
 import importlib.util
 import io
 import json
@@ -85,7 +86,8 @@ def test_massive_writes_one_test_and_one_pilot_file_per_locale_on_the_same_ids()
         q = rows[0]["questions"][0]
         assert q["options"] == ["alarm_set", "weather_query"]          # alphabetical
         assert q["instructions"] == fetch.MASSIVE_ENGLISH_CRITERIA["instructions"]
-        assert [r["_meta"]["text_in_train"] for r in rows] == [True, False]
+        assert [r["_meta"]["text_in_train_or_dev"] for r in rows] == [True, False]
+        assert "text_in_train" not in rows[0]["_meta"]           # BANKING77's: train only
         ids[loc] = [r["_meta"]["id"] for r in rows]
     assert ids["en-US"] == ids["es-ES"] == ids["ca-ES"] == ["0", "1"]
     assert fetch.massive(_corpus()) == files                             # deterministic
@@ -143,6 +145,63 @@ def test_massive_names_an_intent_a_file_never_uses_and_keeps_it_as_an_option():
     dataset, rows = _lines(files["examples/massive/labels-pilot-es-ES.jsonl"])
     assert Counter(r["labels"]["intent"] for r in rows) == {"alarm_set": 4, "weather_query": 1}
     assert any("fewer in dev: weather_query 1" in c for c in dataset["ground_truth"]["caveats"])
+
+
+def test_massive_pilot_marks_and_counts_texts_it_shares_with_the_test_split():
+    _, pilot = _lines(fetch.massive(_corpus())["examples/massive/labels-pilot-en-US.jsonl"])
+    k = int(pilot[0]["_meta"]["id"])
+    corpus = _corpus()
+    for loc in LOCALES:
+        corpus[loc][k]["utt"] = " " + corpus[loc][0]["utt"].upper()   # a pilot text = a test text
+    files = fetch.massive(corpus)
+    for loc in LOCALES:
+        dataset, rows = _lines(files[f"examples/massive/labels-pilot-{loc}.jsonl"])
+        marked = [r["_meta"]["id"] for r in rows if r["_meta"]["text_in_test"]]
+        assert marked == [str(k)]
+        assert (f"1 of {len(rows)} pilot texts also appear in the test split of the same locale "
+                "(case and whitespace ignored), though no pilot item is a test item; "
+                "_meta.text_in_test marks them") in dataset["ground_truth"]["caveats"]
+
+
+def test_massive_says_how_many_localisation_judges_each_row_has():
+    files = fetch.massive(_corpus())
+    dataset, _ = _lines(files["examples/massive/labels-test-es-ES.jsonl"])
+    assert any("judged by three workers of the locale" in c
+               for c in dataset["ground_truth"]["caveats"])
+    corpus = _corpus()
+    corpus["es-ES"][0]["judgments"].pop()
+    dataset, _ = _lines(fetch.massive(corpus)["examples/massive/labels-test-es-ES.jsonl"])
+    assert any("judged by two or three workers of the locale" in c
+               for c in dataset["ground_truth"]["caveats"])
+
+
+def test_a_translated_criteria_arm_never_overwrites_the_english_files():
+    english = fetch.massive(_corpus())
+    spanish = {**fetch.MASSIVE_ENGLISH_CRITERIA, "language": "es",
+               "instructions": "¿Qué intención expresa esta petición?",
+               "origin": "test fixture, not a real translation"}
+    other = {**spanish, "origin": "another translator"}
+    files_es, files_other = fetch.massive(_corpus(), spanish), fetch.massive(_corpus(), other)
+    assert not set(files_es) & set(english) and not set(files_es) & set(files_other)
+    assert all(".criteria-es-" in path for path in files_es)
+    dataset, rows = _lines(files_es["examples/massive/" + Path(next(
+        p for p in files_es if "labels-test-ca-ES" in p)).name])
+    assert dataset["criteria"]["language"] == "es"
+    assert rows[0]["questions"][0]["instructions"] == spanish["instructions"]
+    assert rows[0]["questions"][0]["options"] == ["alarm_set", "weather_query"]
+    assert set(fetch.massive_full_splits(_corpus(), spanish)).isdisjoint(
+        fetch.massive_full_splits(_corpus()))
+
+
+def test_massive_full_reads_the_archive_once(tmp_path, monkeypatch):
+    calls, built = [], []
+    monkeypatch.setattr(fetch, "massive_locales",
+                        lambda src, cache=None: calls.append(src) or _corpus())
+    monkeypatch.setattr(fetch, "build",
+                        lambda src, cache=None, locales=None: built.append(locales) or {})
+    assert fetch.main(["--check", "--massive-full", str(tmp_path)]) == 0
+    assert len(calls) == 1 and built[0] is not None
+    assert (tmp_path / "labels-dev-ca-ES.jsonl").exists()
 
 
 def test_massive_refuses_a_locale_that_misses_an_id_and_names_it():
@@ -290,6 +349,22 @@ def test_download_retries_a_failed_fetch_then_caches_the_verified_bytes(tmp_path
     assert len(calls) == 3 and cached.read_bytes() == data
     assert fetch.download("https://example.invalid/f.bin", want, cached) == data
     assert len(calls) == 3                                  # served from the cache
+
+
+def test_download_retries_a_body_cut_off_mid_transfer(tmp_path, monkeypatch):
+    calls: list = []
+
+    class _Cut(_Response):
+        def read(self, *a):
+            raise http.client.IncompleteRead(b"partial", 100)
+
+    def urlopen(url, timeout):
+        calls.append(url)
+        return _Cut() if len(calls) == 1 else _Response(b"whole")
+    monkeypatch.setattr(fetch.urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(fetch.time, "sleep", lambda s: None)
+    assert fetch.download("u", hashlib.sha256(b"whole").hexdigest()) == b"whole"
+    assert len(calls) == 2
 
 
 def test_download_replaces_a_cached_file_that_no_longer_matches_the_pin(tmp_path, monkeypatch):

@@ -47,8 +47,8 @@ is **GT-3** too, with one more caveat that travels with its numbers: **translate
 data, not native traffic; labels from SLURP annotation carried over by localisation.** The
 `es-ES` and `ca-ES` utterances are localisations of SLURP's English ones and keep the English
 label; nobody labelled them again. What MASSIVE does publish is a check on the translation:
-up to three workers of the locale answered "Does the sentence match the intent?" for each
-localised utterance, and the files keep those answers (`_meta.intent_judgments`) so that a
+three workers of the locale answered "Does the sentence match the intent?" for each
+localised utterance (two for one es-ES train utterance), and the files keep those answers (`_meta.intent_judgments`) so that a
 report can set aside the rows where they said no. Its label noise is not measured.
 
 ### The v2 synthetic stress sets ([#87](https://github.com/kunko-ai-labs/judge-audit/issues/87))
