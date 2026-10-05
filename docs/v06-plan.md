@@ -41,7 +41,18 @@ Results are published whether or not the predictions hold; a difference the test
 | decider-2b, Strands Decider 2B, Clef-flash (#137) | 16 / 24 GB machines, or the vendor's own API for Clef-flash | P(chosen option) | exploratory (D2) |
 | `gemini-3.6-flash` (verbalized, T = 0, v0.5 prompt) | hosted | verbalized | exploratory (D4) |
 
-**Device and precision are fixed per model at the freeze** and recorded in every checkpoint: decisions can depend on them (decider-2b's own card example picks a different option in fp16 on the laptop GPU than in bf16 on CPU; Decision 2.0 autocasts to bf16 on CUDA only). **Training-data overlap** with MASSIVE / SLURP is checked from each model card before the freeze and stated next to that model's numbers (decider's and Strands Decider's cards list BANKING77, Strands also CLINC150: relevant to v0.5's datasets, not to MASSIVE, unless the check finds otherwise).
+**Device and precision are fixed per model at the freeze** and recorded in every checkpoint: decisions can depend on them (decider-2b's own card example picks a different option in fp16 on the laptop GPU than in bf16 on CPU; Decision 2.0 autocasts to bf16 on CUDA only). **Training-data overlap with MASSIVE** (from model cards and published code, 2026-10-05; details and pinned links in `docs/judges.md`; "not documented" is not "unseen"):
+
+| judge | MASSIVE in its documented training or calibration | consequence here |
+|---|---|---|
+| decider-0.8b / -2b | **English intent train split is in training** | its English is in-distribution: an English-certified threshold is optimistic, so its transfer gap mixes language with training exposure; reported with that caveat, never as a language effect alone |
+| decider-4b | "MASSIVE (multilingual)" in training, languages not listed | not run in this study |
+| Strands Decider 2B | English intent held out of training but **used to fit its temperatures** | same caveat as decider for English |
+| Decision 2.0 | not documented; the team's earlier models list MASSIVE among source families | stated as unknown |
+| Laya multilingual | not documented; MASSIVE is its card's own benchmark | stated as unknown |
+| Jev, Clef, gemini-3.6-flash | not documented | stated as unknown |
+
+**Sensitivity, declared here:** every metric and test is also computed without the test items whose text appears in MASSIVE train or dev in any locale (26 `en-US`, 156 `es-ES`, 206 `ca-ES` texts, #140), the item removed in all three locales.
 
 Every local model is pinned to a revision sha recorded in its checkpoint header; a model the vendor changes after the freeze is not updated without an amendment. A model run quantized to fit is labelled as that variant.
 
