@@ -131,11 +131,54 @@ def test_decider_reference_outputs_are_per_device_because_precision_changes_the_
     assert j.describe()["reference_check"]["status"] == "unchecked"
 
 
-def test_a_request_the_runtime_would_truncate_is_refused_before_the_call():
-    j, model = make(DeciderJudge, problems=["the state (40000 tokens) would be cut to 32768"])
-    with pytest.raises(ValueError, match="would read this input truncated.*40000"):
-        j.decide("long", [ROUTE])
-    assert model.calls == []
+@pytest.mark.parametrize("cls", [DeciderJudge, StrandsJudge, ClefJudge])
+def test_a_request_the_runtime_would_truncate_is_counted_as_no_answer_not_sent(cls):
+    """One rule for every local decision model (Decision 2.0's runtime does it itself): the
+    row's questions are no answer, counted against the judge, and the run goes on."""
+    j, model = make(cls, problems=["the state (40000 tokens) would be cut to 32768"])
+    route, urgent = j.decide("long", [ROUTE, URGENT])
+    assert model.calls == []                                     # never sent
+    for out in (route, urgent):
+        assert out.parse_status == "no_answer" and out.confidence is None
+        assert out.decision == "" and out.raw["error"] == "max_length_exceeded"
+        assert out.raw["problems"] == ["the state (40000 tokens) would be cut to 32768"]
+    model.problems = []
+    model.answers = {"route": {"type": "choice", "choice": "sales",
+                               "probabilities": {"billing": 0.2, "sales": 0.8}}}
+    (out,) = j.decide("short", [ROUTE])                          # the next row is read
+    assert out.parse_status == "parsed" and out.confidence == 0.8
+
+
+class CoQuestionDecider:
+    """Answers like decider-2b on MPS: a question's probabilities move with the other questions
+    sent in the same request."""
+
+    def __init__(self):
+        self.requests: list[list[str]] = []
+
+    def system_one(self, state, questions):
+        self.requests.append(list(questions))
+        shift = 0.01 * (len(questions) - 1)
+        return {"model": "decider-2b-v11", "usage": {"input_tokens": 10 * len(questions)},
+                "answers": {k: {"type": "choice", "choice": "billing",
+                                "probabilities": {"billing": 0.6 + shift, "sales": 0.4 - shift}}
+                            for k in questions}}
+
+
+def test_on_mps_each_question_goes_in_its_own_request_so_co_questions_cannot_move_it():
+    route_b = {"type": "choice", "instructions": "Again?", "criteria": {"billing": None,
+                                                                       "sales": None}}
+    route = systemone_question(ROUTE)
+    batched = decider._DeciderSystem(CoQuestionDecider(), lambda s: s, one_per_request=False)
+    alone = batched.system_one(state="x", questions={"route": route})
+    together = batched.system_one(state="x", questions={"route": route, "again": route_b})
+    assert alone["answers"]["route"] != together["answers"]["route"]        # the dependence
+    fake = CoQuestionDecider()
+    split = decider._DeciderSystem(fake, lambda s: s, one_per_request=True)
+    together = split.system_one(state="x", questions={"route": route, "again": route_b})
+    assert together["answers"]["route"] == alone["answers"]["route"]
+    assert fake.requests == [["route"], ["again"]]
+    assert together["usage"] == {"input_tokens": 20, "output_tokens": 0}
 
 
 # --- Strands Decider --------------------------------------------------------------------------
@@ -278,8 +321,24 @@ def test_smoke_decider_2b():
     assert d["loaded_revision"] == decider.PINNED_REVISIONS["Mapika/decider-2b"]
     assert d["reference_check"]["status"] == (
         "passed" if d["device"].split(":")[0] in ("cpu", "mps") else "unchecked")
-    (out,) = j.decide("My card was charged twice for the same purchase.", [ROUTE])
+    assert d["questions_per_request"] == (1 if d["device"].startswith("mps") else "all")
+    state = "My card was charged twice for the same purchase."
+    (out,) = j.decide(state, [ROUTE])
     assert out.decision in ROUTE.options
+    assert sum(out.raw["probabilities"].values()) == pytest.approx(1.0, abs=1e-3)
+    together, _ = j.decide(state, [ROUTE, URGENT])          # co-questions do not move it
+    assert together.raw["probabilities"] == out.raw["probabilities"]
+
+
+@pytest.mark.skipif(os.environ.get("JUDGE_AUDIT_SMOKE_CLEF") != "1",
+                    reason="downloads Clef-flash (19 GB, needs a 24 GB machine); set "
+                           "JUDGE_AUDIT_SMOKE_CLEF=1")
+def test_smoke_clef_flash():
+    j = ClefJudge()
+    d = j.describe()
+    assert d["loaded_revision"] == clef.PINNED_REVISIONS["Cloudflare/clef-flash"]
+    (out,) = j.decide("Our checkout started returning errors and orders are blocked.", [ROUTE])
+    assert out.decision in ROUTE.options and out.raw["native_confidence"] is not None
     assert sum(out.raw["probabilities"].values()) == pytest.approx(1.0, abs=1e-3)
 
 

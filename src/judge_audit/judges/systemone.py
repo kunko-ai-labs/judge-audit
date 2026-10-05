@@ -20,8 +20,11 @@ its window); this base class does the rest:
   revision and kind of device (precision and kernels differ by device): same decisions, every
   probability within the family's tolerance, or the judge refuses to start. Without recorded
   outputs the check is `unchecked` in the provenance.
-- **No truncated input.** Where a runtime would cut the state or a question to fit its window,
-  the adapter raises before the call, naming what would be cut.
+- **No truncated input, and no aborted run.** Where a runtime would cut the state or a question
+  to fit its window, the adapter does not send the request: each of its questions is recorded
+  as no answer (`max_length_exceeded`, with what would be cut in `raw.problems`), which counts
+  against the judge like any unanswered question. Decision 2.0's runtime refuses such input
+  itself, with the same error, so all four families follow one rule.
 """
 from __future__ import annotations
 
@@ -236,10 +239,11 @@ class LocalSystemOneJudge(Judge):
         payload = {q.name: systemone_question(q, self.blank_description) for q in questions}
         fit = getattr(self._system, "fit_problems", None)
         problems = fit(state, payload) if fit else []
-        if problems:
-            raise ValueError(f"{self.label} would read this input truncated: "
-                             f"{'; '.join(problems)}. Shorten the state or the questions "
-                             "(a pre-registration decision) instead")
+        if problems:                    # the runtime would cut it: refused, counted, not sent
+            return [Judgment(question=q.name, decision="", confidence=None, latency_s=0.0,
+                             cost_usd=0.0, parse_status="no_answer",
+                             raw={"error": "max_length_exceeded", "problems": problems})
+                    for q in questions]
         t0 = time.monotonic()
         result = self._system.system_one(state=state, questions=payload)
         latency = (time.monotonic() - t0) / max(len(questions), 1)

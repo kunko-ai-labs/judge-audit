@@ -8,8 +8,10 @@ adapter imports it from the snapshot it downloads, at the same pinned commit as 
 What is recorded, and why (see `systemone.py` for what every local decision model shares):
 
 - **Confidence is the probability of the chosen option** (`probabilities[choice]`, which
-  decider also returns as `x_p_max`). Its `confidence` field is TypeSafe's choice confidence,
-  (n * p_max - 1)/(n - 1), and its `certainty` a normalized entropy: kept in `raw` as
+  decider also returns as `x_p_max`). Its `confidence` field follows TypeSafe's definitions:
+  (n * p_max - 1)/(n - 1) for a choice, and for a score `score_confidence`, 1 minus the expected
+  distance from the most likely level divided by the mean distance of the levels from the middle
+  of the scale. Its `certainty` is a normalized entropy. Both are kept in `raw` as
   `typesafe_confidence` and `entropy_confidence`, never audited.
 - **Probabilities are rounded to 4 decimals by decider's `system_one`**; the provenance says so.
 - **Temperatures.** The softmax temperature per answer type comes from the repository's
@@ -18,7 +20,17 @@ What is recorded, and why (see `systemone.py` for what every local decision mode
 - **Precision.** decider runs in float16 on Apple MPS and bfloat16 elsewhere; the dtype loaded
   is recorded. The two precisions can choose differently (they do on the model card's own
   example), so reference outputs are recorded per kind of device.
-- **No truncated state.** decider cuts the state at 32,768 tokens; the adapter raises instead.
+- **One question per request on MPS.** On MPS a question's answer depends on the other
+  questions in the same request (they are padded into one float16 batch): on the model card's
+  example, `department` is billing at 0.5122 alone and 0.5155 with the other two questions,
+  where decider's own docstring says that other questions cannot change an answer. On MPS the
+  adapter therefore sends each question in its own request (`questions_per_request` 1 in the
+  provenance); on CPU and CUDA it sends them together, as decider does.
+- **One size per process.** decider's code is imported from the snapshot of the model loaded;
+  a second size (another snapshot) in the same process is refused. Run each size in its own
+  process (an Arena or MCP run over several sizes included).
+- **No truncated state.** decider cuts the state at 32,768 tokens; the adapter records the
+  request's questions as no answer instead.
 
 Environment:
   DECIDER_MODEL     Hub id or local directory (default Mapika/decider-2b)
@@ -60,13 +72,14 @@ REFERENCE_QUESTIONS = {
                     "criteria": ["calm", "frustrated", "very frustrated"]},
 }
 # Its answers by (model, revision, kind of device), recorded with transformers 5.17.0 and torch
-# 2.14.0 on an Apple laptop: float16 on MPS, bfloat16 on CPU (decider's defaults). The two
-# precisions choose differently on this very example (billing at 0.5155 on MPS; returns on CPU,
-# where returns and billing both round to 0.4953): a run's device is part of what it measures.
+# 2.14.0 on an Apple laptop: float16 on MPS, bfloat16 on CPU (decider's defaults), each through
+# the adapter (on MPS one question per request). The two precisions choose differently on this
+# very example (billing at 0.5122 on MPS; returns on CPU, where returns and billing both round
+# to 0.4953): a run's device is part of what it measures.
 REFERENCE_OUTPUTS: dict[tuple[str, str, str], dict] = {
     (DEFAULT_MODEL, PINNED_REVISIONS[DEFAULT_MODEL], "mps"): {
         "department": {"type": "choice", "choice": "billing",
-                       "probabilities": {"returns": 0.4756, "billing": 0.5155, "other": 0.0088}},
+                       "probabilities": {"returns": 0.479, "billing": 0.5122, "other": 0.0088}},
         "refund_requested": {"type": "noul", "noul": 0.9588},
         "frustration": {"type": "score",
                         "probabilities": {"0": 0.1638, "1": 0.5809, "2": 0.2553}},
@@ -83,14 +96,27 @@ REFERENCE_TOLERANCE = 2e-4        # decider rounds to 1e-4: one rounding step ei
 
 
 class _DeciderSystem:
-    """decider's Decider behind the keyword interface, with its state budget checked."""
+    """decider's Decider behind the keyword interface, with its state budget checked. With
+    `one_per_request` every question goes in its own request (on MPS, where an answer depends
+    on the other questions of the request)."""
 
-    def __init__(self, decider, render_state):
+    def __init__(self, decider, render_state, one_per_request: bool = False):
         self.decider = decider
         self._render_state = render_state
+        self.one_per_request = one_per_request
 
     def system_one(self, *, state, questions) -> dict:
-        return self.decider.system_one(state, questions)
+        if not self.one_per_request or len(questions) == 1:
+            return self.decider.system_one(state, questions)
+        answers: dict = {}
+        tokens, model = 0, None
+        for name, question in questions.items():
+            result = self.decider.system_one(state, {name: question})
+            answers.update(result.get("answers") or {})
+            tokens += (result.get("usage") or {}).get("input_tokens", 0)
+            model = result.get("model")
+        return {"model": model, "answers": answers,
+                "usage": {"input_tokens": tokens, "output_tokens": 0}}
 
     def fit_problems(self, state, questions) -> list[str]:
         tok = self.decider.m.tok
@@ -150,7 +176,9 @@ def _load(model_id: str, revision: str | None, device: str | None):
         "torch_version": torch.__version__,
         "loader_warnings": messages,
     }
-    return _DeciderSystem(d, render_state), info
+    one_per_request = str(d.dev).startswith("mps")
+    info["questions_per_request"] = 1 if one_per_request else "all"
+    return _DeciderSystem(d, render_state, one_per_request), info
 
 
 class DeciderJudge(LocalSystemOneJudge):
@@ -165,8 +193,9 @@ class DeciderJudge(LocalSystemOneJudge):
     raw_fields = {"confidence": "typesafe_confidence", "certainty": "entropy_confidence",
                   "x_p_max": "x_p_max", "score": "expected_level", "level_fit": "level_fit",
                   "fit_mass": "fit_mass"}
-    native_confidence = ("decider's `confidence` field is TypeSafe's (n * p_max - 1)/(n - 1) "
-                         "(raw.typesafe_confidence) and `certainty` a normalized entropy "
+    native_confidence = ("decider's `confidence` field follows TypeSafe: (n * p_max - 1)/(n - 1) "
+                         "for a choice, score_confidence (ordinal) for a score "
+                         "(raw.typesafe_confidence); `certainty` is a normalized entropy "
                          "(raw.entropy_confidence); neither is audited")
 
     def load(self, model_id: str, revision: str | None, device: str | None):

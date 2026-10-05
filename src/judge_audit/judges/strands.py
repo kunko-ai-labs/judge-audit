@@ -17,7 +17,11 @@ What is recorded, and why (see `systemone.py` for what every local decision mode
   by the package; the dtype used is recorded.
 - **No truncated input.** The package fits a request into `max_length` tokens by cutting a
   long question from the front and the state from the end; the adapter redoes that arithmetic
-  with the package's own tokenizer and rendering and raises instead.
+  (strands-decider 0.1.0's `_fit`, which is why the extra pins that version) with the package's
+  own tokenizer and rendering, and records the request's questions as no answer instead. It
+  sizes the question reserve from the longest question of the whole request, where the package
+  does it per batch of questions, so it can refuse a multi-question request the package would
+  have read whole: conservative, never the other way.
 
 Environment:
   STRANDS_MODEL          Hub id or local directory (default the 2B hobson-v19 checkpoint)

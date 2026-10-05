@@ -14,7 +14,7 @@ What is recorded, and why (see `systemone.py` for what every local decision mode
   other decision models: renaming a question can change an answer.
 - **Weights as released, in bfloat16.** No quantized variant is offered by this adapter.
 - **No truncated state.** `encode_record` cuts the state to fit 16,384 tokens; the adapter
-  measures the request with the same function and raises instead.
+  measures the request with the same function and records its questions as no answer instead.
 
 Not run on a 16 GB machine: Clef-flash's weights take about 19 GB in bfloat16, Clef's about
 55 GB.
