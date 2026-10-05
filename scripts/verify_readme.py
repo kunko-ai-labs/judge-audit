@@ -25,6 +25,7 @@ import functools
 import json
 import os
 import re
+import shutil
 import statistics
 import subprocess
 import sys
@@ -741,11 +742,38 @@ def check_demo_figures(ck: Checker) -> None:
         ck.eq(f"demo / {run} / rate at 5 %", shown["coverage_at_5pct"], cov)
         ck.eq(f"demo / {run} / spread", shown["spread_over_split_seeds"], c["spread_coverage"])
     sim = demo["simulated"]
+    ck.eq("demo / run command", sim["command_run"], DEMO_RUN)
+    ck.eq("demo / check command", sim["command_check"], DEMO_CHECK)
     line = simulated_line("0.10")
-    for key, label in (("accuracy", "accuracy="), ("safe_automation_at_10pct", "safe_automation@10%=")):
-        found = re.search(re.escape(label) + r"([\d.]+%)", line)
-        ck.eq(f"demo / simulated / {key}", sim[key], found and found.group(1))
-    ck.eq("demo / simulated / check exit at 70 %", sim["check_exit"], simulated_check("0.70"))
+    for key, label in (("n", "n="), ("accuracy", "accuracy="),
+                       ("safe_automation_at_10pct", "safe_automation@10%=")):
+        found = re.search(re.escape(label) + r"([\d.]+%?)", line)
+        ck.eq(f"demo / simulated / {key}", str(sim[key]), found and found.group(1))
+    code, text = demo_check()
+    ck.eq("demo / simulated / check exit", sim["check_exit"], code)
+    ck.checked += 1
+    if f"(minimum {sim['minimum']})" not in text:
+        ck.failures.append(f"demo / simulated / minimum: {sim['minimum']} not in the check output")
+
+
+DEMO_RUN = "judge-audit run labels.jsonl --judge simulated --target 0.10"
+DEMO_CHECK = ("judge-audit check labels.jsonl --judge simulated --baseline audit-result.json "
+              "--min-safe-rate 0.10:0.70")
+
+
+@functools.cache
+def demo_check() -> tuple[int, str]:
+    """The video's two commands, exactly as shown, in a directory holding the email-routing
+    labels as labels.jsonl: the exit code and output of the `check`."""
+    env = {**os.environ, "PYTHONPATH": os.pathsep.join(
+        [str(ROOT / "src"), os.environ.get("PYTHONPATH", "")])}
+    with tempfile.TemporaryDirectory() as tmp:
+        shutil.copy(ROOT / "examples/email-routing/labels.jsonl", Path(tmp) / "labels.jsonl")
+        for cmd, check in ((DEMO_RUN, True), (DEMO_CHECK, False)):
+            out = subprocess.run([sys.executable, "-m", "judge_audit.cli", *cmd.split()[1:]],
+                                 cwd=tmp, env=env, capture_output=True, text=True,
+                                 check=check, timeout=120)
+    return out.returncode, out.stdout + out.stderr
 
 
 def paragraph(md: str, opening: str) -> list[str]:

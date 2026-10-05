@@ -343,7 +343,7 @@ def test_a_quickstart_gate_edit_is_caught(old, new):
 def test_the_gate_threshold_follows_a_fresh_check(monkeypatch):
     import verify_readme
 
-    monkeypatch.setattr(verify_readme, "simulated_check", lambda share: 1)
+    monkeypatch.setattr(verify_readme, "demo_check", lambda: (1, "(minimum 70.0%)"))
     assert any(f.startswith("quickstart") and "exit" in f for f in check(README).failures)
 
 
@@ -534,7 +534,7 @@ def test_the_demo_figures_follow_the_json(monkeypatch, tmp_path):
                         lambda name: json.loads((real_root / "docs" / name).read_text()))
     monkeypatch.setattr(verify_readme, "simulated_line", lambda target: (
         "SIMULATED · judge=simulated n=200 accuracy=85.5% safe_automation@10%=65.5%"))
-    monkeypatch.setattr(verify_readme, "simulated_check", lambda share: 1)
+    monkeypatch.setattr(verify_readme, "demo_check", lambda: (1, "(minimum 70.0%)"))
     ck = verify_readme.Checker()
     verify_readme.check_demo_figures(ck)
     assert any("demo / jev / rate at 5 %" in f for f in ck.failures)
