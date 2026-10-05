@@ -162,6 +162,35 @@ def test_known_models_default_to_their_pinned_revision_and_unknown_ones_need_a_p
     assert all(len(sha) == 40 for sha in PINNED_REVISIONS.values())
 
 
+def test_a_branch_or_tag_is_not_a_pin_but_a_local_directory_needs_none(monkeypatch, tmp_path):
+    monkeypatch.delenv("DECISION2_REVISION", raising=False)
+    for ref in ("main", "v2", KAI_SHA[:12], KAI_SHA.upper()):
+        with pytest.raises(ValueError, match="40-hex Hub commit"):
+            Decision2Judge(model_id=KAI, revision=ref, system=FakeModel(), info=dict(INFO))
+    j = Decision2Judge(model_id=str(tmp_path), system=FakeModel(),
+                       info={**INFO, "loaded_revision": None})
+    assert j.requested_revision is None
+    assert j.describe()["reference_check"]["status"] == "unchecked"
+
+
+def test_a_tokenizer_that_differs_from_the_package_refuses_before_the_reference_request():
+    model = FakeModel()
+    bad = {**INFO, "tokenizer_check": {"matches_tokenizer_json": False, "probes": 4,
+                                       "differing_probes": [1, 3]}}
+    with pytest.raises(RuntimeError, match=r"encodes \[1, 3\] differently.*tokenizer.json"):
+        Decision2Judge(model_id=KAI, system=model, info=bad)
+    assert model.calls == []                       # refused before any request
+
+
+def test_score_offsets_are_recorded_from_the_manifest():
+    manifest = {"score_bias": {"file": "score_bias.json", "sha256": "7d3a06",
+                               "offsets": {"5": [0.04, 0.2, 0.08, -0.15, -0.17]}}}
+    assert decision2.score_bias_of(manifest, applied={5: [0.04]}) == {
+        "file": "score_bias.json", "sha256": "7d3a06", "levels": [5],
+        "offsets": {"5": [0.04, 0.2, 0.08, -0.15, -0.17]}, "applied": True}
+    assert decision2.score_bias_of({}, applied=None) is None
+
+
 def test_unsupported_questions_are_refused():
     with pytest.raises(RuntimeError, match="no options"):
         decision2_question(Question(name="c", type=QuestionType.CHOICE, instructions="?"))
@@ -198,6 +227,7 @@ def test_smoke_kai_06b_loads_pinned_and_matches_the_model_card_reference():
     assert d["reference_check"]["status"] == (
         "unchecked" if d["device"].startswith("cuda") else "passed")
     assert d["tokenizer_check"]["matches_tokenizer_json"] is True
+    assert d["score_bias"]["levels"] == [5] and d["score_bias"]["applied"] is True
     out = j.decide(decision2.REFERENCE_STATE, [
         Question(name="route", type=QuestionType.CHOICE,
                  instructions="Which team should handle this request?",

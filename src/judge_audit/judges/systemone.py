@@ -14,7 +14,8 @@ its window); this base class does the rest:
   A family's own `confidence` field, whatever its formula, is kept in `raw` under a name
   that says what it is, never audited.
 - **A pinned revision.** These repositories change after release; a model the family knows
-  loads at the commit pinned in its adapter, any other needs `<FAMILY>_REVISION`.
+  loads at the commit pinned in its adapter, any other needs `<FAMILY>_REVISION`, and a
+  revision must be a 40-hex commit. A local directory loads as it is, without a revision.
 - **A reference request before any decision**, where outputs are recorded for the model,
   revision and kind of device (precision and kernels differ by device): same decisions, every
   probability within the family's tolerance, or the judge refuses to start. Without recorded
@@ -38,6 +39,7 @@ from .base import Judge, Judgment, Question, QuestionType, served_of
 
 # What the judge is shown is `systemone_question`; bump when its shape changes.
 CRITERIA_VERSION = 1
+COMMIT = re.compile(r"[0-9a-f]{40}")      # a pinned Hub revision: a commit, not a branch or tag
 
 
 def systemone_question(q: Question, blank: str | None = None) -> dict:
@@ -173,10 +175,12 @@ class LocalSystemOneJudge(Judge):
         self.model_id = model_id or os.environ.get(f"{self.env}_MODEL", self.default_model)
         self.requested_revision = (revision or os.environ.get(f"{self.env}_REVISION")
                                    or self.pinned.get(self.model_id))
-        if self.requested_revision is None and not Path(self.model_id).exists():
-            raise ValueError(f"{self.model_id} has no pinned revision: set {self.env}_REVISION "
-                             "to a Hub commit (these repositories change after release, so an "
-                             "unpinned run is not reproducible)")
+        if not Path(self.model_id).exists() and \
+                not COMMIT.fullmatch(self.requested_revision or ""):
+            raise ValueError(f"{self.model_id} needs a pinned revision: set {self.env}_REVISION "
+                             "to a 40-hex Hub commit, not a branch or tag (these repositories "
+                             "change after release, so an unpinned run is not reproducible); "
+                             f"got {self.requested_revision!r}")
         self.device = device or os.environ.get(f"{self.env}_DEVICE") or None
         if system is None:
             system, info = self.load(self.model_id, self.requested_revision, self.device)
