@@ -22,11 +22,13 @@ Results are published whether or not the predictions hold; a difference the test
 
 | dataset | locales | rows per locale | options | licence |
 |---|---|---:|---:|---|
-| MASSIVE 1.1 test (`examples/massive/`, #133) | `en-US`, `es-ES`, `ca-ES` | to be confirmed in #133 (expected 2,974) | 60 | to be confirmed in #133 (expected CC BY 4.0) |
+| MASSIVE 1.1 test (`examples/massive/`, #133 / #140) | `en-US`, `es-ES`, `ca-ES` | 2,974 | 60 (`cooking_query` is never the label in test) | CC BY 4.0 (archive pinned by sha256) |
 
-- **Parallel items.** The three locales are the same items, aligned by MASSIVE `id` (alignment verified in #133). Every resample and every certification split is **by item**, so an item's three languages always fall on the same side.
+- **Parallel items.** The three locales are the same items, aligned by MASSIVE `id`: no id missing in any locale and no intent differing across locales (#140). Every resample and every certification split is **by item**, so an item's three languages always fall on the same side.
 - **Questions and option descriptions in English** in the primary arm (Galtea's Spanish/Catalan study found translated rubric questions cost Jev up to 13 points of accuracy). A translated-criteria arm is decision D3.
-- **Labels** are MASSIVE's, carried from SLURP's annotation through professional localisation; a label or localisation error counts as a judge error in every locale it affects. Caveat printed with every table: translated parallel data, not native traffic.
+- **Labels** are MASSIVE's, carried from SLURP's annotation through localisation; a label or localisation error counts as a judge error in every locale it affects. The upstream card identifies localisers and judges by crowd-worker IDs, and `ca-ES` was added in 1.1 without a published localisation method: the report does not call the data professionally translated. Caveat printed with every table: translated parallel data, not native traffic.
+- **Localisation check.** MASSIVE keeps three judges per localised row ("does the sentence match the intent?"). A majority answered no for 0 `es-ES` and 19 `ca-ES` test rows (at least one no: 76 and 120). Primary: every row. Sensitivity, declared here: every metric and test recomputed without the majority-no rows of any locale, removing the item in all three locales.
+- **Repeated texts** (repository normalisation): distinct texts per locale `en-US` 2,970, `es-ES` 2,944, `ca-ES` 2,933; `ca-ES` rows 17 and 1426 share a text with two labels (`calendar_query`, `datetime_query`). Resampling is by item; a repeated text is not merged across items.
 - Rows without a usable answer follow v0.5 §3.
 
 ## 4. Roster and confidence
@@ -74,7 +76,7 @@ Filled from the pilot (§9) before the freeze: rows needed for the transfer test
 
 ## 9. Pilot (before the freeze, train rows only)
 
-300 items from MASSIVE **train**, the same items in the three locales, every primary judge. Used only to size §8 and to settle D2–D4; no pilot number is evidence for or against a hypothesis. Its protocol, checkpoints and estimates are committed before the freeze, as in v0.5 (`docs/runs/v06-pilot/`).
+The 230 pilot items committed in #140 (up to 4 per intent from MASSIVE **dev**, seed 2026, the same items in the three locales; dev, not train, so a classifier later trained on train has never seen them), every primary judge. Used only to size §8 and to settle D2–D4; no pilot number is evidence for or against a hypothesis. Its protocol, checkpoints and estimates are committed before the freeze, as in v0.5 (`docs/runs/v06-pilot/`).
 
 ## 10. Cost ceiling and time
 
