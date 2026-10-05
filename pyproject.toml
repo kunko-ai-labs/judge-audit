@@ -65,7 +65,7 @@ packages = ["src/judge_audit"]
 # The third-party datasets keep their own CC BY licences; the Apache-2.0 sdist leaves them
 # out, and their tests skip without them.
 exclude = ["src/judge_audit/judges/bridge/node_modules", "examples/banking77",
-           "examples/clinc150"]
+           "examples/clinc150", "examples/massive"]
 
 [tool.ruff]
 line-length = 100

@@ -1,7 +1,8 @@
-"""Human-labelled public datasets for the v0.5 benchmark (#86), from pinned upstream files.
+"""Human-labelled public datasets for the benchmarks (#86, #133), from pinned upstream files.
 
-Each source is fetched at a fixed commit of its official repository, checked against the
-sha256 recorded below, and converted to the judge-audit labels format with a dataset header
+Each source is fetched at a fixed commit of its official repository (MASSIVE: its official
+release archive), checked against the sha256 recorded below, and converted to the
+judge-audit labels format with a dataset header
 that declares its ground-truth tier, its caveats, and where every row came from. The
 conversion is deterministic: running it twice writes byte-identical files, and `--check`
 (run in CI) fails if a committed file differs from what the pinned upstream files produce.
@@ -15,30 +16,48 @@ conversion is deterministic: running it twice writes byte-identical files, and `
                                                       the banking and credit_cards domains
                                                       (30 intents) of the test split plus
                                                       the 1,000 out-of-scope test queries
+  MASSIVE 1.1 alexa/massive release archive, CC BY 4.0 (FitzGerald et al. 2023), derived
+              from SLURP (Bastianelli et al. 2020); locales en-US, es-ES and ca-ES
+              examples/massive/labels-test-<locale>.jsonl
+                                                      the 2,974-utterance test split, the
+                                                      same items in each locale (_meta.id)
+              examples/massive/labels-pilot-<locale>.jsonl
+                                                      4 dev utterances per intent (seed 2026),
+                                                      for the pilot; never scored in the study
 
 The question wording, the option lists and CLINC150's domain subset are drafts until the
-v0.5 pre-registration (#91) fixes them; after that they are frozen evidence.
+v0.5 pre-registration (#91) fixes them; after that they are frozen evidence. MASSIVE's are
+drafts until the v0.6 pre-registration (#132) fixes them.
 
   python scripts/fetch_real_datasets.py                # fetch, verify, write
   python scripts/fetch_real_datasets.py --check        # exit 1 naming any file that differs
   python scripts/fetch_real_datasets.py --src DIR      # read the upstream files from DIR
                                                        # (DIR/<repo name>/<path>) offline
+  python scripts/fetch_real_datasets.py --cache DIR    # reuse verified downloads kept in DIR
+  python scripts/fetch_real_datasets.py --massive-full DIR
+                                                       # also write MASSIVE's whole train and
+                                                       # dev splits to DIR (not committed)
 """
 from __future__ import annotations
 
 import argparse
 import csv
 import hashlib
+import http.client
 import io
 import json
 import random
+import re
 import sys
+import tarfile
+import time
 import urllib.request
 from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SEED = 2026
+DOWNLOAD_ATTEMPTS = 4                              # 1 + 3 retries, 5 s, 10 s, 20 s apart
 PILOT_PER_INTENT = 4
 
 SOURCES = {
@@ -77,6 +96,33 @@ SOURCES = {
             "LICENSE": "e6bc9e9c474700b708f568bac9e5a8a9bcb2b1dad53442f5ba449fcb848b8e76",
         },
     },
+    "massive": {
+        "name": "MASSIVE 1.1",
+        "repo": "alexa/massive",
+        # the release archive the upstream README and the Hugging Face loader point to;
+        # the archive is served without a commit, so it and each member are pinned by sha256
+        "archive": ("https://amazon-massive-nlu-dataset.s3.amazonaws.com/"
+                    "amazon-massive-dataset-1.1.tar.gz"),
+        "archive_sha256": "4cba5faa11c71437928e17cb1b9b3d8b8e727e7ea363a3a9a8045e19c0491577",
+        "licence": "CC BY 4.0",
+        "licence_url": "https://creativecommons.org/licenses/by/4.0/",
+        "citation": ("FitzGerald, Hench, Peris, Mackie, Rottmann, Sanchez, Nash, Urbach, "
+                     "Kakarala, Singh, Ranganath, Crist, Britan, Leeuwis, Tur & Natarajan "
+                     "2023, MASSIVE: A 1M-Example Multilingual Natural Language "
+                     "Understanding Dataset with 51 Typologically-Diverse Languages, ACL 2023"),
+        "derived_from": ("SLURP, CC BY 4.0: Bastianelli, Vanzo, Swietojanski & Rieser 2020, "
+                         "SLURP: A Spoken Language Understanding Resource Package, EMNLP 2020"),
+        "files": {
+            "1.1/LICENSE": "c2e6ea015269147de02117ebdd91f30ef09831251f5345fa8365273b1db1d435",
+            "1.1/NOTICE.md": "b90534ccd20c6f0e1e5239567af0d150496339542b75a15bfbc3e1e737593ddb",
+            "1.1/data/en-US.jsonl":
+                "c70f75c6a543a26e249ec383df67733ad9b1066f6c0406c2e04a3f03356e407e",
+            "1.1/data/es-ES.jsonl":
+                "310462a79fa181ff83c643a8d356c7b8155fd37a25e80a77ba3ca9b29305c4a5",
+            "1.1/data/ca-ES.jsonl":
+                "7da25fa3f731ea96dc9caa48363863c117c652ad628e5c7be0d9fdab7ccb7ed3",
+        },
+    },
 }
 
 BANKING77_INSTRUCTIONS = ("Which intent does this online-banking customer message express? "
@@ -112,14 +158,49 @@ def sha256_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def fetch(source: dict, path: str, src_dir: Path | None) -> bytes:
-    """One upstream file at the pinned commit, verified against its recorded sha256."""
-    if src_dir is not None:
-        data = (src_dir / source["repo"].split("/")[1] / path).read_bytes()
-    else:
+def _get(url: str, timeout: int) -> bytes:
+    for attempt in range(1, DOWNLOAD_ATTEMPTS):
+        try:
+            with urllib.request.urlopen(url, timeout=timeout) as r:
+                return r.read()
+        except (OSError, http.client.HTTPException):   # URLError, timeouts, resets, a cut body
+            time.sleep(5 * 2 ** (attempt - 1))
+    try:                                          # the last attempt
+        with urllib.request.urlopen(url, timeout=timeout) as r:
+            return r.read()
+    except (OSError, http.client.HTTPException) as exc:
+        raise SystemExit(f"{url}: {exc!r} after {DOWNLOAD_ATTEMPTS} attempts") from exc
+
+
+def download(url: str, want: str, cached: Path | None = None, timeout: int = 300) -> bytes:
+    """The bytes at `url`, verified against `want`. A network failure is retried with
+    backoff; a sha256 mismatch is not (the pin, not the network, is wrong). With `cached`,
+    a file there that matches the pin is used without the network, and verified bytes
+    are written there."""
+    if cached is not None and cached.exists():
+        data = cached.read_bytes()
+        if sha256_bytes(data) == want:
+            return data
+    data = _get(url, timeout)
+    got = sha256_bytes(data)
+    if got != want:
+        raise SystemExit(f"{url}: sha256 {got} != pinned {want}")
+    if cached is not None:
+        cached.parent.mkdir(parents=True, exist_ok=True)
+        cached.write_bytes(data)
+    return data
+
+
+def fetch(source: dict, path: str, src_dir: Path | None,
+          cache_dir: Path | None = None) -> bytes:
+    """One upstream file at the pinned commit, verified against its recorded sha256
+    (cached as DIR/<repo name>/<path>, the layout --src reads)."""
+    local = Path(source["repo"].split("/")[1]) / path
+    if src_dir is None:
         url = f"https://raw.githubusercontent.com/{source['repo']}/{source['commit']}/{path}"
-        with urllib.request.urlopen(url, timeout=60) as r:
-            data = r.read()
+        return download(url, source["files"][path],
+                        cache_dir / local if cache_dir is not None else None, timeout=60)
+    data = (src_dir / local).read_bytes()
     got, want = sha256_bytes(data), source["files"][path]
     if got != want:
         raise SystemExit(f"{source['repo']}/{path}: sha256 {got} != pinned {want}")
@@ -270,17 +351,310 @@ def clinc150(data: dict, domains: dict[str, list[str]],
     return {name: jsonl(header, rows)}
 
 
-def build(src_dir: Path | None) -> dict[str, str]:
-    b = SOURCES["banking77"]
-    intents = json.loads(fetch(b, "banking_data/categories.json", src_dir))
-    fetch(b, "LICENSE", src_dir)
-    out = banking77(read_csv(fetch(b, "banking_data/test.csv", src_dir)),
-                    read_csv(fetch(b, "banking_data/train.csv", src_dir)), intents)
-    c = SOURCES["clinc150"]
-    fetch(c, "LICENSE", src_dir)
-    out.update(clinc150(json.loads(fetch(c, "data/data_full.json", src_dir)),
-                        json.loads(fetch(c, "data/domains.json", src_dir))))
+MASSIVE_LOCALES = ("en-US", "es-ES", "ca-ES")
+MASSIVE_SOURCE_LOCALE = "en-US"
+MASSIVE_PILOT_SPLIT = "dev"
+# The English-criteria arm. A translated arm is another dict of this shape whose `origin`
+# says who wrote the translation (MASSIVE ships no intent descriptions in any language);
+# the option identifiers, and so the labels, never change, and its files carry a
+# `.criteria-<language>-<digest>` suffix (`_massive_arm`).
+MASSIVE_ENGLISH_CRITERIA = {
+    "language": "en",
+    "instructions": ("Which intent does this request to a voice assistant express? "
+                     "Choose exactly one."),
+    "descriptions": {},
+    "origin": ("instructions written in English by the judge-audit maintainers; the options "
+               "are MASSIVE's intent identifiers, unchanged, without definitions"),
+}
+MASSIVE_TRANSLATION_CAVEAT = ("translated parallel data, not native traffic; labels from SLURP "
+                              "annotation carried over by localisation")
+MASSIVE_INTENT_SCORE = {0: "No", 1: "Yes", 2: "It is a reasonable interpretation of the goal"}
+NUMBER_WORDS = {1: "one", 2: "two", 3: "three"}
+
+
+def fetch_archive(source: dict, src_dir: Path | None,
+                  cache_dir: Path | None = None) -> dict[str, bytes]:
+    """The pinned members of a release archive, the archive and each member verified
+    against their recorded sha256 (offline or cached: DIR/<repo name>/<archive file name>)."""
+    name = source["archive"].rsplit("/", 1)[1]
+    local = Path(source["repo"].split("/")[1]) / name
+    if src_dir is not None:
+        data = (src_dir / local).read_bytes()
+    else:
+        data = download(source["archive"], source["archive_sha256"],
+                        cache_dir / local if cache_dir is not None else None)
+    got = sha256_bytes(data)
+    if got != source["archive_sha256"]:
+        raise SystemExit(f"{name}: sha256 {got} != pinned {source['archive_sha256']}")
+    out: dict[str, bytes] = {}
+    with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as tar:
+        for path, want in source["files"].items():
+            try:
+                member = tar.extractfile(path)
+            except KeyError:
+                member = None
+            if member is None:
+                raise SystemExit(f"{name}: {path} not in the archive")
+            out[path] = member.read()
+            got = sha256_bytes(out[path])
+            if got != want:
+                raise SystemExit(f"{name}: {path}: sha256 {got} != pinned {want}")
     return out
+
+
+def read_jsonl(data: bytes) -> list[dict]:
+    return [json.loads(x) for x in data.decode("utf-8").splitlines() if x.strip()]
+
+
+def massive_provenance(locale: str) -> dict:
+    s = SOURCES["massive"]
+    path = f"1.1/data/{locale}.jsonl"
+    return {"name": s["name"], "repository": f"https://github.com/{s['repo']}",
+            "archive": s["archive"], "archive_sha256": s["archive_sha256"],
+            "file": path, "sha256": s["files"][path], "licence": s["licence"],
+            "licence_url": s["licence_url"], "citation": s["citation"],
+            "derived_from": s["derived_from"]}
+
+
+def _massive_check_criteria(criteria: dict, intents: list[str]) -> None:
+    for key in ("language", "instructions", "origin"):
+        if not criteria.get(key):
+            raise SystemExit(f"MASSIVE criteria need a non-empty {key!r} (who wrote them, "
+                             "in which language)")
+    if not re.fullmatch(r"[a-z]{2,3}(-[A-Za-z0-9]+)*", criteria["language"]):
+        raise SystemExit(f"MASSIVE criteria language {criteria['language']!r}: not a "
+                         "language tag")
+    unknown = sorted(set(criteria.get("descriptions", {})) - set(intents))
+    if unknown:
+        raise SystemExit(f"MASSIVE criteria describe {unknown}: not an intent")
+
+
+def _massive_arm(criteria: dict) -> str:
+    """The file-name suffix of a criteria arm: none for the English arm, else its language
+    and a digest of the whole criteria object, so no arm overwrites another's files."""
+    if criteria == MASSIVE_ENGLISH_CRITERIA:
+        return ""
+    canonical = json.dumps(criteria, sort_keys=True, ensure_ascii=False).encode("utf-8")
+    return f".criteria-{criteria['language']}-{sha256_bytes(canonical)[:8]}"
+
+
+def _massive_aligned(locales: dict[str, list[dict]]) -> dict[str, list[tuple[str, int]]]:
+    """For each split, its (id, index in the source-locale file) in source-locale file
+    order, once every locale is checked to hold the same ids with the same intents."""
+    src = locales[MASSIVE_SOURCE_LOCALE]
+    by_id = {loc: {r["id"]: r for r in rows} for loc, rows in locales.items()}
+    for loc, rows in locales.items():
+        if len(by_id[loc]) != len(rows):
+            raise SystemExit(f"MASSIVE {loc}: an id appears twice")
+    splits: dict[str, list[tuple[str, int]]] = defaultdict(list)
+    for i, r in enumerate(src):
+        splits[r["partition"]].append((r["id"], i))
+    for part, items in splits.items():
+        want = {i for i, _ in items}
+        for loc in locales:
+            have = {i for i, r in by_id[loc].items() if r["partition"] == part}
+            for name, diff in (("lacks", want - have), ("adds", have - want)):
+                if diff:
+                    ids = sorted(diff, key=int)
+                    raise SystemExit(f"MASSIVE {part}: {loc} {name} {len(ids)} id(s) of "
+                                     f"{MASSIVE_SOURCE_LOCALE}: {', '.join(ids[:10])}")
+        for i, _ in items:
+            intents = {by_id[loc][i]["intent"] for loc in locales}
+            if len(intents) > 1:
+                raise SystemExit(f"MASSIVE id {i} has a different intent per locale: "
+                                 f"{sorted(intents)}")
+    return dict(splits)
+
+
+def _massive_row(r: dict, index: int, question: dict, **seen: bool) -> dict:
+    """`seen`: text_in_train_or_dev (test rows; BANKING77's text_in_train is train only)
+    or text_in_test (pilot rows), under `normalise`, within the row's locale."""
+    meta: dict = {"source": "massive", "locale": r["locale"], "split": r["partition"],
+                  "id": r["id"], "source_index": index, "scenario": r["scenario"], **seen}
+    if "judgments" in r:
+        meta["intent_judgments"] = [j["intent_score"] for j in r["judgments"]]
+    return {"state": r["utt"], "questions": [question], "labels": {"intent": r["intent"]},
+            "_meta": meta}
+
+
+def _massive_localisation_caveat(locale: str, rows: list[dict]) -> str:
+    if locale == MASSIVE_SOURCE_LOCALE:
+        return ("en-US is the source language: SLURP's English utterances, from which the "
+                "other locales were localised; it carries no localisation judgments")
+    scores = [r["_meta"]["intent_judgments"] for r in rows]
+    some = sum(1 for s in scores if 0 in s)
+    most = sum(1 for s in scores if 2 * s.count(0) > len(s))
+    counts = sorted({len(s) for s in scores})
+    judges = " or ".join(NUMBER_WORDS.get(k, str(k)) for k in counts)
+    out = (f"localised from en-US by translators (FitzGerald et al. 2023 describe professional "
+           "translators; the upstream card names each localiser by an obfuscated crowd-worker "
+           f"ID) and judged by {judges} workers of the locale: {some} of {len(rows)} rows "
+           "have at least one of the localisation judges answering No to 'Does the sentence "
+           f"match the intent?', {most} a majority; _meta.intent_judgments keeps the scores "
+           f"({', '.join(f'{k} {v}' for k, v in MASSIVE_INTENT_SCORE.items())})")
+    if locale == "ca-ES":
+        out += ("; ca-ES was added in MASSIVE 1.1, after the paper, which does not describe "
+                "its localisation")
+    return out
+
+
+def _massive_unused(rows: list[dict]) -> list[str]:
+    """The intents that are an option but never the label in this file."""
+    options = rows[0]["questions"][0]["options"]
+    unused = sorted(set(options) - {r["labels"]["intent"] for r in rows})
+    return ([f"{len(unused)} of the {len(options)} intents never the label here "
+             f"({', '.join(unused)}), still an option"] if unused else [])
+
+
+def _massive_header(locale: str, rows: list[dict], criteria: dict, purpose: list[str],
+                    extra: list[str]) -> dict:
+    return {
+        "ground_truth": {
+            "tier": "GT-3", "label": "human-annotated", "validation": "not_validated",
+            "purpose": purpose,
+            "caveats": [
+                MASSIVE_TRANSLATION_CAVEAT,
+                "public since 2022: probably in the pretraining data of the judges audited",
+                ("SLURP's utterances are requests to a home voice assistant collected for a "
+                 "research corpus, not production traffic; one intent label each, and "
+                 "MASSIVE publishes no inter-annotator agreement on the intent labels"),
+                _massive_localisation_caveat(locale, rows),
+                (f"options: the {len(rows[0]['questions'][0]['options'])} MASSIVE intent "
+                 "identifiers in alphabetical order, without definitions; instructions in "
+                 f"criteria.language ({criteria['language']}) whatever the locale of the text"),
+                "label noise not measured",
+                distinct_caveat([(r["state"], r["labels"]["intent"]) for r in rows]),
+                *_massive_unused(rows), *extra],
+        },
+        "source": massive_provenance(locale),
+        "locale": locale,
+        "criteria": {"language": criteria["language"], "origin": criteria["origin"]},
+        "parallel": {"key": "_meta.id", "locales": list(MASSIVE_LOCALES)},
+    }
+
+
+def _massive_question(intents: list[str], criteria: dict) -> dict:
+    q = {"name": "intent", "type": "choice", "instructions": criteria["instructions"],
+         "options": intents}
+    if criteria.get("descriptions"):
+        q["descriptions"] = dict(criteria["descriptions"])
+    return q
+
+
+def _massive_prepare(locales: dict[str, list[dict]], criteria: dict):
+    missing = [loc for loc in MASSIVE_LOCALES if loc not in locales]
+    if missing:
+        raise SystemExit(f"MASSIVE: no data for {missing}")
+    locales = {loc: locales[loc] for loc in MASSIVE_LOCALES}
+    intents = sorted({r["intent"] for r in locales[MASSIVE_SOURCE_LOCALE]})
+    _massive_check_criteria(criteria, intents)
+    return locales, intents, _massive_aligned(locales), _massive_question(intents, criteria)
+
+
+def massive(locales: dict[str, list[dict]],
+            criteria: dict = MASSIVE_ENGLISH_CRITERIA) -> dict[str, str]:
+    """The test split in each locale, and the pilot sample of the dev split, as the same
+    items in the same order in every locale (rows aligned on MASSIVE's `id`)."""
+    locales, intents, splits, question = _massive_prepare(locales, criteria)
+    by_id = {loc: {r["id"]: (k, r) for k, r in enumerate(rows)} for loc, rows in locales.items()}
+
+    # the pilot: PILOT_PER_INTENT dev items per intent, drawn once for every locale
+    dev_by_label: dict[str, list[str]] = defaultdict(list)
+    for i, _ in splits.get(MASSIVE_PILOT_SPLIT, []):
+        dev_by_label[by_id[MASSIVE_SOURCE_LOCALE][i][1]["intent"]].append(i)
+    rng = random.Random(SEED)
+    pilot_ids: list[str] = []
+    for label in intents:                          # alphabetical, then seeded
+        ids = list(dev_by_label[label])
+        rng.shuffle(ids)
+        pilot_ids.extend(sorted(ids[:PILOT_PER_INTENT], key=int))
+    short = [f"{label} {len(dev_by_label[label])}" for label in intents
+             if len(dev_by_label[label]) < PILOT_PER_INTENT]
+
+    test_ids = [i for i, _ in splits.get("test", [])]
+    arm = _massive_arm(criteria)
+    out: dict[str, str] = {}
+    for loc in MASSIVE_LOCALES:
+        seen = {normalise(r["utt"]) for r in locales[loc] if r["partition"] in ("train", "dev")}
+        test_rows = []
+        for i in test_ids:
+            k, r = by_id[loc][i]
+            test_rows.append(_massive_row(r, k, question,
+                                          text_in_train_or_dev=normalise(r["utt"]) in seen))
+        n_seen = sum(1 for r in test_rows if r["_meta"]["text_in_train_or_dev"])
+        header = _massive_header(
+            loc, test_rows, criteria,
+            [("calibration and selective prediction per language on the same items"),
+             "comparison between judges and between languages on parallel rows"],
+            [(f"{n_seen} of {len(test_rows)} test texts also appear in the train or dev split "
+              "of the same locale (case and whitespace ignored); _meta.text_in_train_or_dev "
+              "marks them (BANKING77's text_in_train covers train only)")])
+        out[f"examples/massive/labels-test-{loc}{arm}.jsonl"] = jsonl(header, test_rows)
+
+        in_test = {normalise(r["state"]) for r in test_rows}
+        pilot_rows = []
+        for i in pilot_ids:
+            k, r = by_id[loc][i]
+            pilot_rows.append(_massive_row(r, k, question,
+                                           text_in_test=normalise(r["utt"]) in in_test))
+        n_test = sum(1 for r in pilot_rows if r["_meta"]["text_in_test"])
+        header = _massive_header(
+            loc, pilot_rows, criteria,
+            [("pilot: token counts, throughput and variance before the pre-registration "
+              "fixes n; never used to score a judge")],
+            [(f"up to {PILOT_PER_INTENT} {MASSIVE_PILOT_SPLIT} utterances per intent, drawn "
+              f"with random.Random({SEED}) over intents in alphabetical order, the same items "
+              "in every locale; drawn from dev, not train, so that a classifier fine-tuned on "
+              "train never saw them"
+              + (f"; fewer in dev: {', '.join(short)}" if short else "")),
+             (f"{n_test} of {len(pilot_rows)} pilot texts also appear in the test split of the "
+              "same locale (case and whitespace ignored), though no pilot item is a test item; "
+              "_meta.text_in_test marks them")])
+        out[f"examples/massive/labels-pilot-{loc}{arm}.jsonl"] = jsonl(header, pilot_rows)
+    return out
+
+
+def massive_full_splits(locales: dict[str, list[dict]],
+                        criteria: dict = MASSIVE_ENGLISH_CRITERIA) -> dict[str, str]:
+    """Every train and dev utterance in each locale, for fine-tuning a classifier; written
+    outside the repository (`--massive-full DIR`), never committed."""
+    locales, _, splits, question = _massive_prepare(locales, criteria)
+    by_id = {loc: {r["id"]: (k, r) for k, r in enumerate(rows)} for loc, rows in locales.items()}
+    arm = _massive_arm(criteria)
+    out: dict[str, str] = {}
+    for part in ("train", "dev"):
+        for loc in MASSIVE_LOCALES:
+            rows = [_massive_row(by_id[loc][i][1], by_id[loc][i][0], question)
+                    for i, _ in splits.get(part, [])]
+            header = _massive_header(
+                loc, rows, criteria,
+                [f"training a classifier ({part} split); never used to score a judge"], [])
+            out[f"labels-{part}-{loc}{arm}.jsonl"] = jsonl(header, rows)
+    return out
+
+
+def build(src_dir: Path | None, cache_dir: Path | None = None,
+          locales: dict[str, list[dict]] | None = None) -> dict[str, str]:
+    """Every committed file; `locales`: MASSIVE already read, to read its archive once."""
+    b = SOURCES["banking77"]
+    intents = json.loads(fetch(b, "banking_data/categories.json", src_dir, cache_dir))
+    fetch(b, "LICENSE", src_dir, cache_dir)
+    out = banking77(read_csv(fetch(b, "banking_data/test.csv", src_dir, cache_dir)),
+                    read_csv(fetch(b, "banking_data/train.csv", src_dir, cache_dir)), intents)
+    c = SOURCES["clinc150"]
+    fetch(c, "LICENSE", src_dir, cache_dir)
+    out.update(clinc150(json.loads(fetch(c, "data/data_full.json", src_dir, cache_dir)),
+                        json.loads(fetch(c, "data/domains.json", src_dir, cache_dir))))
+    if locales is None:
+        locales = massive_locales(src_dir, cache_dir)
+    out.update(massive(locales))
+    return out
+
+
+def massive_locales(src_dir: Path | None,
+                    cache_dir: Path | None = None) -> dict[str, list[dict]]:
+    files = fetch_archive(SOURCES["massive"], src_dir, cache_dir)
+    return {loc: read_jsonl(files[f"1.1/data/{loc}.jsonl"]) for loc in MASSIVE_LOCALES}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -288,9 +662,21 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--check", action="store_true",
                     help="exit 1 if a committed file differs from the regenerated one")
     ap.add_argument("--src", type=Path, default=None,
-                    help="read upstream files from DIR/<repo name>/<path> instead of fetching")
+                    help=("read upstream files from DIR/<repo name>/<path> (MASSIVE: "
+                          "DIR/massive/<archive file name>) instead of fetching"))
+    ap.add_argument("--cache", type=Path, default=None, metavar="DIR",
+                    help=("keep verified downloads in DIR (the --src layout) and reuse them; "
+                          "a cached file that no longer matches its pin is fetched again"))
+    ap.add_argument("--massive-full", type=Path, default=None, metavar="DIR",
+                    help="also write MASSIVE's whole train and dev splits to DIR")
     args = ap.parse_args(argv)
-    files = build(args.src)
+    locales = massive_locales(args.src, args.cache)
+    files = build(args.src, args.cache, locales)
+    if args.massive_full is not None:
+        args.massive_full.mkdir(parents=True, exist_ok=True)
+        for name, text in massive_full_splits(locales).items():
+            (args.massive_full / name).write_text(text, encoding="utf-8")
+            print(f"wrote: {args.massive_full / name}")
     changed = []
     for rel, text in files.items():
         path = ROOT / rel
