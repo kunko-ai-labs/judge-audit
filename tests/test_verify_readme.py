@@ -343,7 +343,7 @@ def test_a_quickstart_gate_edit_is_caught(old, new):
 def test_the_gate_threshold_follows_a_fresh_check(monkeypatch):
     import verify_readme
 
-    monkeypatch.setattr(verify_readme, "demo_check", lambda: (1, "(minimum 70.0%)"))
+    monkeypatch.setattr(verify_readme, "simulated_check", lambda share: 1)
     assert any(f.startswith("quickstart") and "exit" in f for f in check(README).failures)
 
 
