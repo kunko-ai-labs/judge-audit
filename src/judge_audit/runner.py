@@ -90,6 +90,9 @@ class AuditResult:
     # (`raw.error` max_length_exceeded): no answers, counted wrong, and usually a
     # misconfigured budget. In the JSON only when there are some.
     not_sent: int = 0
+    # sha256 of the canonical judgments the numbers were computed from (`judgments_digest`):
+    # it changes when any field of any record does, even one that moves no count.
+    judgments_sha256: str | None = None
 
     def to_dict(self) -> dict:
         d = {
@@ -106,6 +109,8 @@ class AuditResult:
             "max_latency_s": round(self.max_latency_s, 3),
             "run": self.run,
         }
+        if self.judgments_sha256 is not None:
+            d["judgments_sha256"] = self.judgments_sha256
         if self.accuracy_ci is not None:
             d.update(**ci_fields("accuracy", self.accuracy_ci, self.accuracy),
                      **ci_fields("ece", self.ece_ci, self.ece),
@@ -436,6 +441,7 @@ def summarize(judge_name: str, records: list[dict], run: dict | None = None,
         nll_ci=nll_ci(confidences, correct, groups=known_groups) if ci and known else None,
         nll_infinite=nll_infinite(confidences, correct),
         certificate=certificate_of(records, groups, run=run),
+        judgments_sha256=judgments_digest(records),
     )
 
 
@@ -599,6 +605,51 @@ def write_judgments(result: AuditResult, path: str) -> None:
     with open(path, "w", encoding="utf-8") as f:
         for r in result.records:
             f.write(json.dumps(r, ensure_ascii=False) + "\n")
+
+
+def canonical_judgments(records: list[dict]) -> bytes:
+    """The judgments in the one form their digest is taken of.
+
+    Each record as `write_judgments` writes it and a reader loads it back, one per line,
+    sorted by (`idx`, `question`) whatever order the judge answered in (a record without
+    them sorts as idx -1 and keeps its order). Each line is
+    `json.dumps(record, sort_keys=True, separators=(",", ":"), ensure_ascii=False)`
+    followed by `\n`: keys sorted at every depth, no spaces, non-ASCII written as is,
+    floats in Python's shortest round-trip repr (the same on 3.10-3.12; `1.0` stays
+    `1.0`), `None` as `null`. The whole is encoded as UTF-8. Every field counts, `raw` and
+    `meta` included, so a change that moves no count still changes the digest. The
+    records of an `audit-judgments.jsonl` give the same bytes as the result's own, so the
+    file can be checked against the result (`verify_judgments`)."""
+    # as `write_judgments` writes it and a reader loads it back: keys become strings and
+    # tuples lists, so the in-memory records and the file give the same bytes
+    loaded = [json.loads(json.dumps(r, ensure_ascii=False)) for r in records]
+    ordered = sorted(loaded, key=lambda r: (r.get("idx", -1), str(r.get("question", ""))))
+    return "".join(json.dumps(r, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+                   + "\n" for r in ordered).encode("utf-8")
+
+
+def judgments_digest(records: list[dict]) -> str:
+    """sha256 (hex) of `canonical_judgments(records)`: the result's `judgments_sha256`."""
+    return hashlib.sha256(canonical_judgments(records)).hexdigest()
+
+
+def read_judgments(path: str) -> list[dict]:
+    """The records of an `audit-judgments.jsonl` (one JSON object per line)."""
+    with open(path, encoding="utf-8") as f:
+        return [json.loads(line) for line in f if line.strip()]
+
+
+def verify_judgments(result: dict, judgments_path: str) -> str | None:
+    """None when the judgments file is the one `result` (an `audit-result.json`, loaded)
+    was computed from; otherwise why not. A result written before the digest was recorded
+    cannot be checked, and says so rather than passing."""
+    want = result.get("judgments_sha256")
+    if want is None:
+        return "the result records no judgments_sha256 (written before the digest was recorded)"
+    got = judgments_digest(read_judgments(judgments_path))
+    if got != want:
+        return f"judgments digest {got} differs from the result's {want}"
+    return None
 
 
 def _is_header(obj) -> bool:
