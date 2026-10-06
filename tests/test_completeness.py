@@ -278,12 +278,13 @@ def test_an_over_length_question_warns_once_and_is_counted_apart_from_answered()
     assert len([w for w in caught if w.category is NotSentWarning]) == 1
     message = str(caught[0].message)
     assert "row 0, question 'a' was not sent" in message
-    assert "max_len=512, head_max_len=192" in message and "LAYA_HEAD_MAX_LEN" in message
+    assert "max_len=512, head_max_len=192" in message and "LAYA_" not in message
     # still an answered record (the adapter returned it), but counted on its own
     assert r.completeness["answered"] == 8 and r.not_sent == 4
     assert r.to_dict()["not_sent"] == 4
     md = render_markdown(r)
-    assert "**4/8 questions not sent**" in md and "Check the token budgets" in md
+    assert "**4/8 questions not sent**" in md
+    assert "Check the input length against the judge's window" in md
 
 
 def test_a_run_with_nothing_withheld_says_nothing_about_it(recwarn):
@@ -311,3 +312,17 @@ def test_the_cli_summary_line_counts_what_was_not_sent(tmp_path, monkeypatch, ca
     assert "answered=6/6 not_sent=6 confidence_known=0/6" in out
     assert "6/6 questions not sent" in (tmp_path / "r.html").read_text()
     assert json.loads((tmp_path / "r.json").read_text())["not_sent"] == 6
+
+
+def test_a_judge_without_its_own_advice_gets_the_generic_one(over_length_warning):
+    class Plain(Judge):
+        name = "plain"
+
+        def decide(self, state, questions):
+            return [Judgment(question=q.name, decision="", confidence=None,
+                             parse_status="no_answer", raw={"error": "max_length_exceeded"})
+                    for q in questions]
+
+    message, variables = over_length_warning(Plain())
+    assert "(over length)" in message and variables == set()
+    assert "shorten the state or the options, or ask fewer questions per row" in message

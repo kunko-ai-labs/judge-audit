@@ -397,3 +397,15 @@ def test_smoke_strands_2b_matches_the_model_card():
     assert j.describe()["base_revision"] == "b1485b2fa6dfa1287294f269f5fb618e03d52d7c"
     (out,) = j.decide("Help! My payouts have been failing for 3 days!", [ROUTE])
     assert out.decision in ROUTE.options and out.raw["typesafe_confidence"] is not None
+
+
+# --- the runner's warning names each family's own remedy -------------------------------------
+
+
+@pytest.mark.parametrize("cls", [DeciderJudge, StrandsJudge, ClefJudge])
+def test_the_over_length_warning_says_the_window_is_fixed_and_names_no_variable(
+        cls, over_length_warning):
+    j, _ = make(cls, problems=["the state (40000 tokens) would be cut to 32768"])
+    message, variables = over_length_warning(j)
+    assert "the state (40000 tokens) would be cut to 32768" in message
+    assert "window is fixed" in message and variables == set()

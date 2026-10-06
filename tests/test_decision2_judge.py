@@ -239,3 +239,12 @@ def test_smoke_kai_06b_loads_pinned_and_matches_the_model_card_reference():
     assert out[0].confidence == pytest.approx(
         REFERENCE_OUTPUTS[(KAI, KAI_SHA, "mps")]["route"]["probabilities"]["returns"], abs=1e-4)
     assert sum(out[0].raw["probabilities"].values()) == pytest.approx(1.0)
+
+
+def test_an_over_length_refusal_warns_with_a_reason_and_names_no_variable(over_length_warning):
+    j, _ = judge({"route": {"type": "choice", "error": "max_length_exceeded"}})
+    (out,) = j.decide("a very long state", [ROUTE])
+    assert out.raw["problems"] == ["the runtime refused the request as over length"]
+    message, variables = over_length_warning(j)
+    assert "the runtime refused the request as over length" in message
+    assert "window is fixed" in message and variables == set()

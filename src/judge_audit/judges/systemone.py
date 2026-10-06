@@ -172,6 +172,8 @@ class LocalSystemOneJudge(Judge):
     blank_description: str | None = None      # what an option without description is sent as
     raw_fields: dict[str, str] = {}           # native answer field -> name kept in raw
     native_confidence = ""                    # what the family's own confidence field is
+    over_length_advice = ("the model's window is fixed: shorten the state or the questions, "
+                          "or split the questions across rows")
 
     def __init__(self, model_id: str | None = None, revision: str | None = None,
                  device: str | None = None, system=None, info: dict | None = None):
@@ -253,10 +255,12 @@ class LocalSystemOneJudge(Judge):
         for q in questions:
             ans = answers.get(q.name)
             if not isinstance(ans, dict) or "error" in ans:
+                error = (ans or {}).get("error") if ans else None
+                refused: dict = {"error": error, "answer": ans, "served": served}
+                if error == "max_length_exceeded":   # refused by the runtime itself
+                    refused["problems"] = ["the runtime refused the request as over length"]
                 out.append(Judgment(question=q.name, decision="", confidence=None,
-                                    latency_s=latency, cost_usd=0.0,
-                                    raw={"error": (ans or {}).get("error") if ans else None,
-                                         "answer": ans, "served": served},
+                                    latency_s=latency, cost_usd=0.0, raw=refused,
                                     parse_status="no_answer"))
                 continue
             decision, confidence, probs = read_answer(q, ans)

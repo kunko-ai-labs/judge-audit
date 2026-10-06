@@ -275,7 +275,8 @@ def main() -> None:
             if not warned:
                 first = next((j for j in rec["judgments"] if is_not_sent(j.get("raw"))), None)
                 if first is not None:
-                    warn_not_sent(name, idx, first["question"], first["raw"])
+                    warn_not_sent(name, idx, first["question"], first["raw"],
+                                  getattr(judge, "over_length_advice", None))
                     warned = True
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
             f.flush()

@@ -420,7 +420,7 @@ def not_sent_line(d: dict, bold=("**", "**")) -> str:
     b0, b1 = bold
     return (f"{b0}{k}/{int(d['n'])} questions not sent{b1}: the runtime would have read them "
             "truncated (`max_length_exceeded`); counted wrong, confidence unknown. Check the "
-            "token budgets before reading the numbers.")
+            "input length against the judge's window before reading the numbers.")
 
 
 def confidence_coverage(d: dict) -> dict:

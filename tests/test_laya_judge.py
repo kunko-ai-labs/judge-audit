@@ -160,6 +160,16 @@ def test_only_the_questions_that_do_not_fit_are_withheld():
     assert team.decision == "cards" and team.confidence == 0.8
 
 
+def test_the_over_length_warning_names_laya_budgets_only(over_length_warning):
+    def too_many(agent, state, qdef):
+        return 20, [4] * 77, 30
+
+    message, variables = over_length_warning(LayaJudge(agent=FakeAgent({}),
+                                                       token_counts=too_many))
+    assert "budgets max_len=512, head_max_len=192" in message
+    assert "raise LAYA_MAX_LEN / LAYA_HEAD_MAX_LEN" in message and variables == {"LAYA_"}
+
+
 # --- against the real package, where it is installed -----------------------------------------
 
 

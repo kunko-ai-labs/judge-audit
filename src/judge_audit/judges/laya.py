@@ -155,6 +155,8 @@ def laya_question(q: Question) -> dict:
 
 class LayaJudge(Judge):
     name = "laya"
+    over_length_advice = ("raise LAYA_MAX_LEN / LAYA_HEAD_MAX_LEN (outside the budget Laya was "
+                          "trained with) or shortlist the options")
 
     def __init__(self, model: str | None = None, revision: str | None = None,
                  device: str | None = None, agent=None, version: str | None = None,

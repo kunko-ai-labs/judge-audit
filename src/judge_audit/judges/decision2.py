@@ -35,7 +35,8 @@ What is recorded, and why:
   of device; a revision or device without recorded outputs is loaded and marked `unchecked`
   in the provenance.
 - **Over-length input is not truncated.** The runtime answers `max_length_exceeded` instead;
-  the adapter records it as no answer, with the error in `raw`.
+  the adapter records it as no answer, with the error in `raw` and, in `raw.problems`, that
+  the runtime refused it.
 
 Environment:
   DECISION2_MODEL     Hub id or local directory (default vllm-sr/Decision-2.0-Kai-0.6B)

@@ -147,18 +147,20 @@ def is_not_sent(raw) -> bool:
     return isinstance(raw, dict) and raw.get("error") == NOT_SENT_ERROR
 
 
-def warn_not_sent(judge_name: str, idx: int, question: str, raw: dict) -> None:
-    """One loud line the first time a run withholds a question: a budget too small for
-    the dataset otherwise finishes hours later with every row a silent no answer."""
+def warn_not_sent(judge_name: str, idx: int, question: str, raw: dict,
+                  advice: str | None = None) -> None:
+    """One loud line the first time a run withholds a question: input too long for the
+    judge otherwise finishes hours later with every row a silent no answer. `advice` is the
+    judge's own `over_length_advice` (the base class has a generic one)."""
     budgets = ", ".join(f"{k}={raw[k]}" for k in ("max_len", "head_max_len") if k in raw)
     problems = "; ".join(str(p) for p in raw.get("problems") or [])
     warnings.warn(
         f"{judge_name}: row {idx}, question {question!r} was not sent: the runtime would "
         f"read it truncated ({problems or 'over length'}"
         f"{'; budgets ' + budgets if budgets else ''}). It is recorded as no answer and "
-        "counted wrong, as is any later one (`not_sent` in the summary). If this was "
-        "not intended, stop the run and raise the token budgets (for laya, LAYA_MAX_LEN / "
-        "LAYA_HEAD_MAX_LEN) or shorten the options.", NotSentWarning, stacklevel=2)
+        "counted wrong, as is any later one (`not_sent` in the summary). If this was not "
+        f"intended, stop the run and {advice or Judge.over_length_advice}.",
+        NotSentWarning, stacklevel=2)
 
 
 def questions_of(row: dict) -> list[Question]:
@@ -579,7 +581,8 @@ def run_audit(judge: Judge, rows: list[dict], labels_path: str | None = None,
             first = next((r for r in new
                           if r["parse_status"] == "no_answer" and is_not_sent(r["raw"])), None)
             if first is not None:
-                warn_not_sent(judge.name, idx, first["question"], first["raw"])
+                warn_not_sent(judge.name, idx, first["question"], first["raw"],
+                              getattr(judge, "over_length_advice", None))
                 warned = True
         records += new
     run = run_metadata(judge, labels_path, len(rows), dataset_meta)

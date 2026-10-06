@@ -45,6 +45,10 @@ class Judge:
     """Implement decide(); judge-audit handles the rest."""
 
     name: str = "judge"
+    # What to do when the judge withholds a question as over length (`raw.error`
+    # max_length_exceeded); the runner's warning prints it. Adapters with budgets override it.
+    over_length_advice: str = ("shorten the state or the options, or ask fewer questions "
+                               "per row")
 
     def decide(self, state: str, questions: list[Question]) -> list[Judgment]:
         raise NotImplementedError
