@@ -98,8 +98,8 @@ JUDGE_INFO: dict[str, dict[str, object]] = {
                        "locally at a pinned revision. Confidence is P(chosen option), never its "
                        "entropy-based confidence field; the model card's example is checked "
                        "against recorded outputs before any decision.",
-        "env": ["extra [decision2]", "DECISION2_MODEL, DECISION2_REVISION (pinned by default "
-                "for the six released models), DECISION2_DEVICE (optional)"],
+        "env": ["extra [decision2]", ("DECISION2_MODEL, DECISION2_REVISION (pinned by default "
+                                      "for the six released models), DECISION2_DEVICE (optional)")],
     },
     "simulated": {
         "description": "Seeded simulator to see the pipeline without a key. Not a real "
