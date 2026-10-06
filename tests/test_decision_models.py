@@ -142,13 +142,14 @@ def test_decider_reference_is_enforced_on_cpu_only_mps_and_cuda_are_unchecked():
 
 
 def test_decider_defaults_to_cpu_not_mps_on_apple_silicon(monkeypatch):
-    import torch
-
-    monkeypatch.setattr(torch.cuda, "is_available", lambda: False)
-    monkeypatch.setattr(torch.backends.mps, "is_available", lambda: True)
+    # A stand-in torch, so the rule is checked on CI too, where the `decider` extra is absent.
+    cuda = SimpleNamespace(is_available=lambda: False)
+    mps = SimpleNamespace(is_available=lambda: True)
+    monkeypatch.setitem(sys.modules, "torch",
+                        SimpleNamespace(cuda=cuda, backends=SimpleNamespace(mps=mps)))
     assert decider.default_device(None) == "cpu"
     assert decider.default_device("mps") == "mps"              # only when asked
-    monkeypatch.setattr(torch.cuda, "is_available", lambda: True)
+    cuda.is_available = lambda: True
     assert decider.default_device(None) == "cuda"
 
 
