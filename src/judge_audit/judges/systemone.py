@@ -193,17 +193,23 @@ class LocalSystemOneJudge(Judge):
         self.info = dict(info or {})
         self.label = self.model_id.rstrip("/").split("/")[-1]
         self.name = f"{self.family}:{self.label}"
-        self.preflight()
+        self._check_tokenizer()
         self.info["reference_check"] = self._check_reference()
 
     # ------------------------------------------------------------------ to override
     def load(self, model_id: str, revision: str | None, device: str | None) -> tuple[Any, dict]:
         raise NotImplementedError
 
-    def preflight(self) -> None:
-        """Checks on the loaded model that must pass before the reference request."""
-
     # ------------------------------------------------------------------ shared
+    def _check_tokenizer(self) -> None:
+        """Refuse before the reference request when the loader recorded a tokenizer that
+        encodes its probes differently from the package's tokenizer.json."""
+        check = self.info.get("tokenizer_check") or {}
+        if check.get("matches_tokenizer_json") is False:
+            raise RuntimeError(f"{self.label}: the tokenizer loaded encodes "
+                               f"{check['differing_probes']} differently from the package's "
+                               "tokenizer.json; outputs would change")
+
     def _check_reference(self) -> dict:
         # Numerics differ by device (precision, kernels), so outputs are recorded per kind of
         # device; "*" marks outputs that hold on every device within the tolerance.

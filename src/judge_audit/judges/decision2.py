@@ -192,10 +192,3 @@ class Decision2Judge(LocalSystemOneJudge):
 
     def load(self, model_id: str, revision: str | None, device: str | None):
         return _load(model_id, revision, device)
-
-    def preflight(self) -> None:
-        check = self.info.get("tokenizer_check") or {}
-        if check.get("matches_tokenizer_json") is False:
-            raise RuntimeError(f"{self.label}: the tokenizer loaded encodes "
-                               f"{check['differing_probes']} differently from the package's "
-                               "tokenizer.json; outputs would change")
