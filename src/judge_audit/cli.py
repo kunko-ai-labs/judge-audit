@@ -17,6 +17,9 @@ from typing import NoReturn
 from . import __version__
 from .certificate import DEFAULT_TARGETS, PRIMARY_TARGET, scope_changes
 from .ground_truth import ground_truth_of
+from .judges.clef import ClefJudge
+from .judges.decider import DeciderJudge
+from .judges.decision2 import Decision2Judge
 from .judges.finetuned import FinetunedJudge
 from .judges.jev import JevJudge
 from .judges.laya import LayaJudge
@@ -24,6 +27,7 @@ from .judges.llm import LLMJudge
 from .judges.logprob import LogprobJudge
 from .judges.nli import NLIJudge
 from .judges.simulated import SIMULATED_TAG, SimulatedJudge
+from .judges.strands import StrandsJudge
 from .report import (
     IncompatibleBaseline,
     certificate_summary,
@@ -44,7 +48,8 @@ from .runner import (
     write_judgments,
 )
 
-JUDGES = ("jev", "llm", "nli", "finetuned", "laya", "logprob", "simulated")
+JUDGES = ("jev", "llm", "nli", "finetuned", "laya", "decision2", "decider", "strands", "clef",
+          "logprob", "simulated")
 
 
 def _die(msg: str) -> NoReturn:
@@ -89,6 +94,14 @@ def _judge(name: str, rows: list | None = None):
         return LogprobJudge(), ""
     if name == "laya":
         return LayaJudge(), ""
+    if name == "decision2":
+        return Decision2Judge(), ""
+    if name == "decider":
+        return DeciderJudge(), ""
+    if name == "strands":
+        return StrandsJudge(), ""
+    if name == "clef":
+        return ClefJudge(), ""
     if name == "simulated":
         return SimulatedJudge(rows or []), SIMULATED_TAG
     _die(f"unknown judge '{name}' (available: {', '.join(JUDGES)})")
@@ -107,6 +120,8 @@ def _parser() -> argparse.ArgumentParser:
                    help="jev: AI_GATEWAY_API_KEY (or JEV_ENDPOINT) · llm: any chat model · "
                         "nli: local zero-shot encoder (control) · finetuned: your own "
                         "classifier, FINETUNED_MODEL_DIR · laya: open judgment model, local · "
+                        "decision2 / decider / strands / clef: open decision models, local, "
+                        "pinned revision · "
                         "logprob: an open model's own option probabilities, MLX · see "
                         "docs/judges.md · simulated: nothing")
     r.add_argument("--format", choices=["md", "html"], default="md")
