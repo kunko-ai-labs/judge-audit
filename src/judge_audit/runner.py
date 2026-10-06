@@ -612,7 +612,8 @@ def canonical_judgments(records: list[dict]) -> bytes:
 
     Each record as `write_judgments` writes it and a reader loads it back, one per line,
     sorted by (`idx`, `question`) whatever order the judge answered in (a record without
-    them sorts as idx -1 and keeps its order). Each line is
+    them sorts as idx -1 and keeps its order; an `idx` that is present but not an integer,
+    `null` included, is refused with a `ValueError`). Each line is
     `json.dumps(record, sort_keys=True, separators=(",", ":"), ensure_ascii=False)`
     followed by `\n`: keys sorted at every depth, no spaces, non-ASCII written as is,
     floats in Python's shortest round-trip repr (the same on 3.10-3.12; `1.0` stays
@@ -623,6 +624,12 @@ def canonical_judgments(records: list[dict]) -> bytes:
     # as `write_judgments` writes it and a reader loads it back: keys become strings and
     # tuples lists, so the in-memory records and the file give the same bytes
     loaded = [json.loads(json.dumps(r, ensure_ascii=False)) for r in records]
+    for r in loaded:
+        idx = r.get("idx", -1)
+        if isinstance(idx, bool) or not isinstance(idx, int):
+            raise ValueError(f"a judgment's idx must be an integer row index, got {idx!r} "
+                             f"(question {r.get('question')!r}): its place in the digest "
+                             "would be undefined")
     ordered = sorted(loaded, key=lambda r: (r.get("idx", -1), str(r.get("question", ""))))
     return "".join(json.dumps(r, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
                    + "\n" for r in ordered).encode("utf-8")

@@ -6,9 +6,14 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
+from pathlib import Path
 
+import pytest
+
+import judge_audit
 from judge_audit.runner import (
     canonical_judgments,
     judgments_digest,
@@ -27,6 +32,11 @@ FIXTURE = [   # deliberately out of order, with a non-ASCII value and nested key
      "confidence": 1.0, "parse_status": "parsed", "latency_s": 0.2, "cost_usd": 0.001,
      "meta": {}, "raw": {}},
 ]
+# A child interpreter finds the package under test whatever PYTHONPATH says (a relative
+# one breaks once the child runs in another directory).
+CHILD_ENV = {**os.environ, "PYTHONPATH": os.pathsep.join(
+    [str(Path(judge_audit.__file__).resolve().parents[1])]
+    + [os.path.abspath(p) for p in os.environ.get("PYTHONPATH", "").split(os.pathsep) if p])}
 CANONICAL = (
     '{"confidence":1.0,"correct":false,"cost_usd":0.001,"decision":"b","expected":"a",'
     '"idx":0,"latency_s":0.2,"meta":{},"parse_status":"parsed","question":"intent",'
@@ -63,7 +73,7 @@ def test_the_digest_is_the_same_on_every_supported_python():
     code = ("import json,sys;from judge_audit.runner import judgments_digest;"
             "print(judgments_digest(json.loads(sys.stdin.read())))")
     out = subprocess.run([sys.executable, "-c", code], input=json.dumps(FIXTURE),
-                         capture_output=True, text=True, check=True).stdout.strip()
+                         capture_output=True, text=True, check=True, env=CHILD_ENV).stdout.strip()
     assert out == PINNED
 
 
@@ -111,7 +121,14 @@ def test_audit_resumable_writes_the_digest_of_its_records(root, tmp_path):
 
 def test_the_cli_result_names_the_judgments_file_it_wrote(labels_path, tmp_path):
     r = subprocess.run([sys.executable, "-m", "judge_audit.cli", "run", str(labels_path),
-                        "--judge", "simulated"], cwd=tmp_path, capture_output=True, text=True)
+                        "--judge", "simulated"], cwd=tmp_path, capture_output=True, text=True,
+                       env=CHILD_ENV)
     assert r.returncode == 0, r.stderr
     res = json.loads((tmp_path / "audit-result.json").read_text(encoding="utf-8"))
     assert verify_judgments(res, str(tmp_path / "audit-judgments.jsonl")) is None
+
+
+@pytest.mark.parametrize("bad", [None, "0", 1.0, True])
+def test_an_idx_that_is_not_an_integer_is_refused_not_ordered_by_chance(bad):
+    with pytest.raises(ValueError, match="idx must be an integer"):
+        judgments_digest([FIXTURE[0], dict(FIXTURE[1], idx=bad)])
