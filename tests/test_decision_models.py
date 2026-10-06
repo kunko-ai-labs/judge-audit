@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 from types import SimpleNamespace
 
 import pytest
@@ -117,9 +118,9 @@ def test_decider_state_budget_by_hand():
 
 
 def test_decider_reference_is_enforced_on_cpu_only_mps_and_cuda_are_unchecked():
-    """CPU outputs are recorded; MPS float16 did not reproduce between two Python environments
-    on one machine (billing 0.5122 against 0.5155 on the same single question), so nothing is
-    enforced there."""
+    """CPU outputs are recorded; MPS float16 changes with whether mlx is installed (billing
+    0.5122 with it, 0.5155 without, on the same single question), so nothing is enforced
+    there."""
     sha = decider.PINNED_REVISIONS["Mapika/decider-2b"]
     assert {k[2] for k in decider.REFERENCE_OUTPUTS} == {"cpu"}
     cpu = decider.REFERENCE_OUTPUTS[("Mapika/decider-2b", sha, "cpu")]
@@ -212,6 +213,17 @@ def test_on_mps_each_question_goes_in_its_own_request_so_co_questions_cannot_mov
     assert together["answers"]["route"] == alone["answers"]["route"]
     assert fake.requests == [["route"], ["again"]]
     assert together["usage"] == {"input_tokens": 20, "output_tokens": 0}
+
+
+def test_mlx_loaded_reports_whether_mlx_core_is_imported(monkeypatch):
+    """On MPS decider's own code uses an MLX kernel when mlx imports, which changes its
+    half-precision answers: the provenance records whether it was loaded."""
+    monkeypatch.setitem(sys.modules, "mlx.core", object())
+    assert decider.mlx_loaded() is True
+    monkeypatch.setitem(sys.modules, "mlx.core", None)          # a blocked import
+    assert decider.mlx_loaded() is False
+    monkeypatch.delitem(sys.modules, "mlx.core")
+    assert decider.mlx_loaded() is False
 
 
 # --- Strands Decider --------------------------------------------------------------------------
@@ -355,6 +367,7 @@ def test_smoke_decider_2b():
     assert d["reference_check"]["status"] == (
         "passed" if d["device"].split(":")[0] == "cpu" else "unchecked")
     assert d["questions_per_request"] == (1 if d["device"].startswith("mps") else "all")
+    assert d["mlx_loaded"] is decider.mlx_loaded()
     state = "My card was charged twice for the same purchase."
     (out,) = j.decide(state, [ROUTE])
     assert out.decision in ROUTE.options

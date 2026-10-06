@@ -19,17 +19,20 @@ What is recorded, and why (see `systemone.py` for what every local decision mode
   and per-type values applied are recorded.
 - **CPU by default on Apple silicon.** decider runs in float16 on Apple MPS and bfloat16
   elsewhere; the dtype loaded is recorded. The two precisions choose differently on the model
-  card's own example, and float16 on MPS did not reproduce between two Python environments
-  on one machine (an Apple M4): the same single question gave billing at 0.5122 in one and
-  0.5155 in the other (up to 0.0034 apart), with the same torch and transformers; the cause is
-  not established. float32 on MPS gave 0.5149 in both, an observation, not a guarantee. So this
-  adapter uses CUDA where present and the CPU otherwise; MPS runs only when DECIDER_DEVICE
-  asks for it, and then with its reference check `unchecked`, as on CUDA.
-- **One question per request on MPS.** On MPS a question's answer also depends on the other
-  questions in the same request (they are padded into one float16 batch), where decider's own
-  docstring says that other questions cannot change an answer. On MPS the adapter therefore
-  sends each question in its own request (`questions_per_request` 1 in the provenance); on CPU
-  and CUDA it sends them together, as decider does.
+  card's own example. On MPS, decider's own code (`decider/mps_ops.py`) inverts a matrix with
+  an MLX Metal kernel when the `mlx` package can be imported, and with PyTorch otherwise; in
+  float16 and bfloat16 that changes the answer (the same single question gave billing 0.5122
+  with mlx, 0.5155 without, on one Apple M4; float32 gave 0.5149 either way, and the CPU is
+  identical either way). Whether mlx was loaded is recorded (`mlx_loaded`). An MPS result
+  therefore depends on what else is installed, so this adapter uses CUDA where present and the
+  CPU otherwise; MPS runs only when DECIDER_DEVICE asks for it, and then with its reference
+  check `unchecked`, as on CUDA.
+- **One question per request on MPS.** In float16 on MPS a question's answer also depends on
+  the other questions of the request, which share one padded batch: with mlx, billing 0.5122
+  alone and 0.5155 together; without it, the same question agreed but another moved (0.5809
+  alone, 0.5796 together). On CPU the two are identical. On MPS the adapter therefore sends
+  each question in its own request (`questions_per_request` 1 in the provenance); on CPU and
+  CUDA it sends them together, as decider does.
 - **One size per process.** decider's code is imported from the snapshot of the model loaded;
   a second size (another snapshot) in the same process is refused. Run each size in its own
   process (an Arena or MCP run over several sizes included).
@@ -78,9 +81,8 @@ REFERENCE_QUESTIONS = {
 }
 # Its answers by (model, revision, kind of device), recorded with transformers 5.17.0 and torch
 # 2.14.0 on CPU (bfloat16, decider's default there). None are recorded for MPS: float16 there
-# differed by up to 0.0034 between two Python environments on one Apple M4 on this example
-# (department, asked alone: billing 0.5122 in one, 0.5155 in the other; cause not
-# established), so no MPS value is enforced.
+# changes with whether mlx is installed (department, asked alone: billing 0.5122 with mlx,
+# 0.5155 without), so no MPS value is enforced.
 REFERENCE_OUTPUTS: dict[tuple[str, str, str], dict] = {
     (DEFAULT_MODEL, PINNED_REVISIONS[DEFAULT_MODEL], "cpu"): {
         "department": {"type": "choice", "choice": "returns",
@@ -124,9 +126,14 @@ class _DeciderSystem:
         return []
 
 
+def mlx_loaded() -> bool:
+    """Whether `mlx.core` is imported in this process (a blocked import, None, is not)."""
+    return sys.modules.get("mlx.core") is not None
+
+
 def default_device(requested: str | None) -> str:
     """The device asked for, else CUDA if present, else the CPU: never MPS unasked, whose
-    float16 outputs did not reproduce between environments on one machine."""
+    float16 outputs depend on whether mlx is installed."""
     if requested:
         return requested
     import torch
@@ -183,6 +190,9 @@ def _load(model_id: str, revision: str | None, device: str | None):
         "transformers_version": transformers.__version__,
         "torch_version": torch.__version__,
         "loader_warnings": messages,
+        # on MPS decider uses an MLX kernel when mlx imports, which changes half-precision
+        # answers; the CPU path does not use it
+        "mlx_loaded": mlx_loaded(),
     }
     one_per_request = str(d.dev).startswith("mps")
     info["questions_per_request"] = 1 if one_per_request else "all"
