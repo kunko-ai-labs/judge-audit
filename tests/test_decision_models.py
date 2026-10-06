@@ -117,8 +117,9 @@ def test_decider_state_budget_by_hand():
 
 
 def test_decider_reference_is_enforced_on_cpu_only_mps_and_cuda_are_unchecked():
-    """CPU outputs are recorded; MPS float16 did not reproduce across two Apple M4 machines
-    (billing 0.5122 against 0.5155 on the same single question), so nothing is enforced there."""
+    """CPU outputs are recorded; MPS float16 did not reproduce between two Python environments
+    on one machine (billing 0.5122 against 0.5155 on the same single question), so nothing is
+    enforced there."""
     sha = decider.PINNED_REVISIONS["Mapika/decider-2b"]
     assert {k[2] for k in decider.REFERENCE_OUTPUTS} == {"cpu"}
     cpu = decider.REFERENCE_OUTPUTS[("Mapika/decider-2b", sha, "cpu")]
@@ -126,16 +127,16 @@ def test_decider_reference_is_enforced_on_cpu_only_mps_and_cuda_are_unchecked():
     j, _ = make(DeciderJudge, revision_info={"loaded_revision": sha, "device": "cpu"},
                 reference=cpu, reference_state=decider.REFERENCE_STATE)
     assert j.describe()["reference_check"]["status"] == "passed"
-    mps_one_machine = {**cpu, "department": {"type": "choice", "choice": "billing",
-                                             "probabilities": {"returns": 0.479,
-                                                               "billing": 0.5122,
-                                                               "other": 0.0088}}}
+    mps_float16 = {**cpu, "department": {"type": "choice", "choice": "billing",
+                                         "probabilities": {"returns": 0.479,
+                                                           "billing": 0.5122,
+                                                           "other": 0.0088}}}
     with pytest.raises(RuntimeError, match="department: chose 'billing', reference 'returns'"):
         make(DeciderJudge, revision_info={"loaded_revision": sha, "device": "cpu"},
-             reference=mps_one_machine, reference_state=decider.REFERENCE_STATE)
+             reference=mps_float16, reference_state=decider.REFERENCE_STATE)
     for device in ("mps", "cuda:0"):
         j, _ = make(DeciderJudge, revision_info={"loaded_revision": sha, "device": device},
-                    reference=mps_one_machine, reference_state=decider.REFERENCE_STATE)
+                    reference=mps_float16, reference_state=decider.REFERENCE_STATE)
         assert j.describe()["reference_check"]["status"] == "unchecked"
 
 

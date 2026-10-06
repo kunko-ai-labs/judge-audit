@@ -19,9 +19,10 @@ What is recorded, and why (see `systemone.py` for what every local decision mode
   and per-type values applied are recorded.
 - **CPU by default on Apple silicon.** decider runs in float16 on Apple MPS and bfloat16
   elsewhere; the dtype loaded is recorded. The two precisions choose differently on the model
-  card's own example, and float16 on MPS does not reproduce across machines: the same single
-  question gave billing at 0.5122 on one Apple M4 and 0.5155 on another (up to 0.0034 between
-  the two, same torch and transformers; float32 on MPS agreed, 0.5149 on both). So this
+  card's own example, and float16 on MPS did not reproduce between two Python environments
+  on one machine (an Apple M4): the same single question gave billing at 0.5122 in one and
+  0.5155 in the other (up to 0.0034 apart), with the same torch and transformers; the cause is
+  not established. float32 on MPS gave 0.5149 in both, an observation, not a guarantee. So this
   adapter uses CUDA where present and the CPU otherwise; MPS runs only when DECIDER_DEVICE
   asks for it, and then with its reference check `unchecked`, as on CUDA.
 - **One question per request on MPS.** On MPS a question's answer also depends on the other
@@ -77,8 +78,9 @@ REFERENCE_QUESTIONS = {
 }
 # Its answers by (model, revision, kind of device), recorded with transformers 5.17.0 and torch
 # 2.14.0 on CPU (bfloat16, decider's default there). None are recorded for MPS: float16 there
-# differed by up to 0.0034 between two Apple M4 machines on this example (department, asked
-# alone: billing 0.5122 on one, 0.5155 on the other), so no MPS value is enforced.
+# differed by up to 0.0034 between two Python environments on one Apple M4 on this example
+# (department, asked alone: billing 0.5122 in one, 0.5155 in the other; cause not
+# established), so no MPS value is enforced.
 REFERENCE_OUTPUTS: dict[tuple[str, str, str], dict] = {
     (DEFAULT_MODEL, PINNED_REVISIONS[DEFAULT_MODEL], "cpu"): {
         "department": {"type": "choice", "choice": "returns",
@@ -124,7 +126,7 @@ class _DeciderSystem:
 
 def default_device(requested: str | None) -> str:
     """The device asked for, else CUDA if present, else the CPU: never MPS unasked, whose
-    float16 outputs do not reproduce across machines."""
+    float16 outputs did not reproduce between environments on one machine."""
     if requested:
         return requested
     import torch
