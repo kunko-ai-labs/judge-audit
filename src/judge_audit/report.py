@@ -410,6 +410,19 @@ def completeness_line(d: dict, bold=("**", "**")) -> str:
             f"{int(c['unexpected'])} answers to questions not asked (dropped)")
 
 
+def not_sent_line(d: dict, bold=("**", "**")) -> str:
+    """The questions withheld as over-length, when there are any: they are in `n` as wrong
+    answers, and a run where they are many measured its budget, not the judge.
+    Only an integer goes into it, so it needs no escaping in HTML."""
+    k = int(d.get("not_sent") or 0)
+    if not k:
+        return ""
+    b0, b1 = bold
+    return (f"{b0}{k}/{int(d['n'])} questions not sent{b1}: the runtime would have read them "
+            "truncated (`max_length_exceeded`); counted wrong, confidence unknown. Check the "
+            "token budgets before reading the numbers.")
+
+
 def confidence_coverage(d: dict) -> dict:
     """Normalise the JSON coverage field, including reports written before it existed."""
     value = d.get("confidence")
@@ -467,6 +480,7 @@ def render_markdown(result: AuditResult) -> str:
         f"· cost {fmt_cost(d.get('total_cost_usd'))} · p50 **{d['p50_latency_s']}s** · "
         f"p99 **{d['p99_latency_s']}s**{slowest(d)}",
         *([complete] if complete else []),
+        *([withheld] if (withheld := not_sent_line(d)) else []),
         "",
         *provenance_lines(d.get("run", {})),
         *regeneration_lines(d),
@@ -680,6 +694,9 @@ def render_html(result: AuditResult, tag: str = "") -> str:
                        if d.get("regenerated") else "")
     complete = (f'<p class="metric">{completeness_line(d, ("<b>", "</b>"))}</p>'
                 if d.get("completeness") else "")
+    if d.get("not_sent"):
+        complete += (f'<p class="metric">'
+                     f'{not_sent_line(d, ("<b>", "</b>")).replace("`", "")}</p>')
     return f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Audit report — {judge}</title>

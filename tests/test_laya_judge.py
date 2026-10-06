@@ -151,7 +151,6 @@ def test_only_the_questions_that_do_not_fit_are_withheld():
     agent = FakeAgent({"team": {"type": "choice", "choice": "cards",
                                 "probabilities": {"billing": 0.2, "cards": 0.8}}})
 
-
     def counts(agent, state, qdef):
         return (5, [60, 3], 10) if "card_arrival" in qdef["criteria"] else (5, [3, 3], 10)
 

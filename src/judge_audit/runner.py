@@ -7,6 +7,7 @@ import math
 import os
 import platform
 import urllib.parse
+import warnings
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -85,6 +86,10 @@ class AuditResult:
     # How much the judge can decide alone at each target risk, the threshold to deploy and
     # a bound on its error (certificate.py; docs/judges.md § The safe automation rate).
     certificate: dict = field(default_factory=dict)
+    # Questions the adapter did not send because the runtime would have read them truncated
+    # (`raw.error` max_length_exceeded): no answers, counted wrong, and usually a
+    # misconfigured budget. In the JSON only when there are some.
+    not_sent: int = 0
 
     def to_dict(self) -> dict:
         d = {
@@ -114,6 +119,8 @@ class AuditResult:
             d["certificate"] = self.certificate
         if self.completeness:
             d["completeness"] = self.completeness
+        if self.not_sent:
+            d["not_sent"] = self.not_sent
         if self.regenerated:
             d["regenerated"] = self.regenerated
         return d
@@ -126,6 +133,32 @@ def _percentile(xs: list[float], p: float) -> float:
     if not xs:
         return 0.0
     return interpolated_quantile(sorted(xs), p / 100)
+
+
+NOT_SENT_ERROR = "max_length_exceeded"
+
+
+class NotSentWarning(UserWarning):
+    """A question was not sent because the runtime would have read it truncated."""
+
+
+def is_not_sent(raw) -> bool:
+    """A judgment the adapter withheld as over-length (`raw.error` max_length_exceeded)."""
+    return isinstance(raw, dict) and raw.get("error") == NOT_SENT_ERROR
+
+
+def warn_not_sent(judge_name: str, idx: int, question: str, raw: dict) -> None:
+    """One loud line the first time a run withholds a question: a budget too small for
+    the dataset otherwise finishes hours later with every row a silent no answer."""
+    budgets = ", ".join(f"{k}={raw[k]}" for k in ("max_len", "head_max_len") if k in raw)
+    problems = "; ".join(str(p) for p in raw.get("problems") or [])
+    warnings.warn(
+        f"{judge_name}: row {idx}, question {question!r} was not sent: the runtime would "
+        f"read it truncated ({problems or 'over length'}"
+        f"{'; budgets ' + budgets if budgets else ''}). It is recorded as no answer and "
+        "counted wrong, as is any later one (`not_sent` in the summary). If this was "
+        "not intended, stop the run and raise the token budgets (for laya, LAYA_MAX_LEN / "
+        "LAYA_HEAD_MAX_LEN) or shorten the options.", NotSentWarning, stacklevel=2)
 
 
 def questions_of(row: dict) -> list[Question]:
@@ -369,6 +402,8 @@ def summarize(judge_name: str, records: list[dict], run: dict | None = None,
         ci = bootstrap_enabled()
     return AuditResult(
         judge=judge_name, n=total,
+        not_sent=sum(r.get("parse_status") == "no_answer" and is_not_sent(r.get("raw"))
+                     for r in records),
         accuracy=round(hits / total, 4) if total else 0.0,
         confidence={"known": known, "total": total},
         ece=(round(expected_calibration_error(confidences, correct), 4) if known else None),
@@ -537,8 +572,16 @@ def run_audit(judge: Judge, rows: list[dict], labels_path: str | None = None,
     counts = {"expected": 0, "answered": 0, "missing": 0, "unexpected": 0}
     for idx, row in enumerate(rows):  # every row, before the first (paid) call
         dataset_gaps(idx, row)
+    warned = False
     for idx, row in enumerate(rows):
-        records += reconcile(idx, row, judge.decide(row["state"], questions_of(row)), counts)
+        new = reconcile(idx, row, judge.decide(row["state"], questions_of(row)), counts)
+        if not warned:
+            first = next((r for r in new
+                          if r["parse_status"] == "no_answer" and is_not_sent(r["raw"])), None)
+            if first is not None:
+                warn_not_sent(judge.name, idx, first["question"], first["raw"])
+                warned = True
+        records += new
     run = run_metadata(judge, labels_path, len(rows), dataset_meta)
     served = served_versions(records)
     if served:                    # before summarize: the safe automation rate's scope names it

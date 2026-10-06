@@ -39,6 +39,7 @@ from judge_audit.runner import (  # noqa: E402
     dataset_gaps,
     display_path,
     groups_of,
+    is_not_sent,
     load_dataset,
     missing_answer,
     questions_of,
@@ -46,6 +47,7 @@ from judge_audit.runner import (  # noqa: E402
     served_versions,
     sha256_of,
     summarize,
+    warn_not_sent,
 )
 
 REAL_BANNER = ("> **REAL VENDOR AUDIT** — TypeSafe Jev via the AI Gateway evaluate API (not simulated). "
@@ -241,6 +243,7 @@ def main() -> None:
             header = {"idx": -1, "run": started}
             f.write(json.dumps(header) + "\n")
             done[-1] = header  # the report reads the run time from here, as a rerun would
+        warned = False  # one not-sent warning per invocation, at the first such row
         for idx in wanted:
             row = rows[idx]
             if idx in done:
@@ -269,6 +272,11 @@ def main() -> None:
                     else:
                         raise
             rec = checkpoint_row(idx, row, judgments)
+            if not warned:
+                first = next((j for j in rec["judgments"] if is_not_sent(j.get("raw"))), None)
+                if first is not None:
+                    warn_not_sent(name, idx, first["question"], first["raw"])
+                    warned = True
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
             f.flush()
             done[idx] = rec
@@ -287,6 +295,7 @@ def main() -> None:
     confidence = result.confidence
     cost = f"${result.total_cost_usd:.4f}" if result.total_cost_usd is not None else "unknown"
     print(f"judge={result.judge} n={result.n} accuracy={result.accuracy:.1%} "
+          f"{'not_sent=' + str(result.not_sent) + ' ' if result.not_sent else ''}"
           f"confidence_known={confidence['known']}/{confidence['total']} "
           f"ece={fmt4(result.ece)} ece_equal_mass={fmt4(result.ece_equal_mass)} "
           f"brier={fmt4(result.brier)} nll={'inf' if result.nll_infinite else fmt4(result.nll)} gt={result.run['dataset']['ground_truth']['tier']} "

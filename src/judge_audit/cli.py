@@ -243,6 +243,7 @@ def main(argv: list[str] | None = None) -> None:
               f"{certificate_summary(result.to_dict())} "
               f"answered={done['answered']}/{done['expected']} "
               f"{'unexpected=' + str(done['unexpected']) + ' ' if done['unexpected'] else ''}"
+              f"{'not_sent=' + str(result.not_sent) + ' ' if result.not_sent else ''}"
               f"confidence_known={confidence['known']}/{confidence['total']} "
               f"ece={fmt4(result.ece)}{interval(result.ece_ci)} "
               f"ece_equal_mass={fmt4(result.ece_equal_mass)}"

@@ -168,3 +168,37 @@ def test_a_checkpoint_is_not_resumed_against_another_endpoint(tmp_path, monkeypa
             "--out", str(tmp_path / "r.md"), "--json", str(tmp_path / "r.json")]
     p = run(args, tmp_path)
     assert p.returncode != 0 and "base_url='http://127.0.0.1:8'" in p.stderr
+
+
+def test_a_resumable_run_warns_once_when_a_question_is_not_sent(tmp_path, monkeypatch, capsys):
+    """An over-length no answer is as loud in a checkpointed run as in `judge-audit run`."""
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import audit_resumable
+
+    from judge_audit.judges.base import Judge, Judgment
+    from judge_audit.runner import NotSentWarning
+
+    class Withholds(Judge):
+        name = "withholds"
+
+        def decide(self, state, questions):
+            return [Judgment(question=q.name, decision="", confidence=None, latency_s=0.0,
+                             cost_usd=0.0, parse_status="no_answer",
+                             raw={"error": "max_length_exceeded", "problems": ["too long"]})
+                    for q in questions]
+
+    monkeypatch.setattr(audit_resumable, "_judge", lambda name, rows: (Withholds(), ""))
+    labels = tmp_path / "l.jsonl"
+    labels.write_text("".join(LABELS.read_text().splitlines(keepends=True)[:4]))
+    monkeypatch.setattr(sys, "argv", [
+        "audit_resumable.py", str(labels), "--judge", "withholds",
+        "--checkpoint", str(tmp_path / "c.ckpt.jsonl"),
+        "--out", str(tmp_path / "r.md"), "--json", str(tmp_path / "r.json")])
+    monkeypatch.setenv("JUDGE_AUDIT_BOOTSTRAP", "0")
+    with pytest.warns(NotSentWarning) as caught:
+        audit_resumable.main()
+    assert len([w for w in caught if w.category is NotSentWarning]) == 1
+    result = json.loads((tmp_path / "r.json").read_text())
+    assert result["not_sent"] == result["n"] > 0
+    assert f"not_sent={result['n']} " in capsys.readouterr().out
+    assert "questions not sent" in (tmp_path / "r.md").read_text()

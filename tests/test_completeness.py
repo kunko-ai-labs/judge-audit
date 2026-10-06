@@ -262,3 +262,52 @@ def test_a_dataset_error_is_found_before_the_first_call():
     with pytest.raises(IncompleteAnswers, match="blank or null"):
         run_audit(Scripted(answer), bad, ci=False)
     assert calls == []
+
+
+def withheld(q):
+    return Judgment(question=q, decision="", confidence=None, latency_s=0.0, cost_usd=0.0,
+                    parse_status="no_answer",
+                    raw={"error": "max_length_exceeded", "max_len": 512, "head_max_len": 192,
+                         "problems": ["the 77 options need 553 of head_max_len=192 tokens"]})
+
+
+def test_an_over_length_question_warns_once_and_is_counted_apart_from_answered():
+    from judge_audit.runner import NotSentWarning
+    with pytest.warns(NotSentWarning) as caught:
+        r = run_audit(Scripted(lambda s: [withheld("a"), right("b")]), rows(), ci=False)
+    assert len([w for w in caught if w.category is NotSentWarning]) == 1
+    message = str(caught[0].message)
+    assert "row 0, question 'a' was not sent" in message
+    assert "max_len=512, head_max_len=192" in message and "LAYA_HEAD_MAX_LEN" in message
+    # still an answered record (the adapter returned it), but counted on its own
+    assert r.completeness["answered"] == 8 and r.not_sent == 4
+    assert r.to_dict()["not_sent"] == 4
+    md = render_markdown(r)
+    assert "**4/8 questions not sent**" in md and "Check the token budgets" in md
+
+
+def test_a_run_with_nothing_withheld_says_nothing_about_it(recwarn):
+    from judge_audit.report import render_html
+    from judge_audit.runner import NotSentWarning
+    r = run_audit(Scripted(lambda s: [right("a"), right("b")]), rows(), ci=False)
+    assert not [w for w in recwarn if w.category is NotSentWarning]
+    assert r.not_sent == 0 and "not_sent" not in r.to_dict()
+    assert "not sent" not in render_markdown(r) and "not sent" not in render_html(r)
+
+
+def test_the_cli_summary_line_counts_what_was_not_sent(tmp_path, monkeypatch, capsys):
+    import json
+
+    from judge_audit import cli
+    labels = tmp_path / "labels.jsonl"
+    labels.write_text("".join(json.dumps(r) + "\n" for r in rows(3)))
+    monkeypatch.setattr(cli, "_judge", lambda name, rows: (
+        Scripted(lambda s: [withheld("a"), withheld("b")]), ""))
+    with pytest.warns(Warning, match="was not sent"):
+        cli.main(["run", str(labels), "--judge", "simulated", "--no-ci",
+                  "--out", str(tmp_path / "r.html"), "--format", "html",
+                  "--json", str(tmp_path / "r.json")])
+    out = capsys.readouterr().out
+    assert "answered=6/6 not_sent=6 confidence_known=0/6" in out
+    assert "6/6 questions not sent" in (tmp_path / "r.html").read_text()
+    assert json.loads((tmp_path / "r.json").read_text())["not_sent"] == 6
