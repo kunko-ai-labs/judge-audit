@@ -141,6 +141,7 @@
     },
     "checkpoint": "docs/runs/arena/gemma4/router-bare.ckpt.jsonl"
   },
+  "judgments_sha256": "249548aa71ba86e5a90efe27ddea80676ae67443f42e584fb8b2d2da3d2f73ae",
   "accuracy_ci": [
     0.4615,
     0.712
@@ -402,7 +403,7 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-06T20:00:30+00:00",
+    "utc": "2026-10-06T21:13:06+00:00",
     "judge_audit_version": "0.5.1",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/gemma4/router-bare.ckpt.jsonl",

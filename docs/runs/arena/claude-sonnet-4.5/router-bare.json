@@ -175,6 +175,7 @@
     ],
     "checkpoint": "docs/runs/arena/claude-sonnet-4.5/router-bare.ckpt.jsonl"
   },
+  "judgments_sha256": "d54d9c7a209c21e5c56cf17f30aa8ad8fe2d72ae0c99867b54c2948775b75d26",
   "accuracy_ci": [
     0.5191,
     0.7869
@@ -436,7 +437,7 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-06T20:00:30+00:00",
+    "utc": "2026-10-06T21:13:06+00:00",
     "judge_audit_version": "0.5.1",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/claude-sonnet-4.5/router-bare.ckpt.jsonl",

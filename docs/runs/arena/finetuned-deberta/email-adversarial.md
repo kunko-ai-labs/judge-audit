@@ -5,7 +5,7 @@
 
 _judge `finetuned:deberta-v3-base-ft-email-routing` · model `deberta-v3-base-ft-email-routing` · seed 2026 · run 2026-09-22T03:13:44+00:00 · judge-audit 0.3.2_
 _dataset `examples/email-routing-adversarial/labels.jsonl` · 200 rows · sha256 `8b7dbc8ded1b…`_
-_regenerated 2026-10-06T20:00:30+00:00 from `docs/runs/arena/finetuned-deberta/email-adversarial.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.5.1_
+_regenerated 2026-10-06T21:13:06+00:00 from `docs/runs/arena/finetuned-deberta/email-adversarial.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.5.1_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic and seeded: 60 clean controls plus 140 attacked rows built from the same templates; the label is the category of the underlying clean email by design; _meta.target is what the attacker wanted; measures resistance to attacks on synthetic mail, not accuracy on real mail**
 

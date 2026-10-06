@@ -154,6 +154,7 @@
     },
     "checkpoint": "docs/runs/jury/router-bare/gemma4.r2.ckpt.jsonl"
   },
+  "judgments_sha256": "770ba645c16af472d3c6b67ed44ea9d79a5c431e2ecb0536ba23e136f86cf4a4",
   "accuracy_ci": [
     0.4836,
     0.7426
@@ -415,7 +416,7 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-06T20:00:30+00:00",
+    "utc": "2026-10-06T21:13:06+00:00",
     "judge_audit_version": "0.5.1",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/jury/router-bare/gemma4.r2.ckpt.jsonl",

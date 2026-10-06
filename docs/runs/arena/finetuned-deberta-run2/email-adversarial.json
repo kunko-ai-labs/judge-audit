@@ -278,6 +278,7 @@
     },
     "checkpoint": "docs/runs/arena/finetuned-deberta-run2/email-adversarial.ckpt.jsonl"
   },
+  "judgments_sha256": "aa9f48486a4cf36e3747e70d6e82e6f4bd6c7cb4e5fa4ebd82523b689770aeff",
   "accuracy_ci": [
     0.9746,
     1.0
@@ -710,7 +711,7 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-06T20:00:30+00:00",
+    "utc": "2026-10-06T21:13:06+00:00",
     "judge_audit_version": "0.5.1",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/finetuned-deberta-run2/email-adversarial.ckpt.jsonl",

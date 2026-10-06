@@ -158,6 +158,7 @@
     },
     "checkpoint": "docs/runs/arena/deepseek-r1/router-described.ckpt.jsonl"
   },
+  "judgments_sha256": "470ba40df82fdc99fd2fc94aa7acb39c8d93b553d432a1d2bb2a2b54cf6c3a23",
   "accuracy_ci": [
     0.6992,
     0.8692
@@ -415,7 +416,7 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-06T20:00:30+00:00",
+    "utc": "2026-10-06T21:13:06+00:00",
     "judge_audit_version": "0.5.1",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/deepseek-r1/router-described.ckpt.jsonl",

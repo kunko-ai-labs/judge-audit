@@ -148,6 +148,7 @@
     },
     "checkpoint": "docs/runs/jury/router-bare/gemini-3-flash.r2.ckpt.jsonl"
   },
+  "judgments_sha256": "5899b59b865e0a06c792c0f83b068889873390c642e30815c5a781678954b8df",
   "accuracy_ci": [
     0.5217,
     0.7965
@@ -409,7 +410,7 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-06T20:00:30+00:00",
+    "utc": "2026-10-06T21:13:06+00:00",
     "judge_audit_version": "0.5.1",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/jury/router-bare/gemini-3-flash.r2.ckpt.jsonl",

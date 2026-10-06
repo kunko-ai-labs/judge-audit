@@ -277,6 +277,7 @@
     },
     "checkpoint": "docs/runs/arena/finetuned-deberta-run2/router-described.ckpt.jsonl"
   },
+  "judgments_sha256": "b606ce31bfc49ee751ec9749527b8061d0cd04c7ea494eb9194a04748865f4cb",
   "accuracy_ci": [
     0.9404,
     1.0
@@ -533,7 +534,7 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-06T20:00:30+00:00",
+    "utc": "2026-10-06T21:13:06+00:00",
     "judge_audit_version": "0.5.1",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/finetuned-deberta-run2/router-described.ckpt.jsonl",

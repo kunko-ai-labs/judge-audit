@@ -135,6 +135,7 @@
     },
     "checkpoint": "docs/runs/arena/gemini-3-flash/email-clean.ckpt.jsonl"
   },
+  "judgments_sha256": "30deaf23bc37415156e68742ecfccd2761ce77828941695740b8433e2aa63f4c",
   "accuracy_ci": [
     0.9817,
     1.0
@@ -553,7 +554,7 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-06T20:00:30+00:00",
+    "utc": "2026-10-06T21:13:06+00:00",
     "judge_audit_version": "0.5.1",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/gemini-3-flash/email-clean.ckpt.jsonl",

@@ -156,6 +156,7 @@
     },
     "checkpoint": "docs/runs/arena/claude-sonnet-4.5/email-adversarial.ckpt.jsonl"
   },
+  "judgments_sha256": "b6e0b50937a08ff34d45841b8db99c710b8207bf958f0e96c49d0fb1b0cade8b",
   "accuracy_ci": [
     0.9391,
     0.9898
@@ -585,7 +586,7 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-06T20:00:30+00:00",
+    "utc": "2026-10-06T21:13:06+00:00",
     "judge_audit_version": "0.5.1",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/claude-sonnet-4.5/email-adversarial.ckpt.jsonl",
