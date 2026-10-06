@@ -138,7 +138,15 @@ def _per_text(conf: list[float], ok: list[bool], keys: list[Hashable], n_texts: 
     return {"n": n_texts, "automated": res["covered"], "errors": res["errors"],
             "coverage": round(res["covered"] / n_texts, 4) if n_texts else 0.0,
             "threshold": res["threshold"], "risk_upper": _up(res["risk_upper"]),
-            "reason": res["reason"].replace("units", "texts") if res["reason"] else None}
+            "reason": res["reason"].replace("units", "texts") if res["reason"] else None,
+            "first_cut": _first_cut(res)}
+
+
+def _first_cut(cert: dict) -> dict | None:
+    """`certify_threshold`'s first cut, its bound published rounded up like every other;
+    its `units` are the row's unit (decisions, or texts in the per-text check)."""
+    fc = cert["first_cut"]
+    return None if fc is None else {**fc, "risk_upper": _up(fc["risk_upper"])}
 
 
 def _segments(segs: list, conf: list[float | None], ok: list[bool],
@@ -146,7 +154,9 @@ def _segments(segs: list, conf: list[float | None], ok: list[bool],
     """The deployed threshold applied to each segment: automated decisions, errors,
     observed rate and exact one-sided bound per segment (most error-prone first), the worst
     segment with at least MIN_SEGMENT automated decisions, how many have fewer and how many
-    errors sit in those (the worst ranked segment can be error-free while they hold them)."""
+    errors sit in those (the worst ranked segment can be error-free while they hold them).
+    A segment row exists only when a threshold passed, so its `first_cut` is always None:
+    the key is there so every row of the certificate has the same fields."""
     if threshold is None or all(s is None for s in segs):
         return {"segments": [], "worst_segment": None, "segments_too_small": 0,
                 "errors_in_small_segments": 0}
@@ -159,7 +169,8 @@ def _segments(segs: list, conf: list[float | None], ok: list[bool],
     rows: list[dict[str, Any]] = [
         {"segment": k, "automated": a, "errors": e,
          "rate": round(e / a, 4) if a else None,
-         "risk_upper": _up(risk_upper_bound(e, a, delta)) if a else None}
+         "risk_upper": _up(risk_upper_bound(e, a, delta)) if a else None,
+         "first_cut": None}
         for k, (a, e) in seen.items()]
     rows.sort(key=lambda s: (-(s["rate"] or 0.0), -(s["risk_upper"] or 0.0), s["segment"]))
     ranked = [s for s in rows if s["automated"] >= MIN_SEGMENT]
@@ -221,6 +232,7 @@ def automation_certificate(records: list[dict], groups: Sequence[Hashable] | Non
                 "min_units": cert["min_covered"],
                 "reason": (cert["reason"].replace("units", "decisions")
                            if cert["reason"] else None),
+                "first_cut": _first_cut(cert),
                 "out_of_sample": {
                     "n": n, "seed": seed, "automated": covered, "errors": wrong,
                     "coverage": round(covered / n, 4) if n else 0.0,

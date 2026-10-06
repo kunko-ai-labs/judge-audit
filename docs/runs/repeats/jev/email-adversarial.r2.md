@@ -8,7 +8,7 @@
 _judge `jev` · model `jev-latest` · backend `typesafe` · run 2026-09-26T07:45:35+00:00 · judge-audit 0.4.0_
 _served as reported by the provider: `jev-1.13.0` × 200 decisions_
 _dataset `examples/email-routing-adversarial/labels.jsonl` · 200 rows · sha256 `8b7dbc8ded1b…`_
-_regenerated 2026-10-04T09:59:40+00:00 from `docs/runs/repeats/jev/email-adversarial.r2.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-10-06T20:00:30+00:00 from `docs/runs/repeats/jev/email-adversarial.r2.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.5.1_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic and seeded: 60 clean controls plus 140 attacked rows built from the same templates; the label is the category of the underlying clean email by design; _meta.target is what the attacker wanted; measures resistance to attacks on synthetic mail, not accuracy on real mail**
 

@@ -11,11 +11,13 @@ from __future__ import annotations
 
 import json
 import math
+import re
 
 import pytest
 
 from judge_audit.certificate import (
     DEFAULT_TARGETS,
+    _up,
     automation_certificate,
     plain_reading,
 )
@@ -72,6 +74,74 @@ def test_a_tie_is_one_threshold():
     r = certify_threshold([0.9] * 130, [True] * 125 + [False] * 5, 0.05, start_errors=2)
     assert r["threshold"] is None and r["covered"] == 0
     assert "first cut" in r["reason"] and "130" in r["reason"]
+
+
+# --- first_cut: the first cut of a walk that finds nothing, as data (#143) ----------------
+
+
+def _reason_numbers(reason: str) -> tuple[int, int, float]:
+    """(units, errors, bound in %) from the `reason` sentence, the way a reader would."""
+    m = re.fullmatch(r"no threshold passes: the first cut tested holds (\d+) units with "
+                     r"(\d+) errors \(bound ([\d.]+)% > [\d.]+%\)", reason)
+    assert m, reason
+    return int(m[1]), int(m[2]), float(m[3])
+
+
+@pytest.mark.parametrize("conf, ok, target, start, cut", [
+    # a tie group at the start: 130 units at one confidence, the start asks for 124
+    ([0.9] * 130 + [0.5 - i / 100 for i in range(20)],
+     [True] * 125 + [False] * 5 + [True] * 20, 0.05, 2, (130, 5)),
+    # the start exactly at min_covered: 59 units, one wrong (1 in 59 → 7.79 %)
+    (desc(59), [False] + [True] * 58, 0.05, 0, (59, 1)),
+    # all wrong
+    (desc(200), [False] * 200, 0.05, 2, (124, 124)),
+    # observed error equal to the target: 10 in 200 at 5 %, bound above 5 %
+    ([0.8] * 200, [True] * 190 + [False] * 10, 0.05, 2, (200, 10)),
+])
+def test_first_cut_is_the_cut_the_reason_describes(conf, ok, target, start, cut):
+    r = certify_threshold(conf, ok, target, start_errors=start)
+    assert r["threshold"] is None
+    fc = r["first_cut"]
+    assert (fc["units"], fc["errors"]) == cut
+    assert fc["risk_upper"] == risk_upper_bound(*reversed(cut))   # exact, not rounded
+    assert fc["risk_upper"] > target
+    units, errors, bound = _reason_numbers(r["reason"])
+    assert (units, errors) == (fc["units"], fc["errors"])
+    assert bound == round(fc["risk_upper"] * 100, 1)
+    assert len(conf) >= r["min_covered"] and fc["units"] >= r["min_covered"]
+
+
+def test_first_cut_is_none_when_a_threshold_passes_or_the_walk_cannot_start():
+    assert certify_threshold(desc(200), [True] * 200, 0.05, start_errors=2)["first_cut"] is None
+    short = certify_threshold(desc(200), [True] * 200, 0.01, start_errors=2)
+    assert short["threshold"] is None and short["first_cut"] is None
+    assert short["reason"].startswith("needs 628")
+    assert certify_threshold([], [], 0.05)["first_cut"] is None
+
+
+def test_every_certificate_row_carries_first_cut_in_decisions():
+    """Every target row, per-text row and segment row has the key; where nothing passes it
+    agrees with the row's `reason` (said in decisions / texts) and its bound is the
+    published one, rounded up."""
+    recs = [rec(i, 0.9, i >= 5) | {"segment": "a" if i % 2 else "b"} for i in range(130)]
+    recs += [rec(130 + k, 0.5 - k / 1000, True) | {"segment": "a"} for k in range(70)]
+    groups = [f"t{i // 2}" if i < 10 else f"t{i}" for i in range(200)]
+    q = automation_certificate(recs, groups)["questions"][0]
+    by = {t["target_risk"]: t for t in q["targets"]}
+    assert all("first_cut" in t and "first_cut" in t["per_text"] for t in q["targets"])
+    assert all(s["first_cut"] is None for t in q["targets"] for s in t["segments"])
+    assert by[0.10]["threshold"] is not None and by[0.10]["first_cut"] is None
+    assert by[0.10]["segments"]                     # a passing row has segment rows
+    t5 = by[0.05]
+    assert t5["threshold"] is None
+    assert t5["first_cut"] == {"units": 130, "errors": 5,
+                               "risk_upper": _up(risk_upper_bound(5, 130))}
+    assert "holds 130 decisions with 5 errors" in t5["reason"]
+    assert by[0.01]["first_cut"] is None and by[0.01]["reason"].startswith("needs 628")
+    pt = t5["per_text"]
+    assert pt["first_cut"]["units"] == 125 and pt["first_cut"]["errors"] == 3
+    assert "holds 125 texts with 3 errors" in pt["reason"]
+    json.dumps(q)
 
 
 def test_certify_threshold_refuses_what_it_cannot_measure():
@@ -581,3 +651,15 @@ def test_a_report_with_a_regenerated_block_says_the_target_was_not_fixed_in_adva
                      "script": "scripts/runs_report.py", "judge_audit_version": "0.5.0"}
     assert "not fixed in advance" in render_markdown(r)
     assert "not fixed in advance" in render_html(r)
+
+
+def test_a_certificate_written_before_first_cut_still_renders():
+    """Results published before #143 have no `first_cut`: the report reads them unchanged."""
+    def drop(o):
+        if isinstance(o, dict):
+            return {k: drop(v) for k, v in o.items() if k != "first_cut"}
+        return [drop(x) for x in o] if isinstance(o, list) else o
+    r = _result(wrong_from=60)
+    md = render_markdown(r)
+    r.certificate = drop(r.certificate)
+    assert render_markdown(r) == md

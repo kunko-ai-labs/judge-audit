@@ -282,6 +282,7 @@
             "risk_upper": null,
             "min_units": 628,
             "reason": "needs 628 decisions with a confidence to bound the error at 1%; has 60",
+            "first_cut": null,
             "out_of_sample": {
               "n": 60,
               "seed": 0,
@@ -310,7 +311,8 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "needs 628 texts with a confidence to bound the error at 1%; has 44"
+              "reason": "needs 628 texts with a confidence to bound the error at 1%; has 44",
+              "first_cut": null
             }
           },
           {
@@ -325,6 +327,7 @@
             "risk_upper": null,
             "min_units": 313,
             "reason": "needs 313 decisions with a confidence to bound the error at 2%; has 60",
+            "first_cut": null,
             "out_of_sample": {
               "n": 60,
               "seed": 0,
@@ -353,7 +356,8 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "needs 313 texts with a confidence to bound the error at 2%; has 44"
+              "reason": "needs 313 texts with a confidence to bound the error at 2%; has 44",
+              "first_cut": null
             }
           },
           {
@@ -368,6 +372,7 @@
             "risk_upper": null,
             "min_units": 124,
             "reason": "needs 124 decisions with a confidence to bound the error at 5%; has 60",
+            "first_cut": null,
             "out_of_sample": {
               "n": 60,
               "seed": 0,
@@ -396,7 +401,8 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "needs 124 texts with a confidence to bound the error at 5%; has 44"
+              "reason": "needs 124 texts with a confidence to bound the error at 5%; has 44",
+              "first_cut": null
             }
           },
           {
@@ -411,6 +417,7 @@
             "risk_upper": null,
             "min_units": 61,
             "reason": "needs 61 decisions with a confidence to bound the error at 10%; has 60",
+            "first_cut": null,
             "out_of_sample": {
               "n": 60,
               "seed": 0,
@@ -439,7 +446,8 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "needs 61 texts with a confidence to bound the error at 10%; has 44"
+              "reason": "needs 61 texts with a confidence to bound the error at 10%; has 44",
+              "first_cut": null
             }
           }
         ]
@@ -447,8 +455,8 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-04T09:59:40+00:00",
-    "judge_audit_version": "0.4.0",
+    "utc": "2026-10-06T20:00:30+00:00",
+    "judge_audit_version": "0.5.1",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/finetuned-deberta-run2-ts/router-described.ckpt.jsonl",
     "labels": "examples/task-routing/labels-described.jsonl"

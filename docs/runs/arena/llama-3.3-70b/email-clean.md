@@ -5,7 +5,7 @@
 
 _judge `llm:llama-3.3-70b` · model `llama-3.3-70b` · run 2026-09-20T19:02:12+00:00 · judge-audit 0.3.1_
 _dataset `examples/email-routing/labels.jsonl` · 200 rows · sha256 `c5b4c111290a…`_
-_regenerated 2026-10-04T09:59:40+00:00 from `docs/runs/arena/llama-3.3-70b/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.4.0_
+_regenerated 2026-10-06T20:00:30+00:00 from `docs/runs/arena/llama-3.3-70b/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.5.1_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic: seeded templates with item and number fills, not real mail; the label is the template's category by design; no human checked it; 100 % here is the floor a judge must clear, not evidence of production routing accuracy**
 

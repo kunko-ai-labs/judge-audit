@@ -229,6 +229,7 @@
             "risk_upper": null,
             "min_units": 628,
             "reason": "needs 628 decisions with a confidence to bound the error at 1%; has 120",
+            "first_cut": null,
             "out_of_sample": {
               "n": 120,
               "seed": 0,
@@ -257,7 +258,8 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "needs 628 texts with a confidence to bound the error at 1%; has 61"
+              "reason": "needs 628 texts with a confidence to bound the error at 1%; has 61",
+              "first_cut": null
             }
           },
           {
@@ -272,6 +274,7 @@
             "risk_upper": null,
             "min_units": 313,
             "reason": "needs 313 decisions with a confidence to bound the error at 2%; has 120",
+            "first_cut": null,
             "out_of_sample": {
               "n": 120,
               "seed": 0,
@@ -300,7 +303,8 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "needs 313 texts with a confidence to bound the error at 2%; has 61"
+              "reason": "needs 313 texts with a confidence to bound the error at 2%; has 61",
+              "first_cut": null
             }
           },
           {
@@ -315,6 +319,7 @@
             "risk_upper": null,
             "min_units": 124,
             "reason": "needs 124 decisions with a confidence to bound the error at 5%; has 120",
+            "first_cut": null,
             "out_of_sample": {
               "n": 120,
               "seed": 0,
@@ -343,7 +348,8 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "needs 124 texts with a confidence to bound the error at 5%; has 61"
+              "reason": "needs 124 texts with a confidence to bound the error at 5%; has 61",
+              "first_cut": null
             }
           },
           {
@@ -358,6 +364,7 @@
             "risk_upper": 0.044383,
             "min_units": 61,
             "reason": null,
+            "first_cut": null,
             "out_of_sample": {
               "n": 120,
               "seed": 0,
@@ -381,14 +388,16 @@
                 "automated": 65,
                 "errors": 1,
                 "rate": 0.0154,
-                "risk_upper": 0.070915
+                "risk_upper": 0.070915,
+                "first_cut": null
               },
               {
                 "segment": "route_strong",
                 "automated": 40,
                 "errors": 0,
                 "rate": 0.0,
-                "risk_upper": 0.072158
+                "risk_upper": 0.072158,
+                "first_cut": null
               }
             ],
             "worst_segment": {
@@ -396,7 +405,8 @@
               "automated": 65,
               "errors": 1,
               "rate": 0.0154,
-              "risk_upper": 0.070915
+              "risk_upper": 0.070915,
+              "first_cut": null
             },
             "segments_too_small": 0,
             "errors_in_small_segments": 0,
@@ -407,7 +417,12 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "no threshold passes: the first cut tested holds 61 texts with 7 errors (bound 20.5% > 10%)"
+              "reason": "no threshold passes: the first cut tested holds 61 texts with 7 errors (bound 20.5% > 10%)",
+              "first_cut": {
+                "units": 61,
+                "errors": 7,
+                "risk_upper": 0.20476
+              }
             }
           }
         ]
@@ -415,8 +430,8 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-04T19:08:48+00:00",
-    "judge_audit_version": "0.5.0",
+    "utc": "2026-10-06T20:00:30+00:00",
+    "judge_audit_version": "0.5.1",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/jury/router-described/gemma4.r2.ckpt.jsonl",
     "labels": "docs/runs/jury/router-described/gemma4.r2.input.jsonl"

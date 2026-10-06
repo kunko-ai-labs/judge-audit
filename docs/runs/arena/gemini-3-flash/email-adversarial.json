@@ -221,6 +221,7 @@
             "risk_upper": null,
             "min_units": 628,
             "reason": "needs 628 decisions with a confidence to bound the error at 1%; has 200",
+            "first_cut": null,
             "out_of_sample": {
               "n": 200,
               "seed": 0,
@@ -249,7 +250,8 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "needs 628 texts with a confidence to bound the error at 1%; has 189"
+              "reason": "needs 628 texts with a confidence to bound the error at 1%; has 189",
+              "first_cut": null
             }
           },
           {
@@ -264,6 +266,7 @@
             "risk_upper": null,
             "min_units": 313,
             "reason": "needs 313 decisions with a confidence to bound the error at 2%; has 200",
+            "first_cut": null,
             "out_of_sample": {
               "n": 200,
               "seed": 0,
@@ -292,7 +295,8 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "needs 313 texts with a confidence to bound the error at 2%; has 189"
+              "reason": "needs 313 texts with a confidence to bound the error at 2%; has 189",
+              "first_cut": null
             }
           },
           {
@@ -307,6 +311,11 @@
             "risk_upper": null,
             "min_units": 124,
             "reason": "no threshold passes: the first cut tested holds 125 decisions with 5 errors (bound 8.2% > 5%)",
+            "first_cut": {
+              "units": 125,
+              "errors": 5,
+              "risk_upper": 0.082261
+            },
             "out_of_sample": {
               "n": 200,
               "seed": 0,
@@ -335,7 +344,12 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "no threshold passes: the first cut tested holds 125 texts with 5 errors (bound 8.2% > 5%)"
+              "reason": "no threshold passes: the first cut tested holds 125 texts with 5 errors (bound 8.2% > 5%)",
+              "first_cut": {
+                "units": 125,
+                "errors": 5,
+                "risk_upper": 0.082261
+              }
             }
           },
           {
@@ -350,6 +364,7 @@
             "risk_upper": 0.05835,
             "min_units": 61,
             "reason": null,
+            "first_cut": null,
             "out_of_sample": {
               "n": 200,
               "seed": 0,
@@ -373,70 +388,80 @@
                 "automated": 22,
                 "errors": 3,
                 "rate": 0.1364,
-                "risk_upper": 0.315913
+                "risk_upper": 0.315913,
+                "first_cut": null
               },
               {
                 "segment": "contract",
                 "automated": 15,
                 "errors": 1,
                 "rate": 0.0667,
-                "risk_upper": 0.279397
+                "risk_upper": 0.279397,
+                "first_cut": null
               },
               {
                 "segment": "payment_reminder",
                 "automated": 20,
                 "errors": 1,
                 "rate": 0.05,
-                "risk_upper": 0.216107
+                "risk_upper": 0.216107,
+                "first_cut": null
               },
               {
                 "segment": "invoice_dispute",
                 "automated": 23,
                 "errors": 1,
                 "rate": 0.0435,
-                "risk_upper": 0.190204
+                "risk_upper": 0.190204,
+                "first_cut": null
               },
               {
                 "segment": "order",
                 "automated": 15,
                 "errors": 0,
                 "rate": 0.0,
-                "risk_upper": 0.181037
+                "risk_upper": 0.181037,
+                "first_cut": null
               },
               {
                 "segment": "delivery_status",
                 "automated": 16,
                 "errors": 0,
                 "rate": 0.0,
-                "risk_upper": 0.17075
+                "risk_upper": 0.17075,
+                "first_cut": null
               },
               {
                 "segment": "quote_request",
                 "automated": 17,
                 "errors": 0,
                 "rate": 0.0,
-                "risk_upper": 0.161567
+                "risk_upper": 0.161567,
+                "first_cut": null
               },
               {
                 "segment": "return_request",
                 "automated": 18,
                 "errors": 0,
                 "rate": 0.0,
-                "risk_upper": 0.153318
+                "risk_upper": 0.153318,
+                "first_cut": null
               },
               {
                 "segment": "support",
                 "automated": 23,
                 "errors": 0,
                 "rate": 0.0,
-                "risk_upper": 0.122124
+                "risk_upper": 0.122124,
+                "first_cut": null
               },
               {
                 "segment": "spam",
                 "automated": 31,
                 "errors": 0,
                 "rate": 0.0,
-                "risk_upper": 0.092115
+                "risk_upper": 0.092115,
+                "first_cut": null
               }
             ],
             "worst_segment": {
@@ -444,7 +469,8 @@
               "automated": 31,
               "errors": 0,
               "rate": 0.0,
-              "risk_upper": 0.092115
+              "risk_upper": 0.092115,
+              "first_cut": null
             },
             "segments_too_small": 9,
             "errors_in_small_segments": 6,
@@ -455,7 +481,8 @@
               "coverage": 1.0,
               "threshold": 0.8,
               "risk_upper": 0.061693,
-              "reason": null
+              "reason": null,
+              "first_cut": null
             }
           }
         ]
@@ -463,8 +490,8 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-04T19:08:48+00:00",
-    "judge_audit_version": "0.5.0",
+    "utc": "2026-10-06T20:00:30+00:00",
+    "judge_audit_version": "0.5.1",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/gemini-3-flash/email-adversarial.ckpt.jsonl",
     "labels": "examples/email-routing-adversarial/labels.jsonl"

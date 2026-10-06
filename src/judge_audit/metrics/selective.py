@@ -256,9 +256,12 @@ def certify_threshold(confidences: Sequence[float], correct: Sequence[bool],
     covers: in-sample, so `coverage_at_risk_crossfit` is the out-of-sample estimate of it.
 
     Returns {target_risk, delta, start_errors, min_covered, threshold, n, covered,
-    errors, coverage, risk_upper, reason}: `threshold` None and `covered` 0 when nothing
-    passes, with `reason` saying why — too few units for the start, or the first cut
-    tested already over the bound. Raises on a non-finite confidence, mismatched lengths
+    errors, coverage, risk_upper, reason, first_cut}: `threshold` None and `covered` 0 when
+    nothing passes, with `reason` saying why — too few units for the start, or the first
+    cut tested already over the bound. In the second case `first_cut` is that cut as data,
+    {units, errors, risk_upper} (the exact bound `reason` rounds), so a reader need not
+    parse the sentence; it is None when a threshold passes or the walk could not start
+    (`n < min_covered`). Raises on a non-finite confidence, mismatched lengths
     or a target outside (0, 1)."""
     if len(confidences) != len(correct):
         raise ValueError(f"{len(confidences)} confidences for {len(correct)} outcomes")
@@ -272,7 +275,7 @@ def certify_threshold(confidences: Sequence[float], correct: Sequence[bool],
         "coverage": round(cal["covered"] / n, 4) if n else 0.0,
         "risk_upper": (risk_upper_bound(cal["errors"], cal["covered"], delta)
                        if cal["covered"] else None),
-        "reason": None,
+        "reason": None, "first_cut": None,
     }
     if r["threshold"] is None:
         if n < r["min_covered"]:
@@ -285,6 +288,7 @@ def certify_threshold(confidences: Sequence[float], correct: Sequence[bool],
                 if rows >= r["min_covered"]:
                     break
             bound = risk_upper_bound(errs, rows, delta)
+            out["first_cut"] = {"units": rows, "errors": errs, "risk_upper": bound}
             out["reason"] = (f"no threshold passes: the first cut tested holds {rows} units "
                              f"with {errs} errors (bound {bound:.1%} > {target_risk * 100:g}%)")
     return out

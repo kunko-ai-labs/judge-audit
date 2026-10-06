@@ -354,6 +354,7 @@
             "risk_upper": null,
             "min_units": 628,
             "reason": "needs 628 decisions with a confidence to bound the error at 1%; has 100",
+            "first_cut": null,
             "out_of_sample": {
               "n": 100,
               "seed": 0,
@@ -382,7 +383,8 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "needs 628 texts with a confidence to bound the error at 1%; has 86"
+              "reason": "needs 628 texts with a confidence to bound the error at 1%; has 86",
+              "first_cut": null
             }
           },
           {
@@ -397,6 +399,7 @@
             "risk_upper": null,
             "min_units": 313,
             "reason": "needs 313 decisions with a confidence to bound the error at 2%; has 100",
+            "first_cut": null,
             "out_of_sample": {
               "n": 100,
               "seed": 0,
@@ -425,7 +428,8 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "needs 313 texts with a confidence to bound the error at 2%; has 86"
+              "reason": "needs 313 texts with a confidence to bound the error at 2%; has 86",
+              "first_cut": null
             }
           },
           {
@@ -440,6 +444,7 @@
             "risk_upper": null,
             "min_units": 124,
             "reason": "needs 124 decisions with a confidence to bound the error at 5%; has 100",
+            "first_cut": null,
             "out_of_sample": {
               "n": 100,
               "seed": 0,
@@ -468,7 +473,8 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "needs 124 texts with a confidence to bound the error at 5%; has 86"
+              "reason": "needs 124 texts with a confidence to bound the error at 5%; has 86",
+              "first_cut": null
             }
           },
           {
@@ -483,6 +489,7 @@
             "risk_upper": 0.029514,
             "min_units": 61,
             "reason": null,
+            "first_cut": null,
             "out_of_sample": {
               "n": 100,
               "seed": 0,
@@ -506,70 +513,80 @@
                 "automated": 10,
                 "errors": 0,
                 "rate": 0.0,
-                "risk_upper": 0.258866
+                "risk_upper": 0.258866,
+                "first_cut": null
               },
               {
                 "segment": "delivery_status",
                 "automated": 10,
                 "errors": 0,
                 "rate": 0.0,
-                "risk_upper": 0.258866
+                "risk_upper": 0.258866,
+                "first_cut": null
               },
               {
                 "segment": "invoice_dispute",
                 "automated": 10,
                 "errors": 0,
                 "rate": 0.0,
-                "risk_upper": 0.258866
+                "risk_upper": 0.258866,
+                "first_cut": null
               },
               {
                 "segment": "order",
                 "automated": 10,
                 "errors": 0,
                 "rate": 0.0,
-                "risk_upper": 0.258866
+                "risk_upper": 0.258866,
+                "first_cut": null
               },
               {
                 "segment": "partnership",
                 "automated": 10,
                 "errors": 0,
                 "rate": 0.0,
-                "risk_upper": 0.258866
+                "risk_upper": 0.258866,
+                "first_cut": null
               },
               {
                 "segment": "payment_reminder",
                 "automated": 10,
                 "errors": 0,
                 "rate": 0.0,
-                "risk_upper": 0.258866
+                "risk_upper": 0.258866,
+                "first_cut": null
               },
               {
                 "segment": "quote_request",
                 "automated": 10,
                 "errors": 0,
                 "rate": 0.0,
-                "risk_upper": 0.258866
+                "risk_upper": 0.258866,
+                "first_cut": null
               },
               {
                 "segment": "return_request",
                 "automated": 10,
                 "errors": 0,
                 "rate": 0.0,
-                "risk_upper": 0.258866
+                "risk_upper": 0.258866,
+                "first_cut": null
               },
               {
                 "segment": "spam",
                 "automated": 10,
                 "errors": 0,
                 "rate": 0.0,
-                "risk_upper": 0.258866
+                "risk_upper": 0.258866,
+                "first_cut": null
               },
               {
                 "segment": "support",
                 "automated": 10,
                 "errors": 0,
                 "rate": 0.0,
-                "risk_upper": 0.258866
+                "risk_upper": 0.258866,
+                "first_cut": null
               }
             ],
             "worst_segment": null,
@@ -582,7 +599,8 @@
               "coverage": 1.0,
               "threshold": 0.18850700557231903,
               "risk_upper": 0.034235,
-              "reason": null
+              "reason": null,
+              "first_cut": null
             }
           }
         ]
@@ -590,8 +608,8 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-04T09:59:40+00:00",
-    "judge_audit_version": "0.4.0",
+    "utc": "2026-10-06T20:00:30+00:00",
+    "judge_audit_version": "0.5.1",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/finetuned-deberta/email-clean.ckpt.jsonl",
     "labels": "examples/email-routing/labels.jsonl"

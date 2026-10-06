@@ -230,6 +230,7 @@
             "risk_upper": null,
             "min_units": 628,
             "reason": "needs 628 decisions with a confidence to bound the error at 1%; has 200",
+            "first_cut": null,
             "out_of_sample": {
               "n": 200,
               "seed": 0,
@@ -258,7 +259,8 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "needs 628 texts with a confidence to bound the error at 1%; has 189"
+              "reason": "needs 628 texts with a confidence to bound the error at 1%; has 189",
+              "first_cut": null
             }
           },
           {
@@ -273,6 +275,7 @@
             "risk_upper": null,
             "min_units": 313,
             "reason": "needs 313 decisions with a confidence to bound the error at 2%; has 200",
+            "first_cut": null,
             "out_of_sample": {
               "n": 200,
               "seed": 0,
@@ -301,7 +304,8 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "needs 313 texts with a confidence to bound the error at 2%; has 189"
+              "reason": "needs 313 texts with a confidence to bound the error at 2%; has 189",
+              "first_cut": null
             }
           },
           {
@@ -316,6 +320,11 @@
             "risk_upper": null,
             "min_units": 124,
             "reason": "no threshold passes: the first cut tested holds 183 decisions with 14 errors (bound 11.7% > 5%)",
+            "first_cut": {
+              "units": 183,
+              "errors": 14,
+              "risk_upper": 0.117013
+            },
             "out_of_sample": {
               "n": 200,
               "seed": 0,
@@ -344,7 +353,12 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "no threshold passes: the first cut tested holds 173 texts with 14 errors (bound 12.4% > 5%)"
+              "reason": "no threshold passes: the first cut tested holds 173 texts with 14 errors (bound 12.4% > 5%)",
+              "first_cut": {
+                "units": 173,
+                "errors": 14,
+                "risk_upper": 0.123618
+              }
             }
           },
           {
@@ -359,6 +373,11 @@
             "risk_upper": null,
             "min_units": 61,
             "reason": "no threshold passes: the first cut tested holds 183 decisions with 14 errors (bound 11.7% > 10%)",
+            "first_cut": {
+              "units": 183,
+              "errors": 14,
+              "risk_upper": 0.117013
+            },
             "out_of_sample": {
               "n": 200,
               "seed": 0,
@@ -387,7 +406,12 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "no threshold passes: the first cut tested holds 173 texts with 14 errors (bound 12.4% > 10%)"
+              "reason": "no threshold passes: the first cut tested holds 173 texts with 14 errors (bound 12.4% > 10%)",
+              "first_cut": {
+                "units": 173,
+                "errors": 14,
+                "risk_upper": 0.123618
+              }
             }
           }
         ]
@@ -395,8 +419,8 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-04T19:08:48+00:00",
-    "judge_audit_version": "0.5.0",
+    "utc": "2026-10-06T20:00:30+00:00",
+    "judge_audit_version": "0.5.1",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/llama-3.3-70b/email-adversarial.ckpt.jsonl",
     "labels": "examples/email-routing-adversarial/labels.jsonl"
