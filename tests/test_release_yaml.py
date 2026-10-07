@@ -344,6 +344,9 @@ def test_changelog_check_passes_a_final_section(jobs, tmp_path):
     (CLEAN.replace("- **A feature** (#1).", "- **TODO(#153), before the tag.**"), "TODO"),
     (CLEAN.replace("- **A feature** (#1).", "- **A feature** (FIXME: link)."), "FIXME"),
     (CLEAN.replace("- **A feature** (#1).", "- **A feature** (TBD)."), "TBD"),
+    (CLEAN.replace("- **A feature** (#1).", "- **A feature** (TO-DO: link)."), "TO-DO"),
+    (CLEAN.replace("- **A feature** (#1).", "- **A feature** (to_do)."), "TO-DO"),
+    (CLEAN.replace("- **A feature** (#1).", "- **A feature** XXX."), "XXX"),
     (CLEAN.replace("## [0.6.0rc1] — 2026-10-07",
                    "## [0.6.0rc1] — unreleased (dated when tagged)"), "unreleased"),
     (CLEAN.replace("## [0.6.0rc1] — 2026-10-07", "## [0.6.0rc1] — YYYY-MM-DD"), "date"),
@@ -370,10 +373,11 @@ def test_changelog_check_passes_this_repository_once_dated(root, jobs, tmp_path)
     if f"## [{version}]" not in text:
         assert r.returncode != 0 and "no section" in r.stdout
         return
-    # Only a placeholder line on purpose (`TODO(#N)`) may hold a version back; prose that
-    # merely names a banned word, such as the entry for this check, must not.
-    section = text.split(f"## [{version}]", 1)[1].split("\n## [", 1)[0]
-    if re.search(r"\bTODO\(#\d+\)", section):
-        assert r.returncode != 0 and "TODO" in r.stdout  # caught before the tag
-    else:
-        assert r.returncode == 0, r.stdout
+    assert r.returncode == 0, r.stdout   # the section of the version being released is final
+
+
+def test_changelog_check_rejects_a_placeholder_line(jobs, tmp_path):
+    """The `TODO(#N)` placeholder a release branch carries before the tag is refused."""
+    text = CLEAN.replace("- **A feature** (#1).", "- **TODO(#153), before the tag: a fix.**")
+    r = run_changelog_check(jobs, tmp_path, "v0.6.0rc1", text)
+    assert r.returncode != 0 and "TODO" in r.stdout, r.stdout
