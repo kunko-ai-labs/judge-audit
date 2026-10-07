@@ -25,7 +25,7 @@ from .judges.base import Judge
 from .judges.simulated import SIMULATED_TAG
 from .report import IncompatibleBaseline
 from .report import check_drift as _check_drift
-from .runner import display_path, load_dataset, write_judgments
+from .runner import display_path, load_dataset, scrub, write_judgments
 from .runner import run_audit as _run_audit
 
 try:
@@ -146,9 +146,9 @@ def _load(labels_path: str) -> tuple[list[dict] | None, dict, dict | None]:
     try:
         rows, dataset_meta = load_dataset(full)
     except (OSError, ValueError) as exc:
-        return None, {}, {"error": f"cannot read {labels_path}: {exc}"}
+        return None, {}, {"error": scrub(f"cannot read {labels_path}: {exc}", labels_path)}
     if not rows:
-        return None, {}, {"error": f"{labels_path} has no rows"}
+        return None, {}, {"error": f"{display_path(labels_path)} has no rows"}
     return rows, dataset_meta, None
 
 
@@ -158,7 +158,7 @@ def _make_judge(name: str, rows: list[dict]) -> tuple[Judge | None, str, dict | 
     try:
         judge, tag = _judge(name, rows)
     except (RuntimeError, ValueError) as exc:
-        return None, "", {"error": f"judge '{name}' is not configured: {exc}"}
+        return None, "", {"error": scrub(f"judge '{name}' is not configured: {exc}")}
     return judge, tag, None
 
 
@@ -197,7 +197,7 @@ def run_audit(labels_path: str, judge: str = "simulated",
         result = _run_audit(j, rows, labels_path=os.path.abspath(labels_path),
                             dataset_meta=dataset_meta)
     except Exception as exc:  # judge/network failure: report, do not crash the server
-        return {"error": f"audit failed: {type(exc).__name__}: {exc}"}
+        return {"error": scrub(f"audit failed: {type(exc).__name__}: {exc}", labels_path)}
     out = result.to_dict()
     gt = ground_truth_of(result.run)
     out["ground_truth"] = {"tier": gt.tier, "label": gt.label, "line": gt.report_line()}
@@ -238,11 +238,12 @@ def check_drift(labels_path: str, baseline_path: str, judge: str = "simulated",
         failures = _check_drift(result, baseline, max_ece_drift, max_acc_drop,
                                 allow_incompatible=allow_incompatible)
     except IncompatibleBaseline as exc:
-        return {"error": str(exc), "incompatible_baseline": True}
+        return {"error": scrub(str(exc), baseline_path, labels_path),
+                "incompatible_baseline": True}
     except (OSError, ValueError, KeyError) as exc:
-        return {"error": f"cannot use baseline {baseline_path}: {exc}"}
+        return {"error": scrub(f"cannot use baseline {baseline_path}: {exc}", baseline_path)}
     except Exception as exc:
-        return {"error": f"audit failed: {type(exc).__name__}: {exc}"}
+        return {"error": scrub(f"audit failed: {type(exc).__name__}: {exc}", labels_path)}
     out = {"ok": not failures, "failures": failures,
            "ece": result.ece, "accuracy": result.accuracy, "n": result.n,
            "ground_truth": ground_truth_of(result.run).tier,

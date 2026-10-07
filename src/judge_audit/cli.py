@@ -45,6 +45,7 @@ from .runner import (
     groups_of,
     load_dataset,
     run_audit,
+    scrub,
     write_judgments,
 )
 
@@ -53,7 +54,8 @@ JUDGES = ("jev", "llm", "nli", "finetuned", "laya", "decision2", "decider", "str
 
 
 def _die(msg: str) -> NoReturn:
-    print(f"judge-audit: {msg}", file=sys.stderr)
+    # errors reach CI logs and an Action's output: paths named as provenance names them
+    print(f"judge-audit: {scrub(msg)}", file=sys.stderr)
     sys.exit(2)
 
 

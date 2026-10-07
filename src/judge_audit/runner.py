@@ -6,6 +6,7 @@ import json
 import math
 import os
 import platform
+import re
 import urllib.parse
 import warnings
 from dataclasses import dataclass, field
@@ -283,24 +284,54 @@ def checkpoint_record(idx: int, row: dict, judgment: dict, expected: str,
 def display_path(path: str | Path) -> str:
     """The path as provenance publishes it: relative, never where a computer keeps it.
 
-    A file inside the working directory is named relative to it (`docs/runs/x.ckpt.jsonl`);
-    a file elsewhere, relative to the root of the repository that holds it (the nearest
-    directory above it with `.git` or `pyproject.toml`); any other file by its name alone.
-    No home directory, user name or folder layout is published (#58); the dataset's sha256,
-    recorded beside it, is what identifies the file.
+    Quotes are stripped, `~` expanded and the path made absolute (`..` removed). A file
+    inside the working directory is then named relative to it as given (a symlink there keeps
+    its own name); any other file, relative to the root of the repository that holds it (the
+    nearest directory above it with `.git` or `pyproject.toml`, symlinks followed), or by its
+    name alone. No home directory, user name or folder layout is published (#58); the
+    dataset's sha256, recorded beside it, is what identifies the file.
     """
-    p = Path(path)
-    if not p.is_absolute():
-        return str(path)
+    text = str(path).strip()
+    if len(text) >= 2 and text[0] == text[-1] and text[0] in "'\"":
+        text = text[1:-1]
+    if not text:
+        return text
+    p = Path(os.path.abspath(Path(text).expanduser()))
     try:
-        return str(p.relative_to(Path.cwd()))
+        return str(p.relative_to(Path(os.path.abspath(Path.cwd()))))
     except ValueError:
         pass
-    for parent in p.parents:
+    real = p.resolve()
+    for parent in real.parents:
         if parent != parent.parent and ((parent / ".git").exists()
                                          or (parent / "pyproject.toml").exists()):
-            return str(p.relative_to(parent))
-    return p.name
+            return str(real.relative_to(parent))
+    return real.name
+
+
+# An absolute or home-relative path inside a message: it starts a word (not `1/2`, not the
+# `//` of a URL) and runs up to a quote, a bracket or the end; a space is kept inside it
+# (folder names have spaces) unless the next word starts a new clause.
+_PATH_IN_TEXT = re.compile(r"(?:(?<=^)|(?<=[\s'\"(\[{<=]))(?:~/|/(?=[\w.~-]))"
+                           r"[^'\"()\[\]{}<>\n]*?"
+                           r"(?=['\"()\[\]{}<>\n]|$| (?:and|or|is|was|at|in|on)\b|[,;:] )")
+
+
+def scrub(text: str, *paths: str | Path) -> str:
+    """`text` (an error message, an exception's text) with every path in it named as provenance
+    names files (`display_path`): first the `paths` it is about, in every form they may take,
+    then any other absolute or `~/` path it still carries."""
+    forms: dict[str, str] = {}
+    for given in paths:
+        shown = display_path(given)
+        raw = str(given).strip().strip("'\"")
+        for form in {raw, os.path.abspath(os.path.expanduser(raw)),
+                     str(Path(os.path.expanduser(raw)).resolve())}:
+            if form and form != shown:
+                forms[form] = shown
+    for form in sorted(forms, key=len, reverse=True):
+        text = text.replace(form, forms[form])
+    return _PATH_IN_TEXT.sub(lambda m: display_path(m.group(0).rstrip(" .")), text)
 
 
 def run_metadata(judge: Judge, labels_path: str | None = None,

@@ -183,3 +183,151 @@ def test_a_loader_message_names_the_model_cache_not_where_it_is(monkeypatch, tmp
     got = tidy(f"loading from '{custom}/hub/models--a--b/snapshots/c'")
     assert got == "loading from '<hf-cache>/hub/models--a--b/snapshots/c'"
     assert not leaks(got)
+
+
+# --- review of #153: errors, paths that leave the working directory, local hosts ---------
+
+def _deep(tmp_path: Path) -> Path:
+    """A dataset several folders deep with a client-like name, in no repository."""
+    d = tmp_path / "clients" / "acme corp" / "q3"
+    d.mkdir(parents=True)
+    return d
+
+
+def test_an_mcp_error_on_broken_json_names_no_absolute_path(tmp_path, monkeypatch):
+    from judge_audit import mcp_server
+    bad = _deep(tmp_path) / "labels.jsonl"
+    bad.write_text("{not json\n", encoding="utf-8")
+    monkeypatch.chdir(ROOT)
+    out = mcp_server.run_audit(str(bad))
+    assert "error" in out and "labels.jsonl" in out["error"]
+    assert not leaks(out["error"]) and "acme corp" not in out["error"], out["error"]
+
+
+def test_an_mcp_error_on_an_unreadable_file_names_no_absolute_path(tmp_path, monkeypatch):
+    from judge_audit import mcp_server
+    target = _deep(tmp_path) / "labels.jsonl"
+    target.write_text("{}\n", encoding="utf-8")
+
+    def denied(path, *a, **k):
+        raise PermissionError(13, "Permission denied", str(path))
+    monkeypatch.setattr(mcp_server, "load_dataset", denied)
+    monkeypatch.chdir(ROOT)
+    out = mcp_server.run_audit(str(target))
+    assert "error" in out and "Permission denied" in out["error"]
+    assert not leaks(out["error"]) and "acme corp" not in out["error"], out["error"]
+
+
+def test_an_mcp_error_on_a_broken_baseline_names_no_absolute_path(tmp_path, monkeypatch):
+    from judge_audit import mcp_server
+    base = _deep(tmp_path) / "baseline.json"
+    base.write_text("{broken", encoding="utf-8")
+    monkeypatch.chdir(ROOT)
+    out = mcp_server.check_drift(str(LABELS), str(base))
+    assert "error" in out and "baseline.json" in out["error"]
+    assert not leaks(out["error"]) and "acme corp" not in out["error"], out["error"]
+
+
+def test_scrub_removes_any_absolute_path_from_a_message(tmp_path):
+    from judge_audit.runner import scrub
+    p = _deep(tmp_path) / "labels.jsonl"
+    msg = f"[Errno 2] No such file: '{p}' (also {Path.home()}/x/y.txt and ~/a b/c.json)"
+    got = scrub(msg, str(p))
+    assert "labels.jsonl" in got and not leaks(got) and "acme corp" not in got, got
+
+
+@pytest.mark.parametrize("form", ["dotdot", "tilde", "quoted", "symlink"])
+def test_a_path_that_leaves_the_working_directory_is_never_published_as_given(
+        tmp_path, monkeypatch, form):
+    from judge_audit.runner import display_path
+    data = _deep(tmp_path) / "labels.jsonl"
+    data.write_text("{}\n", encoding="utf-8")
+    work = tmp_path / "work"
+    work.mkdir()
+    monkeypatch.chdir(work)
+    if form == "dotdot":
+        given = "../clients/acme corp/q3/labels.jsonl"
+    elif form == "tilde":
+        monkeypatch.setenv("HOME", str(tmp_path))
+        given = "~/clients/acme corp/q3/labels.jsonl"
+    elif form == "quoted":
+        given = f"'{data}'"
+    else:
+        link = work / "link.jsonl"
+        link.symlink_to(data)
+        given = str(link)
+    got = display_path(given)
+    if form == "symlink":
+        assert got == "link.jsonl"          # inside the working directory, as the user named it
+    else:
+        assert got == "labels.jsonl", got   # outside: no repository holds it, the name alone
+    assert not leaks(got) and "acme corp" not in got and ".." not in got
+
+
+def test_a_dotdot_dataset_path_stays_out_of_header_result_and_report(tmp_path, monkeypatch):
+    import subprocess
+    data = _deep(tmp_path) / "labels.jsonl"
+    data.write_bytes(LABELS.read_bytes())
+    work = tmp_path / "work"
+    work.mkdir()
+    out = subprocess.run(
+        [sys.executable, "-m", "judge_audit.cli", "run", "../clients/acme corp/q3/labels.jsonl",
+         "--judge", "simulated", "--out", "r.md", "--json", "r.json", "--judgments", "j.jsonl"],
+        capture_output=True, text=True, cwd=work)
+    assert out.returncode == 0, out.stderr
+    for name in ("r.md", "r.json", "j.jsonl"):
+        text = (work / name).read_text(encoding="utf-8")
+        assert "acme corp" not in text and "../" not in text and not leaks(text), name
+
+
+@pytest.mark.parametrize("url", [
+    "http://localhost:8080/v1", "http://127.0.0.1:8080/v1", "http://[::1]:8080/v1",
+    "http://0.0.0.0:8080/v1", "http://192.168.1.20:8080/v1", "http://10.0.0.5/v1",
+    "http://172.16.3.4/v1", "http://169.254.10.1/v1", "http://[fe80::1]/v1",
+    "http://[fd00::5]/v1", "http://studio.local:1234/v1", "http://host.docker.internal:11434/v1",
+    "http://gpu-box:8080/v1", "http://", "not a url"])
+def test_these_endpoints_are_on_premises(url):
+    from judge_audit.judges.llm import _is_on_premises
+    assert _is_on_premises(url), url
+
+
+@pytest.mark.parametrize("url", [
+    "https://api.openai.com/v1", "https://generativelanguage.googleapis.com/v1beta/openai",
+    "https://api.example.test/v1", "https://8.8.8.8/v1"])
+def test_these_endpoints_are_hosted(url):
+    from judge_audit.judges.llm import _is_on_premises
+    assert not _is_on_premises(url), url
+
+
+@pytest.mark.parametrize("url, free", [
+    ("http://127.0.0.1:8080/v1", True), ("http://192.168.1.20:8080/v1", False),
+    ("http://gpu-box:8080/v1", False)])
+def test_only_this_computer_is_assumed_free(url, free):
+    """Which fingerprint is kept and which call costs nothing are two rules: a LAN server
+    keeps only its versions, but is not assumed free without a price."""
+    from judge_audit.judges.llm import _is_local_url
+    assert _is_local_url(url) is free
+
+
+def test_a_lan_server_s_fingerprint_is_reduced_to_versions(monkeypatch):
+    served = _served(monkeypatch, "http://192.168.1.20:8080/v1", MLX_FP)
+    assert served["system_fingerprint"] == "mlx-lm 0.31.3 / mlx 0.32.2"
+
+
+def test_a_cli_error_names_no_absolute_path(tmp_path):
+    """CLI errors land in CI logs and an Action's output: same rule."""
+    import subprocess
+    bad = _deep(tmp_path) / "labels.jsonl"
+    bad.write_text("{not json\n", encoding="utf-8")
+    out = subprocess.run([sys.executable, "-m", "judge_audit.cli", "run", str(bad),
+                          "--judge", "simulated"], capture_output=True, text=True, cwd=ROOT)
+    assert out.returncode != 0 and "labels.jsonl" in out.stderr
+    assert "acme corp" not in out.stderr and not leaks(out.stderr), out.stderr
+
+
+@pytest.mark.parametrize("msg", [
+    "audit failed: 3 rows / 4 questions", "ratio 1/2 of rows", "see https://example.com/a/b",
+    "unknown judge 'x' (available: jev, llm)", "rate-limited by http://127.0.0.1:8080/v1"])
+def test_scrub_leaves_text_without_a_file_path_alone(msg):
+    from judge_audit.runner import scrub
+    assert scrub(msg) == msg
