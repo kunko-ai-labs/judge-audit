@@ -143,3 +143,37 @@ def test_the_html_report_carries_the_same_table():
     page = render_html(summarize("x", records, ci=False))
     assert "how often is it wrong?</h2>" in page
     assert "<td>≥ 0.95</td><td>2</td><td>1</td><td>50.0%</td>" in page
+
+
+def _binom_cdf(k: int, n: int, p: float) -> float:
+    """P(X <= k) for X ~ Binomial(n, p), summed in log space."""
+    return math.fsum(math.exp(math.lgamma(n + 1) - math.lgamma(i + 1) - math.lgamma(n - i + 1)
+                              + i * math.log(p) + (n - i) * math.log1p(-p))
+                     for i in range(k + 1))
+
+
+def _cp_upper(k: int, n: int, delta: float = 0.05) -> float:
+    """Exact one-sided Clopper–Pearson upper bound by bisection: the p at which
+    P(X <= k) = delta. Independent of the library's beta quantile."""
+    lo, hi = k / n, 1.0
+    for _ in range(200):
+        mid = (lo + hi) / 2
+        if _binom_cdf(k, n, mid) > delta:
+            lo = mid
+        else:
+            hi = mid
+    return (lo + hi) / 2
+
+
+def test_a_published_row_matches_an_independent_bound():
+    # docs/runs/arena/claude-sonnet-4.5/email-adversarial.json, confidence >= 0.90:
+    # 187 decisions, 5 wrong; the published bound is the exact one rounded up to 6 decimals.
+    import json
+    from pathlib import Path
+    path = (Path(__file__).resolve().parent.parent
+            / "docs/runs/arena/claude-sonnet-4.5/email-adversarial.json")
+    row = json.loads(path.read_text(encoding="utf-8"))["high_confidence_error"]["levels"][0]
+    assert (row["confidence_at_least"], row["n"], row["errors"]) == (0.90, 187, 5)
+    exact = _cp_upper(5, 187)
+    assert row["risk_upper"] == math.ceil(exact * 1e6 - 1e-9) / 1e6
+    assert row["error_rate"] == round(5 / 187, 4)

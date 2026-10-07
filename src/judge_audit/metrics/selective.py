@@ -150,12 +150,14 @@ def high_confidence_error(confidences: Sequence[float], correct: Sequence[bool],
 
     A reading of the coverage–risk curve at fixed confidences, not a new score: the
     decisions declaring at least c (a tie at c included whole), how many of them are
-    wrong, their error rate and its exact one-sided upper bound at level 1 − delta
-    (`risk_upper_bound`, rounded up to 6 decimals so it regenerates identically on every
-    Python). The threshold is fixed in advance, not chosen on these rows, so the bound is
-    the plain binomial one; it is not the safe automation rate, whose threshold is
-    searched for. A cut no decision reaches has no rate and no bound (None). Rows are
-    assumed independent; the caller leaves out decisions without a known confidence.
+    wrong, their error rate (rounded to 4 decimals, like every published rate) and its
+    exact one-sided upper bound at level 1 − delta (`risk_upper_bound`, rounded **up** to
+    6 decimals, so the published bound is never below the exact one and regenerates
+    identically on every Python). The threshold is fixed in advance, not chosen on these
+    rows, so the bound is the plain binomial one; it is not the safe automation rate,
+    whose threshold is searched for. A cut no decision reaches has no rate and no bound
+    (None). Rows are assumed independent; the caller leaves out decisions without a known
+    confidence.
     """
     _require_finite(confidences)
     levels = []
