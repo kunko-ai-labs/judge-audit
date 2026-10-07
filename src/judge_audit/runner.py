@@ -652,10 +652,11 @@ def run_audit(judge: Judge, rows: list[dict], labels_path: str | None = None,
 
 
 def write_judgments(result: AuditResult, path: str) -> None:
-    """Per-decision evidence as JSONL — commit it next to the report."""
+    """Per-decision evidence as JSONL — commit it next to the report. Strict JSON: a record
+    holding a non-finite number raises before anything is written, never `NaN` in a file."""
+    lines = [json.dumps(r, ensure_ascii=False, allow_nan=False) + "\n" for r in result.records]
     with open(path, "w", encoding="utf-8") as f:
-        for r in result.records:
-            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+        f.writelines(lines)
 
 
 def canonical_judgments(records: list[dict]) -> bytes:

@@ -241,7 +241,7 @@ def main() -> None:
         if not done:
             # First line of a fresh checkpoint: how this run was produced.
             header = {"idx": -1, "run": started}
-            f.write(json.dumps(header) + "\n")
+            f.write(json.dumps(header, allow_nan=False) + "\n")
             done[-1] = header  # the report reads the run time from here, as a rerun would
         warned = False  # one not-sent warning per invocation, at the first such row
         for idx in wanted:
@@ -278,7 +278,7 @@ def main() -> None:
                     warn_not_sent(name, idx, first["question"], first["raw"],
                                   getattr(judge, "over_length_advice", None))
                     warned = True
-            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+            f.write(json.dumps(rec, ensure_ascii=False, allow_nan=False) + "\n")
             f.flush()
             done[idx] = rec
             n_done += 1

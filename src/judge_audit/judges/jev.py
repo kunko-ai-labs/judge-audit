@@ -162,8 +162,10 @@ class JevJudge(Judge):
         ts_meta = (meta.get("typesafe") or {}).get("confidence") or {}
         usage = res.get("usage") or {}
         latency = (res.get("latencyMs") or 0) / 1000.0 or wall
-        in_tok = usage.get("inputTokens") or usage.get("input_tokens") or 0
-        cost = in_tok / 1e6 * INPUT_PRICE_PER_MTOK
+        in_tok = usage.get("inputTokens", usage.get("input_tokens"))
+        # billed per request, whatever its answers; no reported tokens is an unknown cost
+        cost = (in_tok / 1e6 * INPUT_PRICE_PER_MTOK
+                if isinstance(in_tok, int) and not isinstance(in_tok, bool) else None)
 
         out: list[Judgment] = []
         for q in questions:
@@ -172,7 +174,7 @@ class JevJudge(Judge):
             out.append(Judgment(
                 question=q.name, decision=decision, confidence=confidence,
                 latency_s=latency / max(len(questions), 1),
-                cost_usd=cost / max(len(questions), 1),
+                cost_usd=None if cost is None else cost / max(len(questions), 1),
                 raw={"answer": ans,
                      "typesafe_confidence": ts_meta.get(q.name),
                      "usage": usage,
@@ -228,8 +230,15 @@ class JevJudge(Judge):
         latency = time.monotonic() - t0
         answers = body.get("answers") or {}
         usage = body.get("usage") or {}
-        in_tok = usage.get("input_tokens", 0)
-        cost = in_tok / 1e6 * INPUT_PRICE_PER_MTOK if self.endpoint == TYPESAFE_ENDPOINT else 0.0
+        in_tok = usage.get("input_tokens")
+        # billed per request, whatever its answers; a priced endpoint that reports no tokens
+        # has an unknown cost, never $0 (a self-hosted Jev-compatible server is not priced)
+        if self.endpoint != TYPESAFE_ENDPOINT:
+            cost: float | None = 0.0
+        elif isinstance(in_tok, int) and not isinstance(in_tok, bool):
+            cost = in_tok / 1e6 * INPUT_PRICE_PER_MTOK
+        else:
+            cost = None
 
         out: list[Judgment] = []
         for q in questions:
@@ -238,7 +247,7 @@ class JevJudge(Judge):
             out.append(Judgment(
                 question=q.name, decision=decision, confidence=confidence,
                 latency_s=latency / max(len(questions), 1),
-                cost_usd=cost / max(len(questions), 1),
+                cost_usd=None if cost is None else cost / max(len(questions), 1),
                 raw={"answer": ans, "typesafe_confidence": ans.get("confidence"),
                      "usage": usage, "model": body.get("model"),
                      "served": served_of({"model": body.get("model")})},

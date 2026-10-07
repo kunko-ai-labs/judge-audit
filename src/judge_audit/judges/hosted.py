@@ -9,15 +9,28 @@ and why:
   `confidence` field, which it does not define as that probability (the Decisions API's
   documented example has 0.93 next to a top probability of 0.95; Workers AI says "derived
   from the probabilities"); it is kept in `raw.native_confidence` and never audited in its
-  place. An answer without probabilities is no answer: a confidence is never invented.
+  place.
+- **An answer is checked before it is used** (`valid_distribution`): every probability a
+  finite number in [0, 1], the distribution summing to 1 within `SUM_TOLERANCE`, the chosen
+  option among them. One that fails, or has no probabilities, is no answer with the reason
+  in `raw.invalid`, and counted against the judge: a confidence is never invented or
+  repaired.
 - **One question per request by default.** Several questions may share a request
   (`*_QUESTIONS_PER_REQUEST=all`); other decision models have changed an answer with the
-  other questions of the request, so sharing is opt-in and recorded.
-- **Cost from the tokens the response reports**, at the documented price. A response that
-  reports none has an unknown cost (`None`), never a count guessed with another tokenizer.
+  other questions of the request, so sharing is opt-in and recorded. Clef takes at most 64
+  questions per request.
+- **Every request's reported tokens are billed**, whatever its answers were: a refused or
+  unreadable answer costs what its request cost, shared between the request's questions.
+  The price is the documented base rate (`*_PRICE_PER_MTOK`); the Decisions API's regional
+  and long-context multipliers, which the adapter cannot see, are not applied. A response
+  that reports no tokens has an unknown cost (`None`), never $0 and never a count guessed
+  with another tokenizer. The Decisions API documents no `usage` field; it is read if
+  present.
 - **What was served**: any model id and response id the response carries.
-- **Credentials from the environment only**; no key, token or account id is recorded or
-  printed, and an HTTP error is reported by status and the server's message.
+- **Credentials from the environment only.** No key, token or account id is recorded or
+  printed: every error message passes through `_redact`, which masks the token, the account
+  id and the URL segment that holds it. A server that cannot be reached is reported within
+  `CONNECT_BUDGET_S`.
 
 Environment:
   openai-decisions  OPENAI_API_KEY; DECISIONS_MODEL (default gpt-6-luna);
@@ -30,27 +43,34 @@ Environment:
 from __future__ import annotations
 
 import json
+import math
 import os
 import random
+import re
 import time
 import urllib.error
 import urllib.request
 
 from .base import Judge, Judgment, Question, QuestionType, served_of
-from .systemone import CRITERIA_VERSION, read_answer, systemone_question
+from .systemone import CRITERIA_VERSION, systemone_question
 
 DECISIONS_ENDPOINT = "https://api.openai.com/v1/decisions"
 DECISIONS_MODEL = "gpt-6-luna"
-DECISIONS_PRICE_PER_MTOK = 0.10        # input; output is not billed (2026-10-07)
+# Base rate per million input tokens; output is not billed (2026-10-07). Regional processing
+# and long-context multipliers may apply on top and are not seen by the adapter.
+DECISIONS_PRICE_PER_MTOK = 0.10
 
 CLEF_ENDPOINT = "https://api.cloudflare.com/client/v4/accounts/{account}/ai/run/{model_id}"
 # Workers AI model id and unit price per million input tokens (2026-10-07).
 CLEF_MODELS = {"clef-flash": ("@cf/cloudflare/clef-flash", 0.09),
                "clef": ("@cf/cloudflare/clef", 0.24)}
+CLEF_MAX_QUESTIONS = 64            # per request, as the Workers AI schema says
 
 RETRY_STATUS = (429, 500, 502, 503, 504, 529)
-ATTEMPTS = 6
+ATTEMPTS = 6                       # for a server that answers busy
+CONNECT_BUDGET_S = 20.0            # total backoff for a server that cannot be reached
 TIMEOUT_S = 120
+SUM_TOLERANCE = 0.01               # |sum of the probabilities - 1| allowed (rounding)
 
 
 def _per_request(env: str) -> int | None:
@@ -63,38 +83,119 @@ def _per_request(env: str) -> int | None:
     raise ValueError(f"{env} must be 1 or all, got {value!r}")
 
 
-def post_json(url: str, body: dict, token: str, label: str) -> dict:
-    """POST `body`, retrying a busy server with backoff; the reply's JSON. An error names the
-    service (`label`) and the status, never the URL's account id or the token."""
-    data = json.dumps(body).encode()
-    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
-    last = ""
+def _redact(text: str, secrets: tuple[str, ...]) -> str:
+    """`text` with every secret masked, and any `/accounts/<id>` URL segment too."""
+    for s in secrets:
+        if s:
+            text = text.replace(s, "***")
+    return re.sub(r"(/accounts/)[^/\s'\"]+", r"\1***", text)
+
+
+def post_json(url: str, body: dict, label: str, secrets: tuple[str, ...]) -> dict:
+    """POST `body` with the first secret as the bearer token; the reply's JSON. A busy server
+    (429, 5xx) is retried with backoff; one that cannot be reached is retried within
+    `CONNECT_BUDGET_S`. Every error names the service (`label`) and the status, with the
+    secrets and the account segment of the URL masked."""
+    data = json.dumps(body, allow_nan=False).encode()
+    headers = {"Content-Type": "application/json", "Authorization": f"Bearer {secrets[0]}"}
+    last, waited, unreachable = "", 0.0, False
     for attempt in range(ATTEMPTS):
         req = urllib.request.Request(url, data=data, headers=headers, method="POST")
         try:
             with urllib.request.urlopen(req, timeout=TIMEOUT_S) as resp:
                 return json.load(resp)
         except urllib.error.HTTPError as e:
-            detail = e.read().decode(errors="replace")[:300].replace(token, "***")
-            last = f"{e.code}: {detail}"
+            last = _redact(f"{e.code}: {e.read().decode(errors='replace')[:300]}", secrets)
+            unreachable = False
             if e.code not in RETRY_STATUS:
                 raise RuntimeError(f"{label} returned {last}") from None
-        except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
-            last = type(e).__name__
-        time.sleep(min(2 ** attempt * 2 + random.uniform(0, 1), 60))
+            wait = min(2 ** attempt * 2 + random.uniform(0, 1), 60)
+        except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as e:
+            # reported by class only: its text can hold the URL, and the URL the account
+            last, unreachable = type(e).__name__, True
+            wait = min(2 ** attempt + random.uniform(0, 0.5), CONNECT_BUDGET_S - waited)
+            if wait <= 0:
+                break
+        waited += wait
+        time.sleep(wait)
+    if unreachable:
+        raise RuntimeError(f"could not reach {label} ({last}) within "
+                           f"{CONNECT_BUDGET_S:.0f} s; check the network and the endpoint")
     # "rate-limited" is what scripts/audit_resumable.py looks for before sleeping.
     raise RuntimeError(f"rate-limited by {label} after {ATTEMPTS} attempts ({last})")
 
 
-def _no_answer(q: Question, latency: float, raw: dict) -> Judgment:
+def valid_distribution(probs: dict[str, float], chosen: str | None = None) -> str | None:
+    """Why a declared distribution cannot be used, or None when it can: every probability a
+    finite number in [0, 1], the total within `SUM_TOLERANCE` of 1, and `chosen` (when
+    given) among the options."""
+    if not probs:
+        return "no probabilities"
+    for k, v in probs.items():
+        if not isinstance(v, (int, float)) or isinstance(v, bool) or not math.isfinite(v):
+            return f"probability of {k!r} is not a finite number"
+        if not 0.0 <= v <= 1.0:
+            return f"probability of {k!r} is {v}, outside [0, 1]"
+    total = math.fsum(probs.values())
+    if abs(total - 1.0) > SUM_TOLERANCE:
+        return f"probabilities sum to {total:.4f}, not 1 (tolerance {SUM_TOLERANCE})"
+    if chosen is not None and chosen not in probs:
+        return f"chosen option {chosen!r} is not among its probabilities"
+    return None
+
+
+def read_checked(q: Question, kind: str, probs: dict[str, float],
+                 yes: float | None, chosen: str | None) -> tuple[str, float, dict] | str:
+    """(decision, P(decision), probabilities), or the reason the answer cannot be used.
+    `yes` is P(true) for a yes/no question; `probs` the per-option (or per-level) ones."""
+    if q.type is QuestionType.NOUL:
+        if yes is None:
+            return "no probability"
+        reason = valid_distribution({"true": yes, "false": 1 - yes}) \
+            if isinstance(yes, (int, float)) and math.isfinite(yes) and 0 <= yes <= 1 \
+            else valid_distribution({"true": yes})
+        if reason:
+            return reason
+        return ("true" if yes >= 0.5 else "false"), max(yes, 1 - yes), {"true": yes,
+                                                                        "false": 1 - yes}
+    if q.type is QuestionType.CHOICE:
+        reason = valid_distribution(probs, chosen if chosen is not None else "")
+        if reason:
+            return reason
+        assert chosen is not None
+        return chosen, probs[chosen], probs
+    reason = valid_distribution(probs)
+    if reason:
+        return reason
+    try:
+        best = max(probs, key=lambda k: (probs[k], -int(k)))     # the first level on a tie
+        return q.options[int(best)], probs[best], probs
+    except (ValueError, IndexError):
+        return f"levels {sorted(probs)} do not match the {len(q.options)} options"
+
+
+def as_evidence(value):
+    """`value` as JSON can hold it: a non-finite number the server sent is kept as its text
+    ("NaN", "Infinity", "-Infinity"), so the record shows what arrived and stays valid JSON."""
+    if isinstance(value, float) and not math.isfinite(value):
+        return "NaN" if math.isnan(value) else ("Infinity" if value > 0 else "-Infinity")
+    if isinstance(value, dict):
+        return {k: as_evidence(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [as_evidence(v) for v in value]
+    return value
+
+
+def _no_answer(q: Question, latency: float, cost: float | None, raw: dict) -> Judgment:
     return Judgment(question=q.name, decision="", confidence=None, latency_s=latency,
-                    cost_usd=0.0, raw=raw, parse_status="no_answer")
+                    cost_usd=cost, raw=as_evidence(raw), parse_status="no_answer")
 
 
 class _HostedDecisionJudge(Judge):
     """Batching, pacing and cost shared by the hosted decision APIs."""
 
     per_request: int | None = 1
+    max_questions: int | None = None
     price: float = 0.0
     _last = 0.0
 
@@ -110,14 +211,18 @@ class _HostedDecisionJudge(Judge):
 
     def decide(self, state: str, questions: list[Question]) -> list[Judgment]:
         size = self.per_request or max(len(questions), 1)
+        if self.max_questions and size > self.max_questions:
+            raise ValueError(f"{self.name} takes at most {self.max_questions} questions per "
+                             f"request; this one has {size} (send one per request)")
         out: list[Judgment] = []
         for i in range(0, len(questions), size):
             self._pace()
             out += self._call(state, questions[i:i + size])
         return out
 
-    def _cost(self, tokens) -> float | None:
-        """Cost of one request from the input tokens it reports; None when it reports none."""
+    def _cost(self, usage) -> float | None:
+        """One request's cost from the input tokens it reports; None when it reports none."""
+        tokens = usage.get("input_tokens") if isinstance(usage, dict) else None
         if isinstance(tokens, bool) or not isinstance(tokens, int) or tokens < 0:
             return None
         return tokens / 1e6 * self.price
@@ -150,7 +255,10 @@ class OpenAIDecisionsJudge(_HostedDecisionJudge):
                                      "native_confidence, not audited",
                 "temperature": "n/a",
                 "questions_per_request": self.per_request or "all",
-                "input_price_per_mtok_usd": self.price, "output_price_per_mtok_usd": 0.0}
+                "input_price_per_mtok_usd": self.price, "output_price_per_mtok_usd": 0.0,
+                "price_note": "documented base rate; regional and long-context multipliers "
+                              "are not applied",
+                "sum_tolerance": SUM_TOLERANCE}
 
     @staticmethod
     def wire_question(q: Question) -> dict:
@@ -167,29 +275,25 @@ class OpenAIDecisionsJudge(_HostedDecisionJudge):
         return base
 
     @staticmethod
-    def read(q: Question, ans: dict) -> tuple[str, float, dict[str, float]]:
-        """(decision, P(decision), probabilities) from one Decisions answer."""
-        if q.type is QuestionType.NOUL:
-            p = float(ans["probability"])
-            return ("true" if p >= 0.5 else "false"), max(p, 1 - p), {"true": p,
-                                                                      "false": 1 - p}
-        probs = {str(x["value"]): float(x["probability"]) for x in ans["probabilities"]}
-        if q.type is QuestionType.CHOICE:
-            decision = str(ans["choice"])
-            return decision, probs[decision], probs
-        best = max(probs, key=lambda k: (probs[k], -int(k)))      # the first level on a tie
-        return q.options[int(best)], probs[best], probs
+    def read(q: Question, ans: dict) -> tuple[str, float, dict] | str:
+        """(decision, P(decision), probabilities) from one Decisions answer, or why not."""
+        try:
+            probs = {str(x["value"]): x["probability"] for x in ans.get("probabilities") or []}
+        except (KeyError, TypeError):
+            return "probabilities are not a list of {value, probability}"
+        chosen = ans.get("choice")
+        return read_checked(q, ans.get("type", ""), probs, ans.get("probability"),
+                            None if chosen is None else str(chosen))
 
     def _call(self, state: str, questions: list[Question]) -> list[Judgment]:
         body = {"model": self.model, "input": state,
                 "questions": [self.wire_question(q) for q in questions]}
         t0 = time.monotonic()
-        reply = post_json(DECISIONS_ENDPOINT, body, self._key, "the OpenAI Decisions API")
+        reply = post_json(DECISIONS_ENDPOINT, body, "the OpenAI Decisions API", (self._key,))
         latency = (time.monotonic() - t0) / max(len(questions), 1)
         answers = {a.get("name"): a for a in reply.get("answers") or [] if isinstance(a, dict)}
         usage = reply.get("usage") or None
-        tokens = (usage or {}).get("input_tokens")
-        cost = self._share(self._cost(tokens), len(questions))
+        cost = self._share(self._cost(usage), len(questions))     # billed whatever the answers
         served = served_of({"model": reply.get("model")})
         out: list[Judgment] = []
         for q in questions:
@@ -197,18 +301,18 @@ class OpenAIDecisionsJudge(_HostedDecisionJudge):
             base = {"answer": ans, "usage": usage, "served": served,
                     "response_id": reply.get("id")}
             if not isinstance(ans, dict) or ans.get("type") == "refusal":
-                out.append(_no_answer(q, latency, {**base, "refusal": bool(
-                    isinstance(ans, dict) and ans.get("type") == "refusal")}))
+                refused = isinstance(ans, dict) and ans.get("type") == "refusal"
+                out.append(_no_answer(q, latency, cost, {**base, "refusal": refused}))
                 continue
-            try:
-                decision, confidence, probs = self.read(q, ans)
-            except (KeyError, ValueError, TypeError, IndexError):
-                out.append(_no_answer(q, latency, base))
+            got = self.read(q, ans)
+            if isinstance(got, str):
+                out.append(_no_answer(q, latency, cost, {**base, "invalid": got}))
                 continue
+            decision, confidence, probs = got
             out.append(Judgment(question=q.name, decision=decision, confidence=confidence,
                                 latency_s=latency, cost_usd=cost,
-                                raw={**base, "probabilities": probs,
-                                     "native_confidence": ans.get("confidence")}))
+                                raw=as_evidence({**base, "probabilities": probs,
+                                                 "native_confidence": ans.get("confidence")})))
         return out
 
 
@@ -216,6 +320,7 @@ class ClefHostedJudge(_HostedDecisionJudge):
     """Clef / Clef-flash on Workers AI: a System One request at `/ai/run/@cf/...`."""
 
     name = "clef-hosted"
+    max_questions = CLEF_MAX_QUESTIONS
 
     def __init__(self, token: str | None = None, account: str | None = None,
                  model: str | None = None):
@@ -242,37 +347,46 @@ class ClefHostedJudge(_HostedDecisionJudge):
                                      "not audited",
                 "temperature": "n/a",
                 "questions_per_request": self.per_request or "all",
-                "input_price_per_mtok_usd": self.price, "output_price_per_mtok_usd": 0.0}
+                "input_price_per_mtok_usd": self.price, "output_price_per_mtok_usd": 0.0,
+                "sum_tolerance": SUM_TOLERANCE}
 
     def _call(self, state: str, questions: list[Question]) -> list[Judgment]:
         body = {"model": self.model, "state": state,
                 "questions": {q.name: systemone_question(q) for q in questions}}
         url = CLEF_ENDPOINT.format(account=self._account, model_id=self.model_id)
+        secrets = (self._token, self._account)
         t0 = time.monotonic()
-        reply = post_json(url, body, self._token, "Workers AI")
+        reply = post_json(url, body, "Workers AI", secrets)
         latency = (time.monotonic() - t0) / max(len(questions), 1)
-        if not reply.get("success", True) or not isinstance(reply.get("result"), dict):
-            errors = "; ".join(str(e.get("message", e)) for e in reply.get("errors") or [])
-            raise RuntimeError(f"Workers AI refused the request: {errors or 'no result'}")
-        result = reply["result"]
+        result = reply.get("result")
+        if not reply.get("success", True) or not isinstance(result, dict):
+            errors = "; ".join(str(e.get("message", e)) if isinstance(e, dict) else str(e)
+                               for e in reply.get("errors") or [])
+            raise RuntimeError(_redact(f"Workers AI refused the request: "
+                                       f"{errors or 'no result'}", secrets))
         answers = result.get("answers") or {}
         usage = result.get("usage") or None
-        cost = self._share(self._cost((usage or {}).get("input_tokens")), len(questions))
+        cost = self._share(self._cost(usage), len(questions))     # billed whatever the answers
         served = served_of({"model": result.get("model")})
         out: list[Judgment] = []
         for q in questions:
             ans = answers.get(q.name)
             base = {"answer": ans, "usage": usage, "served": served}
             if not isinstance(ans, dict) or "error" in ans:
-                out.append(_no_answer(q, latency, base))
+                out.append(_no_answer(q, latency, cost, base))
                 continue
-            try:
-                decision, confidence, probs = read_answer(q, ans)
-            except (KeyError, ValueError, TypeError, IndexError):
-                out.append(_no_answer(q, latency, base))
+            probs = ans.get("probabilities")
+            chosen = ans.get("choice")
+            got = read_checked(q, ans.get("type", ""),
+                               {str(k): v for k, v in probs.items()} if isinstance(probs, dict)
+                               else {}, ans.get("noul"),
+                               None if chosen is None else str(chosen))
+            if isinstance(got, str):
+                out.append(_no_answer(q, latency, cost, {**base, "invalid": got}))
                 continue
+            decision, confidence, checked = got
             out.append(Judgment(question=q.name, decision=decision, confidence=confidence,
                                 latency_s=latency, cost_usd=cost,
-                                raw={**base, "probabilities": probs,
-                                     "native_confidence": ans.get("confidence")}))
+                                raw=as_evidence({**base, "probabilities": checked,
+                                                 "native_confidence": ans.get("confidence")})))
         return out
