@@ -328,3 +328,24 @@ def test_smoke_openai_decisions_answers_the_documented_example():
 def test_smoke_clef_hosted_answers_a_choice():
     (j,) = ClefHostedJudge().decide("I was charged twice for my order.", [ROUTE])
     assert j.decision in ROUTE.options and 0.0 <= j.confidence <= 1.0
+
+
+def test_decisions_reads_the_shape_the_live_api_returns(wire, openai_env):
+    """The reply shape seen from the live API on 2026-10-07, ids and texts removed:
+    probabilities at two decimals, a `confidence` within 0.01 of P(chosen), and a `usage`
+    block the documentation does not describe."""
+    wire({"model": "gpt-6-luna",
+          "answers": [{"type": "choice", "name": "route", "choice": "billing",
+                       "probabilities": [{"value": "billing", "probability": 0.54},
+                                         {"value": "returns", "probability": 0.45},
+                                         {"value": "other", "probability": 0.01}],
+                       "confidence": 0.53}],
+          "usage": {"input_tokens": 1045,
+                    "input_tokens_details": {"cached_tokens": 0, "cache_write_tokens": 0},
+                    "output_tokens": 0, "output_tokens_details": {"reasoning_tokens": 0},
+                    "total_tokens": 1045}})
+    (j,) = OpenAIDecisionsJudge().decide("x", [ROUTE])
+    assert j.parse_status == "parsed" and j.decision == "billing" and j.confidence == 0.54
+    assert j.raw["native_confidence"] == 0.53
+    assert j.cost_usd == pytest.approx(1045 / 1e6 * 0.10)
+    assert j.raw["served"]["model"] == "gpt-6-luna" and j.raw["response_id"] is None

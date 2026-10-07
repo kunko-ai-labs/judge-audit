@@ -24,8 +24,8 @@ and why:
   The price is the documented base rate (`*_PRICE_PER_MTOK`); the Decisions API's regional
   and long-context multipliers, which the adapter cannot see, are not applied. A response
   that reports no tokens has an unknown cost (`None`), never $0 and never a count guessed
-  with another tokenizer. The Decisions API documents no `usage` field; it is read if
-  present.
+  with another tokenizer. The Decisions API's documentation describes no `usage` field,
+  but the live API returns `usage.input_tokens` (2026-10-07); it is read when present.
 - **What was served**: any model id and response id the response carries.
 - **Credentials from the environment only.** No key, token or account id is recorded or
   printed: every error message passes through `_redact`, which masks the token, the account
