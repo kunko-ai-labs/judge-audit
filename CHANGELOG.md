@@ -5,6 +5,20 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.6.0rc2] — 2026-10-07
+
+A second pre-release of 0.6.0. **It replaces 0.6.0rc1, which is superseded and should not be used** (see Security). Like rc1 it holds what is on `main`, reviewed and tested; no v0.6 study result is in it. `pip install kunko-judge-audit` keeps resolving to 0.5.1, and the Action's `@v0.5` tag does not move.
+
+### Security
+- **A server's error text no longer carries a credential into a message** (PR #155). Up to 0.6.0rc1, the `llm` and `jev` judges copied a server's error body into the error they raised, and from there into the output of `judge-audit run` and `scripts/audit_resumable.py`. If a server or a proxy echoed the request's key in that body, the key appeared in the terminal or the CI log. Every message judge-audit prints or returns now passes through one scrubber, which masks the key, token or account id a judge holds, the value of every credential variable set in the process, and any value shaped like a credential. If you used a server or proxy that echoes keys in its errors, rotate that key.
+- **An endpoint override receives the key, so it must be https** (PR #155). The two new hosted-judge endpoint overrides refuse any scheme but `https` before any request, except plain `http` to this computer (127.0.0.0/8, `::1`, `localhost`).
+
+### Added
+- TODO(#155): the hosted decision judges, from #155's final CHANGELOG once it merges.
+
+### Fixed
+- TODO(#155): the judge-error exit code, the cost and log-loss fixes and the sum tolerance, from #155's final CHANGELOG once it merges.
+
 ## [0.6.0rc1] — 2026-10-07
 
 A pre-release of 0.6.0: what is on `main` today, reviewed and tested, published so it can be installed and verified as a signed artefact (`pip install kunko-judge-audit==0.6.0rc1`) before the final release. No v0.6 study result is in it: the pre-registration (#132) is not frozen yet, no metric of the decision models is published, and the pilot checkpoints on the MASSIVE dev sample (#150) are planning inputs for sizing the study, not scores. `pip install kunko-judge-audit` keeps resolving to 0.5.1, and the Action's `@v0.5` tag does not move.
