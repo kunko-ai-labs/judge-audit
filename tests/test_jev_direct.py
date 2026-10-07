@@ -64,7 +64,10 @@ def test_direct_backend_speaks_the_documented_wire_format(server, monkeypatch):
     assert out.decision == "route_strong" and out.confidence == 0.7
     assert out.raw["typesafe_confidence"] == 0.55 and out.raw["model"] == "openjev-test"
     assert out.cost_usd == 0.0  # vendor price does not apply to a self-hosted endpoint
-    assert j.describe()["endpoint"] == server
+    # an override is recorded by its host only, flagged; the path is not provenance
+    d = j.describe()
+    assert d["endpoint"] is None and d["endpoint_overridden"] is True
+    assert d["endpoint_host"] == server.split("://", 1)[1].split("/", 1)[0]
 
 
 def test_official_endpoint_requires_key(monkeypatch):

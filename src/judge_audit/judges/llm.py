@@ -54,7 +54,7 @@ import urllib.parse
 import urllib.request
 from collections.abc import Callable
 
-from .base import Judge, Judgment, Question, QuestionType, redact, served_of
+from .base import Judge, Judgment, Question, QuestionType, checked_endpoint, redact, served_of
 
 # HTTP statuses worth waiting out: rate limit, overloaded, unavailable, gateway timeout.
 TRANSIENT = {429, 503, 529, 502, 504}
@@ -517,6 +517,11 @@ class LLMJudge(Judge):
                 raise RuntimeError(
                     "LLM_BASE_URL is not set (e.g. https://api.openai.com/v1 or "
                     "http://localhost:11434/v1 for Ollama)")
+            # a key goes with every request when one is set: https, or plain http to this
+            # computer only; a keyless server (Ollama on the network) may stay plain http
+            self._endpoint = checked_endpoint(self.base_url, "LLM_BASE_URL",
+                                              sends_key=bool(self.api_key))
+            self.base_url = self._endpoint.url.split("?")[0].rstrip("/")
             if not self.model:
                 raise RuntimeError("LLM_MODEL is not set (e.g. gpt-5-mini, llama3.1)")
         else:
@@ -550,6 +555,10 @@ class LLMJudge(Judge):
                 d.update(owned)             # what this judge measures, not the module's say
         elif self.base_url:
             d["base_url"] = self.base_url
+            ep = getattr(self, "_endpoint", None)
+            if ep is not None:
+                d["endpoint_overridden"] = True             # LLM_BASE_URL has no default
+                d["endpoint_host"] = ep.host
         if self.extra_body:
             d["extra_body"] = self.extra_body
         if self.effort:

@@ -27,7 +27,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from .base import Judge, Judgment, Question, QuestionType, redact, served_of
+from .base import Judge, Judgment, Question, QuestionType, checked_endpoint, redact, served_of
 
 # Version of what the judge is shown: `_sdk_question` / `_direct_question`, the criteria
 # map built from each question's options and descriptions. Jev has no text prompt, so this
@@ -86,8 +86,13 @@ class JevJudge(Judge):
                     "the Node bridge has no dependencies installed. Run: "
                     f"npm install --prefix {_BRIDGE.parent}  (needs Node >= 20)")
         elif self.backend == "typesafe":
-            self.endpoint = os.environ.get("JEV_ENDPOINT", TYPESAFE_ENDPOINT)
             self.api_key = api_key or os.environ.get("TYPESAFE_API_KEY", "")
+            override = os.environ.get("JEV_ENDPOINT")
+            # the key goes with every request: https, or plain http to this computer only
+            self._endpoint = (checked_endpoint(override, "JEV_ENDPOINT",
+                                               sends_key=bool(self.api_key))
+                              if override else None)
+            self.endpoint = self._endpoint.url if self._endpoint else TYPESAFE_ENDPOINT
             if model is None and "JEV_MODEL" not in os.environ:
                 self.model = DIRECT_MODEL
             if self.endpoint == TYPESAFE_ENDPOINT and not self.api_key:
@@ -98,7 +103,7 @@ class JevJudge(Judge):
             raise ValueError(f"unknown backend '{self.backend}' (gateway | typesafe)")
 
     def describe(self) -> dict:
-        d = {"name": self.name, "model": self.model, "backend": self.backend,
+        d: dict = {"name": self.name, "model": self.model, "backend": self.backend,
              "bridge": "ai-sdk/experimental_evaluate" if self.backend == "gateway"
              else "typesafe-systemone-http",
              # Jev takes no sampling temperature: it returns a distribution, not a sample.
@@ -107,7 +112,11 @@ class JevJudge(Judge):
              "criteria_version": CRITERIA_VERSION,
              "input_price_per_mtok_usd": INPUT_PRICE_PER_MTOK}
         if self.backend == "typesafe":
-            d["endpoint"] = self.endpoint
+            ep = getattr(self, "_endpoint", None)
+            d["endpoint"] = None if ep else self.endpoint
+            d["endpoint_overridden"] = ep is not None
+            if ep:
+                d["endpoint_host"] = ep.host
         return d
 
     # ------------------------------------------------------------------ public

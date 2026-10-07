@@ -119,3 +119,11 @@ def test_a_failed_call_exits_2(monkeypatch, capsys, tmp_path):
     code, captured, _ = _run(monkeypatch, capsys, tmp_path,
                              error=urllib.error.URLError("unreachable"))
     assert code == 2 and "request failed" in captured.err
+
+
+def test_a_plain_http_base_url_with_a_key_is_refused_before_any_request(monkeypatch, capsys):
+    monkeypatch.setenv("LLM_API_KEY", KEY)
+    monkeypatch.setattr(smoke, "post", lambda *a, **k: pytest.fail("a request was sent"))
+    code = smoke.main(["--model", "m", "--base-url", "http://gateway.example.test/v1"])
+    err = capsys.readouterr().err
+    assert code == smoke.FAILED and "https" in err and KEY not in err

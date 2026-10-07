@@ -43,6 +43,8 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
 from judge_audit.judges.llm import extra_body_of  # noqa: E402
+from judge_audit.judges.secrets import checked_endpoint  # noqa: E402
+from judge_audit.judges.secrets import redact as _redact  # noqa: E402
 
 PROMPT = ("Classify the customer message into exactly one category: card, transfer, "
           "account. Answer with the category name only, in lower case.\n\n"
@@ -53,9 +55,10 @@ YES, NO, FAILED, UNREADABLE = 0, 1, 2, 3
 
 
 def redact(text: str, key: str) -> str:
-    """`text` with every occurrence of the key replaced; a key shorter than 8 characters is
-    not a key worth searching for and would redact ordinary words."""
-    return text.replace(key, "[redacted]") if key and len(key) >= 8 else text
+    """`text` with the key masked in every form a server may echo it and any other
+    credential-shaped value too (`judges.secrets.redact`), marked `[redacted]`; a key shorter
+    than 8 characters is not a key worth searching for and would redact ordinary words."""
+    return _redact(text, key).replace("***", "[redacted]")
 
 
 def build_request(model: str, extra_body: dict, top_logprobs: int) -> dict:
@@ -155,9 +158,16 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as e:
         emit(f"--extra-body: {e}", sys.stderr)
         return FAILED
+    try:
+        # the key goes with the request: https, or plain http to this computer only
+        base_url = checked_endpoint(args.base_url, "--base-url / LLM_BASE_URL",
+                                    sends_key=bool(key)).url.split("?")[0]
+    except ValueError as e:
+        emit(str(e), sys.stderr)
+        return FAILED
     body = build_request(args.model, extra, args.top_logprobs)
     try:
-        resp = post(args.base_url, key, body)
+        resp = post(base_url, key, body)
     except urllib.error.HTTPError as e:
         detail = e.read().decode(errors="replace")[:300]
         emit(f"HTTP {e.code}: {detail}", sys.stderr)
