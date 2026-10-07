@@ -36,13 +36,15 @@ Not run: Clef-flash (about 19 GB in bf16, does not fit the 16 GB machine); `gemi
 
 ## 4. Order, checks and stopping rules
 
-1. Before this protocol was committed, each local adapter was run on 5 pilot rows into a scratch directory (load, pin, reference check, latency), and Laya on all 230 rows of each locale with the budgets above, to confirm that no row is cut. Those scratch files are not evidence and are not committed; nothing in them changes the settings above beyond what is stated.
+1. Before this protocol was committed, each local adapter was run on 5 pilot rows into a scratch directory (load, pin, reference check, latency), and Laya on all 230 rows of each locale with the budgets above, to confirm that no row is cut. Those scratch files are not evidence and are not committed. The 230-row Laya scratch runs were read only for their count of not-sent questions (0 in each locale); no accuracy, confidence or other figure was read from them. Nothing in them changes the settings above beyond what is stated.
 2. Runs, one at a time, in the background: `decision2-kai-0.6b`, `laya-multilingual`, `jev`, then the exploratory `decider-2b` and `strands-decider-2b`, each locale in turn, with `scripts/audit_resumable.py examples/massive/labels-pilot-<locale>.jsonl --judge <judge> --checkpoint docs/runs/v06-pilot/<slug>-<locale>.ckpt.jsonl`, polling the row count.
 3. **Quality gate,** checked on every finished checkpoint before it is committed: the share of rows with a blank answer, and `scripts/reparse_checkpoints.py --dry-run` reporting 0 changed judgments. A run with more than 5 % unparsed or blank rows among its first 40 is stopped and this protocol amended in a commit before anything changes.
 4. A run that dies is resumed by the driver (it refuses to resume under a different configuration). A row that keeps failing is left missing and counted.
 5. Hosted cost: Jev at v0.5's recorded rate (about $0.013 for 308 rows) is about $0.03 for 690 rows; the checkpoint's `cost_usd` total is reported.
 
 ## 5. What the runs recorded
+
+**Precision not in two headers.** The `decision2` and `laya` adapters record the device but not the precision, so the headers of `decision2-kai-0.6b-*` and `laya-multilingual-*` carry none (decider's and Strands Decider's record `dtype`). The headers are left as the runs wrote them: a header is what the run recorded at the time of its calls, and adding a field afterwards would make it claim what the run did not write. The precision is recorded here instead, from loading each pinned model with the same library versions, offline, after the runs and without judging any row: Kai-0.6B on CPU, parameters float32 (the runtime autocasts to bf16 on CUDA only, per its code); Laya multilingual on MPS, parameters float32. Recording the precision in these two adapters' headers is left to a later change, before the study's runs.
 
 All 15 runs finished on 2026-10-07 (first call 06:52Z, last 07:30Z; times in each header), with no restart. Every checkpoint holds the 230 rows of its locale once; no row has a blank answer, none was not sent (Laya's budgets above held), every judgment parsed, and `scripts/reparse_checkpoints.py --dry-run` reports 0 changed judgments. `scripts/check_complete.py` covers them.
 
