@@ -248,3 +248,72 @@ def test_without_an_override_the_provenance_says_so(monkeypatch, judge_cls, env)
         monkeypatch.delenv(var, raising=False)
     d = getattr(hosted, judge_cls)().describe()
     assert d["endpoint_overridden"] is False
+
+
+# --- every message leaves through one scrubber, local judges included ----------------------
+
+HF = "hf_AbCdEfGhIjKlMnOpQrStUvWxYz0123"
+
+
+@pytest.mark.parametrize("judge", ["decision2", "laya", "decider", "strands", "clef", "nli",
+                                   "finetuned", "logprob"])
+def test_a_local_judge_error_carrying_a_token_is_masked(monkeypatch, capsys, tmp_path, judge):
+    """A gated download fails with the Hub token in its text: it never reaches the screen."""
+    monkeypatch.setenv("HF_TOKEN", HF)
+
+    class Boom:
+        name = judge
+
+        def describe(self):
+            return {"name": judge}
+
+        def decide(self, state, questions):
+            raise RuntimeError(f"401 for url https://huggingface.co/x?token={HF} "
+                               f"(Authorization: Bearer {HF}) using {HF}")
+    monkeypatch.setattr(cli, "_judge", lambda name, rows: (Boom(), ""))
+    with pytest.raises(SystemExit) as e:
+        cli.main(["run", str(LABELS), "--judge", judge, "--no-ci",
+                  "--out", str(tmp_path / "r.md"), "--json", str(tmp_path / "r.json"),
+                  "--judgments", str(tmp_path / "j.jsonl")])
+    err = capsys.readouterr().err
+    assert e.value.code == 2 and HF not in err, err
+
+
+def test_a_judge_that_cannot_be_built_never_prints_the_key(monkeypatch, capsys, tmp_path):
+    monkeypatch.setenv("OPENAI_API_KEY", KEY)
+
+    def bad(name, rows):
+        raise RuntimeError(f"rejected credential {KEY}")
+    monkeypatch.setattr(cli, "_judge", bad)
+    with pytest.raises(SystemExit) as e:
+        cli.main(["run", str(LABELS), "--judge", "openai-decisions", "--no-ci",
+                  "--out", str(tmp_path / "r.md"), "--json", str(tmp_path / "r.json")])
+    err = capsys.readouterr().err
+    assert e.value.code == 2 and "not configured" in err and KEY not in err, err
+
+
+def test_an_mcp_error_never_returns_the_key(monkeypatch):
+    from judge_audit import mcp_server
+    monkeypatch.setenv("LLM_API_KEY", KEY)
+
+    def bad(name, rows):
+        raise RuntimeError(f"bad key {KEY}")
+    monkeypatch.setattr(mcp_server, "_judge", bad)
+    out = mcp_server.run_audit(str(LABELS), judge="llm")
+    assert "error" in out and KEY not in json.dumps(out), out
+
+
+def test_scrub_masks_the_value_of_every_credential_variable(monkeypatch):
+    from judge_audit.runner import scrub
+    monkeypatch.setenv("GEMINI_API_KEY", "AIzaPlainValueNoShape0123")
+    monkeypatch.setenv("CLOUDFLARE_ACCOUNT_ID", "acctplainvalue42")
+    out = scrub("failed with AIzaPlainValueNoShape0123 on acctplainvalue42")
+    assert "AIzaPlainValueNoShape0123" not in out and "acctplainvalue42" not in out
+
+
+def test_settings_that_are_not_credentials_are_not_masked(monkeypatch):
+    from judge_audit.judges.base import credential_values
+    monkeypatch.setenv("LLM_MAX_TOKENS", "1024")             # a budget, not a token
+    monkeypatch.setenv("SOME_KEY", "abc")                    # too short to mask safely
+    assert "1024" not in credential_values()
+    assert redact("budget 1024, value abc") == "budget 1024, value abc"

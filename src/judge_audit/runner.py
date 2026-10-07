@@ -329,9 +329,8 @@ def request_failure(exc: BaseException) -> str:
     """One line for a judge request that failed: the error's own text with paths named as
     provenance names them (`scrub`), else its class; never a traceback. The callers that
     exit with it keep `JUDGE_AUDIT_DEBUG=1` to see the traceback."""
-    from .judges.base import redact
     text = " ".join(str(exc).split())[:300]
-    return redact(scrub(f"{type(exc).__name__}: {text}" if text else type(exc).__name__))
+    return scrub(f"{type(exc).__name__}: {text}" if text else type(exc).__name__)
 
 
 def scrub(text: str, *paths: str | Path) -> str:
@@ -348,7 +347,9 @@ def scrub(text: str, *paths: str | Path) -> str:
                 forms[form] = shown
     for form in sorted(forms, key=len, reverse=True):
         text = text.replace(form, forms[form])
-    return _PATH_IN_TEXT.sub(lambda m: display_path(m.group(0).rstrip(" .")), text)
+    text = _PATH_IN_TEXT.sub(lambda m: display_path(m.group(0).rstrip(" .")), text)
+    from .judges.base import redact  # credentials too: every message passes here
+    return redact(text)
 
 
 def run_metadata(judge: Judge, labels_path: str | None = None,
