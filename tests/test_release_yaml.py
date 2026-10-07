@@ -244,24 +244,41 @@ def test_prerelease_is_never_latest_and_finals_keep_the_defaults(jobs):
     assert "--latest=true" not in run and "--latest " not in run
 
 
-@pytest.mark.parametrize("tag", ["v0.6.0", "v0.6.0rc1"])
-def test_build_and_trigger_accept_a_prerelease_tag(root, jobs, workflow, tag, tmp_path):
-    """The trigger glob matches the tag, and the build job's tag-vs-version check, run as
-    written, passes when pyproject carries the same version (and fails when it differs)."""
-    from fnmatch import fnmatchcase
-    assert any(fnmatchcase(tag, g) for g in workflow[True]["push"]["tags"])
+def run_tag_check(jobs, tmp_path, tag: str, version: str) -> subprocess.CompletedProcess:
+    """The build job's tag check, run by bash as written, on a pyproject at `version`."""
     check = next(s["run"] for s in jobs["build"]["steps"]
                  if s.get("name") == "Tag must match the package version")
     bash = shutil.which("bash")
     if bash is None or sys.version_info < (3, 11):
         pytest.skip("needs bash and tomllib (the build job runs Python 3.12)")
     py = tmp_path / "bin"
-    py.mkdir()
-    (py / "python").symlink_to(sys.executable)
+    py.mkdir(exist_ok=True)
+    if not (py / "python").exists():
+        (py / "python").symlink_to(sys.executable)
+    (tmp_path / "pyproject.toml").write_text(f'[project]\nversion = "{version}"\n')
+    env = {**os.environ, "GITHUB_REF_NAME": tag,
+           "PATH": f"{py}{os.pathsep}{os.environ['PATH']}"}
+    return subprocess.run([bash, "-e", "-c", check], cwd=tmp_path, env=env,
+                          capture_output=True, text=True)
+
+
+@pytest.mark.parametrize("tag", ["v0.6.0", "v0.6.0rc1"])
+def test_build_and_trigger_accept_a_prerelease_tag(jobs, workflow, tag, tmp_path):
+    """The trigger glob matches the tag, and the build job's tag-vs-version check, run as
+    written, passes when pyproject carries the same version (and fails when it differs)."""
+    from fnmatch import fnmatchcase
+    assert any(fnmatchcase(tag, g) for g in workflow[True]["push"]["tags"])
     for version, ok in ((tag[1:], True), ("0.6.0", tag == "v0.6.0")):
-        (tmp_path / "pyproject.toml").write_text(f'[project]\nversion = "{version}"\n')
-        env = {**os.environ, "GITHUB_REF_NAME": tag,
-               "PATH": f"{py}{os.pathsep}{os.environ['PATH']}"}
-        r = subprocess.run([bash, "-e", "-c", check], cwd=tmp_path, env=env,
-                           capture_output=True, text=True)
+        r = run_tag_check(jobs, tmp_path, tag, version)
         assert (r.returncode == 0) is ok, (tag, version, r.stdout)
+
+
+@pytest.mark.parametrize("tag", ["v0.6.0.dev1", "v0.6.0rc1.dev2", "v0.6.0.post1.dev3"])
+def test_build_refuses_a_dev_release_tag(jobs, workflow, tag, tmp_path):
+    """A `.devN` tag matches the trigger, and pyproject may carry the same version, but a
+    development release is never published: the build job stops with a clear error."""
+    from fnmatch import fnmatchcase
+    assert any(fnmatchcase(tag, g) for g in workflow[True]["push"]["tags"])
+    r = run_tag_check(jobs, tmp_path, tag, tag[1:])
+    assert r.returncode != 0, tag
+    assert f"::error::tag {tag} is a development release" in r.stdout

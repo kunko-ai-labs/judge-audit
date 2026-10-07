@@ -17,8 +17,8 @@ Release branches, one per version, off `main`:
 A pre-release follows steps 1, 2 and 4 above, with the PEP 440 version (`0.6.0rc1`) in `pyproject.toml` and `__version__`, and the tag `v0.6.0rc1` on `main`. It differs in four places:
 
 - **Contents.** Only what is already on `main`, reviewed and tested. A pre-release on PyPI can be yanked but never replaced, so a fix is a new `rcN+1`.
-- **GitHub release.** `release.yml` detects the suffix (`a`, `b` or `rc` followed by a number; `.postN` is a final release) and marks the release as a pre-release, never Latest. It does so also when the release was created by hand before the tag.
-- **No floating tag, no Marketplace.** Do not move `vX.Y` for a pre-release: the README snippet and Action users stay on the last final release. Do not tick **Publish this Action to the GitHub Marketplace**. Keep the README's `# resolves once vX.Y.0 is tagged` comment until the final release.
+- **GitHub release.** `release.yml` detects the suffix (`a`, `b` or `rc` followed by a number; `.postN` is a final release; a `.devN` tag is refused by `build` and never published) and marks the release as a pre-release, never Latest. It does so also when the release was created by hand before the tag.
+- **No floating tag, no Marketplace.** Do not move `vX.Y` for a pre-release: the README snippet and Action users stay on the last final release. Do not tick **Publish this Action to the GitHub Marketplace**. Do not change the README's `@vX.Y` Action snippet until the final release.
 - **PyPI.** The same Trusted Publishing path and the same `pypi` environment approval by the maintainer. `pip install kunko-judge-audit` keeps resolving to the last final release; a pre-release installs only when pinned (`==0.6.0rc1`) or with `--pre`.
 
 Verify a pre-release as a final one: `pip install kunko-judge-audit==X.Y.ZrcN`, `judge-audit --version`, and `gh attestation verify <wheel> --repo kunko-ai-labs/judge-audit`.
