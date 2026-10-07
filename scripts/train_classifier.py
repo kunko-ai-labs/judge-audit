@@ -31,7 +31,6 @@ import json
 import math
 import platform
 import random
-import subprocess
 import sys
 import time
 from datetime import datetime, timezone
@@ -140,14 +139,9 @@ def portable_path(path: Path) -> str:
 
 
 def hardware(device: str) -> str:
-    chip = platform.machine()
-    if sys.platform == "darwin":
-        try:
-            chip = subprocess.run(["sysctl", "-n", "machdep.cpu.brand_string"], check=True,
-                                  capture_output=True, text=True).stdout.strip() or chip
-        except (OSError, subprocess.CalledProcessError):
-            pass
-    return f"{chip} ({platform.system()} {platform.release()}), device {device}"
+    """The device a run trained on (cpu, mps, cuda): what a reproducer needs, without the
+    computer's chip, operating system or CPU model."""
+    return f"device {device}"
 
 
 def main() -> None:
@@ -349,6 +343,7 @@ def main() -> None:
         "temperature_scaling": temperature_scaling,
         "train_loss_per_epoch": losses, "train_accuracy_final": round(hits / len(texts), 4),
         "wall_time_s": round(wall, 1), "hardware": hardware(device),
+        "dtype": str(next(model.parameters()).dtype).replace("torch.", ""),
         "determinism": "seeded (python, torch, batch order); MPS kernels are not guaranteed "
                        "bit-reproducible across torch versions",
         "software": {"python": platform.python_version(), "torch": torch.__version__,

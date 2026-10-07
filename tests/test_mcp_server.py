@@ -21,7 +21,10 @@ def test_run_audit_simulated_is_tagged_and_carries_provenance(labels_path, tmp_p
     assert out["run"]["judge"]["name"] == "simulated"
     assert out["run"]["dataset"]["rows"] == 12
     assert (tmp_path / "j.jsonl").read_text().count("\n") == 12
-    assert out["judgments_path"] == str(tmp_path / "j.jsonl")
+    # named as provenance names files: relative, never an absolute path
+    from judge_audit.runner import display_path
+    assert out["judgments_path"] == display_path(str((tmp_path / "j.jsonl").resolve()))
+    assert not out["judgments_path"].startswith("/")
 
 
 def test_run_audit_missing_file_is_a_structured_error(tmp_path):

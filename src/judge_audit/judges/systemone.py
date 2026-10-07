@@ -118,6 +118,10 @@ class _Captured(logging.Handler):
 def tidy(message: str) -> str:
     """A loader message for the provenance: the home directory and temporary directory names
     hidden (they change between machines and loads), one line, bounded."""
+    hf_home = os.environ.get("HF_HOME")
+    if hf_home and not Path(hf_home).expanduser().is_relative_to(Path.home() / ".cache"):
+        # a model cache moved out of the default place names where it is; publish the role
+        message = message.replace(str(Path(hf_home).expanduser()), "<hf-cache>")
     message = message.replace(str(Path.home()), "~")
     message = re.sub(r"\.decision2-view-[^/'\s]+", ".decision2-view-*", message)
     message = re.sub(r"/(?:private/)?(?:var/folders|tmp)/[^'\s]+", "<tmp>", message)

@@ -71,6 +71,19 @@ def _is_local_url(url: str) -> bool:
     return host in {"localhost", "127.0.0.1", "::1"}
 
 
+# mlx_lm.server's system_fingerprint: "<mlx-lm version>-<mlx version>-<platform>-<gpu>".
+_MLX_FINGERPRINT = re.compile(r"(\d+\.\d+\.\d+[\w.]*)-(\d+\.\d+\.\d+[\w.]*)-.+")
+
+
+def local_fingerprint(fp: str | None) -> str | None:
+    """A local server's system_fingerprint reduced to what a reproducer needs. A server on
+    this computer (mlx_lm.server) builds it from its library versions and the computer's
+    platform and GPU; provenance keeps the versions only. Another shape is dropped (None),
+    never guessed at."""
+    m = _MLX_FINGERPRINT.fullmatch(fp or "")
+    return f"mlx-lm {m.group(1)} / mlx {m.group(2)}" if m else None
+
+
 # The only top-level fields LLM_EXTRA_BODY may set: a gateway's routing object. Everything
 # else (the model, the messages, sampling, token limits, a fallback model list, prompt
 # transforms) is fixed by the adapter and recorded in provenance, and a server that reads
@@ -594,8 +607,12 @@ class LLMJudge(Judge):
             # "rate-limited" is what scripts/audit_resumable.py looks for before sleeping.
             raise RuntimeError(f"rate-limited by {self.base_url} after retries ({last})")
         text = data["choices"][0]["message"]["content"]
-        self._served = {"model": data.get("model"),
-                        "system_fingerprint": data.get("system_fingerprint")}
+        fingerprint = data.get("system_fingerprint")
+        if _is_local_url(self.base_url):
+            # served on this computer: the versions, not the computer (a hosted server's
+            # fingerprint identifies the vendor's serving build and is kept as reported)
+            fingerprint = local_fingerprint(fingerprint)
+        self._served = {"model": data.get("model"), "system_fingerprint": fingerprint}
         # A gateway may say which upstream served the request, in a "provider" field.
         self._upstream = checked_upstream(data.get("provider"), self.extra_body)
         usage = data.get("usage") or {}

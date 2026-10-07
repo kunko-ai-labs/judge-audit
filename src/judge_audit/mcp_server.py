@@ -25,7 +25,7 @@ from .judges.base import Judge
 from .judges.simulated import SIMULATED_TAG
 from .report import IncompatibleBaseline
 from .report import check_drift as _check_drift
-from .runner import load_dataset, write_judgments
+from .runner import display_path, load_dataset, write_judgments
 from .runner import run_audit as _run_audit
 
 try:
@@ -140,7 +140,9 @@ def _load(labels_path: str) -> tuple[list[dict] | None, dict, dict | None]:
     """(rows, dataset header, error) — rows is None when error is set."""
     full = _resolve(labels_path)
     if full is None:
-        return None, {}, {"error": f"labels file not found: {labels_path} (cwd {os.getcwd()})"}
+        return None, {}, {"error": f"labels file not found: {display_path(labels_path)} "
+                                   "(a relative path is read from the server's working "
+                                   "directory)"}
     try:
         rows, dataset_meta = load_dataset(full)
     except (OSError, ValueError) as exc:
@@ -204,9 +206,10 @@ def run_audit(labels_path: str, judge: str = "simulated",
     if judgments_path:
         try:
             write_judgments(result, judgments_path)
-            out["judgments_path"] = os.path.abspath(judgments_path)
+            out["judgments_path"] = display_path(os.path.abspath(judgments_path))
         except OSError as exc:
-            out["judgments_error"] = f"cannot write {judgments_path}: {exc}"
+            out["judgments_error"] = (f"cannot write {display_path(judgments_path)}: "
+                                      f"{type(exc).__name__}")
     return out
 
 
@@ -224,7 +227,8 @@ def check_drift(labels_path: str, baseline_path: str, judge: str = "simulated",
         return err or {"error": "internal: no rows or judge"}
     baseline = _resolve(baseline_path)
     if baseline is None:
-        return {"error": f"baseline file not found: {baseline_path} (cwd {os.getcwd()})"}
+        return {"error": f"baseline file not found: {display_path(baseline_path)} (a relative "
+                         "path is read from the server's working directory)"}
     j, tag, err = _make_judge(judge, rows)
     if err or j is None:
         return err or {"error": "internal: no rows or judge"}

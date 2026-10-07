@@ -91,11 +91,12 @@ def test_display_path_never_publishes_a_home_directory(tmp_path, monkeypatch):
     assert display_path("docs/runs/x.ckpt.jsonl") == "docs/runs/x.ckpt.jsonl"
     assert display_path(tmp_path / "docs" / "x.jsonl") == "docs/x.jsonl"
     home = Path.home()
-    assert display_path(home / "elsewhere" / "labels.jsonl") == "~/elsewhere/labels.jsonl"
-    for p in ("docs/runs/x.ckpt.jsonl", str(tmp_path / "docs" / "x.jsonl"),
-              str(home / "elsewhere" / "labels.jsonl")):
+    elsewhere = tmp_path / "elsewhere" / "labels.jsonl"     # in no repository
+    monkeypatch.chdir(home)
+    assert display_path(elsewhere) == "labels.jsonl"
+    for p in ("docs/runs/x.ckpt.jsonl", str(tmp_path / "docs" / "x.jsonl"), str(elsewhere)):
         out = display_path(p)
-        assert str(home) not in out and not out.startswith("/Users/")
+        assert str(home) not in out and not out.startswith(("/", "~"))
 
 
 def test_run_metadata_publishes_a_relative_dataset_path(tmp_path, monkeypatch):

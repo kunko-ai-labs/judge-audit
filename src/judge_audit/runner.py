@@ -281,21 +281,26 @@ def checkpoint_record(idx: int, row: dict, judgment: dict, expected: str,
 
 
 def display_path(path: str | Path) -> str:
-    """The path as a provenance line should publish it: never somebody's home directory.
+    """The path as provenance publishes it: relative, never where a computer keeps it.
 
-    A file inside the working directory is named relative to it (`docs/runs/x.ckpt.jsonl`),
-    a file elsewhere under the user's home as `~/…`; anything else is left alone. The
-    point is a report that reads the same on every machine and leaks none of them (#58).
+    A file inside the working directory is named relative to it (`docs/runs/x.ckpt.jsonl`);
+    a file elsewhere, relative to the root of the repository that holds it (the nearest
+    directory above it with `.git` or `pyproject.toml`); any other file by its name alone.
+    No home directory, user name or folder layout is published (#58); the dataset's sha256,
+    recorded beside it, is what identifies the file.
     """
     p = Path(path)
     if not p.is_absolute():
         return str(path)
-    for base, prefix in ((Path.cwd(), ""), (Path.home(), "~/")):
-        try:
-            return prefix + str(p.relative_to(base))
-        except ValueError:
-            continue
-    return str(path)
+    try:
+        return str(p.relative_to(Path.cwd()))
+    except ValueError:
+        pass
+    for parent in p.parents:
+        if parent != parent.parent and ((parent / ".git").exists()
+                                         or (parent / "pyproject.toml").exists()):
+            return str(p.relative_to(parent))
+    return p.name
 
 
 def run_metadata(judge: Judge, labels_path: str | None = None,
