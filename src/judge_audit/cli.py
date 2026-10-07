@@ -21,6 +21,7 @@ from .judges.clef import ClefJudge
 from .judges.decider import DeciderJudge
 from .judges.decision2 import Decision2Judge
 from .judges.finetuned import FinetunedJudge
+from .judges.hosted import ClefHostedJudge, OpenAIDecisionsJudge
 from .judges.jev import JevJudge
 from .judges.laya import LayaJudge
 from .judges.llm import LLMJudge
@@ -50,7 +51,7 @@ from .runner import (
 )
 
 JUDGES = ("jev", "llm", "nli", "finetuned", "laya", "decision2", "decider", "strands", "clef",
-          "logprob", "simulated")
+          "openai-decisions", "clef-hosted", "logprob", "simulated")
 
 
 def _die(msg: str) -> NoReturn:
@@ -104,6 +105,10 @@ def _judge(name: str, rows: list | None = None):
         return StrandsJudge(), ""
     if name == "clef":
         return ClefJudge(), ""
+    if name == "openai-decisions":
+        return OpenAIDecisionsJudge(), ""
+    if name == "clef-hosted":
+        return ClefHostedJudge(), ""
     if name == "simulated":
         return SimulatedJudge(rows or []), SIMULATED_TAG
     _die(f"unknown judge '{name}' (available: {', '.join(JUDGES)})")
@@ -123,7 +128,9 @@ def _parser() -> argparse.ArgumentParser:
                         "nli: local zero-shot encoder (control) · finetuned: your own "
                         "classifier, FINETUNED_MODEL_DIR · laya: open judgment model, local · "
                         "decision2 / decider / strands / clef: open decision models, local, "
-                        "pinned revision · "
+                        "pinned revision · openai-decisions: the OpenAI Decisions API, "
+                        "OPENAI_API_KEY · clef-hosted: Clef / Clef-flash on Workers AI, "
+                        "CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID · "
                         "logprob: an open model's own option probabilities, MLX · see "
                         "docs/judges.md · simulated: nothing")
     r.add_argument("--format", choices=["md", "html"], default="md")

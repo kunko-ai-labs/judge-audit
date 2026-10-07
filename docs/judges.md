@@ -110,6 +110,19 @@ What ran where (plumbing only, no metric): decider-2b and Strands Decider ran on
 
 **Laya's multilingual checkpoint** (`convaiinnovations/laya-multilingual`, an mmBERT-base encoder) loads through the existing `laya` judge, no new code: `LAYA_MODEL=convaiinnovations/laya-multilingual LAYA_REVISION=1720e3e3357cfe1e281542e223f8273b0890ca34`. Its shipped budget is `max_len` 1,024 and `head_max_len` 256 (Laya's README: pass `LAYA_MAX_LEN=8192` for long documents), and it ships no softmax temperature (1.0 for every type).
 
+## Hosted decision APIs: the OpenAI Decisions API and Clef on Workers AI
+
+`--judge openai-decisions` calls the OpenAI Decisions API (`POST https://api.openai.com/v1/decisions`, model `gpt-6-luna`, `OPENAI_API_KEY`); `--judge clef-hosted` calls Clef-flash or Clef on Workers AI (`POST https://api.cloudflare.com/client/v4/accounts/<account>/ai/run/@cf/cloudflare/clef-flash`, or `.../clef` with `CLEF_HOSTED_MODEL=clef`; `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`). Both are in `judges/hosted.py`.
+
+- **Request.** The Decisions API takes `input` and a list of `questions`: a choice question's options are `choices` (`{value, description}`, the description falling back to the label), a yes/no question is a `predicate`, a score's options are its `levels`. Clef on Workers AI takes the same System One request as the local Clef (`state`, `questions` keyed by name, options as `criteria`).
+- **Confidence is P(chosen option)**, from the per-option probabilities the answer returns (the Decisions API: a list of `{value, probability}`; Workers AI: a map). Each API also returns its own `confidence`: the Decisions API does not define it (its documented example has 0.93 next to a top probability of 0.95), Workers AI says it is "derived from the probabilities". It is kept in `raw.native_confidence`, so it can be audited separately, and never replaces P(chosen option). An answer without probabilities is no answer.
+- **A refusal** (Decisions API: an answer of type `refusal`) is no answer, counted against the judge, with `raw.refusal` true.
+- **One question per request by default.** Other decision models have changed an answer with the other questions of the request; `DECISIONS_QUESTIONS_PER_REQUEST=all` or `CLEF_HOSTED_QUESTIONS_PER_REQUEST=all` sends them together, and the provenance records which (`questions_per_request`).
+- **Cost** is the input tokens a response reports times the documented price: $0.10 per million for `gpt-6-luna` (no output charge), $0.09 for Clef-flash and $0.24 for Clef (2026-10-07). A response that reports no tokens has an unknown cost (`null`), not one counted with another model's tokenizer.
+- **Served.** Any model id the response returns is recorded in `raw.served`, and the Decisions API's response id in `raw.response_id`. No account id, key or token is recorded or printed; an HTTP error is reported by its status and the server's message, with the key removed if the server echoes it.
+
+Opt-in live smoke tests (`JUDGE_AUDIT_SMOKE_HOSTED=1 pytest tests/test_hosted_decision_judges.py`) call each API once; CI never runs them.
+
 ## Why an NLI control
 
 `nli` is a ~180M-parameter encoder that scores each option as a hypothesis against the state and returns the softmax over options. It cannot follow instructions, so prompt injection cannot reach it by construction; its probabilities are real, not written; it runs on a CPU for free. It also cannot reason and reads a short context. It is a **control**, not a competitor: the row that shows what "small, instruction-immune, real softmax" looks like before any training, so the fine-tuned row and the LLM rows can be read against it. Option descriptions, when present, are used as the hypotheses — the same lever the router ablation tests.
