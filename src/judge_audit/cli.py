@@ -21,6 +21,7 @@ from .judges.clef import ClefJudge
 from .judges.decider import DeciderJudge
 from .judges.decision2 import Decision2Judge
 from .judges.finetuned import FinetunedJudge
+from .judges.hosted import ClefHostedJudge, OpenAIDecisionsJudge
 from .judges.jev import JevJudge
 from .judges.laya import LayaJudge
 from .judges.llm import LLMJudge
@@ -45,13 +46,14 @@ from .runner import (
     display_path,
     groups_of,
     load_dataset,
+    request_failure,
     run_audit,
     scrub,
     write_judgments,
 )
 
 JUDGES = ("jev", "llm", "nli", "finetuned", "laya", "decision2", "decider", "strands", "clef",
-          "logprob", "simulated")
+          "openai-decisions", "clef-hosted", "logprob", "simulated")
 
 
 def _die(msg: str) -> NoReturn:
@@ -114,6 +116,10 @@ def _judge(name: str, rows: list | None = None):
         return StrandsJudge(), ""
     if name == "clef":
         return ClefJudge(), ""
+    if name == "openai-decisions":
+        return OpenAIDecisionsJudge(), ""
+    if name == "clef-hosted":
+        return ClefHostedJudge(), ""
     if name == "simulated":
         return SimulatedJudge(rows or []), SIMULATED_TAG
     _die(f"unknown judge '{name}' (available: {', '.join(JUDGES)})")
@@ -133,7 +139,9 @@ def _parser() -> argparse.ArgumentParser:
                         "nli: local zero-shot encoder (control) · finetuned: your own "
                         "classifier, FINETUNED_MODEL_DIR · laya: open judgment model, local · "
                         "decision2 / decider / strands / clef: open decision models, local, "
-                        "pinned revision · "
+                        "pinned revision · openai-decisions: the OpenAI Decisions API, "
+                        "OPENAI_API_KEY · clef-hosted: Clef / Clef-flash on Workers AI, "
+                        "CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID · "
                         "logprob: an open model's own option probabilities, MLX · see "
                         "docs/judges.md · simulated: nothing")
     r.add_argument("--format", choices=["md", "html"], default="md")
@@ -197,13 +205,28 @@ def _stale_baseline(path: str, current: dict) -> list[str]:
     return notes
 
 
+def nll_text(result) -> str:
+    """The log loss on a summary line: a number, or `inf(N certain and wrong)` when a judge
+    declared certainty and was wrong, never a bare `inf` (the report says the same)."""
+    if result.nll_infinite:
+        return f"inf({result.nll_infinite} certain and wrong)"
+    return fmt4(result.nll)
+
+
 def _audit(judge, rows: list[dict], args, dataset_meta: dict):
-    """run_audit, or exit 2 when the answers or the dataset would leave it incomplete."""
+    """run_audit, or exit 2 when the answers or the dataset would leave it incomplete, or when
+    the judge cannot answer (an HTTP error, a server that cannot be reached, a model that
+    fails to run): exit 1 means drift, and an expired key must not read as one.
+    `JUDGE_AUDIT_DEBUG=1` re-raises, with the traceback."""
     try:
         return run_audit(judge, rows, labels_path=args.labels, dataset_meta=dataset_meta,
                          ci=False if args.no_ci else None)
     except IncompleteAnswers as e:
         _die(f"the audit would not be complete: {e}")
+    except Exception as e:
+        if os.environ.get("JUDGE_AUDIT_DEBUG"):
+            raise
+        _die(f"judge request failed: {request_failure(e)}")
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -276,7 +299,7 @@ def main(argv: list[str] | None = None) -> None:
               f"ece_equal_mass={fmt4(result.ece_equal_mass)}"
               f"{interval(result.ece_equal_mass_ci)} "
               f"brier={fmt4(result.brier)}{interval(result.brier_ci)} "
-              f"nll={'inf' if result.nll_infinite else fmt4(result.nll)}"
+              f"nll={nll_text(result)}"
               f"{interval(result.nll_ci)} "
               f"gt={ground_truth_of(result.run).tier} "
               f"cost={cost} -> {out}")

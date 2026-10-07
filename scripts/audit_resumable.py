@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from datetime import datetime, timezone
@@ -27,7 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from judge_audit import __version__  # noqa: E402
-from judge_audit.cli import _judge  # noqa: E402
+from judge_audit.cli import _judge, nll_text  # noqa: E402
 from judge_audit.ground_truth import parse_ground_truth  # noqa: E402
 from judge_audit.judges.simulated import SIMULATED_TAG  # noqa: E402
 from judge_audit.report import fmt4, render_html, render_markdown  # noqa: E402
@@ -43,6 +44,7 @@ from judge_audit.runner import (  # noqa: E402
     load_dataset,
     missing_answer,
     questions_of,
+    request_failure,
     run_metadata,
     served_versions,
     sha256_of,
@@ -241,7 +243,7 @@ def main() -> None:
         if not done:
             # First line of a fresh checkpoint: how this run was produced.
             header = {"idx": -1, "run": started}
-            f.write(json.dumps(header) + "\n")
+            f.write(json.dumps(header, allow_nan=False) + "\n")
             done[-1] = header  # the report reads the run time from here, as a rerun would
         warned = False  # one not-sent warning per invocation, at the first such row
         for idx in wanted:
@@ -269,8 +271,15 @@ def main() -> None:
                               f"({type(e).__name__}); sleeping {wait}s "
                               f"(attempt {attempt + 1}/3)", flush=True)
                         time.sleep(wait)
-                    else:
+                    elif os.environ.get("JUDGE_AUDIT_DEBUG"):
                         raise
+                    else:
+                        # The rows already judged are on disk: a rerun resumes after them.
+                        print(f"judge request failed: row {idx}: {request_failure(e)}; "
+                              f"{sum(1 for k in done if k >= 0)} rows "
+                              f"kept in {display_path(ckpt)}; rerun to resume",
+                              file=sys.stderr)
+                        raise SystemExit(2) from None
             rec = checkpoint_row(idx, row, judgments)
             if not warned:
                 first = next((j for j in rec["judgments"] if is_not_sent(j.get("raw"))), None)
@@ -278,7 +287,7 @@ def main() -> None:
                     warn_not_sent(name, idx, first["question"], first["raw"],
                                   getattr(judge, "over_length_advice", None))
                     warned = True
-            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+            f.write(json.dumps(rec, ensure_ascii=False, allow_nan=False) + "\n")
             f.flush()
             done[idx] = rec
             n_done += 1
@@ -299,7 +308,7 @@ def main() -> None:
           f"{'not_sent=' + str(result.not_sent) + ' ' if result.not_sent else ''}"
           f"confidence_known={confidence['known']}/{confidence['total']} "
           f"ece={fmt4(result.ece)} ece_equal_mass={fmt4(result.ece_equal_mass)} "
-          f"brier={fmt4(result.brier)} nll={'inf' if result.nll_infinite else fmt4(result.nll)} gt={result.run['dataset']['ground_truth']['tier']} "
+          f"brier={fmt4(result.brier)} nll={nll_text(result)} gt={result.run['dataset']['ground_truth']['tier']} "
           f"cost={cost} -> {args.out}")
 
 

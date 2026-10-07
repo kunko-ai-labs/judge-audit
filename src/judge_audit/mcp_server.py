@@ -122,6 +122,22 @@ JUDGE_INFO: dict[str, dict[str, object]] = {
         "env": ["extra [clef]", ("CLEF_MODEL, CLEF_REVISION, CLEF_DEVICE (optional; pinned by "
                                  "default)")],
     },
+    "openai-decisions": {
+        "description": "The OpenAI Decisions API (gpt-6-luna), hosted. Confidence is "
+                       "P(chosen option) from its per-option probabilities; its own "
+                       "confidence field is kept in raw, not audited. One question per "
+                       "request by default.",
+        "env": ["OPENAI_API_KEY", ("DECISIONS_MODEL, DECISIONS_QUESTIONS_PER_REQUEST "
+                                   "(1 | all; optional)")],
+    },
+    "clef-hosted": {
+        "description": "Clef / Clef-flash on Workers AI, hosted. Confidence is P(chosen "
+                       "option) from its per-option probabilities. One question per request "
+                       "by default.",
+        "env": ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID",
+                ("CLEF_HOSTED_MODEL (clef-flash | clef), CLEF_HOSTED_QUESTIONS_PER_REQUEST "
+                 "(1 | all; optional)")],
+    },
     "simulated": {
         "description": "Seeded simulator to see the pipeline without a key. Not a real "
                        "vendor audit; every result is tagged SIMULATED.",

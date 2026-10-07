@@ -27,7 +27,16 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from .base import Judge, Judgment, Question, QuestionType, served_of
+from .base import (
+    OPENER,
+    Judge,
+    Judgment,
+    Question,
+    QuestionType,
+    checked_endpoint,
+    redact,
+    served_of,
+)
 
 # Version of what the judge is shown: `_sdk_question` / `_direct_question`, the criteria
 # map built from each question's options and descriptions. Jev has no text prompt, so this
@@ -86,8 +95,13 @@ class JevJudge(Judge):
                     "the Node bridge has no dependencies installed. Run: "
                     f"npm install --prefix {_BRIDGE.parent}  (needs Node >= 20)")
         elif self.backend == "typesafe":
-            self.endpoint = os.environ.get("JEV_ENDPOINT", TYPESAFE_ENDPOINT)
             self.api_key = api_key or os.environ.get("TYPESAFE_API_KEY", "")
+            override = os.environ.get("JEV_ENDPOINT")
+            # the key goes with every request: https, or plain http to this computer only
+            self._endpoint = (checked_endpoint(override, "JEV_ENDPOINT",
+                                               sends_key=bool(self.api_key))
+                              if override else None)
+            self.endpoint = self._endpoint.url if self._endpoint else TYPESAFE_ENDPOINT
             if model is None and "JEV_MODEL" not in os.environ:
                 self.model = DIRECT_MODEL
             if self.endpoint == TYPESAFE_ENDPOINT and not self.api_key:
@@ -98,7 +112,7 @@ class JevJudge(Judge):
             raise ValueError(f"unknown backend '{self.backend}' (gateway | typesafe)")
 
     def describe(self) -> dict:
-        d = {"name": self.name, "model": self.model, "backend": self.backend,
+        d: dict = {"name": self.name, "model": self.model, "backend": self.backend,
              "bridge": "ai-sdk/experimental_evaluate" if self.backend == "gateway"
              else "typesafe-systemone-http",
              # Jev takes no sampling temperature: it returns a distribution, not a sample.
@@ -107,7 +121,11 @@ class JevJudge(Judge):
              "criteria_version": CRITERIA_VERSION,
              "input_price_per_mtok_usd": INPUT_PRICE_PER_MTOK}
         if self.backend == "typesafe":
-            d["endpoint"] = self.endpoint
+            ep = getattr(self, "_endpoint", None)
+            d["endpoint"] = None if ep else self.endpoint
+            d["endpoint_overridden"] = ep is not None
+            if ep:
+                d["endpoint_host"] = ep.host
         return d
 
     # ------------------------------------------------------------------ public
@@ -138,7 +156,7 @@ class JevJudge(Judge):
             )
             wall = time.monotonic() - t0
             if proc.returncode != 0:
-                last_err = proc.stderr.decode()[-300:]
+                last_err = redact(proc.stderr.decode(errors="replace"), self.api_key)[-300:]
                 if _is_rate_limit(last_err):
                     time.sleep(min(2 ** attempt * 10 + random.uniform(0, 5), 300))
                     _throttle()
@@ -146,7 +164,7 @@ class JevJudge(Judge):
                 raise RuntimeError(f"jev bridge failed: {last_err}")
             (res,) = json.loads(proc.stdout.decode())
             if not res.get("ok"):
-                last_err = str(res.get("error"))
+                last_err = redact(str(res.get("error")), self.api_key)
                 if _is_rate_limit(last_err):
                     # Free-tier windows look long (minutes); back off hard.
                     time.sleep(min(2 ** attempt * 10 + random.uniform(0, 5), 300))
@@ -162,8 +180,10 @@ class JevJudge(Judge):
         ts_meta = (meta.get("typesafe") or {}).get("confidence") or {}
         usage = res.get("usage") or {}
         latency = (res.get("latencyMs") or 0) / 1000.0 or wall
-        in_tok = usage.get("inputTokens") or usage.get("input_tokens") or 0
-        cost = in_tok / 1e6 * INPUT_PRICE_PER_MTOK
+        in_tok = usage.get("inputTokens", usage.get("input_tokens"))
+        # billed per request, whatever its answers; no reported tokens is an unknown cost
+        cost = (in_tok / 1e6 * INPUT_PRICE_PER_MTOK
+                if isinstance(in_tok, int) and not isinstance(in_tok, bool) else None)
 
         out: list[Judgment] = []
         for q in questions:
@@ -172,7 +192,7 @@ class JevJudge(Judge):
             out.append(Judgment(
                 question=q.name, decision=decision, confidence=confidence,
                 latency_s=latency / max(len(questions), 1),
-                cost_usd=cost / max(len(questions), 1),
+                cost_usd=None if cost is None else cost / max(len(questions), 1),
                 raw={"answer": ans,
                      "typesafe_confidence": ts_meta.get(q.name),
                      "usage": usage,
@@ -218,18 +238,29 @@ class JevJudge(Judge):
                                      headers=headers)
         t0 = time.monotonic()
         try:
-            with urllib.request.urlopen(req, timeout=120) as resp:
+            with OPENER.open(req, timeout=120) as resp:      # refuses redirects
                 body = json.load(resp)
         except urllib.error.HTTPError as e:
-            detail = e.read().decode(errors="replace")[:300]
+            detail = redact(e.read().decode(errors="replace"), self.api_key)[:300]
             if e.code in (429, 503, 529):
-                raise _RateLimited(f"{self.endpoint} returned {e.code}: {detail}") from e
-            raise RuntimeError(f"{self.endpoint} returned {e.code}: {detail}") from e
+                raise _RateLimited(f"{self.endpoint} returned {e.code}: {detail}") from None
+            raise RuntimeError(f"{self.endpoint} returned {e.code}: {detail}") from None
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+            # reported by class only: its text can hold the URL and the request
+            raise RuntimeError(f"could not reach {redact(self.endpoint, self.api_key)} "
+                               f"({type(e).__name__})") from None
         latency = time.monotonic() - t0
         answers = body.get("answers") or {}
         usage = body.get("usage") or {}
-        in_tok = usage.get("input_tokens", 0)
-        cost = in_tok / 1e6 * INPUT_PRICE_PER_MTOK if self.endpoint == TYPESAFE_ENDPOINT else 0.0
+        in_tok = usage.get("input_tokens")
+        # billed per request, whatever its answers; a priced endpoint that reports no tokens
+        # has an unknown cost, never $0 (a self-hosted Jev-compatible server is not priced)
+        if self.endpoint != TYPESAFE_ENDPOINT:
+            cost: float | None = 0.0
+        elif isinstance(in_tok, int) and not isinstance(in_tok, bool):
+            cost = in_tok / 1e6 * INPUT_PRICE_PER_MTOK
+        else:
+            cost = None
 
         out: list[Judgment] = []
         for q in questions:
@@ -238,7 +269,7 @@ class JevJudge(Judge):
             out.append(Judgment(
                 question=q.name, decision=decision, confidence=confidence,
                 latency_s=latency / max(len(questions), 1),
-                cost_usd=cost / max(len(questions), 1),
+                cost_usd=None if cost is None else cost / max(len(questions), 1),
                 raw={"answer": ans, "typesafe_confidence": ans.get("confidence"),
                      "usage": usage, "model": body.get("model"),
                      "served": served_of({"model": body.get("model")})},

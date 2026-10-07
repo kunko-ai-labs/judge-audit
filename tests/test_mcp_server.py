@@ -79,6 +79,7 @@ def test_list_judges_names_every_judge():
     out = mcp_server.list_judges()
     assert {j["name"] for j in out["judges"]} == {"jev", "llm", "nli", "finetuned", "laya",
                                                   "decision2", "decider", "strands", "clef",
+                                                  "openai-decisions", "clef-hosted",
                                                   "logprob", "simulated"}
     assert all("description" in j and "env" in j for j in out["judges"])
     assert out["simulated_tag"] == SIMULATED_TAG

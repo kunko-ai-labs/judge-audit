@@ -54,7 +54,17 @@ import urllib.parse
 import urllib.request
 from collections.abc import Callable
 
-from .base import Judge, Judgment, Question, QuestionType, served_of
+from .base import (
+    OPENER,
+    Judge,
+    Judgment,
+    Question,
+    QuestionType,
+    RedirectRefused,
+    checked_endpoint,
+    redact,
+    served_of,
+)
 
 # HTTP statuses worth waiting out: rate limit, overloaded, unavailable, gateway timeout.
 TRANSIENT = {429, 503, 529, 502, 504}
@@ -174,12 +184,30 @@ def checked_upstream(reported, extra_body: dict) -> str | None:
     return name
 
 
+def _anthropic_client_args(anthropic, api_key: str | None, endpoint) -> dict:
+    """The Anthropic client's arguments: the key when given, the checked endpoint when one is
+    set, and an HTTP client that does not follow redirects (the SDK's own follows them, and
+    sends the key to the host a 30x names). `DefaultHttpxClient` keeps the SDK's defaults;
+    an SDK without it is refused, since a redirect-safe client cannot be built for it."""
+    args: dict = {}
+    if api_key:
+        args["api_key"] = api_key
+    if endpoint is not None:
+        args["base_url"] = endpoint.url
+    make = getattr(anthropic, "DefaultHttpxClient", None)
+    if make is None:
+        raise RuntimeError("this anthropic SDK has no DefaultHttpxClient, so a client that "
+                           "refuses redirects cannot be built; upgrade the anthropic package")
+    args["http_client"] = make(follow_redirects=False)
+    return args
+
+
 def _fetch_json(req: urllib.request.Request, deadline: float) -> dict:
     box: dict = {}
 
     def go():
         try:
-            with urllib.request.urlopen(req, timeout=deadline) as r:
+            with OPENER.open(req, timeout=deadline) as r:      # refuses redirects
                 box["data"] = json.load(r)
         except Exception as e:  # re-raised in the caller's thread
             box["err"] = e
@@ -484,9 +512,15 @@ class LLMJudge(Judge):
                     "the anthropic provider needs the SDK: "
                     "pip install 'kunko-judge-audit[anthropic]'"
                 ) from e
-            # Credentials resolve from ANTHROPIC_API_KEY or an `ant auth login` profile.
-            self._client = (anthropic.Anthropic(api_key=api_key) if api_key
-                            else anthropic.Anthropic())
+            # Credentials resolve from ANTHROPIC_API_KEY or an `ant auth login` profile; the
+            # key is kept so that every error this path raises masks it.
+            self.api_key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
+            # The SDK reads ANTHROPIC_BASE_URL itself; it is checked here as every endpoint a
+            # key is sent to, and the checked URL is what the client is given.
+            raw = (os.environ.get("ANTHROPIC_BASE_URL") or "").strip()
+            self._endpoint = checked_endpoint(raw, "ANTHROPIC_BASE_URL") if raw else None
+            self._client = anthropic.Anthropic(**_anthropic_client_args(
+                anthropic, api_key, self._endpoint))
             self._anthropic = anthropic
         elif self.provider == "custom":
             self.model = model or os.environ.get("LLM_MODEL", "")
@@ -517,6 +551,11 @@ class LLMJudge(Judge):
                 raise RuntimeError(
                     "LLM_BASE_URL is not set (e.g. https://api.openai.com/v1 or "
                     "http://localhost:11434/v1 for Ollama)")
+            # a key goes with every request when one is set: https, or plain http to this
+            # computer only; a keyless server (Ollama on the network) may stay plain http
+            self._endpoint = checked_endpoint(self.base_url, "LLM_BASE_URL",
+                                              sends_key=bool(self.api_key))
+            self.base_url = self._endpoint.url.split("?")[0].rstrip("/")
             if not self.model:
                 raise RuntimeError("LLM_MODEL is not set (e.g. gpt-5-mini, llama3.1)")
         else:
@@ -548,8 +587,17 @@ class LLMJudge(Judge):
                          if k in d}
                 d.update(extra(self.model))
                 d.update(owned)             # what this judge measures, not the module's say
+        elif self.provider == "anthropic":
+            ep = getattr(self, "_endpoint", None)
+            d["endpoint_overridden"] = ep is not None       # ANTHROPIC_BASE_URL: host only
+            if ep is not None:
+                d["endpoint_host"] = ep.host
         elif self.base_url:
             d["base_url"] = self.base_url
+            ep = getattr(self, "_endpoint", None)
+            if ep is not None:
+                d["endpoint_overridden"] = True             # LLM_BASE_URL has no default
+                d["endpoint_host"] = ep.host
         if self.extra_body:
             d["extra_body"] = self.extra_body
         if self.effort:
@@ -562,7 +610,7 @@ class LLMJudge(Judge):
         return PRICES.get(self.model)
 
     # ---------------------------------------------------------------- calls
-    def _call(self, user: str) -> tuple[str, int, int]:
+    def _call(self, user: str) -> tuple[str, int | None, int | None]:
         """Returns (text, input_tokens, output_tokens); what the provider says it served
         lands in `self._served` (a custom provider may return it as a 4th element)."""
         if self.provider == "anthropic":
@@ -589,16 +637,23 @@ class LLMJudge(Judge):
                 model=self.model, max_tokens=int(os.environ.get("LLM_MAX_TOKENS", "1024")),
                 system=self.system, messages=[{"role": "user", "content": user}], **kwargs)
         except self._anthropic.RateLimitError as e:
-            raise RuntimeError(f"rate-limited by Anthropic: {e.message}") from e
+            raise RuntimeError(f"rate-limited by Anthropic: "
+                               f"{redact(str(e.message), self.api_key)}") from None
         except self._anthropic.APIStatusError as e:
-            raise RuntimeError(f"Anthropic API error {e.status_code}: {e.message}") from e
+            if 300 <= int(getattr(e, "status_code", 0) or 0) < 400:
+                raise RedirectRefused(
+                    f"the server answered {e.status_code} (a redirect); judge-audit does not "
+                    f"follow redirects, so the key is never sent to a host that was not "
+                    f"checked: set the endpoint to the URL that answers") from None
+            raise RuntimeError(f"Anthropic API error {e.status_code}: "
+                               f"{redact(str(e.message), self.api_key)}") from None
         if resp.stop_reason == "refusal":
             raise RuntimeError("model refused the request")
         text = "".join(b.text for b in resp.content if b.type == "text")
         self._served = {"model": getattr(resp, "model", None)}
         return text, resp.usage.input_tokens, resp.usage.output_tokens
 
-    def _call_openai_compatible(self, user: str) -> tuple[str, int, int]:
+    def _call_openai_compatible(self, user: str) -> tuple[str, int | None, int | None]:
         body: dict = {"model": self.model, "temperature": self.temperature,
                       "response_format": {"type": "json_object"},
                       "messages": [{"role": "system", "content": self.system},
@@ -622,15 +677,15 @@ class LLMJudge(Judge):
                 last = f"{type(e).__name__}: {e}"
                 body.pop("response_format", None)
             except urllib.error.HTTPError as e:
-                detail = e.read().decode(errors="replace")[:300]
+                detail = redact(e.read().decode(errors="replace"), self.api_key)[:300]
                 if e.code in TRANSIENT:
                     last = f"{e.code}: {detail}"
                     time.sleep(min(2 ** attempt * 5 + random.uniform(0, 3), 120))
                     continue
-                raise RuntimeError(f"{self.base_url} returned {e.code}: {detail}") from e
+                raise RuntimeError(f"{self.base_url} returned {e.code}: {detail}") from None
             except (urllib.error.URLError, http.client.HTTPException, ConnectionError) as e:
                 # Dropped or reset connections are as transient as a 503.
-                last = f"{type(e).__name__}: {e}"
+                last = redact(f"{type(e).__name__}: {e}", self.api_key)
                 time.sleep(min(2 ** attempt * 5 + random.uniform(0, 3), 120))
         else:
             # "rate-limited" is what scripts/audit_resumable.py looks for before sleeping.
@@ -645,12 +700,13 @@ class LLMJudge(Judge):
         # A gateway may say which upstream served the request, in a "provider" field.
         self._upstream = checked_upstream(data.get("provider"), self.extra_body)
         usage = data.get("usage") or {}
-        in_tok, out_tok = usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
+        # None when the reply reports no count: a priced call is then an unknown cost (`_cost`)
+        in_tok, out_tok = usage.get("prompt_tokens"), usage.get("completion_tokens")
         self._hidden = hidden_output_tokens(usage)
         return text, in_tok, out_tok
 
     # ---------------------------------------------------------------- judge
-    def _usage(self, in_tok: int, out_tok: int) -> dict:
+    def _usage(self, in_tok: int | None, out_tok: int | None) -> dict:
         """The usage record of one call: v0.4's shape, plus `hidden_output_tokens` when the
         endpoint billed tokens it did not itemise."""
         u = {"input_tokens": in_tok, "output_tokens": out_tok}
@@ -658,12 +714,15 @@ class LLMJudge(Judge):
             u["hidden_output_tokens"] = self._hidden
         return u
 
-    def _cost(self, in_tok: int, out_tok: int) -> tuple[float | None, bool]:
+    def _cost(self, in_tok: int | None, out_tok: int | None) -> tuple[float | None, bool]:
         price = self._price()
         local_free = price is None and self.provider == "openai-compatible" and _is_local_url(
             self.base_url)
-        cost = ((in_tok * price[0] + out_tok * price[1]) / 1e6 if price else
-                0.0 if local_free else None)
+        cost: float | None
+        if price and in_tok is not None and out_tok is not None:
+            cost = (in_tok * price[0] + out_tok * price[1]) / 1e6
+        else:
+            cost = 0.0 if local_free else None
         return cost, price is not None or local_free
 
     def decide(self, state: str, questions: list[Question]) -> list[Judgment]:
@@ -677,7 +736,7 @@ class LLMJudge(Judge):
         served = served_of(self._served)
         latency = time.monotonic() - t0
         usage = self._usage(in_tok, out_tok)
-        cost, priced = self._cost(in_tok, out_tok + self._hidden)
+        cost, priced = self._cost(in_tok, None if out_tok is None else out_tok + self._hidden)
         parsed = parse_reply(text, questions)
         out: list[Judgment] = []
         for q in questions:
@@ -708,10 +767,13 @@ class LLMJudge(Judge):
                             "served": served_of(self._served),
                             **({"upstream_provider": self._upstream} if self._upstream else {})})
         latency = time.monotonic() - t0
-        in_all = sum(x["usage"]["input_tokens"] for x in samples)
-        out_all = sum(x["usage"]["output_tokens"] for x in samples)
+        # one sample without a count makes the run's count, and so a priced cost, unknown
+        ins = [x["usage"]["input_tokens"] for x in samples]
+        outs = [x["usage"]["output_tokens"] for x in samples]
+        in_all = None if None in ins else sum(ins)
+        out_all = None if None in outs else sum(outs)
         hidden_all = sum(x["usage"].get("hidden_output_tokens", 0) for x in samples)
-        cost, priced = self._cost(in_all, out_all + hidden_all)
+        cost, priced = self._cost(in_all, None if out_all is None else out_all + hidden_all)
         parsed = [parse_reply(x["text"], questions) for x in samples]
         voted = vote(parsed, questions)
         out: list[Judgment] = []

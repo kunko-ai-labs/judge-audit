@@ -8,7 +8,7 @@ from pathlib import Path
 from judge_audit.cli import JUDGES
 
 WORDS = {4: "four", 5: "five", 6: "six", 7: "seven", 8: "eight", 9: "nine", 10: "ten",
-         11: "eleven", 12: "twelve"}
+         11: "eleven", 12: "twelve", 13: "thirteen", 14: "fourteen"}
 README = Path(__file__).resolve().parent.parent / "README.md"
 
 
@@ -17,5 +17,6 @@ def test_the_readme_names_every_judge_the_cli_accepts_and_counts_them():
     m = re.search(r"Ships with (\w+): (.+?) Details in", text)
     assert m, "README lost its 'Ships with N: ...' sentence"
     assert m.group(1) == WORDS[len(JUDGES)]
-    named = re.findall(r"`(\w+)` \(", m.group(2)) + re.findall(r"and `(\w+)`\.", m.group(2))
+    named = (re.findall(r"`([\w-]+)` \(", m.group(2))
+             + re.findall(r"and `([\w-]+)`\.", m.group(2)))
     assert sorted(named) == sorted(JUDGES)

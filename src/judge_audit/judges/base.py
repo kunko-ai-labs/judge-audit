@@ -33,6 +33,22 @@ class Judgment:
     parse_status: str = "parsed"  # parsed | no_answer | no_confidence
 
 
+# Credential handling lives in `secrets`; judges import it from here.
+from .secrets import (  # noqa: E402
+    OPENER,
+    Endpoint,
+    RedirectRefused,
+    checked_endpoint,
+    credential_values,
+    redact,
+)
+
+__all__ = [
+    "Judge", "Judgment", "Question", "QuestionType", "served_of",
+    "OPENER", "Endpoint", "RedirectRefused", "checked_endpoint", "credential_values", "redact",
+]
+
+
 def served_of(reported: dict | None) -> dict:
     """What the provider said it served: model id and fingerprint as returned, None where it
     returned nothing — never the model name we asked for, which is what drift would hide."""
@@ -56,3 +72,4 @@ class Judge:
     def describe(self) -> dict:
         """Metadata recorded in every audit (model, backend, version...)."""
         return {"name": self.name}
+

@@ -325,6 +325,14 @@ _PATH_IN_TEXT = re.compile(r"(?:(?<=^)|(?<=[\s'\"(\[{<=]))(?:~/|/(?=[\w.~-]))"
                            r"(?=['\"()\[\]{}<>\n]|$| (?:and|or|is|was|at|in|on)\b|[,;:] )")
 
 
+def request_failure(exc: BaseException) -> str:
+    """One line for a judge request that failed: the error's own text with paths named as
+    provenance names them (`scrub`), else its class; never a traceback. The callers that
+    exit with it keep `JUDGE_AUDIT_DEBUG=1` to see the traceback."""
+    text = scrub(" ".join(str(exc).split()))[:300]          # masked whole, then cut
+    return f"{type(exc).__name__}: {text}" if text else type(exc).__name__
+
+
 def scrub(text: str, *paths: str | Path) -> str:
     """`text` (an error message, an exception's text) with every path in it named as provenance
     names files (`display_path`): first the `paths` it is about, in every form they may take,
@@ -339,7 +347,9 @@ def scrub(text: str, *paths: str | Path) -> str:
                 forms[form] = shown
     for form in sorted(forms, key=len, reverse=True):
         text = text.replace(form, forms[form])
-    return _PATH_IN_TEXT.sub(lambda m: display_path(m.group(0).rstrip(" .")), text)
+    text = _PATH_IN_TEXT.sub(lambda m: display_path(m.group(0).rstrip(" .")), text)
+    from .judges.base import redact  # credentials too: every message passes here
+    return redact(text)
 
 
 def run_metadata(judge: Judge, labels_path: str | None = None,
@@ -589,6 +599,34 @@ def missing_answer(question: str, returned: list) -> dict:
             "parse_status": "no_answer"}
 
 
+def non_finite_at(value, path: str = "") -> tuple[str, float] | None:
+    """(path, value) of the first number in `value` that strict JSON cannot hold (NaN, ±inf),
+    or None. Evidence is strict JSON, so such a value is refused where it enters, not when
+    the file is written."""
+    if isinstance(value, float) and not math.isfinite(value):
+        return path or "(value)", value
+    items = (value.items() if isinstance(value, dict) else
+             enumerate(value) if isinstance(value, (list, tuple)) else ())
+    for k, v in items:
+        found = non_finite_at(v, f"{path}[{k}]" if isinstance(k, int) else
+                              f"{path}.{k}" if path else str(k))
+        if found:
+            return found
+    return None
+
+
+def check_evidence(record: dict) -> None:
+    """Raise, naming the row, the question and the field, if `record` holds a number strict
+    JSON cannot write; the adapter that produced it is the one to fix."""
+    found = non_finite_at(record)
+    if found:
+        path, value = found
+        shown = "NaN" if math.isnan(value) else ("Infinity" if value > 0 else "-Infinity")
+        raise ValueError(f"row {record.get('idx')}, question {record.get('question')!r}: "
+                         f"{path} is {shown}, which evidence (strict JSON) cannot hold; "
+                         f"the adapter must record it as text or leave it out")
+
+
 def reconcile(idx: int, row: dict, judgments, counts: dict) -> list[dict]:
     """One record per labelled question, answered or not.
 
@@ -619,6 +657,8 @@ def reconcile(idx: int, row: dict, judgments, counts: dict) -> list[dict]:
         else:
             counts["answered"] += 1
             records.append(record_of(idx, row, judgment, expected))
+    for record in records:
+        check_evidence(record)
     return records
 
 
@@ -652,10 +692,11 @@ def run_audit(judge: Judge, rows: list[dict], labels_path: str | None = None,
 
 
 def write_judgments(result: AuditResult, path: str) -> None:
-    """Per-decision evidence as JSONL — commit it next to the report."""
+    """Per-decision evidence as JSONL — commit it next to the report. Strict JSON: a record
+    holding a non-finite number raises before anything is written, never `NaN` in a file."""
+    lines = [json.dumps(r, ensure_ascii=False, allow_nan=False) + "\n" for r in result.records]
     with open(path, "w", encoding="utf-8") as f:
-        for r in result.records:
-            f.write(json.dumps(r, ensure_ascii=False) + "\n")
+        f.writelines(lines)
 
 
 def canonical_judgments(records: list[dict]) -> bytes:
