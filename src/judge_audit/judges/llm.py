@@ -60,6 +60,7 @@ from .base import (
     Judgment,
     Question,
     QuestionType,
+    RedirectRefused,
     checked_endpoint,
     redact,
     served_of,
@@ -181,6 +182,24 @@ def checked_upstream(reported, extra_body: dict) -> str | None:
         raise RuntimeError(f"the gateway served the request from an upstream outside the "
                            f"pinned list {pinned}; the run's routing did not hold")
     return name
+
+
+def _anthropic_client_args(anthropic, api_key: str | None, endpoint) -> dict:
+    """The Anthropic client's arguments: the key when given, the checked endpoint when one is
+    set, and an HTTP client that does not follow redirects (the SDK's own follows them, and
+    sends the key to the host a 30x names). `DefaultHttpxClient` keeps the SDK's defaults;
+    an SDK without it gets a plain httpx client."""
+    args: dict = {}
+    if api_key:
+        args["api_key"] = api_key
+    if endpoint is not None:
+        args["base_url"] = endpoint.url
+    make = getattr(anthropic, "DefaultHttpxClient", None)
+    if make is None:
+        import httpx
+        make = httpx.Client
+    args["http_client"] = make(follow_redirects=False)
+    return args
 
 
 def _fetch_json(req: urllib.request.Request, deadline: float) -> dict:
@@ -496,8 +515,12 @@ class LLMJudge(Judge):
             # Credentials resolve from ANTHROPIC_API_KEY or an `ant auth login` profile; the
             # key is kept so that every error this path raises masks it.
             self.api_key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
-            self._client = (anthropic.Anthropic(api_key=api_key) if api_key
-                            else anthropic.Anthropic())
+            # The SDK reads ANTHROPIC_BASE_URL itself; it is checked here as every endpoint a
+            # key is sent to, and the checked URL is what the client is given.
+            raw = (os.environ.get("ANTHROPIC_BASE_URL") or "").strip()
+            self._endpoint = checked_endpoint(raw, "ANTHROPIC_BASE_URL") if raw else None
+            self._client = anthropic.Anthropic(**_anthropic_client_args(
+                anthropic, api_key, self._endpoint))
             self._anthropic = anthropic
         elif self.provider == "custom":
             self.model = model or os.environ.get("LLM_MODEL", "")
@@ -564,6 +587,11 @@ class LLMJudge(Judge):
                          if k in d}
                 d.update(extra(self.model))
                 d.update(owned)             # what this judge measures, not the module's say
+        elif self.provider == "anthropic":
+            ep = getattr(self, "_endpoint", None)
+            d["endpoint_overridden"] = ep is not None       # ANTHROPIC_BASE_URL: host only
+            if ep is not None:
+                d["endpoint_host"] = ep.host
         elif self.base_url:
             d["base_url"] = self.base_url
             ep = getattr(self, "_endpoint", None)
@@ -612,6 +640,11 @@ class LLMJudge(Judge):
             raise RuntimeError(f"rate-limited by Anthropic: "
                                f"{redact(str(e.message), self.api_key)}") from None
         except self._anthropic.APIStatusError as e:
+            if 300 <= int(getattr(e, "status_code", 0) or 0) < 400:
+                raise RedirectRefused(
+                    f"the server answered {e.status_code} (a redirect); judge-audit does not "
+                    f"follow redirects, so the key is never sent to a host that was not "
+                    f"checked: set the endpoint to the URL that answers") from None
             raise RuntimeError(f"Anthropic API error {e.status_code}: "
                                f"{redact(str(e.message), self.api_key)}") from None
         if resp.stop_reason == "refusal":

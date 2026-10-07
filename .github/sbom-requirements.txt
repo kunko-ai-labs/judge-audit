@@ -26,7 +26,7 @@ chardet==5.2.0 \
 cyclonedx-bom==7.4.0 \
     --hash=sha256:425862a74a6660cfa867fd4bc3dff34ca1cec49549594e4a9096663135426cfe \
     --hash=sha256:75756389cef95b9bb1d9c8d0c5b884719c2bfeb595109e2ed5321598a141bf4a
-    # via -r /private/tmp/claude-502/-Users-altostratus-1-Documents-Vane-kunko-judge-audit/6f4efaff-4380-4df5-be24-972927b3f6cc/scratchpad/sbom/in.txt
+    # via -r in.txt
 cyclonedx-python-lib==11.12.0 \
     --hash=sha256:0e807521a921a5c3cb8ce1153f8a61d29eedfe76a46aac2796b7c6b573391a54 \
     --hash=sha256:16767c4039de90c04e9f03348f8f0ed4b8ff842eaa7eefcad3a95685f970dacf

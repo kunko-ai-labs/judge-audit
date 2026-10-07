@@ -501,7 +501,7 @@ def _fake_anthropic(raise_):
         pass
 
     class Anthropic:
-        def __init__(self, api_key=None):
+        def __init__(self, **kw):
             self.messages = self
 
         def create(self, **k):
@@ -569,3 +569,154 @@ def test_a_clef_endpoint_template_fills_its_two_placeholders_in_the_path(monkeyp
     with pytest.raises(Sent):
         hosted.ClefHostedJudge()._call("x", [])
     assert sent == [f"https://gw.example.test/accounts/{ACCOUNT}/run/@cf/cloudflare/clef-flash"]
+
+
+# --- the Anthropic SDK path: no redirect, an endpoint checked like the others ----------------
+
+def _stub_anthropic(monkeypatch, built: list):
+    """A stub `anthropic` module that records how its client is built."""
+    import types
+
+    class APIStatusError(Exception):
+        def __init__(self, status=401, message=""):
+            super().__init__(message)
+            self.status_code, self.message = status, message
+
+    class RateLimitError(APIStatusError):
+        pass
+
+    class DefaultHttpxClient:
+        def __init__(self, **kw):
+            self.kw = kw
+
+    class Anthropic:
+        def __init__(self, **kw):
+            built.append(kw)
+            self.messages = self
+
+        def create(self, **k):
+            raise APIStatusError(307, "Error code: 307")
+
+    mod = types.SimpleNamespace(Anthropic=Anthropic, APIStatusError=APIStatusError,
+                                RateLimitError=RateLimitError,
+                                DefaultHttpxClient=DefaultHttpxClient)
+    monkeypatch.setitem(sys.modules, "anthropic", mod)
+    monkeypatch.setenv("LLM_PROVIDER", "anthropic")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", SHAPELESS)
+    return mod
+
+
+def test_the_anthropic_client_is_built_not_to_follow_redirects(monkeypatch):
+    from judge_audit.judges import llm
+    built: list = []
+    _stub_anthropic(monkeypatch, built)
+    monkeypatch.delenv("ANTHROPIC_BASE_URL", raising=False)
+    llm.LLMJudge()
+    (kw,) = built
+    assert kw["http_client"].kw.get("follow_redirects") is False
+    assert "base_url" not in kw                                    # the SDK's own default
+
+
+def test_an_anthropic_redirect_answer_is_refused_in_one_line(monkeypatch):
+    from judge_audit.judges import llm
+    _stub_anthropic(monkeypatch, [])
+    monkeypatch.delenv("ANTHROPIC_BASE_URL", raising=False)
+    with pytest.raises(RuntimeError) as e:
+        llm.LLMJudge()._call_anthropic("u")
+    assert "redirect" in str(e.value) and "307" in str(e.value)
+    assert not _runs(SHAPELESS, str(e.value))
+
+
+@pytest.mark.parametrize("url, host", [
+    ("https://gw.example.test:8443/anthropic", "gw.example.test:8443"),
+    ("http://127.0.0.1:9/x", "127.0.0.1:9")])
+def test_anthropic_base_url_is_checked_and_passed_explicitly(monkeypatch, url, host):
+    from judge_audit.judges import llm
+    built: list = []
+    _stub_anthropic(monkeypatch, built)
+    monkeypatch.setenv("ANTHROPIC_BASE_URL", url)
+    d = llm.LLMJudge().describe()
+    assert built[0]["base_url"] == url
+    assert d["endpoint_overridden"] is True and d["endpoint_host"] == host
+    assert "base_url" not in d and "/anthropic" not in json.dumps(d)
+
+
+@pytest.mark.parametrize("url", ["http://gw.example.test/v1", "https://u:p@gw.example.test/",
+                                 "http://example.com\\@127.0.0.1/", "ftp://gw.example.test/"])
+def test_a_bad_anthropic_base_url_exits_2_before_any_request(monkeypatch, capsys, tmp_path, url):
+    built: list = []
+    _stub_anthropic(monkeypatch, built)
+    monkeypatch.setenv("ANTHROPIC_BASE_URL", url)
+    with pytest.raises(SystemExit) as e:
+        cli.main(["run", str(LABELS), "--judge", "llm", "--no-ci",
+                  "--out", str(tmp_path / "r.md"), "--json", str(tmp_path / "r.json")])
+    err = capsys.readouterr().err
+    assert e.value.code == 2 and "ANTHROPIC_BASE_URL" in err and not _runs(SHAPELESS, err), err
+    assert built == []                                             # no client, no request
+
+
+@pytest.mark.parametrize("status", [302, 307])
+def test_a_real_anthropic_client_never_follows_a_redirect(monkeypatch, capsys, tmp_path, status):
+    """The installed SDK against a loopback server answering a redirect to `localhost`."""
+    pytest.importorskip("anthropic")
+    hits = {"second": 0}
+
+    class Second(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):  # noqa: N802
+            hits["second"] += 1
+            self.send_response(200)
+            self.end_headers()
+
+        def log_message(self, *a):
+            pass
+
+    second = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Second)
+    target = f"http://localhost:{second.server_address[1]}/v1/messages"
+
+    class First(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):  # noqa: N802
+            self.rfile.read(int(self.headers.get("Content-Length", 0)))
+            self.send_response(status)
+            self.send_header("Location", target)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        def log_message(self, *a):
+            pass
+
+    first = http.server.ThreadingHTTPServer(("127.0.0.1", 0), First)
+    for s in (first, second):
+        threading.Thread(target=s.serve_forever, daemon=True).start()
+    try:
+        monkeypatch.setenv("LLM_PROVIDER", "anthropic")
+        monkeypatch.setenv("ANTHROPIC_API_KEY", SHAPELESS)
+        monkeypatch.setenv("ANTHROPIC_BASE_URL", f"http://127.0.0.1:{first.server_address[1]}")
+        # the provider's own temperature: SDKs that refuse the keyword still send the request
+        monkeypatch.setenv("LLM_TEMPERATURE", "default")
+        with pytest.raises(SystemExit) as e:
+            cli.main(["run", str(LABELS), "--judge", "llm", "--no-ci",
+                      "--out", str(tmp_path / "r.md"), "--json", str(tmp_path / "r.json")])
+        err = capsys.readouterr().err
+        assert e.value.code == 2 and "redirect" in err and not _runs(SHAPELESS, err), err
+        assert len(err.strip().splitlines()) == 1
+        assert hits["second"] == 0
+    finally:
+        first.shutdown()
+        second.shutdown()
+
+
+# --- the Workers AI account id is an id ------------------------------------------------------
+
+@pytest.mark.parametrize("account", ["acct/../x", "a.b", "abc def", "id?x=1", "x#y", "é1"])
+def test_an_account_id_that_is_not_alphanumeric_is_refused(monkeypatch, capsys, tmp_path,
+                                                            account):
+    monkeypatch.setenv("CLOUDFLARE_API_TOKEN", KEY)
+    monkeypatch.setenv("CLOUDFLARE_ACCOUNT_ID", account)
+    monkeypatch.delenv("CLEF_HOSTED_ENDPOINT", raising=False)
+    monkeypatch.setattr("judge_audit.judges.secrets.OPENER.open",
+                        lambda *a, **k: pytest.fail("a request was sent"))
+    with pytest.raises(SystemExit) as e:
+        cli.main(["run", str(LABELS), "--judge", "clef-hosted", "--no-ci",
+                  "--out", str(tmp_path / "r.md"), "--json", str(tmp_path / "r.json")])
+    err = capsys.readouterr().err
+    assert e.value.code == 2 and "CLOUDFLARE_ACCOUNT_ID" in err and not _leaks(err), err

@@ -432,6 +432,10 @@ class ClefHostedJudge(_HostedDecisionJudge):
         if not self._token or not self._account:
             raise RuntimeError("clef-hosted needs CLOUDFLARE_API_TOKEN and "
                                "CLOUDFLARE_ACCOUNT_ID")
+        if not (self._account.isascii() and self._account.isalnum()):
+            # it is written into the URL's path: only letters and digits, so it cannot
+            # change the path or the host the token is sent to
+            raise ValueError("CLOUDFLARE_ACCOUNT_ID must hold letters and digits only")
         self.model = (model or os.environ.get("CLEF_HOSTED_MODEL") or "clef-flash").strip()
         if self.model not in CLEF_MODELS:
             raise ValueError(f"CLEF_HOSTED_MODEL must be one of {', '.join(CLEF_MODELS)}, "
