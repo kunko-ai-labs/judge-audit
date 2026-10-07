@@ -54,6 +54,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from .base import Judge, Judgment, Question, QuestionType
+from .systemone import weights_dtype
 
 DEFAULT_MODEL = "convaiinnovations/laya"
 # What Laya's own loader downloads from a Hub checkpoint (laya 0.3.20, Agent.__init__).
@@ -94,6 +95,44 @@ def _load_agent(model: str, revision: str | None, device: str | None):
     local, commit = _download(model, revision)
     kwargs: dict = {"device": device} if device else {}
     return laya.Agent(local, **kwargs), getattr(laya, "__version__", None), commit
+
+
+def laya_precision(agent) -> dict:
+    """What Laya computes in: the weights' dtype and when it autocasts. Laya 0.3.20 sends one
+    row per question in a single forward pass and autocasts on CUDA always and on MPS only when
+    the pass has at least `min_rows` rows, so `autocast` is the condition it applies:
+    `{"dtype", "min_rows"}` (`min_rows` None: every pass), or None when it never autocasts.
+    Whether a given request was autocast is in each judgment's `raw.autocast`
+    (`autocast_record`). None when not
+    readable, never a guess."""
+    model = getattr(agent, "model", None)
+    enabled = getattr(agent, "amp_enabled", None)
+    autocast = None
+    if enabled:
+        on_mps = str(getattr(agent, "device", "")).startswith("mps")
+        autocast = {"dtype": str(getattr(agent, "dtype", "")).replace("torch.", "") or None,
+                    "min_rows": getattr(agent, "mps_amp_min_rows", None) if on_mps else None}
+    return {"dtype": weights_dtype(model) if model is not None else None, "autocast": autocast}
+
+
+def request_autocast(agent, rows: int) -> bool | None:
+    """Whether Laya's own gate would autocast a forward pass of `rows` rows right now; None
+    when the agent does not expose it."""
+    gate = getattr(agent, "_amp_enabled_for", None)
+    return bool(gate(rows)) if callable(gate) else None
+
+
+def autocast_record(before: bool | None, after: bool | None) -> dict | None:
+    """`raw.autocast` for one request: `requested`, the gate before the call, and
+    `effective`, true only when the gate was on before and is still on after it. Laya 0.3.20
+    sends one state in one forward pass and, when that pass fails under autocast (out of
+    memory, or an op MPS cannot autocast), turns autocast off for good and retries in float32
+    within the same call, so a gate on before and off after means the pass that answered ran
+    without it. `effective` is read from that state, not reported by Laya: it assumes nothing
+    else turns autocast on or off during the call. None when the gate is not exposed."""
+    if before is None or after is None:
+        return None
+    return {"requested": before, "effective": before and after}
 
 
 def fit_problems(head_len: int, option_lens: list[int], state_len: int, max_len: int,
@@ -207,6 +246,7 @@ class LayaJudge(Judge):
             },
             "max_len": max_len, "head_max_len": head_max_len,
             "device": str(getattr(a, "device", "")) or None,
+            **laya_precision(a),
             "device_requested": self.device,
         }
 
@@ -229,7 +269,12 @@ class LayaJudge(Judge):
         kwargs = {k: v for k, v in (("max_len", self.max_len),
                                     ("head_max_len", self.head_max_len)) if v is not None}
         t0 = time.monotonic()
+        # One row per question sent, one forward pass: Laya's autocast gate before the call,
+        # and after it, since a fallback inside the call turns autocast off and retries.
+        before = request_autocast(self._agent, len(send)) if send else None
         result = self._agent.predict(state, send, **kwargs) if send else {}
+        autocast = (autocast_record(before, request_autocast(self._agent, len(send)))
+                    if send else None)
         latency = (time.monotonic() - t0) / max(len(send), 1) if send else 0.0
         answers = result.get("answers", {})
         max_len, head_max_len = self._budgets()
@@ -257,6 +302,7 @@ class LayaJudge(Judge):
                 raw={"probabilities": probs,
                      "answer_confidence": ans.get("answer_confidence"),
                      "entropy_confidence": ans.get("confidence"),
-                     "act_probability": (ans.get("action") or {}).get("act_probability")},
+                     "act_probability": (ans.get("action") or {}).get("act_probability"),
+                     "autocast": autocast},
             ))
         return out

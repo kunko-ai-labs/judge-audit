@@ -51,7 +51,12 @@ from pathlib import Path
 from typing import Any
 
 from .base import Question
-from .systemone import LocalSystemOneJudge, captured_warnings, systemone_question
+from .systemone import (
+    LocalSystemOneJudge,
+    captured_warnings,
+    systemone_question,
+    weights_dtype,
+)
 from .systemone import check_reference as _check_reference
 
 KAI = "vllm-sr/Decision-2.0-Kai-0.6B"
@@ -133,6 +138,15 @@ def tokenizer_check(tokenizer, tokenizer_json: Path) -> dict:
             "differing_probes": differ}
 
 
+def precision_of(backend) -> dict:
+    """What the runtime computes in: the weights' dtype and its autocast. The runtime
+    autocasts to bfloat16 on CUDA only and runs its weights as loaded elsewhere."""
+    model = getattr(backend, "model", None)
+    on_cuda = str(getattr(backend, "device", "")).startswith("cuda")
+    return {"dtype": weights_dtype(model) if model is not None else None,
+            "autocast": "bfloat16" if on_cuda else None}
+
+
 def _load(model_id: str, revision: str | None, device: str | None):
     """(the loaded model, its provenance), the load's warnings captured."""
     try:
@@ -162,6 +176,7 @@ def _load(model_id: str, revision: str | None, device: str | None):
         "softmax_temperature": dict(getattr(backend, "temperatures", {}) or {}),
         "share_context": getattr(backend, "share_context", None),
         "device": str(getattr(backend, "device", "")) or None,
+        **precision_of(backend),
         "max_input_tokens": manifest.get("max_input_tokens"),
         "transformers_version": transformers.__version__,
         "torch_version": torch.__version__,

@@ -144,6 +144,16 @@ def captured_warnings(*loggers: str) -> Iterator[list[str]]:
         out.extend(tidy(f"{w.category.__name__}: {w.message}") for w in caught)
 
 
+def weights_dtype(module) -> str | None:
+    """The dtype(s) of a torch module's parameters, sorted and comma-joined without the
+    `torch.` prefix ("float32"); None when the module cannot be read (never a guess)."""
+    try:
+        found = {str(p.dtype).replace("torch.", "") for p in module.parameters()}
+    except (AttributeError, TypeError):
+        return None
+    return ",".join(sorted(found)) or None
+
+
 def best_device(requested: str | None) -> str:
     """The device asked for, else CUDA, Apple MPS or CPU, the first available."""
     if requested:
