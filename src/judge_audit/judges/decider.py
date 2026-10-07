@@ -22,7 +22,7 @@ What is recorded, and why (see `systemone.py` for what every local decision mode
   card's own example. On MPS, decider's own code (`decider/mps_ops.py`) inverts a matrix with
   an MLX Metal kernel when the `mlx` package can be imported, and with PyTorch otherwise; in
   float16 and bfloat16 that changes the answer (the same single question gave billing 0.5122
-  with mlx, 0.5155 without, on one Apple M4; float32 gave 0.5149 either way, and the CPU is
+  with mlx, 0.5155 without, on Apple MPS; float32 gave 0.5149 either way, and the CPU is
   identical either way). Whether mlx was loaded is recorded (`mlx_loaded`). An MPS result
   therefore depends on what else is installed, so this adapter uses CUDA where present and the
   CPU otherwise; MPS runs only when DECIDER_DEVICE asks for it, and then with its reference

@@ -423,7 +423,7 @@ def render(judges: dict) -> str:
           "| Llama 3.3 70B | an open, hosted, mid-size chat model — the self-hostable alternative |",
           "| DeepSeek R1 | a reasoning model; its reasoning channel spends the output budget before " +
           "the answer, so the token budget decides how many replies are blank (see `no answer`) |",
-          "| gemma4 (e4b), llama3.2 3B | small local chat models on a laptop — the cost floor " +
+          "| gemma4 (e4b), llama3.2 3B | small local chat models — the cost floor " +
           "($0) and the floor of what a chat prompt can do |",
           "| DeBERTa-v3 zero-shot NLI | **control**, not a competitor: a ~180M encoder that cannot " +
           f"follow instructions, so an injection cannot hijack it{nli_note}; returns a real " +
@@ -507,7 +507,7 @@ def render(judges: dict) -> str:
           "is by construction. See each dataset's audit report for the full list.",
           "- One prompt per chat model (`src/judge_audit/judges/llm.py`). A better prompt would move " +
           "the numbers; that is a finding about prompts, not a fix for calibration.",
-          "- Local models run through Ollama on a laptop; latency is not comparable with hosted APIs.",
+          "- Local models run through Ollama; latency is not comparable with hosted APIs.",
           ""]
     if heldout_runs:
         L += ["- Runs made on a pre-registered held-out half are not in these tables (their n differs): "

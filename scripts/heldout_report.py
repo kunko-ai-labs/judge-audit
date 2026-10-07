@@ -134,6 +134,13 @@ AMENDMENT = [
 ]
 
 
+
+def device_of(t: dict) -> str:
+    """The device a training run used, as its record states it (`…, device mps` → `mps`): the
+    report names the device, not the computer; the record keeps what it recorded."""
+    hw = str(t.get("hardware", ""))
+    return hw.rsplit("device ", 1)[1] if "device " in hw else "?"
+
 def training_texts(ds: str) -> set[str]:
     """State texts of the training half the fine-tuned model was trained on (index split)."""
     dataset = DATASET_OF[ds]
@@ -472,10 +479,10 @@ def render(data: dict) -> str:
          "- **Training** (`scripts/train_classifier.py`): `microsoft/deberta-v3-base` (chosen "
          "because it downloaded in 16 s; the local zero-shot backbone was the fallback) with a "
          "fresh classification head, train half only, seed 2026, at most 10 epochs, lr 2e-5, "
-         "batch 8, max 256 tokens, laptop MPS. Emails: 10 labels. Router: one model on the task "
+         "batch 8, max 256 tokens, MPS. Emails: 10 labels. Router: one model on the task "
          "text with 2 labels; the option descriptions of `labels-described.jsonl` are **not** an "
          "input — a classifier has no place to put them — so the described run re-uses the bare "
-         "model. Every hyper-parameter, the loss curve, wall time, hardware and the sha256 of the "
+         "model. Every hyper-parameter, the loss curve, wall time, device and the sha256 of the "
          "train rows are in `docs/runs/finetuned/<dataset>.train.json`.",
          "- **Evaluation**: `scripts/audit_resumable.py --rows <split>:heldout` judges only the "
          "held-out indices; the checkpoint header records the split file and its sha256. "
@@ -520,7 +527,7 @@ def render(data: dict) -> str:
     if training:
         L += ["## Training runs", "",
               "| run | dataset | backbone | revision | train rows | epochs (stop) | final train loss | "
-              "wall time | temperature (val NLL before → after) | hardware | train rows sha256 |",
+              "wall time | temperature (val NLL before → after) | device | train rows sha256 |",
               "|---|---|---|---|---|---|---|---|---|---|---|"]
         for slug, per_dataset in training.items():
             if slug == "finetuned-deberta-run2-ts":
@@ -540,7 +547,7 @@ def render(data: dict) -> str:
                          f"`{t['backbone']}` | `{t.get('backbone_revision', '?')[:12]}` | "
                          f"{t['n_train']} | {t['epochs']} ({stop}) | "
                          f"{fmt(losses[-1]) if losses else '—'} | {t['wall_time_s']:.0f} s | {tcol} | "
-                         f"{t['hardware']} | `{t['train_rows_sha256'][:12]}…` |")
+                         f"{device_of(t)} | `{t['train_rows_sha256'][:12]}…` |")
         L.append("")
     names = {"email-clean": ("Business emails, clean — held-out half", "email-clean"),
              "router-bare": ("Task router, bare option labels — held-out half", "router-bare"),
@@ -650,7 +657,7 @@ def render(data: dict) -> str:
               "generalise: a new category or a drifted inbox needs new labels and a retrain, not "
               "a new prompt.",
               f"- **Cost**: $0 per row after {te.get('wall_time_s', 0):.0f} s (emails) and "
-              f"{tr.get('wall_time_s', 0):.0f} s (router) of training on {te.get('hardware', '?')}; "
+              f"{tr.get('wall_time_s', 0):.0f} s (router) of training on {device_of(te)}; "
               f"p50 latency {clean.get('p50_latency_s', 0):.3f} s per row.",
               ""]
         L += reading_run2(judges, training)
@@ -712,7 +719,7 @@ def render(data: dict) -> str:
           "- **Run 2 and temperature scaling are post hoc.** They were decided after run 1's "
           "numbers were known (the amendment says when and why). Nothing in them is pre-registered; "
           "the prediction stays scored on run 1.",
-          "- **Wall times are from a shared laptop** and vary with load (run 1's router took "
+          "- **Wall times are from a shared computer** and vary with load (run 1's router took "
           "1,069 s for 10 epochs; run 2's took 63 s for 15): read them as orders of magnitude, "
           "not as a benchmark.",
           ""]

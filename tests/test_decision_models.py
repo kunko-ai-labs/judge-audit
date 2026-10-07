@@ -378,7 +378,7 @@ def test_smoke_decider_2b():
 
 
 @pytest.mark.skipif(os.environ.get("JUDGE_AUDIT_SMOKE_CLEF") != "1",
-                    reason="downloads Clef-flash (19 GB, needs a 24 GB machine); set "
+                    reason="downloads Clef-flash (19 GB, needs ~24 GB of memory); set "
                            "JUDGE_AUDIT_SMOKE_CLEF=1")
 def test_smoke_clef_flash():
     j = ClefJudge()

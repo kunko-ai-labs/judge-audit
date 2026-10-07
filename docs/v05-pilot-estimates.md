@@ -42,7 +42,7 @@ exit 0
 
 **Hosted runs**: Jev: complete (308/308); gemini-3.6-flash verbalized: complete (308/308, resumed 2026-09-29, the maintainer's note); gemini-3.6-flash self-consistency (k = 5): complete (308/308). Billing console total: 2.7 EUR for gemini-3.6-flash on 2026-09-29 (the resumed verbalized rows 21-307 and the whole self-consistency run; the 21 rows of 2026-09-27 ran under another project) (the maintainer's note, not a checkpoint figure).
 
-**Provenance of the served chat model.** The `llm` checkpoints' headers record neither the weights revision nor `enable_thinking`: the pin rests on the protocol's offline `refs/main` check (docs/v05-pilot.md §3), and the server's `system_fingerprint` `0.31.3-0.32.2-macOS-26.6.2-arm64-arm-64bit-applegpu_g16g` records software and platform versions, not the weights.
+**Provenance of the served chat model.** The `llm` checkpoints' headers record neither the weights revision nor `enable_thinking`: the pin rests on the protocol's offline `refs/main` check (docs/v05-pilot.md §3), and the server's `system_fingerprint` (1 distinct, listed in `llm_provenance` of the JSON) records software and platform versions, not the weights.
 
 ## Decision agreement between the Qwen3 read-outs
 
@@ -134,7 +134,7 @@ Tetrachoric correlation of right/wrong over every decision. **Not fed back**: pa
 | Laya | 308 | 0.338 | 177.4 | — | not recorded |
 | Qwen3-8B self-consistency (k = 10) | 308 | 20.337 | 3.0 | 3080 | 718.3 / 25.4 |
 
-Latency is each judge's own per-decision field, measured on the maintainer's machine (the checkpoints do not record the hardware); for the local runs it excludes loading the model.
+Latency is each judge's own per-decision field, measured locally (the checkpoints do not record the hardware); for the local runs it excludes loading the model.
 
 **Errors among the most confident rows** (also reported, not fed back), on the rows with a confidence: the top confidence level, and the most confident 10 %, 20 %, 30 % taken as whole tie levels from the top (the smallest set of levels holding at least that share; ties are never split, so a slice can hold more rows than its share, and the rows it holds are printed). Errors / rows = error rate, two-sided 95 % Clopper-Pearson interval. Train queries: not a certification of any judge.
 

@@ -16,8 +16,8 @@ What is recorded, and why (see `systemone.py` for what every local decision mode
 - **No truncated state.** `encode_record` cuts the state to fit 16,384 tokens; the adapter
   measures the request with the same function and records its questions as no answer instead.
 
-Not run on a 16 GB machine: Clef-flash's weights take about 19 GB in bfloat16, Clef's about
-55 GB.
+Memory: Clef-flash needs about 19 GB in bfloat16, Clef about 55 GB; both are tested with
+stubbed models only.
 
 Environment:
   CLEF_MODEL     Hub id or local directory (default Cloudflare/clef-flash)

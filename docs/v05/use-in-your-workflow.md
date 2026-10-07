@@ -70,4 +70,4 @@ Nothing is sent anywhere.
 ## What could be automated next (not done)
 
 - **A scheduled benchmark job.** It would run the hosted judges on the frozen v0.5 sets with keys from repository secrets, commit the checkpoints and open a pull request with the regenerated reports. This is possible, but each run costs money and must respect the pre-registered cost ceiling, so it is a maintainer decision, not a default.
-- **Local judges in CI.** Laya and small MLX models run on CPU runners slowly. That is fine for a smoke test on a few rows; published runs stay on the maintainer's machine.
+- **Local judges in CI.** Laya and small MLX models run on CPU runners slowly. That is fine for a smoke test on a few rows; published runs are run locally, not in CI.

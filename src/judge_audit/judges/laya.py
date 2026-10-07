@@ -3,7 +3,7 @@
 Laya (Convai Innovations, Apache-2.0, `pip install laya`) reads a state and typed questions
 and scores every option in one forward pass of an encoder, returning a probability per
 option. Like Jev, it is a model built to judge rather than a chat model writing a number; it
-runs on a laptop and its weights are public, so anyone can reproduce its row.
+runs on a CPU and its weights are public, so anyone can reproduce its row.
 
 What is recorded, and why:
 

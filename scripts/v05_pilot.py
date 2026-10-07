@@ -1231,7 +1231,8 @@ def run_log_lines(d: dict) -> list[str]:
                      "record neither the weights revision nor `enable_thinking`: the pin rests "
                      "on the protocol's offline `refs/main` check (docs/v05-pilot.md §3), and "
                      "the server's `system_fingerprint` "
-                     + (", ".join(f"`{f}`" for f in fps) if fps else "(not recorded)")
+                     + (f"({len(fps)} distinct, listed in `llm_provenance` of the JSON)" if fps
+                        else "(not recorded)")
                      + " records software and platform versions, not the weights.")]
     return out
 
@@ -1415,8 +1416,8 @@ def markdown(d: dict) -> str:
         lines.append(f"| {NAMES[sl]} | {tp['rows_timed']:,} | {_num(tp['seconds_per_row'], 3)} "
                      f"| {_num(tp['rows_per_minute'], 1)} | "
                      f"{tp['calls'] if tp['calls'] is not None else '—'} | {tok} |")
-    lines += ["", ("Latency is each judge's own per-decision field, measured on the maintainer's "
-                   "machine (the checkpoints do not record the hardware); for the local runs it "
+    lines += ["", ("Latency is each judge's own per-decision field, measured locally (the checkpoints "
+                   "do not record the hardware); for the local runs it "
                    "excludes loading the model.")]
     lines += top_slice_lines(d)
     if d.get("cost_probe"):

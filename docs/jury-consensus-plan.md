@@ -46,7 +46,7 @@ Panel at freeze: `jev`, `claude-sonnet-4.5`, `deberta-nli`, `deepseek-r1`, `gemm
 - Synthetic, seeded datasets; ground truth for routing is by construction (difficulty labels), not validated by executing the routed tasks. n=120 per dataset, 40 per subset — subset rows are indicative.
 - One deliberation prompt. A different wording would move the numbers; that is a finding about prompts, not a fix for the mechanism.
 - Ties in an even panel go to the alphabetically first option.
-- Local models run through Ollama on a laptop; hosted models through their vendors' APIs with credentials that never enter the repo, the checkpoints or the logs.
+- Local models run through Ollama; hosted models through their vendors' APIs with credentials that never enter the repo, the checkpoints or the logs.
 
 ## 5. Outputs
 

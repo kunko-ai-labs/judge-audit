@@ -18,7 +18,7 @@ Up to 4 dev utterances per intent, seed 2026, the same items in the three locale
 
 ## 3. Judges
 
-One Apple M4 with 16 GB, one local model in memory at a time; Python 3.12.8, torch 2.14.0, transformers 5.17.0, laya 0.3.20, mlx 0.32.2 installed. Checkpoint slug `<slug>-<locale>.ckpt.jsonl`.
+Apple silicon, one local model in memory at a time; Python 3.12.8, torch 2.14.0, transformers 5.17.0, laya 0.3.20, mlx 0.32.2 installed. Checkpoint slug `<slug>-<locale>.ckpt.jsonl`.
 
 | slug | judge | model and pin | device and precision | settings |
 |---|---|---|---|---|
@@ -28,7 +28,7 @@ One Apple M4 with 16 GB, one local model in memory at a time; Python 3.12.8, tor
 | `decider-2b` (exploratory) | `decider` | `Mapika/decider-2b` at `533964dae8be954c5b5e19fa4948e48408094c1e` | MPS, float16, `mlx_loaded` true, one question per request (recorded in the header); MPS has no recorded reference outputs, so the header says `unchecked` | `DECIDER_DEVICE=mps` |
 | `strands-decider-2b` (exploratory) | `strands` | `StrandsAgents/strands-decider-2B-hobson-v19` at `bb282d786bc251fd4e3068de3ada9ddbb38127cd`, strands-decider 0.1.0 | MPS, bfloat16 (reference check against the card) | defaults |
 
-Not run: Clef-flash (about 19 GB in bf16, does not fit the 16 GB machine); `gemini-3.6-flash` (optional, exploratory) only if run time and quota allow, and then listed here before its call.
+Not run: Clef-flash (needs about 19 GB of memory in bf16); `gemini-3.6-flash` (optional, exploratory) only if run time and quota allow, and then listed here before its call.
 
 **Laya's budgets.** With the checkpoint's own head budget (256 tokens) the 60 options need 291 tokens, so every question would be recorded as not sent (`max_length_exceeded`). The options and instructions are the same on every row, so the pilot raises `head_max_len` to 384 and `max_len` to 1,024, which fits every row with nothing cut. These budgets are outside what the checkpoint shipped with and are recorded in each header.
 

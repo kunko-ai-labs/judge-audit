@@ -10,7 +10,7 @@ or distrust the run goes to docs/runs/finetuned/<dataset>.train.json (committed)
 
 Pre-registered hyper-parameters (issue #51): seed 2026, at most 10 epochs,
 lr 2e-5, batch 8, max 256 tokens, AdamW with 10 % linear warm-up then linear
-decay, laptop CPU/MPS. Change them and it is a different, unregistered run.
+decay, CPU or MPS. Change them and it is a different, unregistered run.
 
 `--run 2` is the post-hoc amendment of docs/finetuned-baseline-2026-09.md:
 20 % of the train half (label-stratified, seeded) becomes a validation slice,
