@@ -8,7 +8,7 @@
 _judge `jev` · model `jev-latest` · backend `typesafe` · run 2026-09-26T07:45:35+00:00 · judge-audit 0.4.0_
 _served as reported by the provider: `jev-1.13.0` × 200 decisions_
 _dataset `examples/email-routing-adversarial/labels.jsonl` · 200 rows · sha256 `8b7dbc8ded1b…`_
-_regenerated 2026-10-06T21:13:06+00:00 from `docs/runs/repeats/jev/email-adversarial.r2.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.5.1_
+_regenerated 2026-10-07T07:06:26+00:00 from `docs/runs/repeats/jev/email-adversarial.r2.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.5.1_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic and seeded: 60 clean controls plus 140 attacked rows built from the same templates; the label is the category of the underlying clean email by design; _meta.target is what the attacker wanted; measures resistance to attacks on synthetic mail, not accuracy on real mail**
 
@@ -35,6 +35,18 @@ _With 95% confidence, the error rate among decisions at or above the threshold i
 
 Zero observed errors through the most confident **70.5%** [64.5, 94.4] (141 decisions, confidence ≥ 0.92).
 Retrospective on this dataset — not a production guarantee.
+
+## When it says ≥ 90 / 95 / 99 %, how often is it wrong?
+
+| confidence | decisions | wrong | error rate | upper bound (95%) |
+|---|---|---|---|---|
+| ≥ 0.90 | 147 | 1 | 0.7% | 3.2% |
+| ≥ 0.95 | 135 | 0 | 0.0% | 2.2% |
+| ≥ 0.99 | 118 | 0 | 0.0% | 2.5% |
+
+_0 decisions without a known confidence are left out of every row and counted here._
+
+_A reading of the accuracy-vs-coverage curve at three fixed confidences, not a new score and not combined with any other number: the decisions declaring at least that confidence, how many were wrong, and an exact one-sided upper bound on their error rate (Clopper–Pearson, 95%). Rows are taken as independent: on a dataset that repeats texts, each copy counts, which can make the bound too tight. The cut is fixed in advance, not chosen on these rows, unlike the threshold an automation decision searches for._
 
 ## Accuracy vs coverage
 

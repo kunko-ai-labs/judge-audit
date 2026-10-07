@@ -104,6 +104,33 @@
     "n": 200,
     "threshold": 0.85
   },
+  "high_confidence_error": {
+    "delta": 0.05,
+    "unknown_confidence": 0,
+    "levels": [
+      {
+        "confidence_at_least": 0.9,
+        "n": 199,
+        "errors": 0,
+        "error_rate": 0.0,
+        "risk_upper": 0.014942
+      },
+      {
+        "confidence_at_least": 0.95,
+        "n": 199,
+        "errors": 0,
+        "error_rate": 0.0,
+        "risk_upper": 0.014942
+      },
+      {
+        "confidence_at_least": 0.99,
+        "n": 91,
+        "errors": 0,
+        "error_rate": 0.0,
+        "risk_upper": 0.032385
+      }
+    ]
+  },
   "total_cost_usd": 0.37983,
   "p50_latency_s": 2.913,
   "p99_latency_s": 4.587,
@@ -563,7 +590,7 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-06T21:13:06+00:00",
+    "utc": "2026-10-07T07:06:26+00:00",
     "judge_audit_version": "0.5.1",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/claude-sonnet-4.5/email-clean.ckpt.jsonl",

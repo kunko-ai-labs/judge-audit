@@ -5,7 +5,7 @@
 
 _judge `llm:deepseek-r1` · model `deepseek-r1` · run 2026-09-21T19:39:01+00:00 · judge-audit 0.3.2_
 _dataset `docs/runs/jury/router-described/deepseek-r1.r2.input.jsonl` · 120 rows · sha256 `c0ed19f9c960…`_
-_regenerated 2026-10-06T21:13:06+00:00 from `docs/runs/jury/router-described/deepseek-r1.r2.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.5.1_
+_regenerated 2026-10-07T07:06:26+00:00 from `docs/runs/jury/router-described/deepseek-r1.r2.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.5.1_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome; downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified; 40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted**
 
@@ -30,6 +30,18 @@ _With 95% confidence, the error rate among decisions at or above the threshold i
 
 Zero observed errors through the most confident **0.0%** [0.0, 34.1] (none: the most confident group of decisions already holds an error).
 Retrospective on this dataset — not a production guarantee.
+
+## When it says ≥ 90 / 95 / 99 %, how often is it wrong?
+
+| confidence | decisions | wrong | error rate | upper bound (95%) |
+|---|---|---|---|---|
+| ≥ 0.90 | 110 | 7 | 6.4% | 11.6% |
+| ≥ 0.95 | 103 | 5 | 4.9% | 9.9% |
+| ≥ 0.99 | 19 | 1 | 5.3% | 22.6% |
+
+_0 decisions without a known confidence are left out of every row and counted here._
+
+_A reading of the accuracy-vs-coverage curve at three fixed confidences, not a new score and not combined with any other number: the decisions declaring at least that confidence, how many were wrong, and an exact one-sided upper bound on their error rate (Clopper–Pearson, 95%). Rows are taken as independent: on a dataset that repeats texts, each copy counts, which can make the bound too tight. The cut is fixed in advance, not chosen on these rows, unlike the threshold an automation decision searches for._
 
 ## Accuracy vs coverage
 
