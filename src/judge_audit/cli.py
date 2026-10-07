@@ -46,6 +46,7 @@ from .runner import (
     display_path,
     groups_of,
     load_dataset,
+    request_failure,
     run_audit,
     scrub,
     write_judgments,
@@ -205,12 +206,19 @@ def _stale_baseline(path: str, current: dict) -> list[str]:
 
 
 def _audit(judge, rows: list[dict], args, dataset_meta: dict):
-    """run_audit, or exit 2 when the answers or the dataset would leave it incomplete."""
+    """run_audit, or exit 2 when the answers or the dataset would leave it incomplete, or when
+    the judge cannot answer (an HTTP error, a server that cannot be reached, a model that
+    fails to run): exit 1 means drift, and an expired key must not read as one.
+    `JUDGE_AUDIT_DEBUG=1` re-raises, with the traceback."""
     try:
         return run_audit(judge, rows, labels_path=args.labels, dataset_meta=dataset_meta,
                          ci=False if args.no_ci else None)
     except IncompleteAnswers as e:
         _die(f"the audit would not be complete: {e}")
+    except Exception as e:
+        if os.environ.get("JUDGE_AUDIT_DEBUG"):
+            raise
+        _die(f"judge request failed: {request_failure(e)}")
 
 
 def main(argv: list[str] | None = None) -> None:

@@ -38,7 +38,9 @@ Environment:
   clef-hosted       CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID; CLEF_HOSTED_MODEL
                     (clef-flash | clef, default clef-flash);
                     CLEF_HOSTED_QUESTIONS_PER_REQUEST (1 | all, default 1)
-  both              HOSTED_MIN_INTERVAL_S (seconds between calls, default 0)
+  both              HOSTED_MIN_INTERVAL_S (seconds between calls, default 0);
+                    DECISIONS_ENDPOINT, CLEF_HOSTED_ENDPOINT (another server speaking the
+                    same API, e.g. a proxy; CLEF_HOSTED_ENDPOINT may hold {model_id})
 """
 from __future__ import annotations
 
@@ -243,11 +245,12 @@ class OpenAIDecisionsJudge(_HostedDecisionJudge):
         if not self._key:
             raise RuntimeError("OPENAI_API_KEY is not set (the OpenAI Decisions API)")
         self.model = model or os.environ.get("DECISIONS_MODEL", DECISIONS_MODEL)
+        self.endpoint = os.environ.get("DECISIONS_ENDPOINT") or DECISIONS_ENDPOINT
         self.per_request = _per_request("DECISIONS_QUESTIONS_PER_REQUEST")
 
     def describe(self) -> dict:
         return {"name": self.name, "provider": "hosted-api", "model": self.model,
-                "endpoint": DECISIONS_ENDPOINT, "criteria_version": CRITERIA_VERSION,
+                "endpoint": self.endpoint, "criteria_version": CRITERIA_VERSION,
                 "confidence_method": "P(chosen option), from the answer's per-option "
                                      "probabilities (yes/no: of the answer given)",
                 "native_confidence": "the API's `confidence` field, not defined by its "
@@ -289,7 +292,7 @@ class OpenAIDecisionsJudge(_HostedDecisionJudge):
         body = {"model": self.model, "input": state,
                 "questions": [self.wire_question(q) for q in questions]}
         t0 = time.monotonic()
-        reply = post_json(DECISIONS_ENDPOINT, body, "the OpenAI Decisions API", (self._key,))
+        reply = post_json(self.endpoint, body, "the OpenAI Decisions API", (self._key,))
         latency = (time.monotonic() - t0) / max(len(questions), 1)
         answers = {a.get("name"): a for a in reply.get("answers") or [] if isinstance(a, dict)}
         usage = reply.get("usage") or None
@@ -353,7 +356,8 @@ class ClefHostedJudge(_HostedDecisionJudge):
     def _call(self, state: str, questions: list[Question]) -> list[Judgment]:
         body = {"model": self.model, "state": state,
                 "questions": {q.name: systemone_question(q) for q in questions}}
-        url = CLEF_ENDPOINT.format(account=self._account, model_id=self.model_id)
+        url = (os.environ.get("CLEF_HOSTED_ENDPOINT") or CLEF_ENDPOINT).format(
+            account=self._account, model_id=self.model_id)
         secrets = (self._token, self._account)
         t0 = time.monotonic()
         reply = post_json(url, body, "Workers AI", secrets)

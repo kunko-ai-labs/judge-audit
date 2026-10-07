@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from datetime import datetime, timezone
@@ -43,6 +44,7 @@ from judge_audit.runner import (  # noqa: E402
     load_dataset,
     missing_answer,
     questions_of,
+    request_failure,
     run_metadata,
     served_versions,
     sha256_of,
@@ -269,8 +271,15 @@ def main() -> None:
                               f"({type(e).__name__}); sleeping {wait}s "
                               f"(attempt {attempt + 1}/3)", flush=True)
                         time.sleep(wait)
-                    else:
+                    elif os.environ.get("JUDGE_AUDIT_DEBUG"):
                         raise
+                    else:
+                        # The rows already judged are on disk: a rerun resumes after them.
+                        print(f"judge request failed: row {idx}: {request_failure(e)}; "
+                              f"{sum(1 for k in done if k >= 0)} rows "
+                              f"kept in {display_path(ckpt)}; rerun to resume",
+                              file=sys.stderr)
+                        raise SystemExit(2) from None
             rec = checkpoint_row(idx, row, judgments)
             if not warned:
                 first = next((j for j in rec["judgments"] if is_not_sent(j.get("raw"))), None)
