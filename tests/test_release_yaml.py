@@ -9,7 +9,11 @@ that ordering, the hash-pinned SBOM tool or the credential hygiene ever regresse
 """
 from __future__ import annotations
 
+import os
 import re
+import shutil
+import subprocess
+import sys
 
 import pytest
 
@@ -200,3 +204,64 @@ def test_all_actions_are_pinned_by_full_commit_sha(jobs):
             uses = step.get("uses")
             if uses:
                 assert re.search(r"@[0-9a-f]{40}\b", uses), f"unpinned action: {uses}"
+
+
+def release_step(jobs) -> str:
+    return next(s["run"] for s in jobs["github-release"]["steps"]
+                if "gh release create" in s.get("run", ""))
+
+
+def shell_function(run: str, name: str) -> str:
+    """The `name() { … }` block of a step's script, exactly as the workflow defines it."""
+    m = re.search(rf"^( *){name}\(\) \{{\n.*?^\1\}}$", run, flags=re.M | re.S)
+    assert m, f"{name}() is not defined in the step"
+    return m.group(0)
+
+
+@pytest.mark.parametrize(("tag", "pre"), [
+    ("v0.6.0", False), ("v0.6.0rc1", True), ("v0.6.0a2", True), ("v0.6.0b1", True),
+    ("v0.6.0.post1", False), ("v1.10.12rc10", True), ("v0.6", False), ("v0.6.0rc", False),
+    ("v0.6.0-rc1", False), ("v0.6.0rc1x", False)])
+def test_prerelease_detection_runs_the_workflow_function(jobs, tag, pre):
+    """The function is run by bash as release.yml defines it, not re-implemented here."""
+    bash = shutil.which("bash")
+    if bash is None:
+        pytest.skip("bash not available")
+    fn = shell_function(release_step(jobs), "is_prerelease")
+    got = subprocess.run([bash, "-c", f'{fn}\nis_prerelease "$1"', "_", tag]).returncode == 0
+    assert got is pre, tag
+
+
+def test_prerelease_is_never_latest_and_finals_keep_the_defaults(jobs):
+    run = release_step(jobs)
+    create = next(ln for ln in run.splitlines() if "gh release create" in ln)
+    assert '"${flags[@]}"' in create, "the flags reach gh release create"
+    assert "flags=(--prerelease --latest=false)" in run
+    assert re.search(r"^ *flags=\(\)$", run, flags=re.M), "a final tag gets no extra flags"
+    # a release created by hand before the tag is corrected too
+    assert re.search(r'is_prerelease "\$\{GITHUB_REF_NAME\}"; then\n *gh release edit '
+                     r'"\$\{GITHUB_REF_NAME\}" --prerelease --latest=false', run)
+    assert "--latest=true" not in run and "--latest " not in run
+
+
+@pytest.mark.parametrize("tag", ["v0.6.0", "v0.6.0rc1"])
+def test_build_and_trigger_accept_a_prerelease_tag(root, jobs, workflow, tag, tmp_path):
+    """The trigger glob matches the tag, and the build job's tag-vs-version check, run as
+    written, passes when pyproject carries the same version (and fails when it differs)."""
+    from fnmatch import fnmatchcase
+    assert any(fnmatchcase(tag, g) for g in workflow[True]["push"]["tags"])
+    check = next(s["run"] for s in jobs["build"]["steps"]
+                 if s.get("name") == "Tag must match the package version")
+    bash = shutil.which("bash")
+    if bash is None or sys.version_info < (3, 11):
+        pytest.skip("needs bash and tomllib (the build job runs Python 3.12)")
+    py = tmp_path / "bin"
+    py.mkdir()
+    (py / "python").symlink_to(sys.executable)
+    for version, ok in ((tag[1:], True), ("0.6.0", tag == "v0.6.0")):
+        (tmp_path / "pyproject.toml").write_text(f'[project]\nversion = "{version}"\n')
+        env = {**os.environ, "GITHUB_REF_NAME": tag,
+               "PATH": f"{py}{os.pathsep}{os.environ['PATH']}"}
+        r = subprocess.run([bash, "-e", "-c", check], cwd=tmp_path, env=env,
+                           capture_output=True, text=True)
+        assert (r.returncode == 0) is ok, (tag, version, r.stdout)
