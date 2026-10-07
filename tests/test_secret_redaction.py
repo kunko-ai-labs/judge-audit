@@ -508,7 +508,8 @@ def _fake_anthropic(raise_):
             raise raise_(APIStatusError, RateLimitError)
 
     return types.SimpleNamespace(Anthropic=Anthropic, APIStatusError=APIStatusError,
-                                 RateLimitError=RateLimitError)
+                                 RateLimitError=RateLimitError,
+                                 DefaultHttpxClient=lambda **kw: object())
 
 
 @pytest.mark.parametrize("which, says", [

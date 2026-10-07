@@ -188,7 +188,7 @@ def _anthropic_client_args(anthropic, api_key: str | None, endpoint) -> dict:
     """The Anthropic client's arguments: the key when given, the checked endpoint when one is
     set, and an HTTP client that does not follow redirects (the SDK's own follows them, and
     sends the key to the host a 30x names). `DefaultHttpxClient` keeps the SDK's defaults;
-    an SDK without it gets a plain httpx client."""
+    an SDK without it is refused, since a redirect-safe client cannot be built for it."""
     args: dict = {}
     if api_key:
         args["api_key"] = api_key
@@ -196,8 +196,8 @@ def _anthropic_client_args(anthropic, api_key: str | None, endpoint) -> dict:
         args["base_url"] = endpoint.url
     make = getattr(anthropic, "DefaultHttpxClient", None)
     if make is None:
-        import httpx
-        make = httpx.Client
+        raise RuntimeError("this anthropic SDK has no DefaultHttpxClient, so a client that "
+                           "refuses redirects cannot be built; upgrade the anthropic package")
     args["http_client"] = make(follow_redirects=False)
     return args
 
