@@ -317,3 +317,25 @@ def test_settings_that_are_not_credentials_are_not_masked(monkeypatch):
     monkeypatch.setenv("SOME_KEY", "abc")                    # too short to mask safely
     assert "1024" not in credential_values()
     assert redact("budget 1024, value abc") == "budget 1024, value abc"
+
+
+def test_the_jev_gateway_reply_error_field_never_prints_the_key(monkeypatch):
+    """The bridge exits 0 but its reply says ok: false with an error that repeats the key."""
+    from judge_audit.judges import jev
+    monkeypatch.setenv("AI_GATEWAY_API_KEY", KEY)
+    monkeypatch.setattr(jev, "_BRIDGE", Path(__file__))
+    monkeypatch.setattr(jev.Path, "exists", lambda self: True)
+    monkeypatch.setattr(jev.time, "sleep", lambda s: None)
+    monkeypatch.setattr(jev, "_MIN_INTERVAL_S", 0.0)
+
+    class Proc:
+        returncode = 0
+        stderr = b""
+        stdout = json.dumps([{"ok": False, "error": f"Unauthorized: key {KEY} rejected "
+                                                    f"(Authorization: Bearer {KEY})"}]).encode()
+    monkeypatch.setattr(jev.subprocess, "run", lambda *a, **k: Proc())
+    from judge_audit.judges.base import Question, QuestionType
+    q = Question(name="c", type=QuestionType.CHOICE, instructions="?", options=["a", "b"])
+    with pytest.raises(RuntimeError) as e:
+        jev.JevJudge().decide("x", [q])
+    assert "jev evaluate error" in str(e.value) and not _leaks(str(e.value)), str(e.value)
