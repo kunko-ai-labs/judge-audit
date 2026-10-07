@@ -34,8 +34,7 @@ class Judgment:
 
 
 # Credential handling lives in `secrets`; judges import it from here.
-from .secrets import (  # noqa: E402,F401
-    CREDENTIAL_VARS,
+from .secrets import (  # noqa: E402
     OPENER,
     Endpoint,
     RedirectRefused,
@@ -43,6 +42,11 @@ from .secrets import (  # noqa: E402,F401
     credential_values,
     redact,
 )
+
+__all__ = [
+    "Judge", "Judgment", "Question", "QuestionType", "served_of",
+    "OPENER", "Endpoint", "RedirectRefused", "checked_endpoint", "credential_values", "redact",
+]
 
 
 def served_of(reported: dict | None) -> dict:
