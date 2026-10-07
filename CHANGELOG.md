@@ -22,6 +22,9 @@ All notable changes to this project are documented here. The format follows
 ### Changed
 - **`laya`: an over-length question is no answer, not an aborted run.** A question Laya 0.3.20 would read truncated (`fit_problems`: an option, the instructions or the state cut to fit `max_len` / `head_max_len`) is no longer a `ValueError` that stops the run: it is not sent, and is recorded as no answer (`raw.error` `max_length_exceeded`, what would be cut in `raw.problems`, the budgets used), counted against the judge like any unanswered question; the run goes on. The same rule as the local decision models, except that Laya withholds only the questions that do not fit, not the whole request. So that a budget too small for a dataset is not silent, `judge-audit run` and `scripts/audit_resumable.py` warn on stderr at the first question not sent, with what would be cut and the judge's own remedy (`over_length_advice`: Laya's token budgets; for the decision models, whose windows are fixed, a shorter input; a generic one otherwise), and count these questions apart from `answered`: `not_sent=N` on the summary line, `not_sent` in the result JSON, and a line in the Markdown and HTML report (any adapter that records `raw.error` `max_length_exceeded`; `decision2` now also says in `raw.problems` that its runtime refused the request). No published number moves: Laya raised before, so no committed checkpoint holds such a row (`verify_published.py` and the report regeneration show 0 changes).
 
+### Fixed
+- **`decision2` and `laya` record their precision** in the run header, as `decider` and `strands` record `dtype`: the dtype of the weights (`dtype`) and the autocast the runtime applies (`autocast`; for Laya its policy, including the MPS row threshold). Checkpoints written before keep the header they were written with.
+
 ## [0.5.1] — 2026-10-05
 
 ### Changed

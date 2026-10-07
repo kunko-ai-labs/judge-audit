@@ -54,6 +54,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from .base import Judge, Judgment, Question, QuestionType
+from .systemone import weights_dtype
 
 DEFAULT_MODEL = "convaiinnovations/laya"
 # What Laya's own loader downloads from a Hub checkpoint (laya 0.3.20, Agent.__init__).
@@ -94,6 +95,19 @@ def _load_agent(model: str, revision: str | None, device: str | None):
     local, commit = _download(model, revision)
     kwargs: dict = {"device": device} if device else {}
     return laya.Agent(local, **kwargs), getattr(laya, "__version__", None), commit
+
+
+def laya_precision(agent) -> dict:
+    """What Laya computes in: the weights' dtype and its autocast policy (Laya 0.3.20 turns
+    autocast on for CUDA and MPS, at `dtype`, and on MPS only for a forward of at least
+    `mps_min_rows` rows; a one-question request is one row). None when not readable."""
+    model = getattr(agent, "model", None)
+    enabled = getattr(agent, "amp_enabled", None)
+    autocast = None if enabled is None else {
+        "enabled": bool(enabled),
+        "dtype": str(getattr(agent, "dtype", "")).replace("torch.", "") or None,
+        "mps_min_rows": getattr(agent, "mps_amp_min_rows", None)}
+    return {"dtype": weights_dtype(model) if model is not None else None, "autocast": autocast}
 
 
 def fit_problems(head_len: int, option_lens: list[int], state_len: int, max_len: int,
@@ -207,6 +221,7 @@ class LayaJudge(Judge):
             },
             "max_len": max_len, "head_max_len": head_max_len,
             "device": str(getattr(a, "device", "")) or None,
+            **laya_precision(a),
             "device_requested": self.device,
         }
 
