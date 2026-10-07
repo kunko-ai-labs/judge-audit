@@ -302,3 +302,82 @@ def test_build_refuses_a_dev_release_tag(jobs, workflow, tag, tmp_path):
     r = run_tag_check(jobs, tmp_path, tag, tag[1:])
     assert r.returncode != 0, tag
     assert f"::error::tag {tag} is a development release" in r.stdout
+
+
+CHANGELOG_STEP = "The CHANGELOG section of the tagged version is final"
+CLEAN = ("# Changelog\n\n## [Unreleased]\n\n### Added\n- **Work in progress.** TODO later.\n\n"
+         "## [0.6.0rc1] — 2026-10-07\n\nA pre-release.\n\n### Added\n- **A feature** (#1).\n\n"
+         "## [0.5.1] — 2026-10-05\n\n### Fixed\n- **unreleased** in an old section is history.\n")
+
+
+def run_changelog_check(jobs, tmp_path, tag: str, text: str) -> subprocess.CompletedProcess:
+    """The build job's CHANGELOG step, run by bash as written, on a CHANGELOG of `text`."""
+    step = next(s for s in jobs["build"]["steps"] if s.get("name") == CHANGELOG_STEP)
+    bash = shutil.which("bash")
+    if bash is None:
+        pytest.skip("bash not available")
+    py = tmp_path / "bin"
+    py.mkdir(exist_ok=True)
+    if not (py / "python").exists():
+        (py / "python").symlink_to(sys.executable)
+    (tmp_path / "CHANGELOG.md").write_text(text, encoding="utf-8")
+    env = {**os.environ, "GITHUB_REF_NAME": tag,
+           "PATH": f"{py}{os.pathsep}{os.environ['PATH']}"}
+    return subprocess.run([bash, "-e", "-c", step["run"]], cwd=tmp_path, env=env,
+                          capture_output=True, text=True)
+
+
+def test_changelog_check_runs_first_and_installs_nothing(jobs):
+    steps = jobs["build"]["steps"]
+    i = next(k for k, s in enumerate(steps) if s.get("name") == CHANGELOG_STEP)
+    builds = next(k for k, s in enumerate(steps) if "python -m build" in s.get("run", ""))
+    assert i < builds, "the CHANGELOG is checked before anything is built"
+    assert not INSTALLS.search(steps[i]["run"])
+
+
+def test_changelog_check_passes_a_final_section(jobs, tmp_path):
+    r = run_changelog_check(jobs, tmp_path, "v0.6.0rc1", CLEAN)
+    assert r.returncode == 0, r.stdout + r.stderr
+
+
+@pytest.mark.parametrize(("text", "why"), [
+    (CLEAN.replace("- **A feature** (#1).", "- **TODO(#153), before the tag.**"), "TODO"),
+    (CLEAN.replace("- **A feature** (#1).", "- **A feature** (FIXME: link)."), "FIXME"),
+    (CLEAN.replace("- **A feature** (#1).", "- **A feature** (TBD)."), "TBD"),
+    (CLEAN.replace("- **A feature** (#1).", "- **A feature** (TO-DO: link)."), "TO-DO"),
+    (CLEAN.replace("- **A feature** (#1).", "- **A feature** (to_do)."), "TO-DO"),
+    (CLEAN.replace("- **A feature** (#1).", "- **A feature** XXX."), "XXX"),
+    (CLEAN.replace("## [0.6.0rc1] — 2026-10-07",
+                   "## [0.6.0rc1] — unreleased (dated when tagged)"), "unreleased"),
+    (CLEAN.replace("## [0.6.0rc1] — 2026-10-07", "## [0.6.0rc1] — YYYY-MM-DD"), "date"),
+    (CLEAN.replace("## [0.6.0rc1] — 2026-10-07", "## [0.6.0rc1] — 2026-13-45"), "date"),
+    (CLEAN.replace("## [0.6.0rc1] — 2026-10-07", "## [0.6.0rc1]"), "date"),
+    (CLEAN.replace("## [0.6.0rc1] — 2026-10-07\n", "## [0.6.0rc2] — 2026-10-07\n"), "no section"),
+    (CLEAN.replace("## [0.6.0rc1] — 2026-10-07\n",
+                   "## [0.6.0rc1] — 2026-10-07\n\n## [0.6.0rc1] — 2026-10-08\n"), "twice"),
+])
+def test_changelog_check_refuses_an_unfinished_section(jobs, tmp_path, text, why):
+    r = run_changelog_check(jobs, tmp_path, "v0.6.0rc1", text)
+    assert r.returncode != 0, why
+    assert "::error::CHANGELOG.md" in r.stdout and why in r.stdout, r.stdout
+
+
+def test_changelog_check_passes_this_repository_once_dated(root, jobs, tmp_path):
+    """The real CHANGELOG, at the version in pyproject: the check is not vacuous here."""
+    if sys.version_info < (3, 11):
+        pytest.skip("needs tomllib")
+    import tomllib
+    version = tomllib.loads((root / "pyproject.toml").read_text())["project"]["version"]
+    text = (root / "CHANGELOG.md").read_text(encoding="utf-8")
+    r = run_changelog_check(jobs, tmp_path, f"v{version}", text)
+    if f"## [{version}]" not in text:
+        assert r.returncode != 0 and "no section" in r.stdout
+        return
+    assert r.returncode == 0, r.stdout   # the section of the version being released is final
+
+
+def test_changelog_check_rejects_a_placeholder_line(jobs, tmp_path):
+    """The `TODO(#N)` placeholder a release branch carries before the tag is refused."""
+    text = CLEAN.replace("- **A feature** (#1).", "- **TODO(#153), before the tag: a fix.**")
+    r = run_changelog_check(jobs, tmp_path, "v0.6.0rc1", text)
+    assert r.returncode != 0 and "TODO" in r.stdout, r.stdout

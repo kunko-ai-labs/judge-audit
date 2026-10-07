@@ -2,7 +2,7 @@
 from .judges.base import Judge, Judgment, Question, QuestionType
 from .runner import AuditResult, run_audit
 
-__version__ = "0.5.1"
+__version__ = "0.6.0rc1"
 
 __all__ = ["Judge", "Question", "Judgment", "QuestionType", "AuditResult", "run_audit",
            "__version__"]

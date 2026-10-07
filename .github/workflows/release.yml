@@ -1,5 +1,6 @@
 # Release: on a v* tag, in this order —
-#   build           sdist + wheel, tag must equal the version and must not be a .devN
+#   build           the tagged version's CHANGELOG section is final (dated, no TODO), then
+#                   sdist + wheel, tag must equal the version and must not be a .devN
 #                   development release; the files stay a workflow artifact, nothing is
 #                   published
 #   smoke           installs the built wheel in a clean runner, checks `judge-audit
@@ -35,6 +36,38 @@ jobs:
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
+      - name: The CHANGELOG section of the tagged version is final
+        # Before anything is built: the tagged version has exactly one section, its heading
+        # carries a real date, and it holds no TODO, TO-DO, FIXME, XXX, TBD or "unreleased".
+        # Standard library only; nothing is installed.
+        run: |
+          python - <<'PY'
+          import datetime, os, re, sys
+          v = os.environ["GITHUB_REF_NAME"].removeprefix("v")
+          text = open("CHANGELOG.md", encoding="utf-8").read()
+          heads = [m for m in re.finditer(r"^## \[(.+?)\](.*)$", text, re.M) if m.group(1) == v]
+          def fail(why):
+              print(f"::error::CHANGELOG.md [{v}]: {why}")
+              sys.exit(1)
+          if not heads:
+              fail("no section for this version")
+          if len(heads) > 1:
+              fail("the section appears twice")
+          head = heads[0]
+          nxt = re.compile(r"^## \[", re.M).search(text, head.end())
+          body = text[head.start():nxt.start() if nxt else len(text)]
+          date = re.fullmatch(r" — (\d{4}-\d{2}-\d{2})", head.group(2))
+          markers = {"TODO": r"\bTODO\b", "TO-DO": r"\bTO[-_]DO\b", "FIXME": r"\bFIXME\b",
+                     "XXX": r"\bXXX\b", "TBD": r"\bTBD\b", "unreleased": r"\bunreleased\b"}
+          for word, pattern in markers.items():
+              if re.search(pattern, body, re.I):
+                  fail(f"the section still says {word}")
+          try:
+              datetime.date.fromisoformat(date.group(1) if date else "")
+          except ValueError:
+              fail(f"the heading needs a real date, '## [{v}] — YYYY-MM-DD': {head.group(0)!r}")
+          print(f"CHANGELOG.md [{v}] dated {date.group(1)}: final")
+          PY
       - run: pip install build && python -m build
       - name: Tag must match the package version
         # A development release is never published, even when the version matches: the tag
