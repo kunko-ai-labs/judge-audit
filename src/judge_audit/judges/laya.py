@@ -98,16 +98,27 @@ def _load_agent(model: str, revision: str | None, device: str | None):
 
 
 def laya_precision(agent) -> dict:
-    """What Laya computes in: the weights' dtype and its autocast policy (Laya 0.3.20 turns
-    autocast on for CUDA and MPS, at `dtype`, and on MPS only for a forward of at least
-    `mps_min_rows` rows; a one-question request is one row). None when not readable."""
+    """What Laya computes in: the weights' dtype and when it autocasts. Laya 0.3.20 sends one
+    row per question in a single forward pass and autocasts on CUDA always and on MPS only when
+    the pass has at least `min_rows` rows, so `autocast` is the condition it applies:
+    `{"dtype", "min_rows"}` (`min_rows` None: every pass), or None when it never autocasts.
+    Whether a given request crossed it is in each judgment's `raw.autocast`. None when not
+    readable, never a guess."""
     model = getattr(agent, "model", None)
     enabled = getattr(agent, "amp_enabled", None)
-    autocast = None if enabled is None else {
-        "enabled": bool(enabled),
-        "dtype": str(getattr(agent, "dtype", "")).replace("torch.", "") or None,
-        "mps_min_rows": getattr(agent, "mps_amp_min_rows", None)}
+    autocast = None
+    if enabled:
+        on_mps = str(getattr(agent, "device", "")).startswith("mps")
+        autocast = {"dtype": str(getattr(agent, "dtype", "")).replace("torch.", "") or None,
+                    "min_rows": getattr(agent, "mps_amp_min_rows", None) if on_mps else None}
     return {"dtype": weights_dtype(model) if model is not None else None, "autocast": autocast}
+
+
+def request_autocast(agent, rows: int) -> bool | None:
+    """Whether Laya autocasts a forward pass of `rows` rows (its own gate); None when the
+    agent does not expose it."""
+    gate = getattr(agent, "_amp_enabled_for", None)
+    return bool(gate(rows)) if callable(gate) else None
 
 
 def fit_problems(head_len: int, option_lens: list[int], state_len: int, max_len: int,
@@ -244,6 +255,8 @@ class LayaJudge(Judge):
         kwargs = {k: v for k, v in (("max_len", self.max_len),
                                     ("head_max_len", self.head_max_len)) if v is not None}
         t0 = time.monotonic()
+        # One row per question sent, one forward pass: Laya's autocast gate for this request.
+        autocast = request_autocast(self._agent, len(send)) if send else None
         result = self._agent.predict(state, send, **kwargs) if send else {}
         latency = (time.monotonic() - t0) / max(len(send), 1) if send else 0.0
         answers = result.get("answers", {})
@@ -272,6 +285,7 @@ class LayaJudge(Judge):
                 raw={"probabilities": probs,
                      "answer_confidence": ans.get("answer_confidence"),
                      "entropy_confidence": ans.get("confidence"),
-                     "act_probability": (ans.get("action") or {}).get("act_probability")},
+                     "act_probability": (ans.get("action") or {}).get("act_probability"),
+                     "autocast": autocast},
             ))
         return out

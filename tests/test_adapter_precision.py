@@ -5,6 +5,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from judge_audit.judges import decision2
+from judge_audit.judges.base import Question, QuestionType
 from judge_audit.judges.laya import LayaJudge, laya_precision
 
 
@@ -46,36 +47,108 @@ def test_decision2_without_a_readable_model_records_unknown_not_a_guess():
 
 
 class _Agent:
+    """A Laya agent stub with its autocast state and gate, as Laya 0.3.20 has them."""
     cfg = {"max_len": 512, "head_max_len": 192}
-    device = "mps"
 
-    def __init__(self, amp_enabled=True, dtype="torch.float16", min_rows=5,
-                 weights="torch.float32"):
+    def __init__(self, device="mps", amp_enabled=True, dtype="torch.float16", min_rows=5,
+                 weights="torch.float32", answers=None):
+        self.device = device
         self.model = _Module(weights)
         self.amp_enabled = amp_enabled
         self.dtype = dtype
         self.mps_amp_min_rows = min_rows
+        self.answers = answers or {}
+
+    def _amp_enabled_for(self, rows: int) -> bool:
+        if not self.amp_enabled:
+            return False
+        return not (self.device == "mps" and rows < self.mps_amp_min_rows)
+
+    def predict(self, state, questions, **kwargs):
+        return {"answers": {k: v for k, v in self.answers.items() if k in questions}}
 
 
-def test_laya_records_weights_and_its_autocast_policy():
+def test_laya_on_mps_records_the_autocast_condition():
     assert laya_precision(_Agent()) == {
-        "dtype": "float32",
-        "autocast": {"enabled": True, "dtype": "float16", "mps_min_rows": 5}}
+        "dtype": "float32", "autocast": {"dtype": "float16", "min_rows": 5}}
 
 
-def test_laya_with_autocast_off_records_it_off():
-    got = laya_precision(_Agent(amp_enabled=False, dtype="torch.float32"))
-    assert got["autocast"] == {"enabled": False, "dtype": "float32", "mps_min_rows": 5}
+def test_laya_on_cuda_autocasts_every_forward():
+    got = laya_precision(_Agent(device="cuda", dtype="torch.bfloat16"))
+    assert got["autocast"] == {"dtype": "bfloat16", "min_rows": None}
+
+
+def test_laya_with_autocast_off_records_none():
+    got = laya_precision(_Agent(device="cpu", amp_enabled=False, dtype="torch.float32"))
+    assert got == {"dtype": "float32", "autocast": None}
 
 
 def test_laya_precision_reaches_the_provenance():
     judge = LayaJudge(agent=_Agent(), version="0.3.20", loaded_revision="abc123",
                       token_counts=lambda *a: (5, [3], 10))
     d = judge.describe()
-    assert d["dtype"] == "float32"
-    assert d["autocast"]["enabled"] is True and d["autocast"]["mps_min_rows"] == 5
+    assert d["dtype"] == "float32" and d["autocast"] == {"dtype": "float16", "min_rows": 5}
 
 
 def test_laya_an_agent_without_these_attributes_records_unknown():
     bare = SimpleNamespace(cfg={}, device="cpu")
     assert laya_precision(bare) == {"dtype": None, "autocast": None}
+
+
+def _choice(name: str) -> Question:
+    return Question(name=name, type=QuestionType.CHOICE, instructions="Which?",
+                    options=["a", "b"])
+
+
+ANSWER = {"type": "choice", "choice": "a", "probabilities": {"a": 0.8, "b": 0.2}}
+
+
+def _decide(n_questions: int, **agent_kwargs):
+    names = [f"q{i}" for i in range(n_questions)]
+    agent = _Agent(answers={n: ANSWER for n in names}, **agent_kwargs)
+    judge = LayaJudge(agent=agent, token_counts=lambda *a: (5, [3, 3], 10))
+    return judge.decide("state", [_choice(n) for n in names])
+
+
+def test_each_judgment_says_whether_its_request_was_autocast():
+    # On MPS the gate is 5 rows, one row per question sent: 4 questions run in the weights'
+    # dtype, 5 run under float16 autocast.
+    assert {j.raw["autocast"] for j in _decide(4)} == {False}
+    assert {j.raw["autocast"] for j in _decide(5)} == {True}
+
+
+def test_without_autocast_no_request_is_autocast():
+    got = _decide(6, device="cpu", amp_enabled=False, dtype="torch.float32")
+    assert {j.raw["autocast"] for j in got} == {False}
+
+
+def test_an_agent_without_a_gate_records_unknown_per_request():
+    class NoGate(_Agent):
+        _amp_enabled_for = None
+    judge = LayaJudge(agent=NoGate(answers={"q0": ANSWER}),
+                      token_counts=lambda *a: (5, [3, 3], 10))
+    assert judge.decide("state", [_choice("q0")])[0].raw["autocast"] is None
+
+
+def test_decision2_load_writes_dtype_and_autocast_into_the_provenance(monkeypatch, tmp_path):
+    """`_load` with transformers' loader stubbed: no network, no download."""
+    import sys
+
+    snap = tmp_path / "snapshots" / ("c" * 40)
+    snap.mkdir(parents=True)
+    (snap / "tokenizer.json").write_text("{}", encoding="utf-8")
+    backend = SimpleNamespace(model=_Module("torch.float32"), device="cpu", tokenizer=None,
+                              temperatures={"choice": 1.0}, share_context=False)
+    model = SimpleNamespace(_source=str(snap), config=SimpleNamespace(),
+                            manifest={"model_name": "stub"},
+                            runtime=SimpleNamespace(backend=backend))
+    fake_tf = SimpleNamespace(__version__="5.17.0",
+                              AutoModel=SimpleNamespace(from_pretrained=lambda *a, **k: model))
+    monkeypatch.setitem(sys.modules, "transformers", fake_tf)
+    monkeypatch.setitem(sys.modules, "torch", SimpleNamespace(__version__="2.14.0"))
+    monkeypatch.setattr(decision2, "tokenizer_check", lambda tok, path: {"stub": True})
+    _, info = decision2._load("stub/model", "c" * 40, None)
+    assert info["dtype"] == "float32" and info["autocast"] is None
+    backend.device = "cuda:0"
+    _, info = decision2._load("stub/model", "c" * 40, "cuda:0")
+    assert info["autocast"] == "bfloat16"
