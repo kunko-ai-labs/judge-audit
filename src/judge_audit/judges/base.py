@@ -1,6 +1,7 @@
 """Pluggable judge interface. Anything that maps (state, questions) -> judgments fits."""
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -31,6 +32,30 @@ class Judgment:
     cost_usd: float | None = 0.0
     raw: dict = field(default_factory=dict)
     parse_status: str = "parsed"  # parsed | no_answer | no_confidence
+
+
+# Shapes a credential takes in a server's error text, masked whatever its value: a bearer or
+# Authorization header value, an `sk-…` key, a `key=` / `api_key=` / `token=` query value, and
+# the account segment of a Workers AI URL.
+_SECRET_SHAPES = (
+    (re.compile(r"(?i)(authorization\s*[:=]\s*)(?:bearer\s+)?[A-Za-z0-9._~+/=-]{8,}"),
+     r"\1***"),
+    (re.compile(r"(?i)(\bbearer\s+)[A-Za-z0-9._~+/=-]{8,}"), r"\1***"),
+    (re.compile(r"\bsk-[A-Za-z0-9_\-]{8,}"), "sk-***"),
+    (re.compile(r"(?i)([?&;\s](?:api[_-]?key|key|token|access_token)=)[^&\s'\"]+"), r"\1***"),
+    (re.compile(r"(/accounts/)[^/\s'\"]+"), r"\1***"),
+)
+
+
+def redact(text: str, *secrets: str | None) -> str:
+    """`text` with every credential masked before it leaves a judge: each of `secrets` (the
+    key, token or account id the judge holds) wherever it appears, then any value shaped like
+    one (`_SECRET_SHAPES`), whatever server sent it. Every judge's error paths use it."""
+    for s in sorted((x for x in secrets if x and len(x) >= 4), key=len, reverse=True):
+        text = text.replace(s, "***")
+    for pattern, repl in _SECRET_SHAPES:
+        text = pattern.sub(repl, text)
+    return text
 
 
 def served_of(reported: dict | None) -> dict:

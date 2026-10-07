@@ -54,7 +54,7 @@ import urllib.parse
 import urllib.request
 from collections.abc import Callable
 
-from .base import Judge, Judgment, Question, QuestionType, served_of
+from .base import Judge, Judgment, Question, QuestionType, redact, served_of
 
 # HTTP statuses worth waiting out: rate limit, overloaded, unavailable, gateway timeout.
 TRANSIENT = {429, 503, 529, 502, 504}
@@ -589,9 +589,11 @@ class LLMJudge(Judge):
                 model=self.model, max_tokens=int(os.environ.get("LLM_MAX_TOKENS", "1024")),
                 system=self.system, messages=[{"role": "user", "content": user}], **kwargs)
         except self._anthropic.RateLimitError as e:
-            raise RuntimeError(f"rate-limited by Anthropic: {e.message}") from e
+            raise RuntimeError(f"rate-limited by Anthropic: "
+                               f"{redact(str(e.message), self.api_key)}") from None
         except self._anthropic.APIStatusError as e:
-            raise RuntimeError(f"Anthropic API error {e.status_code}: {e.message}") from e
+            raise RuntimeError(f"Anthropic API error {e.status_code}: "
+                               f"{redact(str(e.message), self.api_key)}") from None
         if resp.stop_reason == "refusal":
             raise RuntimeError("model refused the request")
         text = "".join(b.text for b in resp.content if b.type == "text")
@@ -622,15 +624,15 @@ class LLMJudge(Judge):
                 last = f"{type(e).__name__}: {e}"
                 body.pop("response_format", None)
             except urllib.error.HTTPError as e:
-                detail = e.read().decode(errors="replace")[:300]
+                detail = redact(e.read().decode(errors="replace")[:300], self.api_key)
                 if e.code in TRANSIENT:
                     last = f"{e.code}: {detail}"
                     time.sleep(min(2 ** attempt * 5 + random.uniform(0, 3), 120))
                     continue
-                raise RuntimeError(f"{self.base_url} returned {e.code}: {detail}") from e
+                raise RuntimeError(f"{self.base_url} returned {e.code}: {detail}") from None
             except (urllib.error.URLError, http.client.HTTPException, ConnectionError) as e:
                 # Dropped or reset connections are as transient as a 503.
-                last = f"{type(e).__name__}: {e}"
+                last = redact(f"{type(e).__name__}: {e}", self.api_key)
                 time.sleep(min(2 ** attempt * 5 + random.uniform(0, 3), 120))
         else:
             # "rate-limited" is what scripts/audit_resumable.py looks for before sleeping.

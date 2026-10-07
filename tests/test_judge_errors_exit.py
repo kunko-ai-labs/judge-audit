@@ -115,7 +115,7 @@ def test_an_http_error_is_exit_2_with_one_clean_line(server, monkeypatch, capsys
 def test_an_unreachable_server_is_exit_2_with_one_clean_line(monkeypatch, capsys, tmp_path,
                                                             family, where):
     base = (f"http://127.0.0.1:{_free_port()}" if where == "refused"
-            else "http://judge-audit-test.invalid")
+            else "https://judge-audit-test.invalid")      # https: passes the override check
     code, err = _run_in_process(monkeypatch, capsys, family, FAMILIES[family](base),
                                 "run", tmp_path)
     assert code == 2 and "judge request failed:" in err, err

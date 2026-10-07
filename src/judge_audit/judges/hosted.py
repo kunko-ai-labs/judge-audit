@@ -47,16 +47,17 @@ Environment:
 """
 from __future__ import annotations
 
+import ipaddress
 import json
 import math
 import os
 import random
-import re
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
-from .base import Judge, Judgment, Question, QuestionType, served_of
+from .base import Judge, Judgment, Question, QuestionType, redact, served_of
 from .systemone import CRITERIA_VERSION, systemone_question
 
 DECISIONS_ENDPOINT = "https://api.openai.com/v1/decisions"
@@ -77,6 +78,38 @@ CONNECT_BUDGET_S = 20.0            # total backoff for a server that cannot be r
 TIMEOUT_S = 120
 
 
+def endpoint_override(var: str) -> str | None:
+    """The endpoint in `var`, or None when unset. It receives the API key as a bearer token,
+    so it must be https, or plain http only to this computer (127.0.0.0/8, ::1, localhost);
+    anything else is refused before any request is built."""
+    url = (os.environ.get(var) or "").strip()
+    if not url:
+        return None
+    parts = urllib.parse.urlsplit(url)
+    host = (parts.hostname or "").lower()
+    loopback = host == "localhost"
+    try:
+        loopback = loopback or ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        pass
+    if parts.scheme == "https" and host:
+        return url
+    if parts.scheme == "http" and loopback:
+        return url
+    raise ValueError(f"{var} must be an https URL (plain http only to this computer: "
+                     f"127.0.0.0/8, ::1, localhost): the API key is sent to that host")
+
+
+def endpoint_host(url: str) -> str:
+    """What provenance records of an overridden endpoint: its host and port, nothing else
+    (no path, query or credential)."""
+    parts = urllib.parse.urlsplit(url)
+    host = parts.hostname or ""
+    if ":" in host:
+        host = f"[{host}]"
+    return f"{host}:{parts.port}" if parts.port else host
+
+
 def _per_request(env: str) -> int | None:
     """Questions per request: 1 (the default) or None for all of them."""
     value = os.environ.get(env, "1").strip().lower()
@@ -88,11 +121,8 @@ def _per_request(env: str) -> int | None:
 
 
 def _redact(text: str, secrets: tuple[str, ...]) -> str:
-    """`text` with every secret masked, and any `/accounts/<id>` URL segment too."""
-    for s in secrets:
-        if s:
-            text = text.replace(s, "***")
-    return re.sub(r"(/accounts/)[^/\s'\"]+", r"\1***", text)
+    """`text` with the judge's secrets and every credential-shaped value masked (`redact`)."""
+    return redact(text, *secrets)
 
 
 def post_json(url: str, body: dict, label: str, secrets: tuple[str, ...]) -> dict:
@@ -254,6 +284,16 @@ class _HostedDecisionJudge(Judge):
             out += self._call(state, questions[i:i + size])
         return out
 
+    _override: str | None = None
+
+    def _endpoint_provenance(self, default: str) -> dict:
+        """The endpoint as provenance records it: the documented one, or for an override its
+        host only, flagged."""
+        if self._override:
+            return {"endpoint": None, "endpoint_overridden": True,
+                    "endpoint_host": endpoint_host(self._override)}
+        return {"endpoint": default, "endpoint_overridden": False}
+
     def _cost(self, usage) -> float | None:
         """One request's cost from the input tokens it reports; None when it reports none."""
         tokens = usage.get("input_tokens") if isinstance(usage, dict) else None
@@ -277,12 +317,14 @@ class OpenAIDecisionsJudge(_HostedDecisionJudge):
         if not self._key:
             raise RuntimeError("OPENAI_API_KEY is not set (the OpenAI Decisions API)")
         self.model = model or os.environ.get("DECISIONS_MODEL", DECISIONS_MODEL)
-        self.endpoint = os.environ.get("DECISIONS_ENDPOINT") or DECISIONS_ENDPOINT
+        self._override = endpoint_override("DECISIONS_ENDPOINT")
+        self.endpoint = self._override or DECISIONS_ENDPOINT
         self.per_request = _per_request("DECISIONS_QUESTIONS_PER_REQUEST")
 
     def describe(self) -> dict:
         return {"name": self.name, "provider": "hosted-api", "model": self.model,
-                "endpoint": self.endpoint, "criteria_version": CRITERIA_VERSION,
+                **self._endpoint_provenance(DECISIONS_ENDPOINT),
+                "criteria_version": CRITERIA_VERSION,
                 "confidence_method": "P(chosen option), from the answer's per-option "
                                      "probabilities (yes/no: of the answer given)",
                 "native_confidence": "the API's `confidence` field, not defined by its "
@@ -374,10 +416,13 @@ class ClefHostedJudge(_HostedDecisionJudge):
         self.model_id, self.price = CLEF_MODELS[self.model]
         self.per_request = _per_request("CLEF_HOSTED_QUESTIONS_PER_REQUEST")
         self.name = f"clef-hosted:{self.model}"
+        self._override = endpoint_override("CLEF_HOSTED_ENDPOINT")
 
     def describe(self) -> dict:
         return {"name": self.name, "provider": "hosted-api", "model": self.model,
-                "model_id": self.model_id, "criteria_version": CRITERIA_VERSION,
+                "model_id": self.model_id,
+                **self._endpoint_provenance("api.cloudflare.com/client/v4/accounts/***/ai/run"),
+                "criteria_version": CRITERIA_VERSION,
                 "confidence_method": "P(chosen option), from the answer's per-option "
                                      "probabilities (yes/no: of the answer given)",
                 "native_confidence": "the API's `confidence` field (\"derived from the "
@@ -391,8 +436,8 @@ class ClefHostedJudge(_HostedDecisionJudge):
     def _call(self, state: str, questions: list[Question]) -> list[Judgment]:
         body = {"model": self.model, "state": state,
                 "questions": {q.name: systemone_question(q) for q in questions}}
-        url = (os.environ.get("CLEF_HOSTED_ENDPOINT") or CLEF_ENDPOINT).format(
-            account=self._account, model_id=self.model_id)
+        url = (self._override or CLEF_ENDPOINT).format(account=self._account,
+                                                       model_id=self.model_id)
         secrets = (self._token, self._account)
         t0 = time.monotonic()
         reply = post_json(url, body, "Workers AI", secrets)

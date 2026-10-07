@@ -27,7 +27,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from .base import Judge, Judgment, Question, QuestionType, served_of
+from .base import Judge, Judgment, Question, QuestionType, redact, served_of
 
 # Version of what the judge is shown: `_sdk_question` / `_direct_question`, the criteria
 # map built from each question's options and descriptions. Jev has no text prompt, so this
@@ -138,7 +138,7 @@ class JevJudge(Judge):
             )
             wall = time.monotonic() - t0
             if proc.returncode != 0:
-                last_err = proc.stderr.decode()[-300:]
+                last_err = redact(proc.stderr.decode(errors="replace")[-300:], self.api_key)
                 if _is_rate_limit(last_err):
                     time.sleep(min(2 ** attempt * 10 + random.uniform(0, 5), 300))
                     _throttle()
@@ -146,7 +146,7 @@ class JevJudge(Judge):
                 raise RuntimeError(f"jev bridge failed: {last_err}")
             (res,) = json.loads(proc.stdout.decode())
             if not res.get("ok"):
-                last_err = str(res.get("error"))
+                last_err = redact(str(res.get("error")), self.api_key)
                 if _is_rate_limit(last_err):
                     # Free-tier windows look long (minutes); back off hard.
                     time.sleep(min(2 ** attempt * 10 + random.uniform(0, 5), 300))
@@ -223,10 +223,14 @@ class JevJudge(Judge):
             with urllib.request.urlopen(req, timeout=120) as resp:
                 body = json.load(resp)
         except urllib.error.HTTPError as e:
-            detail = e.read().decode(errors="replace")[:300]
+            detail = redact(e.read().decode(errors="replace")[:300], self.api_key)
             if e.code in (429, 503, 529):
-                raise _RateLimited(f"{self.endpoint} returned {e.code}: {detail}") from e
-            raise RuntimeError(f"{self.endpoint} returned {e.code}: {detail}") from e
+                raise _RateLimited(f"{self.endpoint} returned {e.code}: {detail}") from None
+            raise RuntimeError(f"{self.endpoint} returned {e.code}: {detail}") from None
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
+            # reported by class only: its text can hold the URL and the request
+            raise RuntimeError(f"could not reach {redact(self.endpoint, self.api_key)} "
+                               f"({type(e).__name__})") from None
         latency = time.monotonic() - t0
         answers = body.get("answers") or {}
         usage = body.get("usage") or {}
