@@ -37,11 +37,15 @@ jobs:
           python-version: "3.12"
       - run: pip install build && python -m build
       - name: Tag must match the package version
-        # A development release (.devN) is never published, even when the version matches.
+        # A development release is never published, even when the version matches: the tag
+        # ends in a PEP 440 dev segment in any of its spellings (.devN, devN, -devN, _devN,
+        # any case, the number optional), which `packaging` normalises to .devN.
         run: |
-          if [[ "${GITHUB_REF_NAME}" =~ \.dev[0-9]+$ ]]; then
+          shopt -s nocasematch
+          if [[ "${GITHUB_REF_NAME}" =~ [-_.]?dev[-_.]?[0-9]*$ ]]; then
             echo "::error::tag ${GITHUB_REF_NAME} is a development release (.devN): not published"; exit 1
           fi
+          shopt -u nocasematch
           v=$(python -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
           test "v$v" = "${GITHUB_REF_NAME}" || { echo "::error::tag ${GITHUB_REF_NAME} != version $v"; exit 1; }
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

@@ -273,10 +273,30 @@ def test_build_and_trigger_accept_a_prerelease_tag(jobs, workflow, tag, tmp_path
         assert (r.returncode == 0) is ok, (tag, version, r.stdout)
 
 
-@pytest.mark.parametrize("tag", ["v0.6.0.dev1", "v0.6.0rc1.dev2", "v0.6.0.post1.dev3"])
+DEV_TAGS = ["v0.6.0.dev1", "v0.6.0rc1.dev2", "v0.6.0.post1.dev3", "v0.6.0dev1", "v0.6.0.DEV1",
+            "v0.6.0-dev1", "v0.6.0_dev1", "v0.6.0.dev", "v0.6.0rc1-Dev_4", "v0.6.0.dev.5"]
+NOT_DEV_TAGS = ["v0.6.0", "v0.6.0rc1", "v0.6.0a2", "v0.6.0b1", "v0.6.0.post1", "v0.6.0rc1.post2"]
+
+
+@pytest.mark.parametrize("tag", DEV_TAGS + NOT_DEV_TAGS)
+def test_dev_tag_list_agrees_with_pep_440(tag):
+    """The tags above are classified as `packaging` (the PEP 440 reference) classifies
+    them, so the build step is tested against the standard and not against itself."""
+    version = pytest.importorskip("packaging.version")
+    assert version.Version(tag[1:]).is_devrelease is (tag in DEV_TAGS)
+
+
+@pytest.mark.parametrize("tag", NOT_DEV_TAGS)
+def test_build_does_not_refuse_a_release_or_prerelease_tag(jobs, tag, tmp_path):
+    r = run_tag_check(jobs, tmp_path, tag, tag[1:])
+    assert r.returncode == 0, (tag, r.stdout)
+
+
+@pytest.mark.parametrize("tag", DEV_TAGS)
 def test_build_refuses_a_dev_release_tag(jobs, workflow, tag, tmp_path):
-    """A `.devN` tag matches the trigger, and pyproject may carry the same version, but a
-    development release is never published: the build job stops with a clear error."""
+    """A development-release tag in any PEP 440 spelling (`.devN`, `devN`, `-dev`, `_DEV`, no
+    number) matches the trigger, and pyproject may carry the same version, but a development
+    release is never published: the build job stops with a clear error."""
     from fnmatch import fnmatchcase
     assert any(fnmatchcase(tag, g) for g in workflow[True]["push"]["tags"])
     r = run_tag_check(jobs, tmp_path, tag, tag[1:])
