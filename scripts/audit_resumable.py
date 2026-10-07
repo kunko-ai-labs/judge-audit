@@ -28,7 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from judge_audit import __version__  # noqa: E402
-from judge_audit.cli import _judge  # noqa: E402
+from judge_audit.cli import _judge, nll_text  # noqa: E402
 from judge_audit.ground_truth import parse_ground_truth  # noqa: E402
 from judge_audit.judges.simulated import SIMULATED_TAG  # noqa: E402
 from judge_audit.report import fmt4, render_html, render_markdown  # noqa: E402
@@ -308,7 +308,7 @@ def main() -> None:
           f"{'not_sent=' + str(result.not_sent) + ' ' if result.not_sent else ''}"
           f"confidence_known={confidence['known']}/{confidence['total']} "
           f"ece={fmt4(result.ece)} ece_equal_mass={fmt4(result.ece_equal_mass)} "
-          f"brier={fmt4(result.brier)} nll={'inf' if result.nll_infinite else fmt4(result.nll)} gt={result.run['dataset']['ground_truth']['tier']} "
+          f"brier={fmt4(result.brier)} nll={nll_text(result)} gt={result.run['dataset']['ground_truth']['tier']} "
           f"cost={cost} -> {args.out}")
 
 

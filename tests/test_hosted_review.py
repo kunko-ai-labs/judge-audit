@@ -214,10 +214,57 @@ def test_a_chosen_option_absent_from_the_distribution_is_no_answer(monkeypatch, 
 
 
 def test_valid_distribution_by_hand():
+    from judge_audit.judges.hosted import decimals, sum_tolerance
     assert valid_distribution({"a": 0.6, "b": 0.4}) is None
-    assert valid_distribution({"a": 0.6, "b": 0.4 + 0.009}) is None     # within tolerance
-    assert "sum to" in valid_distribution({"a": 0.6, "b": 0.42})
+    # two options at 2 decimals: the rounding can move the sum by 2 x 0.005 = 0.01 at most
+    assert sum_tolerance({"a": 0.6, "b": 0.42}) == pytest.approx(0.01 + 1e-9)
+    assert "sum to" in valid_distribution({"a": 0.6, "b": 0.42})          # 0.02 off
+    # full precision leaves no room for rounding: 0.009 off is not rounding
+    assert "sum to" in valid_distribution({"a": 0.6, "b": 0.4 + 0.009})
     assert "no probabilities" in valid_distribution({})
+    assert [decimals(x) for x in (0.5, 0.54, 0.123, 1.0, 0, 1e-05)] == [1, 2, 3, 0, 0, 5]
+
+
+def _rounded(k: int, total: float) -> dict[str, float]:
+    """`k` options at 2 decimals summing to `total` (exactly representable steps)."""
+    cents = round(total * 100)
+    base, extra = divmod(cents, k)
+    return {f"o{i}": (base + (1 if i < extra else 0)) / 100 for i in range(k)}
+
+
+def test_77_options_at_2_decimals_summing_to_1_03_are_accepted(monkeypatch, oa):
+    """77 values each rounded by up to 0.005 can move the total by 0.385; 1.03 is rounding."""
+    probs = _rounded(77, 1.03)
+    probs["o0"] = 0.40                      # one clear choice, the rest spread
+    rest = round(1.03 - 0.40, 2)
+    for i, v in enumerate(_rounded(76, rest).values(), 1):
+        probs[f"o{i}"] = v
+    assert abs(sum(probs.values()) - 1.03) < 1e-9
+    q = Question(name="intent", type=QuestionType.CHOICE, instructions="?",
+                 options=list(probs))
+    _install(monkeypatch, [{"answers": [{"type": "choice", "name": "intent", "choice": "o0",
+                                         "confidence": 0.4, "probabilities": [
+                                             {"value": k, "probability": v}
+                                             for k, v in probs.items()]}]}])
+    (j,) = OpenAIDecisionsJudge().decide("x", [q])
+    assert j.parse_status == "parsed" and j.decision == "o0"
+    assert j.confidence == 0.40                                     # as returned, not renormalised
+    assert j.raw["probability_sum"] == pytest.approx(1.03)
+    assert j.raw["probability_decimals"] == 2
+
+
+def test_a_sum_beyond_what_rounding_explains_is_still_rejected(monkeypatch, oa):
+    """77 options at 2 decimals allow 0.385; a total of 1.40 is not rounding."""
+    probs = _rounded(77, 1.40)
+    q = Question(name="intent", type=QuestionType.CHOICE, instructions="?",
+                 options=list(probs))
+    _install(monkeypatch, [{"answers": [{"type": "choice", "name": "intent", "choice": "o0",
+                                         "confidence": 0.1, "probabilities": [
+                                             {"value": k, "probability": v}
+                                             for k, v in probs.items()]}]}])
+    (j,) = OpenAIDecisionsJudge().decide("x", [q])
+    assert j.parse_status == "no_answer" and "sum to" in j.raw["invalid"]
+    assert j.raw["probability_sum"] == pytest.approx(1.40)
 
 
 def test_evidence_with_an_invalid_probability_round_trips_as_strict_json(tmp_path,
@@ -329,3 +376,29 @@ def test_a_non_finite_value_fails_at_its_row_with_its_path(tmp_path):
     with pytest.raises(ValueError, match=r"row 2.*'route'.*raw\.score.*NaN"):
         run_audit(judge, rows, str(labels), meta, ci=False)
     assert judge.calls == 3                       # stopped at the bad row, not after all five
+
+
+# --- an infinite log loss is said, never printed as a bare number ---------------------------
+
+def test_the_summary_line_explains_an_infinite_nll(tmp_path, capsys):
+    from judge_audit import cli
+    from judge_audit.runner import AuditResult
+    line = cli.nll_text(AuditResult(judge="x", n=2, accuracy=0.5, ece=0.1, nll=None,
+                                    nll_infinite=1))
+    assert line == "inf(1 certain and wrong)"
+    assert cli.nll_text(AuditResult(judge="x", n=2, accuracy=1.0, ece=0.1, nll=0.1234,
+                                    nll_infinite=0)) == "0.1234"
+
+
+def test_a_certain_wrong_answer_makes_nll_null_in_json_and_explained_in_markdown():
+    from judge_audit.report import render_markdown
+    from judge_audit.runner import summarize
+    records = [{"confidence": 1.0, "correct": False, "latency_s": 0.1, "cost_usd": 0.0},
+               {"confidence": 0.7, "correct": True, "latency_s": 0.1, "cost_usd": 0.0}]
+    res = summarize("x", records, ci=False)
+    d = res.to_dict()
+    assert d["nll"] is None and d["nll_infinite"] == 1
+    json.dumps(d, allow_nan=False)                        # the JSON never holds an infinity
+    md = render_markdown(res)
+    assert "NLL **∞** (1 answer declared certain and wrong)" in md
+    assert "nll=inf" not in md and " inf " not in md

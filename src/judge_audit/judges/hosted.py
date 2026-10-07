@@ -11,10 +11,13 @@ and why:
   from the probabilities"); it is kept in `raw.native_confidence` and never audited in its
   place.
 - **An answer is checked before it is used** (`valid_distribution`): every probability a
-  finite number in [0, 1], the distribution summing to 1 within `SUM_TOLERANCE`, the chosen
-  option among them. One that fails, or has no probabilities, is no answer with the reason
-  in `raw.invalid`, and counted against the judge: a confidence is never invented or
-  repaired.
+  finite number in [0, 1], the distribution summing to 1 within what rounding explains
+  (`sum_tolerance`: K options rounded to d decimals can move the total by K x 0.5 x 10^-d,
+  with d the most decimals any of them shows), the chosen option among them. The total is
+  kept in `raw.probability_sum` and d in `raw.probability_decimals`; the chosen option's
+  probability is audited as returned, never renormalised. One that fails, or has no
+  probabilities, is no answer with the reason in `raw.invalid`, and counted against the
+  judge: a confidence is never invented or repaired.
 - **One question per request by default.** Several questions may share a request
   (`*_QUESTIONS_PER_REQUEST=all`); other decision models have changed an answer with the
   other questions of the request, so sharing is opt-in and recorded. Clef takes at most 64
@@ -72,7 +75,6 @@ RETRY_STATUS = (429, 500, 502, 503, 504, 529)
 ATTEMPTS = 6                       # for a server that answers busy
 CONNECT_BUDGET_S = 20.0            # total backoff for a server that cannot be reached
 TIMEOUT_S = 120
-SUM_TOLERANCE = 0.01               # |sum of the probabilities - 1| allowed (rounding)
 
 
 def _per_request(env: str) -> int | None:
@@ -127,9 +129,26 @@ def post_json(url: str, body: dict, label: str, secrets: tuple[str, ...]) -> dic
     raise RuntimeError(f"rate-limited by {label} after {ATTEMPTS} attempts ({last})")
 
 
+def decimals(x: float) -> int:
+    """How many decimals `x` shows in its shortest round-trip form (0.54 -> 2, 1e-05 -> 5):
+    the digits the server sent, since JSON numbers parse to that form."""
+    text = repr(float(x)).lower()
+    mantissa, _, exponent = text.partition("e")
+    places = len(mantissa.partition(".")[2].rstrip("0"))
+    return max(0, places - int(exponent or 0))
+
+
+def sum_tolerance(probs: dict[str, float]) -> float:
+    """How far from 1 rounding can move the total: K options rounded to d decimals, each off
+    by at most 0.5 x 10^-d, with d the most decimals any of them shows (77 options at 2
+    decimals: 0.385). Full-precision probabilities leave almost no room."""
+    d = max((decimals(v) for v in probs.values()), default=0)
+    return len(probs) * 0.5 * 10.0 ** -d + 1e-9
+
+
 def valid_distribution(probs: dict[str, float], chosen: str | None = None) -> str | None:
     """Why a declared distribution cannot be used, or None when it can: every probability a
-    finite number in [0, 1], the total within `SUM_TOLERANCE` of 1, and `chosen` (when
+    finite number in [0, 1], the total within `sum_tolerance` of 1, and `chosen` (when
     given) among the options."""
     if not probs:
         return "no probabilities"
@@ -139,11 +158,24 @@ def valid_distribution(probs: dict[str, float], chosen: str | None = None) -> st
         if not 0.0 <= v <= 1.0:
             return f"probability of {k!r} is {v}, outside [0, 1]"
     total = math.fsum(probs.values())
-    if abs(total - 1.0) > SUM_TOLERANCE:
-        return f"probabilities sum to {total:.4f}, not 1 (tolerance {SUM_TOLERANCE})"
+    tolerance = sum_tolerance(probs)
+    if abs(total - 1.0) > tolerance:
+        return (f"probabilities sum to {total:.4f}, not 1: more than rounding "
+                f"{len(probs)} options explains ({tolerance:.4g})")
     if chosen is not None and chosen not in probs:
         return f"chosen option {chosen!r} is not among its probabilities"
     return None
+
+
+def declared_sum(values) -> dict:
+    """`probability_sum` and `probability_decimals` of the probabilities an answer declares,
+    as returned (recorded whether or not the answer is used); {} when there are none."""
+    nums = [v for v in values if isinstance(v, (int, float)) and not isinstance(v, bool)
+            and math.isfinite(v)]
+    if not nums:
+        return {}
+    return {"probability_sum": round(math.fsum(nums), 9),
+            "probability_decimals": max(decimals(v) for v in nums)}
 
 
 def read_checked(q: Question, kind: str, probs: dict[str, float],
@@ -261,7 +293,7 @@ class OpenAIDecisionsJudge(_HostedDecisionJudge):
                 "input_price_per_mtok_usd": self.price, "output_price_per_mtok_usd": 0.0,
                 "price_note": "documented base rate; regional and long-context multipliers "
                               "are not applied",
-                "sum_tolerance": SUM_TOLERANCE}
+                "sum_tolerance": "options x 0.5 x 10^-decimals (rounding)"}
 
     @staticmethod
     def wire_question(q: Question) -> dict:
@@ -303,6 +335,9 @@ class OpenAIDecisionsJudge(_HostedDecisionJudge):
             ans = answers.get(q.name)
             base = {"answer": ans, "usage": usage, "served": served,
                     "response_id": reply.get("id")}
+            if isinstance(ans, dict) and isinstance(ans.get("probabilities"), list):
+                base.update(declared_sum(x.get("probability") for x in ans["probabilities"]
+                                         if isinstance(x, dict)))
             if not isinstance(ans, dict) or ans.get("type") == "refusal":
                 refused = isinstance(ans, dict) and ans.get("type") == "refusal"
                 out.append(_no_answer(q, latency, cost, {**base, "refusal": refused}))
@@ -351,7 +386,7 @@ class ClefHostedJudge(_HostedDecisionJudge):
                 "temperature": "n/a",
                 "questions_per_request": self.per_request or "all",
                 "input_price_per_mtok_usd": self.price, "output_price_per_mtok_usd": 0.0,
-                "sum_tolerance": SUM_TOLERANCE}
+                "sum_tolerance": "options x 0.5 x 10^-decimals (rounding)"}
 
     def _call(self, state: str, questions: list[Question]) -> list[Judgment]:
         body = {"model": self.model, "state": state,
@@ -376,6 +411,8 @@ class ClefHostedJudge(_HostedDecisionJudge):
         for q in questions:
             ans = answers.get(q.name)
             base = {"answer": ans, "usage": usage, "served": served}
+            if isinstance(ans, dict) and isinstance(ans.get("probabilities"), dict):
+                base.update(declared_sum(ans["probabilities"].values()))
             if not isinstance(ans, dict) or "error" in ans:
                 out.append(_no_answer(q, latency, cost, base))
                 continue
