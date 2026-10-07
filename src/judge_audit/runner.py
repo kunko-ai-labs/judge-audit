@@ -589,6 +589,34 @@ def missing_answer(question: str, returned: list) -> dict:
             "parse_status": "no_answer"}
 
 
+def non_finite_at(value, path: str = "") -> tuple[str, float] | None:
+    """(path, value) of the first number in `value` that strict JSON cannot hold (NaN, ±inf),
+    or None. Evidence is strict JSON, so such a value is refused where it enters, not when
+    the file is written."""
+    if isinstance(value, float) and not math.isfinite(value):
+        return path or "(value)", value
+    items = (value.items() if isinstance(value, dict) else
+             enumerate(value) if isinstance(value, (list, tuple)) else ())
+    for k, v in items:
+        found = non_finite_at(v, f"{path}[{k}]" if isinstance(k, int) else
+                              f"{path}.{k}" if path else str(k))
+        if found:
+            return found
+    return None
+
+
+def check_evidence(record: dict) -> None:
+    """Raise, naming the row, the question and the field, if `record` holds a number strict
+    JSON cannot write; the adapter that produced it is the one to fix."""
+    found = non_finite_at(record)
+    if found:
+        path, value = found
+        shown = "NaN" if math.isnan(value) else ("Infinity" if value > 0 else "-Infinity")
+        raise ValueError(f"row {record.get('idx')}, question {record.get('question')!r}: "
+                         f"{path} is {shown}, which evidence (strict JSON) cannot hold; "
+                         f"the adapter must record it as text or leave it out")
+
+
 def reconcile(idx: int, row: dict, judgments, counts: dict) -> list[dict]:
     """One record per labelled question, answered or not.
 
@@ -619,6 +647,8 @@ def reconcile(idx: int, row: dict, judgments, counts: dict) -> list[dict]:
         else:
             counts["answered"] += 1
             records.append(record_of(idx, row, judgment, expected))
+    for record in records:
+        check_evidence(record)
     return records
 
 

@@ -296,3 +296,36 @@ def test_connection_retries_give_up_in_under_30_seconds(monkeypatch, cf):
     with pytest.raises(RuntimeError, match="could not reach Workers AI"):
         ClefHostedJudge().decide("x", [ROUTE])
     assert sum(slept) < 30
+
+
+# --- a bad value fails at its own row, not when the file is written --------------------------
+
+class _NanAt:
+    """A judge whose answer to row `bad` carries a NaN in raw; every other row is clean."""
+    name = "nan-at"
+
+    def __init__(self, bad: int):
+        self.bad, self.calls = bad, 0
+
+    def describe(self) -> dict:
+        return {"name": self.name}
+
+    def decide(self, state, questions):
+        from judge_audit.judges.base import Judgment
+        row, self.calls = self.calls, self.calls + 1
+        raw = {"score": float("nan") if row == self.bad else 0.5}
+        return [Judgment(question=q.name, decision=q.options[0], confidence=0.9, raw=raw)
+                for q in questions]
+
+
+def test_a_non_finite_value_fails_at_its_row_with_its_path(tmp_path):
+    from judge_audit.runner import load_dataset, run_audit
+    labels = tmp_path / "labels.jsonl"
+    labels.write_text("".join(json.dumps({"state": f"s{i}", "questions": [
+        {"name": "route", "type": "choice", "instructions": "?", "options": ["a", "b"]}],
+        "labels": {"route": "a"}}) + "\n" for i in range(5)), encoding="utf-8")
+    rows, meta = load_dataset(str(labels))
+    judge = _NanAt(bad=2)
+    with pytest.raises(ValueError, match=r"row 2.*'route'.*raw\.score.*NaN"):
+        run_audit(judge, rows, str(labels), meta, ci=False)
+    assert judge.calls == 3                       # stopped at the bad row, not after all five
