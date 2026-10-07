@@ -43,6 +43,7 @@ from .report import (
 from .runner import (
     IncompleteAnswers,
     certificate_of,
+    display_path,
     groups_of,
     load_dataset,
     run_audit,
@@ -58,6 +59,15 @@ def _die(msg: str) -> NoReturn:
     # errors reach CI logs and an Action's output: paths named as provenance names them
     print(f"judge-audit: {scrub(msg)}", file=sys.stderr)
     sys.exit(2)
+
+
+def _write_or_die(write, path: str, *args) -> None:
+    """`write(path, *args)`, or a clear exit 2 naming the path as provenance names it: an
+    output that cannot be written is the caller's to fix, not a traceback."""
+    try:
+        write(path, *args)
+    except OSError as e:
+        _die(f"cannot write {display_path(path)}: {e.strerror or type(e).__name__}")
 
 
 def _write_atomic(path: str, content: str) -> None:
@@ -255,10 +265,10 @@ def main(argv: list[str] | None = None) -> None:
             content = render_markdown(result)
             if tag:
                 content = f"> ⚠️ **{tag}**\n\n" + content
-        _write_atomic(out, content)
-        _write_json(args.json, result.to_dict())
+        _write_or_die(_write_atomic, out, content)
+        _write_or_die(_write_json, args.json, result.to_dict())
         if args.judgments:
-            write_judgments(result, args.judgments)
+            _write_or_die(lambda path: write_judgments(result, path), args.judgments)
         confidence = result.confidence
         cost = (f"${result.total_cost_usd:.4f}" if result.total_cost_usd is not None
                 else "unknown")
@@ -295,15 +305,15 @@ def main(argv: list[str] | None = None) -> None:
             content = render_markdown(result)
             if tag:
                 content = f"> ⚠️ **{tag}**\n\n" + content
-            _write_atomic(args.out, content)
+            _write_or_die(_write_atomic, args.out, content)
         if args.json:
-            _write_json(args.json, result.to_dict())
+            _write_or_die(_write_json, args.json, result.to_dict())
         if args.drift:
-            _write_json(args.drift,
+            _write_or_die(_write_json, args.drift,
                         {"ok": not failures and not gate_failures, "failures": failures,
                          "gate_failures": gate_failures, "ece": result.ece,
                          "accuracy": result.accuracy, "n": result.n,
-                         "baseline": args.baseline,
+                         "baseline": display_path(args.baseline),
                          "max_ece_drift": args.max_ece_drift,
                          "max_acc_drop": args.max_acc_drop,
                          "min_safe_rate": [{"risk": r, "share": sh} for r, sh in minimums],

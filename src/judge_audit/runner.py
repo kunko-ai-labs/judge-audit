@@ -281,6 +281,16 @@ def checkpoint_record(idx: int, row: dict, judgment: dict, expected: str,
     }
 
 
+def normalise_path(path: str | Path) -> str:
+    """A path as a person or an agent may type it, made absolute: surrounding spaces and one
+    pair of matching quotes removed, `~` expanded, `..` resolved against the working
+    directory (symlinks kept). Empty stays empty."""
+    text = str(path).strip()
+    if len(text) >= 2 and text[0] == text[-1] and text[0] in "'\"":
+        text = text[1:-1]
+    return os.path.abspath(Path(text).expanduser()) if text else text
+
+
 def display_path(path: str | Path) -> str:
     """The path as provenance publishes it: relative, never where a computer keeps it.
 
@@ -291,12 +301,10 @@ def display_path(path: str | Path) -> str:
     name alone. No home directory, user name or folder layout is published (#58); the
     dataset's sha256, recorded beside it, is what identifies the file.
     """
-    text = str(path).strip()
-    if len(text) >= 2 and text[0] == text[-1] and text[0] in "'\"":
-        text = text[1:-1]
+    text = normalise_path(path)
     if not text:
         return text
-    p = Path(os.path.abspath(Path(text).expanduser()))
+    p = Path(text)
     try:
         return str(p.relative_to(Path(os.path.abspath(Path.cwd()))))
     except ValueError:
