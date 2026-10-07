@@ -448,6 +448,49 @@ def zero_error_sentence(d: dict, zec_ci: str = "") -> str:
             f"{zec_ci} {zero_error_tail(zero)}.")
 
 
+HIGH_CONFIDENCE_NOTE = (
+    "A reading of the accuracy-vs-coverage curve at three fixed confidences, not a new score "
+    "and not combined with any other number: the decisions declaring at least that "
+    "confidence, how many were wrong, and an exact one-sided upper bound on their error "
+    "rate (Clopper–Pearson, {level:.0%}). Rows are taken as independent: on a dataset that "
+    "repeats texts, each copy counts, which can make the bound too tight. The cut is fixed "
+    "in advance, not chosen on these rows, unlike the threshold an automation decision "
+    "searches for.")
+
+
+def high_confidence_rows(d: dict) -> list[tuple[str, str, str, str, str]]:
+    """(cut, decisions, wrong, error rate, upper bound) per cut, formatted; [] when the
+    result has no `high_confidence_error` (JSON written before it existed)."""
+    hc = d.get("high_confidence_error")
+    if not hc:
+        return []
+    return [(f"≥ {lv['confidence_at_least']:.2f}", str(lv["n"]), str(lv["errors"]),
+             "—" if lv["error_rate"] is None else f"{lv['error_rate']:.1%}",
+             "—" if lv["risk_upper"] is None else f"{lv['risk_upper']:.1%}")
+            for lv in hc["levels"]]
+
+
+def high_confidence_unknown(d: dict) -> str:
+    """How many decisions the table leaves out for want of a known confidence."""
+    k = d["high_confidence_error"]["unknown_confidence"]
+    return (f"{k} decision{'s' if k != 1 else ''} without a known confidence "
+            f"{'are' if k != 1 else 'is'} left out of every row and counted here.")
+
+
+def high_confidence_lines(d: dict) -> list[str]:
+    """The "When it says ≥ c, how often is it wrong?" table (#134); [] without the field."""
+    rows = high_confidence_rows(d)
+    if not rows:
+        return []
+    level = 1 - d["high_confidence_error"]["delta"]
+    return ["## When it says ≥ 90 / 95 / 99 %, how often is it wrong?", "",
+            f"| confidence | decisions | wrong | error rate | upper bound ({level:.0%}) |",
+            "|---|---|---|---|---|",
+            *[f"| {c} | {n} | {e} | {r} | {u} |" for c, n, e, r, u in rows],
+            "", f"_{high_confidence_unknown(d)}_", "",
+            f"_{HIGH_CONFIDENCE_NOTE.format(level=level)}_", ""]
+
+
 def calibration_numbers(d: dict, bold: tuple[str, str] = ("**", "**")) -> str:
     """`ECE (equal-mass) **y** [ci] · Brier **z** [ci] · NLL **w** [ci]` — the numbers
     that need no fixed bins, printed right after the equal-width ECE they qualify. NLL
@@ -495,6 +538,7 @@ def render_markdown(result: AuditResult) -> str:
         zero_error_sentence(d, zec_ci),
         "Retrospective on this dataset — not a production guarantee.",
         "",
+        *high_confidence_lines(d),
         "## Accuracy vs coverage",
         "",
         "| coverage | accuracy | min confidence | n |",
@@ -692,6 +736,17 @@ def render_html(result: AuditResult, tag: str = "") -> str:
                   if ("†" in acc_ci + ece_ci or "‡" in acc_ci + ece_ci) else "")
     footer_evidence = (" · every number recomputes from the per-decision checkpoint named above"
                        if d.get("regenerated") else "")
+    hc_rows = high_confidence_rows(d)
+    high_conf = ("" if not hc_rows else
+                 "<h2>When it says ≥ 90 / 95 / 99 %, how often is it wrong?</h2>"
+                 f"<table><tr><th>confidence</th><th>decisions</th><th>wrong</th>"
+                 f"<th>error rate</th><th>upper bound "
+                 f"({1 - d['high_confidence_error']['delta']:.0%})</th></tr>"
+                 + "".join("<tr>" + "".join(f"<td>{html.escape(x)}</td>" for x in r) + "</tr>"
+                           for r in hc_rows)
+                 + f'</table><p class="note">{html.escape(high_confidence_unknown(d))} '
+                 + html.escape(HIGH_CONFIDENCE_NOTE.format(
+                     level=1 - d["high_confidence_error"]["delta"])) + "</p>")
     complete = (f'<p class="metric">{completeness_line(d, ("<b>", "</b>"))}</p>'
                 if d.get("completeness") else "")
     if d.get("not_sent"):
@@ -717,6 +772,7 @@ def render_html(result: AuditResult, tag: str = "") -> str:
 <div class="fig"><h2>Reliability diagram</h2>
 <p class="note">A perfectly honest judge sits on the diagonal: in every bin, average confidence equals accuracy.</p>
 <img src="{rel}" alt="Reliability diagram: average stated confidence against observed accuracy in each confidence bin, with the diagonal of a perfectly honest judge"></div>
+{high_conf}
 <h2>Accuracy vs coverage</h2>
 <img src="{acc}" alt="Accuracy against coverage: accuracy among the decisions above each confidence threshold, by the share of decisions above it">
 <table class="num"><tr><th scope="col">Coverage</th><th scope="col">Accuracy</th><th scope="col">Min confidence</th><th scope="col">n</th></tr>{curve_rows}</table>

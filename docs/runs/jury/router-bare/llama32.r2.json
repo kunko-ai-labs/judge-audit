@@ -104,6 +104,33 @@
     "n": 1,
     "threshold": 0.99
   },
+  "high_confidence_error": {
+    "delta": 0.05,
+    "unknown_confidence": 0,
+    "levels": [
+      {
+        "confidence_at_least": 0.9,
+        "n": 36,
+        "errors": 10,
+        "error_rate": 0.2778,
+        "risk_upper": 0.425461
+      },
+      {
+        "confidence_at_least": 0.95,
+        "n": 17,
+        "errors": 6,
+        "error_rate": 0.3529,
+        "risk_upper": 0.580295
+      },
+      {
+        "confidence_at_least": 0.99,
+        "n": 1,
+        "errors": 0,
+        "error_rate": 0.0,
+        "risk_upper": 0.95
+      }
+    ]
+  },
   "total_cost_usd": 0.0,
   "p50_latency_s": 1.014,
   "p99_latency_s": 1.324,
@@ -407,7 +434,7 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-06T21:13:06+00:00",
+    "utc": "2026-10-07T07:06:26+00:00",
     "judge_audit_version": "0.5.1",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/jury/router-bare/llama32.r2.ckpt.jsonl",
