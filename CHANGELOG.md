@@ -7,7 +7,7 @@ All notable changes to this project are documented here. The format follows
 
 ## [0.6.0rc1] — 2026-10-07
 
-A pre-release of 0.6.0: what is on `main` today, reviewed and tested, published so it can be installed and verified as a signed artefact (`pip install kunko-judge-audit==0.6.0rc1`) before the final release. No v0.6 study result is in it: the pre-registration (#132) is not frozen yet, and no metric of the decision models is published. `pip install kunko-judge-audit` keeps resolving to 0.5.1, and the Action's `@v0.5` tag does not move.
+A pre-release of 0.6.0: what is on `main` today, reviewed and tested, published so it can be installed and verified as a signed artefact (`pip install kunko-judge-audit==0.6.0rc1`) before the final release. No v0.6 study result is in it: the pre-registration (#132) is not frozen yet, no metric of the decision models is published, and the pilot checkpoints on the MASSIVE dev sample (#150) are planning inputs for sizing the study, not scores. `pip install kunko-judge-audit` keeps resolving to 0.5.1, and the Action's `@v0.5` tag does not move.
 
 ### Added
 - **"When it says ≥ 90 / 95 / 99 %, how often is it wrong?"** (US-008-004, #134). Every audit report and `audit-result.json` (`high_confidence_error`) give, for confidence ≥ 0.90, 0.95 and 0.99, the number of decisions, how many were wrong, the error rate and its exact one-sided Clopper–Pearson upper bound (95 %). A reading of the existing coverage–risk curve at fixed cuts, not a new score and never combined with another number; decisions without a known confidence are excluded and counted (`unknown_confidence`). Every committed report regenerated: only the new field and the regeneration stamp change.
