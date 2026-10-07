@@ -12,6 +12,17 @@ Release branches, one per version, off `main`:
    **SBOM.** `smoke` generates a CycloneDX 1.6 SBOM with `cyclonedx-py environment` — a pip-installable tool rather than a marketplace action, pinned with hashes in `.github/sbom-requirements.txt` (`cyclonedx-bom==7.4.0` and its dependencies, installed with `--require-hashes`) — from a virtual environment created `--without-pip` that holds nothing but the built wheel plus its `mcp` extra. Its root component is `kunko-judge-audit` at the tagged version (read from `pyproject.toml`, which the `build` job has already checked against the tag), and a workflow step fails the release if the root is anything else or if `pip` or the SBOM tool leaked into the component list. `github-release` attests the SBOM file with the same `actions/attest-build-provenance` action as the wheel (`gh attestation verify sbom.cdx.json --repo kunko-ai-labs/judge-audit`) and attaches it to the GitHub release as `sbom.cdx.json`. It covers the Python packages the wheel and its `mcp` extra pull in. It does **not** cover: the judges' hosted models (`claude-sonnet-4.5`, `llama-3.3-70b`, …) — they are audited subjects reached over an HTTP API, not Python dependencies, so an SBOM cannot and should not list them; the npm dependencies of the Node bridge (`judge_audit/judges/bridge/` ships its `package.json` and `package-lock.json` in the wheel, but the packages themselves are fetched by `npm install` when you set up the Jev bridge, outside the Python environment); or the `charts`/`nli`/`anthropic` extras, which are optional and not installed for this smoke run. A consumer who installs additional extras has a different dependency set than this SBOM describes.
 5. On the GitHub release page, tick **Publish this Action to the GitHub Marketplace** (UI only; the listing takes `action.yml`'s name, description and branding). Edit the notes: what changed for a user, the headline findings with their caveats, how to verify the build. Delete the release branch.
 
+## Pre-releases (`vX.Y.ZrcN`, `aN`, `bN`)
+
+A pre-release follows steps 1, 2 and 4 above, with the PEP 440 version (`0.6.0rc1`) in `pyproject.toml` and `__version__`, and the tag `v0.6.0rc1` on `main`. It differs in four places:
+
+- **Contents.** Only what is already on `main`, reviewed and tested. A pre-release on PyPI can be yanked but never replaced, so a fix is a new `rcN+1`.
+- **GitHub release.** `release.yml` detects the suffix (`a`, `b` or `rc` followed by a number; `.postN` is a final release; a `.devN` tag is refused by `build` and never published) and marks the release as a pre-release, never Latest. It does so also when the release was created by hand before the tag.
+- **No floating tag, no Marketplace.** Do not move `vX.Y` for a pre-release: the README snippet and Action users stay on the last final release. Do not tick **Publish this Action to the GitHub Marketplace**. Do not change the README's `@vX.Y` Action snippet until the final release.
+- **PyPI.** The same Trusted Publishing path and the same `pypi` environment approval by the maintainer. `pip install kunko-judge-audit` keeps resolving to the last final release; a pre-release installs only when pinned (`==0.6.0rc1`) or with `--pre`.
+
+Verify a pre-release as a final one: `pip install kunko-judge-audit==X.Y.ZrcN`, `judge-audit --version`, and `gh attestation verify <wheel> --repo kunko-ai-labs/judge-audit`.
+
 Audits are not releases: a new audit (new checkpoint + report) lands through an `audit/*` branch and a normal PR, any time.
 
 ## One-time setup for PyPI (owner)

@@ -35,6 +35,7 @@ from .metrics.calibration import (
     zero_error_coverage,
     zero_error_coverage_ci,
 )
+from .metrics.selective import high_confidence_error
 
 # Percentile bootstrap over distinct texts (docs/judges.md § Confidence intervals): the
 # datasets repeat states, and two rows with the same text are not two independent
@@ -93,6 +94,9 @@ class AuditResult:
     # sha256 of the canonical judgments the numbers were computed from (`judgments_digest`):
     # it changes when any field of any record does, even one that moves no count.
     judgments_sha256: str | None = None
+    # "When it says ≥ 0.90 / 0.95 / 0.99, how often is it wrong?": the coverage–risk curve
+    # read at three fixed cuts, with exact upper bounds (#134); not a score, never combined.
+    high_confidence: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         d = {
@@ -102,6 +106,7 @@ class AuditResult:
             "nll": self.nll, "nll_infinite": self.nll_infinite,
             "reliability_bins": self.reliability,
             "accuracy_coverage": self.curve, "zero_error_coverage": self.zero_error,
+            **({"high_confidence_error": self.high_confidence} if self.high_confidence else {}),
             "total_cost_usd": (round(self.total_cost_usd, 6)
                                if self.total_cost_usd is not None else None),
             "p50_latency_s": round(self.p50_latency_s, 3),
@@ -442,6 +447,8 @@ def summarize(judge_name: str, records: list[dict], run: dict | None = None,
         nll_infinite=nll_infinite(confidences, correct),
         certificate=certificate_of(records, groups, run=run),
         judgments_sha256=judgments_digest(records),
+        high_confidence={"delta": 0.05, "unknown_confidence": total - known,
+                         "levels": high_confidence_error(confidences, correct)},
     )
 
 

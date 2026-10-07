@@ -116,6 +116,33 @@
     "n": 0,
     "threshold": null
   },
+  "high_confidence_error": {
+    "delta": 0.05,
+    "unknown_confidence": 0,
+    "levels": [
+      {
+        "confidence_at_least": 0.9,
+        "n": 187,
+        "errors": 5,
+        "error_rate": 0.0267,
+        "risk_upper": 0.055394
+      },
+      {
+        "confidence_at_least": 0.95,
+        "n": 184,
+        "errors": 4,
+        "error_rate": 0.0217,
+        "risk_upper": 0.049054
+      },
+      {
+        "confidence_at_least": 0.99,
+        "n": 59,
+        "errors": 2,
+        "error_rate": 0.0339,
+        "risk_upper": 0.10289
+      }
+    ]
+  },
   "total_cost_usd": 0.457701,
   "p50_latency_s": 3.484,
   "p99_latency_s": 6.114,
@@ -598,7 +625,7 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-06T21:13:06+00:00",
+    "utc": "2026-10-07T07:06:26+00:00",
     "judge_audit_version": "0.5.1",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/repeats/claude-sonnet-4.5/email-adversarial.r1.ckpt.jsonl",

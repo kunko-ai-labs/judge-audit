@@ -1,12 +1,14 @@
 # Release: on a v* tag, in this order —
-#   build           sdist + wheel, tag must equal the version; the files stay a workflow
-#                   artifact, nothing is published
+#   build           sdist + wheel, tag must equal the version and must not be a .devN
+#                   development release; the files stay a workflow artifact, nothing is
+#                   published
 #   smoke           installs the built wheel in a clean runner, checks `judge-audit
 #                   --version` against the tag, runs a simulated audit and
 #                   `judge-audit-mcp --help`, then generates and checks the CycloneDX SBOM
 #                   of that install (root component kunko-judge-audit)
 #   github-release  only after smoke: Sigstore build-provenance attestations for dist/* and
-#                   the SBOM, then creates the release if the tag has none and attaches them
+#                   the SBOM, then creates the release if the tag has none and attaches them;
+#                   a pre-release tag (a, b, rc) is marked pre-release and never Latest
 #   publish         only after smoke and github-release: PyPI via Trusted Publishing (no
 #                   API token stored anywhere; PyPI trusts this workflow's OIDC identity)
 # A failing smoke test therefore leaves both the GitHub release and PyPI untouched.
@@ -35,7 +37,15 @@ jobs:
           python-version: "3.12"
       - run: pip install build && python -m build
       - name: Tag must match the package version
+        # A development release is never published, even when the version matches: the tag
+        # ends in a PEP 440 dev segment in any of its spellings (.devN, devN, -devN, _devN,
+        # any case, the number optional), which `packaging` normalises to .devN.
         run: |
+          shopt -s nocasematch
+          if [[ "${GITHUB_REF_NAME}" =~ [-_.]?dev[-_.]?[0-9]*$ ]]; then
+            echo "::error::tag ${GITHUB_REF_NAME} is a development release (.devN): not published"; exit 1
+          fi
+          shopt -u nocasematch
           v=$(python -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
           test "v$v" = "${GITHUB_REF_NAME}" || { echo "::error::tag ${GITHUB_REF_NAME} != version $v"; exit 1; }
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -129,9 +139,20 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+        # A PEP 440 pre-release tag (vX.Y.ZaN, bN, rcN) becomes a GitHub pre-release that is
+        # never marked Latest, also when the release was created by hand before the tag. A
+        # final tag (vX.Y.Z, or a post-release vX.Y.Z.postN) keeps the defaults.
         run: |
+          is_prerelease() {
+            [[ "$1" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(a|b|rc)[0-9]+$ ]]
+          }
+          flags=()
+          if is_prerelease "${GITHUB_REF_NAME}"; then flags=(--prerelease --latest=false); fi
           gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 \
-            || gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --generate-notes --verify-tag
+            || gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --generate-notes --verify-tag "${flags[@]}"
+          if is_prerelease "${GITHUB_REF_NAME}"; then
+            gh release edit "${GITHUB_REF_NAME}" --prerelease --latest=false
+          fi
           gh release upload "${GITHUB_REF_NAME}" dist/* sbom.cdx.json --clobber
 
   publish:
