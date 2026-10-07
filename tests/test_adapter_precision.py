@@ -113,13 +113,35 @@ def _decide(n_questions: int, **agent_kwargs):
 def test_each_judgment_says_whether_its_request_was_autocast():
     # On MPS the gate is 5 rows, one row per question sent: 4 questions run in the weights'
     # dtype, 5 run under float16 autocast.
-    assert {j.raw["autocast"] for j in _decide(4)} == {False}
-    assert {j.raw["autocast"] for j in _decide(5)} == {True}
+    four, five = _decide(4), _decide(5)
+    assert len(four) == 4 and len(five) == 5
+    assert all(j.raw["autocast"] == {"requested": False, "effective": False} for j in four)
+    assert all(j.raw["autocast"] == {"requested": True, "effective": True} for j in five)
+
+
+class _FallbackAgent(_Agent):
+    """Laya's fallback: the autocast forward fails, Laya turns autocast off and retries in
+    float32 within the same call."""
+
+    def predict(self, state, questions, **kwargs):
+        self.amp_enabled = False
+        self.dtype = "torch.float32"
+        return super().predict(state, questions, **kwargs)
+
+
+def test_a_fallback_inside_the_call_is_recorded_as_not_autocast():
+    names = [f"q{i}" for i in range(5)]
+    agent = _FallbackAgent(answers={n: ANSWER for n in names})
+    judge = LayaJudge(agent=agent, token_counts=lambda *a: (5, [3, 3], 10))
+    got = judge.decide("state", [_choice(n) for n in names])
+    assert len(got) == 5
+    assert all(j.raw["autocast"] == {"requested": True, "effective": False} for j in got)
 
 
 def test_without_autocast_no_request_is_autocast():
     got = _decide(6, device="cpu", amp_enabled=False, dtype="torch.float32")
-    assert {j.raw["autocast"] for j in got} == {False}
+    assert len(got) == 6
+    assert all(j.raw["autocast"] == {"requested": False, "effective": False} for j in got)
 
 
 def test_an_agent_without_a_gate_records_unknown_per_request():
