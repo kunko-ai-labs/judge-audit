@@ -93,7 +93,7 @@ Four families of open decision models were released within three weeks of each o
 - **Rounded probabilities.** All three runtimes round each probability to 4 decimals (`probability_resolution` in the provenance); with 77 options the rounded probabilities sum to 1 within about 0.001.
 - **Clef reads the question ID.** Its prompt includes each question's name (`ID: <name>`), unlike the other models: renaming a question can change an answer.
 
-What ran where (plumbing only, no metric): decider-2b and Strands Decider ran on Apple silicon (MPS and CPU) through `judge-audit run` on five BANKING77 train rows. Clef-flash needs about 19 GB of memory in bfloat16 and Clef about 55 GB, and neither has been run: the `clef` adapter is tested with a stubbed model only, and no quantized variant is offered. No metric from these judges is published before the v0.6 pre-registration (#132).
+What ran where (plumbing only, no metric): decider-2b and Strands Decider ran on Apple silicon (MPS and CPU) through `judge-audit run` on five BANKING77 train rows. Clef-flash needs about 19 GB of memory in bfloat16 and Clef about 55 GB, and neither is run by this repository's CI or in a published run (an opt-in smoke test can load Clef-flash): the `clef` adapter is tested with a stubbed model only, and no quantized variant is offered. No metric from these judges is published before the v0.6 pre-registration (#132).
 
 **What the decision models may have seen.** From each model's public card and training-data list (checked 2026-10-05), for the datasets of the v0.5 and v0.6 studies:
 

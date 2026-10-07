@@ -719,9 +719,9 @@ def render(data: dict) -> str:
           "- **Run 2 and temperature scaling are post hoc.** They were decided after run 1's "
           "numbers were known (the amendment says when and why). Nothing in them is pre-registered; "
           "the prediction stays scored on run 1.",
-          "- **Wall times are from a shared computer** and vary with load (run 1's router took "
-          "1,069 s for 10 epochs; run 2's took 63 s for 15): read them as orders of magnitude, "
-          "not as a benchmark.",
+          ("- **Wall times are from a shared computer** and vary with load (run 1's router took "
+           "1,069 s for 10 epochs; run 2's took 63 s for 15): read them as orders of magnitude, "
+           "not as a benchmark."),
           ""]
     return "\n".join(with_interval_notes(L))
 
