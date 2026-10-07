@@ -62,9 +62,10 @@ def echo():
         def do_POST(self):  # noqa: N802
             self.rfile.read(int(self.headers.get("Content-Length", 0)))
             sent = self.headers.get("Authorization", "")
-            body = json.dumps({"error": {"message": f"Incorrect API key provided: {sent} "
-                                                   f"({sent.removeprefix('Bearer ')}) for "
-                                                   f"/accounts/{ACCOUNT}/x"}}).encode()
+            body = (state["body"].encode() if "body" in state else
+                    json.dumps({"error": {"message": f"Incorrect API key provided: {sent} "
+                                                    f"({sent.removeprefix('Bearer ')}) for "
+                                                    f"/accounts/{ACCOUNT}/x"}}).encode())
             self.send_response(state["status"])
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
@@ -151,33 +152,6 @@ def test_the_jev_gateway_bridge_error_never_prints_the_key(monkeypatch):
     with pytest.raises(RuntimeError) as e:
         jev.JevJudge().decide("x", [q])
     assert not _leaks(str(e.value)), str(e.value)
-
-
-def test_an_anthropic_error_message_never_prints_the_key(monkeypatch):
-    from judge_audit.judges import llm
-    monkeypatch.setenv("LLM_PROVIDER", "anthropic")
-    monkeypatch.setenv("ANTHROPIC_API_KEY", KEY)
-
-    class APIStatusError(Exception):
-        def __init__(self):
-            self.status_code, self.message = 401, f"invalid x-api-key {KEY}"
-
-    class RateLimitError(Exception):
-        pass
-
-    class Messages:
-        def create(self, **k):
-            raise APIStatusError()
-
-    fake = type("A", (), {"APIStatusError": APIStatusError, "RateLimitError": RateLimitError})
-    judge = llm.LLMJudge.__new__(llm.LLMJudge)
-    judge.provider, judge.model, judge.system = "anthropic", "claude-x", "s"
-    judge.effort, judge.temperature = None, 0
-    judge._anthropic, judge._client = fake, type("C", (), {"messages": Messages()})()
-    judge.api_key = KEY
-    with pytest.raises(RuntimeError) as e:
-        judge._call_anthropic("u")
-    assert KEY not in str(e.value) and "401" in str(e.value)
 
 
 # --- endpoint overrides go to https or to this computer only -------------------------------
@@ -339,3 +313,259 @@ def test_the_jev_gateway_reply_error_field_never_prints_the_key(monkeypatch):
     with pytest.raises(RuntimeError) as e:
         jev.JevJudge().decide("x", [q])
     assert "jev evaluate error" in str(e.value) and not _leaks(str(e.value)), str(e.value)
+
+
+# --- a key echoed in a disguised form, shapeless keys included ------------------------------
+
+SHAPELESS = "Zq9fakeTOKENvalue77x"                    # no known shape; masked because it is held
+
+
+def _runs(key: str, text: str) -> list[str]:
+    """Every 12-character run of `key` left in `text`, in any case."""
+    low = text.lower()
+    return [key[i:i + 12] for i in range(len(key) - 11) if key[i:i + 12].lower() in low]
+
+
+@pytest.fixture
+def disguised():
+    """A local server whose 401 body repeats the key it received split by a JSON-escaped
+    newline, cut short and followed by `...`, and upper-cased."""
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):  # noqa: N802
+            self.rfile.read(int(self.headers.get("Content-Length", 0)))
+            k = self.headers.get("Authorization", "").removeprefix("Bearer ")
+            body = json.dumps({"error": {"message": f"invalid {k[:9]}\n{k[9:]}; "
+                                                   f"got {k[:14]}...; echo {k.upper()}"}})
+            data = body.encode()
+            self.send_response(401)
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+
+        def log_message(self, *a):
+            pass
+
+    httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    yield f"http://127.0.0.1:{httpd.server_address[1]}"
+    httpd.shutdown()
+
+
+@pytest.mark.parametrize("family", sorted(FAMILIES))
+@pytest.mark.parametrize("key", [KEY, SHAPELESS])
+def test_a_key_echoed_in_a_disguised_form_never_gets_printed(disguised, monkeypatch, capsys,
+                                                              tmp_path, family, key):
+    for k, v in FAMILIES[family](disguised).items():
+        monkeypatch.setenv(k, key if v == KEY else v)
+    import time as _time
+    monkeypatch.setattr(_time, "sleep", lambda s: None)
+    with pytest.raises(SystemExit) as e:
+        cli.main(["run", str(LABELS), "--judge", family, "--no-ci",
+                  "--out", str(tmp_path / "r.md"), "--json", str(tmp_path / "r.json")])
+    out = capsys.readouterr()
+    assert e.value.code == 2
+    assert len(out.err.strip().splitlines()) == 1, out.err
+    assert not _runs(key, out.out + out.err), out.err
+
+
+# --- a redirect is refused: the key never goes to the host it points to ----------------------
+
+@pytest.fixture
+def redirector():
+    """Two local servers: the first answers every request with a 302 to the second, which
+    counts what reaches it."""
+    hits = {"second": 0}
+
+    class Second(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802
+            hits["second"] += 1
+            self.send_response(200)
+            self.end_headers()
+        do_POST = do_GET  # noqa: N815
+
+        def log_message(self, *a):
+            pass
+
+    second = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Second)
+    target = f"http://127.0.0.1:{second.server_address[1]}/stolen"
+
+    class First(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):  # noqa: N802
+            self.rfile.read(int(self.headers.get("Content-Length", 0)))
+            self.send_response(302)
+            self.send_header("Location", target)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+        def log_message(self, *a):
+            pass
+
+    first = http.server.ThreadingHTTPServer(("127.0.0.1", 0), First)
+    for s in (first, second):
+        threading.Thread(target=s.serve_forever, daemon=True).start()
+    yield f"http://127.0.0.1:{first.server_address[1]}", hits
+    first.shutdown()
+    second.shutdown()
+
+
+@pytest.mark.parametrize("family", sorted(FAMILIES))
+def test_a_redirect_is_refused_and_the_key_never_follows_it(redirector, monkeypatch, capsys,
+                                                             tmp_path, family):
+    url, hits = redirector
+    for k, v in FAMILIES[family](url).items():
+        monkeypatch.setenv(k, v)
+    import time as _time
+    monkeypatch.setattr(_time, "sleep", lambda s: None)
+    with pytest.raises(SystemExit) as e:
+        cli.main(["run", str(LABELS), "--judge", family, "--no-ci",
+                  "--out", str(tmp_path / "r.md"), "--json", str(tmp_path / "r.json")])
+    err = capsys.readouterr().err
+    assert e.value.code == 2 and "redirect" in err, err
+    assert hits["second"] == 0
+    assert not _leaks(err), err
+
+
+def test_the_logprob_smoke_script_refuses_a_redirect(redirector, monkeypatch, capsys):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("logprob_smoke_redirect",
+                                                  ROOT / "scripts" / "logprob_smoke.py")
+    smoke = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(smoke)
+    url, hits = redirector
+    monkeypatch.setenv("LLM_API_KEY", KEY)
+    code = smoke.main(["--model", "m", "--base-url", f"{url}/v1"])
+    err = capsys.readouterr().err
+    assert code == smoke.FAILED and "redirect" in err and KEY not in err, err
+    assert hits["second"] == 0
+
+
+# --- a long message is masked whole, then cut ------------------------------------------------
+
+CUT_KEY = "sk-TESTKEY0123456789abcdef"
+LONG = "y" * 400 + "Error: invalid " + CUT_KEY + " " + "z" * 275   # the last 300 keep a suffix
+
+
+def test_the_jev_bridge_stderr_is_masked_before_it_is_cut(monkeypatch):
+    from judge_audit.judges import jev
+    monkeypatch.setenv("AI_GATEWAY_API_KEY", CUT_KEY)
+    monkeypatch.setattr(jev, "_BRIDGE", Path(__file__))
+    monkeypatch.setattr(jev.Path, "exists", lambda self: True)
+    monkeypatch.setattr(jev.time, "sleep", lambda s: None)
+    monkeypatch.setattr(jev, "_MIN_INTERVAL_S", 0.0)
+
+    class Proc:
+        returncode = 1
+        stdout = b""
+        stderr = LONG.encode()
+    monkeypatch.setattr(jev.subprocess, "run", lambda *a, **k: Proc())
+    from judge_audit.judges.base import Question, QuestionType
+    q = Question(name="c", type=QuestionType.CHOICE, instructions="?", options=["a", "b"])
+    with pytest.raises(RuntimeError) as e:
+        jev.JevJudge().decide("x", [q])
+    assert "TESTKEY0123" not in str(e.value) and "456789abcdef" not in str(e.value), str(e.value)
+
+
+@pytest.mark.parametrize("family", sorted(FAMILIES))
+def test_an_error_body_is_masked_before_it_is_cut(echo, monkeypatch, family):
+    """A body whose first 300 characters end inside the key: what is left of it is masked."""
+    body = "y" * 290 + CUT_KEY                     # [:300] keeps "sk-TESTKEY", 10 characters
+    echo["status"], echo["body"] = 400, body
+    for k, v in FAMILIES[family](echo["url"]).items():
+        monkeypatch.setenv(k, CUT_KEY if v == KEY else v)
+    from judge_audit.judges.base import Question, QuestionType
+    judge, _ = cli._judge(family, [])
+    q = Question(name="c", type=QuestionType.CHOICE, instructions="?", options=["a", "b"])
+    with pytest.raises(RuntimeError) as e:          # the adapter's own error, before any cut
+        judge.decide("x", [q])
+    assert "returned 400" in str(e.value) and "sk-TESTKEY" not in str(e.value), str(e.value)
+
+
+def test_a_long_exception_text_is_masked_before_it_is_cut(monkeypatch):
+    from judge_audit.runner import request_failure
+    monkeypatch.setenv("LLM_API_KEY", CUT_KEY)
+    text = request_failure(RuntimeError("x" * 290 + CUT_KEY))
+    assert "sk-TESTKEY" not in text, text
+
+
+# --- the Anthropic path: an error keeps its status, never the key ----------------------------
+
+def _fake_anthropic(raise_):
+    import types
+
+    class APIStatusError(Exception):
+        def __init__(self, status=401, message=""):
+            super().__init__(message)
+            self.status_code, self.message = status, message
+
+    class RateLimitError(APIStatusError):
+        pass
+
+    class Anthropic:
+        def __init__(self, api_key=None):
+            self.messages = self
+
+        def create(self, **k):
+            raise raise_(APIStatusError, RateLimitError)
+
+    return types.SimpleNamespace(Anthropic=Anthropic, APIStatusError=APIStatusError,
+                                 RateLimitError=RateLimitError)
+
+
+@pytest.mark.parametrize("which, says", [
+    (lambda s, r: s(401, f"invalid x-api-key {SHAPELESS}"), "401"),
+    (lambda s, r: r(429, f"slow down, {SHAPELESS}"), "rate-limited"),
+])
+def test_an_anthropic_error_message_never_prints_the_key(monkeypatch, which, says):
+    """Built by the real constructor: the key it holds is the one its errors mask."""
+    from judge_audit.judges import llm
+    monkeypatch.setitem(sys.modules, "anthropic", _fake_anthropic(which))
+    monkeypatch.setenv("LLM_PROVIDER", "anthropic")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", SHAPELESS)
+    judge = llm.LLMJudge()
+    with pytest.raises(RuntimeError) as e:
+        judge._call_anthropic("u")
+    assert says in str(e.value) and not _runs(SHAPELESS, str(e.value)), str(e.value)
+
+
+# --- clef-hosted: placeholders only in the path, only the two it fills ----------------------
+
+@pytest.mark.parametrize("url", [
+    "https://good.example{model_id}/x",
+    "https://api.cloudflare.com.{account}.evil.com/x",
+    "https://gw.example.test/{account.__class__}/{model_id}",
+    "https://gw.example.test/{model_id[0]}",
+    "https://gw.example.test/{0}/{model_id}",
+    "https://gw.example.test/{model_id}}",
+])
+def test_a_clef_endpoint_template_that_could_move_the_host_is_refused(monkeypatch, capsys,
+                                                                      tmp_path, url):
+    monkeypatch.setenv("CLOUDFLARE_API_TOKEN", KEY)
+    monkeypatch.setenv("CLOUDFLARE_ACCOUNT_ID", ACCOUNT)
+    monkeypatch.setenv("CLEF_HOSTED_ENDPOINT", url)
+    monkeypatch.setattr("judge_audit.judges.secrets.OPENER.open",
+                        lambda *a, **k: pytest.fail("a request was sent"))
+    with pytest.raises(SystemExit) as e:
+        cli.main(["run", str(LABELS), "--judge", "clef-hosted", "--no-ci",
+                  "--out", str(tmp_path / "r.md"), "--json", str(tmp_path / "r.json")])
+    err = capsys.readouterr().err
+    assert e.value.code == 2 and "CLEF_HOSTED_ENDPOINT" in err and not _leaks(err), err
+
+
+def test_a_clef_endpoint_template_fills_its_two_placeholders_in_the_path(monkeypatch):
+    from judge_audit.judges import hosted
+    monkeypatch.setenv("CLOUDFLARE_API_TOKEN", KEY)
+    monkeypatch.setenv("CLOUDFLARE_ACCOUNT_ID", ACCOUNT)
+    monkeypatch.setenv("CLEF_HOSTED_ENDPOINT",
+                       "https://gw.example.test/accounts/{account}/run/{model_id}")
+    sent = []
+
+    class Sent(Exception):
+        pass
+
+    def open_(req, timeout=0):
+        sent.append(req.full_url)
+        raise Sent
+    monkeypatch.setattr("judge_audit.judges.secrets.OPENER.open", open_)
+    with pytest.raises(Sent):
+        hosted.ClefHostedJudge()._call("x", [])
+    assert sent == [f"https://gw.example.test/accounts/{ACCOUNT}/run/@cf/cloudflare/clef-flash"]

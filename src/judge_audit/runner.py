@@ -329,8 +329,8 @@ def request_failure(exc: BaseException) -> str:
     """One line for a judge request that failed: the error's own text with paths named as
     provenance names them (`scrub`), else its class; never a traceback. The callers that
     exit with it keep `JUDGE_AUDIT_DEBUG=1` to see the traceback."""
-    text = " ".join(str(exc).split())[:300]
-    return scrub(f"{type(exc).__name__}: {text}" if text else type(exc).__name__)
+    text = scrub(" ".join(str(exc).split()))[:300]          # masked whole, then cut
+    return f"{type(exc).__name__}: {text}" if text else type(exc).__name__
 
 
 def scrub(text: str, *paths: str | Path) -> str:

@@ -57,6 +57,7 @@ import urllib.parse
 import urllib.request
 
 from .base import (
+    OPENER,
     Endpoint,
     Judge,
     Judgment,
@@ -94,6 +95,44 @@ def endpoint_override(var: str) -> Endpoint | None:
     return checked_endpoint(url, var) if url else None
 
 
+CLEF_PLACEHOLDERS = ("{model_id}", "{account}")
+
+
+def clef_endpoint(var: str) -> Endpoint | None:
+    """The endpoint template in `var`, as `endpoint_override`, or None when unset. It may hold
+    `{model_id}` and `{account}`, in its path only, and no other brace: a placeholder in the
+    host would let the account id choose the host the token is sent to, and any other field
+    (`{account.__class__}`, `{0}`) would be read by `str.format`. Refused before any request
+    is built."""
+    url = (os.environ.get(var) or "").strip()
+    if not url:
+        return None
+    netloc = urllib.parse.urlsplit(url).netloc
+    if "{" in netloc or "}" in netloc:
+        raise ValueError(f"{var} holds a placeholder in its host: {{model_id}} and {{account}} "
+                         f"are allowed in the path only")
+    rest = url
+    for p in CLEF_PLACEHOLDERS:
+        rest = rest.replace(p, "")
+    if "{" in rest or "}" in rest:
+        raise ValueError(f"{var} holds a brace that is not {{model_id}} or {{account}}")
+    return checked_endpoint(url, var)
+
+
+def fill_endpoint(ep: Endpoint, var: str, **values: str) -> str:
+    """`ep`'s URL with its placeholders replaced by `values` (plain replacement, never
+    `str.format`), checked again (`checked_endpoint`) and refused unless it still names the
+    host that was checked."""
+    url = ep.url
+    for name, value in values.items():
+        for form in (f"{{{name}}}", f"%7B{name}%7D"):
+            url = url.replace(form, value)
+    final = checked_endpoint(url, var)
+    if final.host != ep.host:
+        raise ValueError(f"{var} names another host once its placeholders are filled")
+    return final.url
+
+
 def _per_request(env: str) -> int | None:
     """Questions per request: 1 (the default) or None for all of them."""
     value = os.environ.get(env, "1").strip().lower()
@@ -120,10 +159,10 @@ def post_json(url: str, body: dict, label: str, secrets: tuple[str, ...]) -> dic
     for attempt in range(ATTEMPTS):
         req = urllib.request.Request(url, data=data, headers=headers, method="POST")
         try:
-            with urllib.request.urlopen(req, timeout=TIMEOUT_S) as resp:
+            with OPENER.open(req, timeout=TIMEOUT_S) as resp:      # refuses redirects
                 return json.load(resp)
         except urllib.error.HTTPError as e:
-            last = _redact(f"{e.code}: {e.read().decode(errors='replace')[:300]}", secrets)
+            last = _redact(f"{e.code}: {e.read().decode(errors='replace')}", secrets)[:300]
             unreachable = False
             if e.code not in RETRY_STATUS:
                 raise RuntimeError(f"{label} returned {last}") from None
@@ -400,7 +439,7 @@ class ClefHostedJudge(_HostedDecisionJudge):
         self.model_id, self.price = CLEF_MODELS[self.model]
         self.per_request = _per_request("CLEF_HOSTED_QUESTIONS_PER_REQUEST")
         self.name = f"clef-hosted:{self.model}"
-        self._override = endpoint_override("CLEF_HOSTED_ENDPOINT")
+        self._override = clef_endpoint("CLEF_HOSTED_ENDPOINT")
 
     def describe(self) -> dict:
         return {"name": self.name, "provider": "hosted-api", "model": self.model,
@@ -420,10 +459,10 @@ class ClefHostedJudge(_HostedDecisionJudge):
     def _call(self, state: str, questions: list[Question]) -> list[Judgment]:
         body = {"model": self.model, "state": state,
                 "questions": {q.name: systemone_question(q) for q in questions}}
-        # the override's {model_id} / {account} survive the rebuild percent-encoded
-        template = (self._override.url.replace("%7B", "{").replace("%7D", "}")
-                    if self._override else CLEF_ENDPOINT)
-        url = template.format(account=self._account, model_id=self.model_id)
+        url = (fill_endpoint(self._override, "CLEF_HOSTED_ENDPOINT", account=self._account,
+                             model_id=self.model_id)
+               if self._override else
+               CLEF_ENDPOINT.format(account=self._account, model_id=self.model_id))
         secrets = (self._token, self._account)
         t0 = time.monotonic()
         reply = post_json(url, body, "Workers AI", secrets)

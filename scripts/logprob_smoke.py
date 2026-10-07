@@ -43,7 +43,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
 from judge_audit.judges.llm import extra_body_of  # noqa: E402
-from judge_audit.judges.secrets import checked_endpoint  # noqa: E402
+from judge_audit.judges.secrets import OPENER, RedirectRefused, checked_endpoint  # noqa: E402
 from judge_audit.judges.secrets import redact as _redact  # noqa: E402
 
 PROMPT = ("Classify the customer message into exactly one category: card, transfer, "
@@ -75,7 +75,7 @@ def post(base_url: str, api_key: str, body: dict, timeout: float = 60.0) -> obje
         headers["Authorization"] = f"Bearer {api_key}"
     req = urllib.request.Request(f"{base_url.rstrip('/')}/chat/completions",
                                  data=json.dumps(body).encode(), headers=headers)
-    with urllib.request.urlopen(req, timeout=timeout) as r:
+    with OPENER.open(req, timeout=timeout) as r:      # refuses redirects: the key stays put
         return json.loads(r.read().decode("utf-8", errors="replace"))
 
 
@@ -169,8 +169,11 @@ def main(argv: list[str] | None = None) -> int:
     try:
         resp = post(base_url, key, body)
     except urllib.error.HTTPError as e:
-        detail = e.read().decode(errors="replace")[:300]
-        emit(f"HTTP {e.code}: {detail}", sys.stderr)
+        emit(f"HTTP {e.code}: {redact(e.read().decode(errors='replace'), key)[:300]}",
+             sys.stderr)
+        return FAILED
+    except RedirectRefused as e:
+        emit(str(e), sys.stderr)
         return FAILED
     except (urllib.error.URLError, TimeoutError, OSError, ValueError) as e:
         emit(f"request failed: {e}", sys.stderr)

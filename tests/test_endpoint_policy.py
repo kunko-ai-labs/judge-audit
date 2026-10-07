@@ -11,6 +11,7 @@ import urllib.parse
 import pytest
 
 from judge_audit.judges.base import checked_endpoint, redact
+from judge_audit.judges.secrets import OPENER
 
 KEY = "sk-proj-Z9yX8wV7uT6sR5qP4oN3mL2kJ1iH0gF/plus+eq=="
 ACCOUNT = "9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d"
@@ -115,8 +116,7 @@ def test_a_refused_endpoint_exits_2_before_any_request(monkeypatch, capsys, tmp_
     monkeypatch.setenv("JEV_BACKEND", "typesafe")
     monkeypatch.setenv("TYPESAFE_API_KEY", KEY)
     monkeypatch.setenv("JEV_ENDPOINT", "http://example.com\\@127.0.0.1/")
-    import urllib.request
-    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **k: pytest.fail("a request"))
+    monkeypatch.setattr(OPENER, "open", lambda *a, **k: pytest.fail("a request"))
     labels = Path(__file__).resolve().parent.parent / "examples/email-routing/labels.jsonl"
     with pytest.raises(SystemExit) as e:
         cli.main(["run", str(labels), "--judge", "jev", "--no-ci",
@@ -138,7 +138,33 @@ def _forms(key: str) -> dict[str, str]:
         "base64-url": base64.urlsafe_b64encode(key.encode()).decode(),
         "split by a newline": key[:20] + "\n" + key[20:],
         "truncated prefix": key[:14],
+        # a JSON body that splits the key with an escaped newline, or zero-width characters
+        "split by a JSON \\n": key[:10] + "\\n" + key[10:],
+        "split by a JSON \\r\\n": key[:10] + "\\r\\n" + key[10:],
+        "split by a JSON \\u000a": key[:10] + "\\u000a" + key[10:],
+        "zero-width characters inside": (key[:4] + "\u200b" + key[4:8] + "\u200c" + key[8:12]
+                                         + "\u200d" + key[12:16] + "\ufeff" + key[16:]),
+        # cut short and followed by something else
+        "truncated, then ...": key[:14] + "...",
+        "truncated, then .": key[:13] + ".",
+        "truncated, then -": key[:13] + "-",
+        "truncated, then other characters": key[:13] + "Q7Q7Q7Q7",
+        # echoed in another case, or escaped differently
+        "upper-cased": key.upper(),
+        "lower-cased": key.lower(),
+        "json \\u escapes, upper-case hex": "".join(f"\\u{ord(c):04X}" for c in key),
+        "json-encoded twice": json.dumps(json.dumps(key[:10] + "\n" + key[10:]))[1:-1],
+        "zero-width characters, json-escaped": json.dumps(
+            key[:4] + "\u200b" + key[4:8] + "\ufeff" + key[8:])[1:-1],
+        "json \\u escapes, partial": "".join(f"\\u{ord(c):04x}" if i % 2 else c
+                                              for i, c in enumerate(key)),
     }
+
+
+def _gone(key: str, out: str) -> bool:
+    """No 12-character run of the key, in any case, is left in `out`."""
+    low = out.lower()
+    return not any(key[i:i + 12].lower() in low for i in range(len(key) - 11))
 
 
 @pytest.mark.parametrize("form", sorted(_forms(KEY)))
@@ -146,7 +172,7 @@ def test_redact_masks_every_echoed_form_of_a_held_key(form):
     shown = _forms(KEY)[form]
     out = redact(f"server said: ... {shown} ...", KEY)
     assert shown not in out, (form, out)
-    assert KEY[:12] not in out
+    assert _gone(KEY, out), (form, out)
 
 
 def test_a_key_cut_at_the_300_character_limit_is_masked():
@@ -161,6 +187,16 @@ def test_a_key_cut_at_the_300_character_limit_is_masked():
     ("x-api-key: s3cr3t-value-0123456", "s3cr3t-value-0123456"),
     ("api-key: s3cr3t-value-0123456", "s3cr3t-value-0123456"),
     ("X-Api-Key=s3cr3t-value-0123456", "s3cr3t-value-0123456"),
+    ('{"x-api-key": "s3cr3t-value-0123456"}', "s3cr3t-value-0123456"),
+    ("{'x-api-key': 's3cr3t-value-0123456'}", "s3cr3t-value-0123456"),
+    ('{"Api-Key":"s3cr3t-value-0123456"}', "s3cr3t-value-0123456"),
+    ("api_key: s3cr3t-value-0123456", "s3cr3t-value-0123456"),
+    ("x_api_key=s3cr3t-value-0123456", "s3cr3t-value-0123456"),
+    ("X-Api_Key: s3cr3t-value-0123456", "s3cr3t-value-0123456"),
+    ("key=s3cr3t-value-0123456&alt=json", "s3cr3t-value-0123456"),
+    ("Authorization=Bearer%20s3cr3t-value-0123456", "s3cr3t-value-0123456"),
+    ("GET /x?auth=Bearer%20s3cr3t-value-0123456", "s3cr3t-value-0123456"),
+    ("could not reach https://user:p4ss@w0rd99@api.example.test/v1", "w0rd99"),
 ])
 def test_redact_masks_these_shapes_without_knowing_the_key(text, gone):
     assert gone not in redact(text)
@@ -193,3 +229,15 @@ def test_a_held_key_with_no_shape_is_masked_in_every_form(form):
     shown = _forms(PLAIN)[form]
     out = redact(f"server said: ... {shown} ...", PLAIN)
     assert shown not in out, (form, out)
+    assert _gone(PLAIN, out), (form, out)
+
+
+SHAPELESS = ["Zq9fakeTOKENvalue77x", "acct0fake12345abcd"]     # held keys with no known shape
+
+
+@pytest.mark.parametrize("key", SHAPELESS)
+@pytest.mark.parametrize("form", sorted(_forms(SHAPELESS[0])))
+def test_a_shapeless_held_key_is_masked_in_every_form(key, form):
+    shown = _forms(key)[form]
+    out = redact(f"server said: {shown} (401)", key)
+    assert _gone(key, out), (form, out)

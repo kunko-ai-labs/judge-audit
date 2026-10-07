@@ -27,7 +27,16 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from .base import Judge, Judgment, Question, QuestionType, checked_endpoint, redact, served_of
+from .base import (
+    OPENER,
+    Judge,
+    Judgment,
+    Question,
+    QuestionType,
+    checked_endpoint,
+    redact,
+    served_of,
+)
 
 # Version of what the judge is shown: `_sdk_question` / `_direct_question`, the criteria
 # map built from each question's options and descriptions. Jev has no text prompt, so this
@@ -147,7 +156,7 @@ class JevJudge(Judge):
             )
             wall = time.monotonic() - t0
             if proc.returncode != 0:
-                last_err = redact(proc.stderr.decode(errors="replace")[-300:], self.api_key)
+                last_err = redact(proc.stderr.decode(errors="replace"), self.api_key)[-300:]
                 if _is_rate_limit(last_err):
                     time.sleep(min(2 ** attempt * 10 + random.uniform(0, 5), 300))
                     _throttle()
@@ -229,10 +238,10 @@ class JevJudge(Judge):
                                      headers=headers)
         t0 = time.monotonic()
         try:
-            with urllib.request.urlopen(req, timeout=120) as resp:
+            with OPENER.open(req, timeout=120) as resp:      # refuses redirects
                 body = json.load(resp)
         except urllib.error.HTTPError as e:
-            detail = redact(e.read().decode(errors="replace")[:300], self.api_key)
+            detail = redact(e.read().decode(errors="replace"), self.api_key)[:300]
             if e.code in (429, 503, 529):
                 raise _RateLimited(f"{self.endpoint} returned {e.code}: {detail}") from None
             raise RuntimeError(f"{self.endpoint} returned {e.code}: {detail}") from None

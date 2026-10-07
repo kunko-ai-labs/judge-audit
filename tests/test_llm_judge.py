@@ -7,6 +7,7 @@ import pytest
 
 from judge_audit.judges.base import Question, QuestionType
 from judge_audit.judges.llm import LLMJudge, _extract_json, _render
+from judge_audit.judges.secrets import OPENER
 
 
 def make(monkeypatch, reply: str, in_tok=100, out_tok=20, model="gpt-5-mini"):
@@ -138,7 +139,6 @@ def test_dropped_connection_is_retried(monkeypatch):
     """A server that closes the socket mid-request is as transient as a 503."""
     import http.client
     import io
-    import urllib.request
 
     from judge_audit.judges import llm as llm_mod
 
@@ -161,7 +161,7 @@ def test_dropped_connection_is_retried(monkeypatch):
         return Resp(json.dumps({"choices": [{"message": {"content": "{}"}}],
                                 "usage": {"prompt_tokens": 1, "completion_tokens": 1}}).encode())
 
-    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(OPENER, "open", urlopen)
     monkeypatch.setattr(llm_mod.time, "sleep", lambda s: None)
     text, _, _ = LLMJudge()._call("hello")
     assert text == "{}" and calls["n"] == 2
@@ -169,7 +169,6 @@ def test_dropped_connection_is_retried(monkeypatch):
 
 def test_timeout_in_json_mode_retries_without_it(monkeypatch):
     """An endpoint that hangs in JSON mode gets the same prompt again as plain text."""
-    import urllib.request
 
     from judge_audit.judges import llm as llm_mod
 
@@ -194,7 +193,7 @@ def test_timeout_in_json_mode_retries_without_it(monkeypatch):
             raise TimeoutError("timed out")
         return Resp()
 
-    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(OPENER, "open", urlopen)
     monkeypatch.setattr(llm_mod.time, "sleep", lambda s: None)
     assert LLMJudge()._call("hello")[0] == "{}"
     assert "response_format" in bodies[0] and "response_format" not in bodies[1]
@@ -210,7 +209,7 @@ def test_wall_clock_deadline_trips_when_the_socket_never_times_out(monkeypatch):
     def urlopen(req, timeout=0):
         threading.Event().wait(5)  # hangs longer than the deadline
 
-    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(OPENER, "open", urlopen)
     with pytest.raises(TimeoutError):
         llm_mod._fetch_json(urllib.request.Request("http://unit.test/v1"), 0.2)
 
@@ -229,7 +228,6 @@ def test_extract_json_scans_past_prose_braces_and_fenced_then_prose():
 
 def test_the_served_model_version_is_recorded_as_the_provider_reports_it(monkeypatch):
     import io
-    import urllib.request
 
     from judge_audit.judges import llm as llm_mod
 
@@ -248,7 +246,7 @@ def test_the_served_model_version_is_recorded_as_the_provider_reports_it(monkeyp
         def __exit__(self, *a):
             return False
 
-    monkeypatch.setattr(urllib.request, "urlopen",
+    monkeypatch.setattr(OPENER, "open",
                         lambda req, timeout=0: Resp(json.dumps(reply).encode()))
     monkeypatch.setattr(llm_mod.time, "sleep", lambda s: None)
     (out,) = LLMJudge().decide("x", [Q])
@@ -257,7 +255,6 @@ def test_the_served_model_version_is_recorded_as_the_provider_reports_it(monkeyp
 
 def test_no_reported_version_is_unknown_not_the_requested_name(monkeypatch):
     import io
-    import urllib.request
 
     monkeypatch.setenv("LLM_PROVIDER", "openai-compatible")
     monkeypatch.setenv("LLM_BASE_URL", "http://unit.test/v1")
@@ -272,7 +269,7 @@ def test_no_reported_version_is_unknown_not_the_requested_name(monkeypatch):
         def __exit__(self, *a):
             return False
 
-    monkeypatch.setattr(urllib.request, "urlopen",
+    monkeypatch.setattr(OPENER, "open",
                         lambda req, timeout=0: Resp(json.dumps(reply).encode()))
     (out,) = LLMJudge().decide("x", [Q])  # the real HTTP path, no "model" in the reply
     assert out.raw["served"] == {"model": None, "system_fingerprint": None}

@@ -9,13 +9,13 @@ import platform
 import re
 import socket
 import sys
-import urllib.request
 from pathlib import Path
 
 import pytest
 
 from judge_audit.judges.base import Question, QuestionType
 from judge_audit.judges.llm import LLMJudge, local_fingerprint
+from judge_audit.judges.secrets import OPENER
 from judge_audit.judges.simulated import SimulatedJudge
 from judge_audit.runner import load_dataset, run_audit, run_metadata
 
@@ -88,7 +88,7 @@ def _served(monkeypatch, base_url: str, fingerprint: str) -> dict:
              "choices": [{"message": {"content":
                           '{"answers": {"category": {"decision": "spam", "confidence": 0.8}}}'}}],
              "usage": {"prompt_tokens": 1, "completion_tokens": 1}}
-    monkeypatch.setattr(urllib.request, "urlopen",
+    monkeypatch.setattr(OPENER, "open",
                         lambda req, timeout=0: _Resp(json.dumps(reply).encode()))
     monkeypatch.setattr(llm_mod.time, "sleep", lambda s: None)
     (out,) = LLMJudge().decide("x", [Q])

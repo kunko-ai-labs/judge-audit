@@ -8,20 +8,28 @@ host, no host. The request is then built from the URL it returns, rebuilt from t
 checked, never from the string it was given, so the host that was checked is the host that is
 called.
 
+`OPENER` sends every request that carries a key, and refuses a redirect (`RedirectRefused`)
+instead of following it: urllib would resend the Authorization header to the host a 30x names,
+which no rule checked, over plain http too.
+
 `redact` masks a credential in every form a server, a proxy or a library may echo it: the
-value as held (literal, JSON-escaped, percent-encoded, base64, split across a line, or cut
-short by a length limit), the value of every credential variable set in the process, and any
-value shaped like a credential (bearer and Authorization values, `x-api-key` and `api-key`
-headers, `sk-`, `AIza` and `hf_` keys, `key=` / `api_key=` / `token=` query values, userinfo
-in a URL, the account segment of a Workers AI URL).
+value as held (literal, in any letter case, JSON-escaped in whole or in part, percent-encoded,
+base64, split by whitespace, an escaped newline or a zero-width character, or cut short after
+at least 12 characters, whatever follows), the value of every credential variable set in the
+process, and any value shaped like a credential (bearer and Authorization values, `x-api-key`
+and `api-key` headers quoted or not, `sk-`, `AIza` and `hf_` keys, `key=` / `api_key=` /
+`token=` query values, userinfo in a URL, the account segment of a Workers AI URL). A message
+is masked whole before it is cut to a length limit, so no cut leaves part of a key unmasked.
 """
 from __future__ import annotations
 
 import base64
+import functools
 import ipaddress
 import os
 import re
 import urllib.parse
+import urllib.request
 from dataclasses import dataclass
 
 LOOPBACK_NAMES = {"localhost"}
@@ -83,20 +91,42 @@ def checked_endpoint(url: str, var: str, sends_key: bool = True) -> Endpoint:
     return Endpoint(url=rebuilt, host=netloc)
 
 
+# --- the opener -------------------------------------------------------------------------------
+
+class RedirectRefused(RuntimeError):
+    """A server answered with a redirect, which judge-audit does not follow with a key."""
+
+
+class _RefuseRedirects(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise RedirectRefused(f"the server answered {code} (a redirect); judge-audit does not "
+                              f"follow redirects, so the key is never sent to a host that "
+                              f"was not checked: set the endpoint to the URL that answers")
+
+
+# Every request that carries a key goes through this opener, never through `urlopen`.
+OPENER = urllib.request.build_opener(_RefuseRedirects)
+
+
 # --- the scrubber -----------------------------------------------------------------------------
 
 _TOKEN = r"[A-Za-z0-9._~+/=-]"
+_Q = r"[\"']?"                                       # a header name or value may be quoted
+_SPACE = r"(?:\s+|%20|\+)"                           # the space after Bearer, as sent or encoded
 # Shapes a credential takes in a message, masked whatever its value.
 _SECRET_SHAPES = (
-    (re.compile(rf"(?i)(authorization\s*[:=]\s*)(?:bearer\s+|basic\s+)?{_TOKEN}{{8,}}"),
+    (re.compile(rf"(?i)(authorization{_Q}\s*[:=]\s*{_Q})(?:bearer{_SPACE}|basic\s+)?"
+                rf"{_TOKEN}{{8,}}"), r"\1***"),
+    (re.compile(rf"(?i)(\bbearer{_SPACE}){_TOKEN}{{8,}}"), r"\1***"),
+    (re.compile(rf"(?i)({_Q}\b(?:x[-_])?api[-_]key{_Q}\s*[:=]\s*{_Q}){_TOKEN}{{8,}}"),
      r"\1***"),
-    (re.compile(rf"(?i)(\bbearer\s+){_TOKEN}{{8,}}"), r"\1***"),
-    (re.compile(rf"(?i)(\b(?:x-)?api-key\s*[:=]\s*){_TOKEN}{{8,}}"), r"\1***"),
     (re.compile(r"\bsk-[A-Za-z0-9_\-]{8,}"), "sk-***"),
     (re.compile(r"\bAIza[A-Za-z0-9_\-]{20,}"), "AIza***"),
     (re.compile(r"\bhf_[A-Za-z0-9]{20,}"), "hf_***"),
-    (re.compile(r"(?i)([?&;\s](?:api[_-]?key|key|token|access_token)=)[^&\s'\"]+"), r"\1***"),
-    (re.compile(r"(?i)(\b[a-z][a-z0-9+.-]*://)[^/\s@'\"]+@"), r"\1***@"),        # userinfo
+    (re.compile(r"(?im)((?:^|[?&;\s])(?:api[_-]?key|key|token|access_token)=)[^&\s'\"]+"),
+     r"\1***"),
+    # userinfo, up to the last `@` of the authority: a password may hold one
+    (re.compile(r"(?i)(\b[a-z][a-z0-9+.-]*://)[^/\s'\"?#]*@"), r"\1***@"),
     (re.compile(r"(/accounts/)[^/\s'\"]+"), r"\1***"),
 )
 
@@ -115,39 +145,59 @@ def credential_values() -> list[str]:
     return [v for n in names if (v := os.environ.get(n, "").strip())]
 
 
+# What may stand between two characters of an echoed key: whitespace, a JSON-escaped newline,
+# carriage return or tab, a zero-width character, raw or escaped. An escape may carry more than
+# one backslash: a message that was JSON-encoded twice.
+_GAP = (r"(?:\s|[\u200b\u200c\u200d\ufeff]"
+        r"|\\+(?:[nrt]|u000[9ad]|u200[bcd]|ufeff))*")
+
+
+def _char(c: str) -> str:
+    """One character of a key as it may be echoed: itself, a JSON `\\u` escape (either case
+    of hex, one or more backslashes), percent-encoded, `\\/` for a slash, `+` for a space."""
+    alts = [re.escape(c), rf"\\+u{ord(c):04x}"]
+    if ord(c) < 128:
+        alts.append(f"%{ord(c):02x}")
+    if c == "/":
+        alts.append(r"\\+/")
+    if c == " ":
+        alts.append(r"\+")
+    return "(?:" + "|".join(alts) + ")"
+
+
+@functools.lru_cache(maxsize=64)
+def _held_pattern(secret: str) -> re.Pattern:
+    """`secret` in any letter case, each character in any of its echoed forms (`_char`), any
+    `_GAP` between two of them; from MIN_PREFIX characters on, the rest is optional, so a key
+    cut short by a length limit is masked whatever follows the cut."""
+    head = _GAP.join(_char(c) for c in secret[:MIN_PREFIX])
+    tail = ""
+    for c in reversed(secret[MIN_PREFIX:]):
+        tail = f"(?:{_GAP}{_char(c)}{tail})?"
+    return re.compile(head + tail, re.IGNORECASE)
+
+
 def _encodings(secret: str) -> set[str]:
-    """The forms `secret` may be echoed in."""
+    """The whole-value encodings of `secret` a character-by-character match cannot see."""
     raw = secret.encode()
-    forms = {secret,
-             secret.replace("/", "\\/"),                                   # JSON-escaped slash
-             "".join(f"\\u{ord(c):04x}" for c in secret),                  # JSON \u escapes
-             urllib.parse.quote(secret, safe=""), urllib.parse.quote_plus(secret),
-             base64.b64encode(raw).decode(), base64.urlsafe_b64encode(raw).decode(),
-             base64.b64encode(raw).decode().rstrip("="),
-             base64.urlsafe_b64encode(raw).decode().rstrip("=")}
+    forms = {base64.b64encode(raw).decode(), base64.urlsafe_b64encode(raw).decode()}
+    forms |= {f.rstrip("=") for f in forms}
     return {f for f in forms if len(f) >= MIN_SECRET}
 
 
 def _mask_held(text: str, secret: str) -> str:
     for form in sorted(_encodings(secret), key=len, reverse=True):
         text = text.replace(form, "***")
-    # split across a line: the secret with a newline (and indentation) anywhere inside it
-    pattern = r"\s*".join(re.escape(c) for c in secret)
-    text = re.sub(pattern, "***", text)
-    # cut short (by a length limit, or a server that truncates): a prefix of at least
-    # MIN_PREFIX characters, where it ends the text or the token it is part of
-    for n in range(len(secret) - 1, MIN_PREFIX - 1, -1):
-        text = re.sub(re.escape(secret[:n]) + r"(?![A-Za-z0-9._~+/=-])", "***", text)
-    return text
+    return _held_pattern(secret).sub("***", text)
 
 
 def redact(text: str, *secrets: str | None) -> str:
     """`text` with every credential masked before it leaves judge-audit: each of `secrets`
     (the key, token or account id a judge holds) and the value of every credential variable
-    set in the process, in every form they may be echoed in (`_encodings`, split across a
-    line, cut short), then any value shaped like a credential (`_SECRET_SHAPES`), whatever
-    server, proxy or library sent it. Every message judge-audit prints or returns passes
-    through it (`runner.scrub`)."""
+    set in the process, in every form they may be echoed in (`_held_pattern`, `_encodings`),
+    then any value shaped like a credential (`_SECRET_SHAPES`), whatever server, proxy or
+    library sent it. Every message judge-audit prints or returns passes through it
+    (`runner.scrub`); a message is masked whole first, and only then cut to a length."""
     every = {x for x in (*secrets, *credential_values()) if x and len(x) >= MIN_SECRET}
     for s in sorted(every, key=len, reverse=True):
         text = _mask_held(text, s)

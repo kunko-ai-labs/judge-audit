@@ -36,7 +36,9 @@ class Judgment:
 # Credential handling lives in `secrets`; judges import it from here.
 from .secrets import (  # noqa: E402,F401
     CREDENTIAL_VARS,
+    OPENER,
     Endpoint,
+    RedirectRefused,
     checked_endpoint,
     credential_values,
     redact,

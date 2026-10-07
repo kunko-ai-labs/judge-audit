@@ -16,6 +16,7 @@ from judge_audit.judges import jev as jev_mod
 from judge_audit.judges.base import Question, QuestionType
 from judge_audit.judges.hosted import ClefHostedJudge, OpenAIDecisionsJudge, valid_distribution
 from judge_audit.judges.llm import LLMJudge
+from judge_audit.judges.secrets import OPENER
 
 ROUTE = Question(name="route", type=QuestionType.CHOICE, instructions="Which team?",
                  options=["billing", "returns", "other"])
@@ -43,7 +44,7 @@ def _install(monkeypatch, replies):
             code, body = reply
             raise urllib.error.HTTPError(req.full_url, code, "err", {}, io.BytesIO(body.encode()))
         return _Resp(json.dumps(reply).encode())
-    monkeypatch.setattr(urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(OPENER, "open", urlopen)
     monkeypatch.setattr(hosted.time, "sleep", lambda s: None)
     monkeypatch.setattr(hosted.time, "monotonic", _clock())
 
@@ -128,7 +129,7 @@ def test_jev_typesafe_without_reported_tokens_has_unknown_cost_not_zero(monkeypa
     body = {"model": "jev-1.13.0", "answers": {"route": {
         "type": "choice", "choice": "billing", "confidence": 0.8,
         "probabilities": {"billing": 0.9, "returns": 0.06, "other": 0.04}}}}
-    monkeypatch.setattr(urllib.request, "urlopen", lambda req, timeout=0: _Resp(
+    monkeypatch.setattr(OPENER, "open", lambda req, timeout=0: _Resp(
         json.dumps(body).encode()))
     (j,) = jev_mod.JevJudge().decide("x", [ROUTE])
     assert j.cost_usd is None
@@ -141,7 +142,7 @@ def test_llm_a_priced_reply_without_usage_has_unknown_cost_not_zero(monkeypatch)
     reply = {"model": "gpt-5-mini", "choices": [{"message": {"content":
              '{"answers": {"route": {"decision": "billing", "confidence": 0.8}}}'}}]}
     from judge_audit.judges import llm as llm_mod
-    monkeypatch.setattr(urllib.request, "urlopen",
+    monkeypatch.setattr(OPENER, "open",
                         lambda req, timeout=0: _Resp(json.dumps(reply).encode()))
     monkeypatch.setattr(llm_mod.time, "sleep", lambda s: None)
     (j,) = LLMJudge().decide("x", [ROUTE])
@@ -157,7 +158,7 @@ def test_llm_a_free_local_reply_without_usage_still_costs_nothing(monkeypatch):
     reply = {"model": "qwen3-8b", "choices": [{"message": {"content":
              '{"answers": {"route": {"decision": "billing", "confidence": 0.8}}}'}}]}
     from judge_audit.judges import llm as llm_mod
-    monkeypatch.setattr(urllib.request, "urlopen",
+    monkeypatch.setattr(OPENER, "open",
                         lambda req, timeout=0: _Resp(json.dumps(reply).encode()))
     monkeypatch.setattr(llm_mod.time, "sleep", lambda s: None)
     (j,) = LLMJudge().decide("x", [ROUTE])

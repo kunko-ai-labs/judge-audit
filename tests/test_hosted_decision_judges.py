@@ -14,6 +14,7 @@ import pytest
 from judge_audit.judges import hosted
 from judge_audit.judges.base import Question, QuestionType
 from judge_audit.judges.hosted import ClefHostedJudge, OpenAIDecisionsJudge
+from judge_audit.judges.secrets import OPENER
 
 ROUTE = Question(name="route", type=QuestionType.CHOICE, instructions="Which team?",
                  options=["billing", "returns", "other"],
@@ -54,7 +55,7 @@ class Wire:
 def wire(monkeypatch):
     def install(*replies):
         w = Wire(*replies)
-        monkeypatch.setattr(urllib.request, "urlopen", w)
+        monkeypatch.setattr(OPENER, "open", w)
         monkeypatch.setattr(hosted.time, "sleep", lambda s: None)
         return w
     return install
@@ -193,7 +194,7 @@ def test_decisions_a_server_that_echoes_the_key_does_not_get_it_printed(monkeypa
     def echo(req, timeout=0):
         raise urllib.error.HTTPError(req.full_url, 401, "err", {}, io.BytesIO(
             f'{{"error": "Incorrect API key provided: {SECRET}"}}'.encode()))
-    monkeypatch.setattr(urllib.request, "urlopen", echo)
+    monkeypatch.setattr(OPENER, "open", echo)
     with pytest.raises(RuntimeError) as e:
         OpenAIDecisionsJudge().decide("x", [ROUTE])
     assert SECRET not in str(e.value) and "Incorrect API key" in str(e.value)

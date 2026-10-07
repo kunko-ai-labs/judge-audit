@@ -54,7 +54,16 @@ import urllib.parse
 import urllib.request
 from collections.abc import Callable
 
-from .base import Judge, Judgment, Question, QuestionType, checked_endpoint, redact, served_of
+from .base import (
+    OPENER,
+    Judge,
+    Judgment,
+    Question,
+    QuestionType,
+    checked_endpoint,
+    redact,
+    served_of,
+)
 
 # HTTP statuses worth waiting out: rate limit, overloaded, unavailable, gateway timeout.
 TRANSIENT = {429, 503, 529, 502, 504}
@@ -179,7 +188,7 @@ def _fetch_json(req: urllib.request.Request, deadline: float) -> dict:
 
     def go():
         try:
-            with urllib.request.urlopen(req, timeout=deadline) as r:
+            with OPENER.open(req, timeout=deadline) as r:      # refuses redirects
                 box["data"] = json.load(r)
         except Exception as e:  # re-raised in the caller's thread
             box["err"] = e
@@ -484,7 +493,9 @@ class LLMJudge(Judge):
                     "the anthropic provider needs the SDK: "
                     "pip install 'kunko-judge-audit[anthropic]'"
                 ) from e
-            # Credentials resolve from ANTHROPIC_API_KEY or an `ant auth login` profile.
+            # Credentials resolve from ANTHROPIC_API_KEY or an `ant auth login` profile; the
+            # key is kept so that every error this path raises masks it.
+            self.api_key = api_key or os.environ.get("ANTHROPIC_API_KEY", "")
             self._client = (anthropic.Anthropic(api_key=api_key) if api_key
                             else anthropic.Anthropic())
             self._anthropic = anthropic
@@ -633,7 +644,7 @@ class LLMJudge(Judge):
                 last = f"{type(e).__name__}: {e}"
                 body.pop("response_format", None)
             except urllib.error.HTTPError as e:
-                detail = redact(e.read().decode(errors="replace")[:300], self.api_key)
+                detail = redact(e.read().decode(errors="replace"), self.api_key)[:300]
                 if e.code in TRANSIENT:
                     last = f"{e.code}: {detail}"
                     time.sleep(min(2 ** attempt * 5 + random.uniform(0, 3), 120))
