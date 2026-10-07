@@ -369,7 +369,11 @@ def test_changelog_check_passes_this_repository_once_dated(root, jobs, tmp_path)
     r = run_changelog_check(jobs, tmp_path, f"v{version}", text)
     if f"## [{version}]" not in text:
         assert r.returncode != 0 and "no section" in r.stdout
-    elif "TODO" in text.split(f"## [{version}]", 1)[1].split("\n## [", 1)[0]:
+        return
+    # Only a placeholder line on purpose (`TODO(#N)`) may hold a version back; prose that
+    # merely names a banned word, such as the entry for this check, must not.
+    section = text.split(f"## [{version}]", 1)[1].split("\n## [", 1)[0]
+    if re.search(r"\bTODO\(#\d+\)", section):
         assert r.returncode != 0 and "TODO" in r.stdout  # caught before the tag
     else:
         assert r.returncode == 0, r.stdout
