@@ -110,6 +110,33 @@
     "n": 0,
     "threshold": null
   },
+  "high_confidence_error": {
+    "delta": 0.05,
+    "unknown_confidence": 0,
+    "levels": [
+      {
+        "confidence_at_least": 0.9,
+        "n": 106,
+        "errors": 35,
+        "error_rate": 0.3302,
+        "risk_upper": 0.412988
+      },
+      {
+        "confidence_at_least": 0.95,
+        "n": 96,
+        "errors": 26,
+        "error_rate": 0.2708,
+        "risk_upper": 0.355394
+      },
+      {
+        "confidence_at_least": 0.99,
+        "n": 58,
+        "errors": 4,
+        "error_rate": 0.069,
+        "risk_upper": 0.150908
+      }
+    ]
+  },
   "total_cost_usd": 0.024187,
   "p50_latency_s": 3.23,
   "p99_latency_s": 62.423,
@@ -410,7 +437,7 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-06T21:13:06+00:00",
+    "utc": "2026-10-07T07:06:26+00:00",
     "judge_audit_version": "0.5.1",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/jury/router-bare/gemini-3-flash.r2.ckpt.jsonl",

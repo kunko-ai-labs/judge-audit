@@ -104,6 +104,33 @@
     "n": 0,
     "threshold": null
   },
+  "high_confidence_error": {
+    "delta": 0.05,
+    "unknown_confidence": 0,
+    "levels": [
+      {
+        "confidence_at_least": 0.9,
+        "n": 196,
+        "errors": 36,
+        "error_rate": 0.1837,
+        "risk_upper": 0.235224
+      },
+      {
+        "confidence_at_least": 0.95,
+        "n": 177,
+        "errors": 31,
+        "error_rate": 0.1751,
+        "risk_upper": 0.228967
+      },
+      {
+        "confidence_at_least": 0.99,
+        "n": 84,
+        "errors": 29,
+        "error_rate": 0.3452,
+        "risk_upper": 0.439706
+      }
+    ]
+  },
   "total_cost_usd": 0.0,
   "p50_latency_s": 12.232,
   "p99_latency_s": 28.689,
@@ -411,7 +438,7 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-06T21:13:06+00:00",
+    "utc": "2026-10-07T07:06:26+00:00",
     "judge_audit_version": "0.5.1",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/gemma4/email-adversarial.ckpt.jsonl",

@@ -6,6 +6,8 @@ prediction, § Paired comparisons):
 
 - does the confidence rank the judge's errors below its right answers? (`failure_auroc`)
 - how much risk does the judge carry across every automation threshold? (`aurc`)
+- when it says ≥ 90 / 95 / 99 %, how often is it wrong? (`high_confidence_error`, the
+  curve read at three fixed cuts)
 - how much can be automated at a target risk, with the threshold chosen on one split and
   checked on another? (`coverage_at_risk`, `coverage_at_risk_crossfit`)
 - is judge A better than judge B on the same rows? (`paired_difference_ci`,
@@ -136,6 +138,36 @@ def risk_upper_bound(errors: int, n: int, delta: float = 0.05) -> float:
     if errors == 0:
         return 1.0 - delta ** (1.0 / n)
     return _beta_quantile(1.0 - delta, errors + 1, n - errors)
+
+
+HIGH_CONFIDENCE_CUTS = (0.90, 0.95, 0.99)
+
+
+def high_confidence_error(confidences: Sequence[float], correct: Sequence[bool],
+                          cuts: Sequence[float] = HIGH_CONFIDENCE_CUTS,
+                          delta: float = 0.05) -> list[dict]:
+    """"When it says ≥ c, how often is it wrong?" for each cut c (#134).
+
+    A reading of the coverage–risk curve at fixed confidences, not a new score: the
+    decisions declaring at least c (a tie at c included whole), how many of them are
+    wrong, their error rate and its exact one-sided upper bound at level 1 − delta
+    (`risk_upper_bound`, rounded up to 6 decimals so it regenerates identically on every
+    Python). The threshold is fixed in advance, not chosen on these rows, so the bound is
+    the plain binomial one; it is not the safe automation rate, whose threshold is
+    searched for. A cut no decision reaches has no rate and no bound (None). Rows are
+    assumed independent; the caller leaves out decisions without a known confidence.
+    """
+    _require_finite(confidences)
+    levels = []
+    for c in cuts:
+        above = [ok for conf, ok in zip(confidences, correct, strict=True) if conf >= c]
+        n, errors = len(above), sum(not ok for ok in above)
+        upper = risk_upper_bound(errors, n, delta) if n else None
+        levels.append({"confidence_at_least": c, "n": n, "errors": errors,
+                       "error_rate": round(errors / n, 4) if n else None,
+                       "risk_upper": (None if upper is None
+                                      else math.ceil(upper * 1e6 - 1e-9) / 1e6)})
+    return levels
 
 
 def _check_count(name: str, value: object) -> int:
