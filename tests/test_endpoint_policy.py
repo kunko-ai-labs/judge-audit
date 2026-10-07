@@ -241,3 +241,83 @@ def test_a_shapeless_held_key_is_masked_in_every_form(key, form):
     shown = _forms(key)[form]
     out = redact(f"server said: {shown} (401)", key)
     assert _gone(key, out), (form, out)
+
+
+# --- any 12-character piece of a held key, from anywhere in it --------------------------------
+
+@pytest.mark.parametrize("key", [KEY, PLAIN, *SHAPELESS])
+def test_every_12_character_window_of_a_held_key_is_masked(key):
+    for i in range(len(key) - 11):
+        piece = key[i:i + 12]
+        out = redact(f"server said: {piece} (401)", key)
+        assert piece.lower() not in out.lower(), (i, out)
+        assert "server said:" in out and "(401)" in out, out           # the rest is kept
+
+
+@pytest.mark.parametrize("key", [KEY, *SHAPELESS])
+@pytest.mark.parametrize("cut", [lambda k: k[-14:], lambda k: k[5:19], lambda k: k[3:],
+                                 lambda k: k[2:-2].upper(), lambda k: k[4:10] + "\\n" + k[10:20]],
+                         ids=["suffix", "middle", "head cut", "middle upper-cased",
+                              "middle split by a JSON \\n"])
+def test_a_key_cut_at_its_head_is_masked(key, cut):
+    shown = cut(key)
+    out = redact(f"got {shown}...", key)
+    assert _gone(key, out), out
+
+
+def test_two_pieces_of_a_key_side_by_side_are_masked_whole():
+    out = redact(f"a {PLAIN[0:14]}{PLAIN[6:20]} b", PLAIN)      # two 14-character pieces
+    assert out == "a *** b", out
+    assert redact(f"a {PLAIN[0:14]}{PLAIN[10:20]} b", PLAIN) == f"a ***{PLAIN[10:20]} b"
+
+
+# --- no input makes the scrubber slow ---------------------------------------------------------
+
+MB = 1_000_000
+
+
+def _adversarial() -> str:
+    piece = (" \t\u200b\\u000a\\\\n" + PLAIN[:11] + "\\" * 7 + "%2" + KEY[:11] + "\ufeff"
+             + "a.a.a.a.b://" + "Bearer " + "authorization: " + "x-api-key=" + "/accounts/")
+    return (piece * (MB // len(piece) + 1))[:MB]
+
+
+@pytest.mark.parametrize("text", [lambda: "\\" * MB, _adversarial,
+                                  lambda: "lorem ipsum " * (MB // 12),
+                                  lambda: "a." * (MB // 2), lambda: "\\u00" * (MB // 4)],
+                         ids=["backslashes", "adversarial mix", "plain text", "a.a.a", "\\u00"])
+def test_redact_takes_under_a_second_on_a_megabyte(monkeypatch, text):
+    import time
+    for i, name in enumerate(("OPENAI_API_KEY", "LLM_API_KEY", "HF_TOKEN", "CLOUDFLARE_API_TOKEN",
+                              "CLOUDFLARE_ACCOUNT_ID")):
+        monkeypatch.setenv(name, f"{PLAIN[i:]}{SHAPELESS[0][:i + 4]}")
+    body = text()
+    t0 = time.perf_counter()
+    redact(body, KEY, PLAIN)
+    assert time.perf_counter() - t0 < 1.0
+
+
+def test_a_long_message_is_capped_then_masked():
+    out = redact("y" * 70_000 + KEY, KEY)
+    assert len(out) < 70_000 and _gone(KEY, out)
+
+
+# --- ordinary words next to a credential name are not masked ---------------------------------
+
+@pytest.mark.parametrize("text", [
+    "key=value pairs", "token=null", "token=None", "api_key=true", "key=false",
+    "Authorization: required", "authorization=required", "x-api-key: required",
+    "Bearer null", "see /accounts/settings/billing", "GET /accounts/me", "/accounts/***/ai/run",
+    "the access_token=undefined case"])
+def test_these_ordinary_texts_are_left_alone(text):
+    assert redact(text) == text
+
+
+@pytest.mark.parametrize("text, gone", [
+    ("token=abcdefgh123", "abcdefgh123"),
+    ("Authorization: Bearer requiredXYZ123", "requiredXYZ123"),
+    ("/accounts/9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d/ai/run", "9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d"),
+    ("/accounts/acct0fake12345abcd", "acct0fake12345abcd"),
+])
+def test_these_values_are_still_masked(text, gone):
+    assert gone not in redact(text)

@@ -13,18 +13,18 @@ instead of following it: urllib would resend the Authorization header to the hos
 which no rule checked, over plain http too.
 
 `redact` masks a credential in every form a server, a proxy or a library may echo it: the
-value as held (literal, in any letter case, JSON-escaped in whole or in part, percent-encoded,
-base64, split by whitespace, an escaped newline or a zero-width character, or cut short after
-at least 12 characters, whatever follows), the value of every credential variable set in the
-process, and any value shaped like a credential (bearer and Authorization values, `x-api-key`
-and `api-key` headers quoted or not, `sk-`, `AIza` and `hf_` keys, `key=` / `api_key=` /
-`token=` query values, userinfo in a URL, the account segment of a Workers AI URL). A message
-is masked whole before it is cut to a length limit, so no cut leaves part of a key unmasked.
+value as held, or any piece of it of at least 12 characters, from anywhere in it (literal, in
+any letter case, JSON-escaped in whole or in part, percent-encoded, split by whitespace, an
+escaped newline or a zero-width character), its base64, the value of every credential variable
+set in the process, and any value shaped like a credential (bearer and Authorization values,
+`x-api-key` and `api-key` headers quoted or not, `sk-`, `AIza` and `hf_` keys, `key=` /
+`api_key=` / `token=` query values, userinfo in a URL, the account segment of a Workers AI
+URL). It reads at most `MAX_TEXT` characters, in time linear in them. A message is masked
+whole before it is cut to a length limit, so no cut leaves 12 characters of a key unmasked.
 """
 from __future__ import annotations
 
 import base64
-import functools
 import ipaddress
 import os
 import re
@@ -112,22 +112,27 @@ OPENER = urllib.request.build_opener(_RefuseRedirects)
 
 _TOKEN = r"[A-Za-z0-9._~+/=-]"
 _Q = r"[\"']?"                                       # a header name or value may be quoted
-_SPACE = r"(?:\s+|%20|\+)"                           # the space after Bearer, as sent or encoded
-# Shapes a credential takes in a message, masked whatever its value.
+_SPACE = r"(?:\s{1,8}|%20|\+)"                       # the space after Bearer, as sent or encoded
+_SEP = r"\s{0,8}[:=]\s{0,8}"
+# A word that stands where a credential would, but is not one: never masked.
+_NOT_A_VALUE = r"(?!(?:null|none|true|false|required|undefined|missing)(?![A-Za-z0-9]))"
+_VALUE = rf"{_NOT_A_VALUE}{_TOKEN}{{8,}}"
+# Shapes a credential takes in a message, masked whatever its value. Every repetition is
+# bounded or anchored on a literal, so no input makes one slow.
 _SECRET_SHAPES = (
-    (re.compile(rf"(?i)(authorization{_Q}\s*[:=]\s*{_Q})(?:bearer{_SPACE}|basic\s+)?"
-                rf"{_TOKEN}{{8,}}"), r"\1***"),
-    (re.compile(rf"(?i)(\bbearer{_SPACE}){_TOKEN}{{8,}}"), r"\1***"),
-    (re.compile(rf"(?i)({_Q}\b(?:x[-_])?api[-_]key{_Q}\s*[:=]\s*{_Q}){_TOKEN}{{8,}}"),
+    (re.compile(rf"(?i)(authorization{_Q}{_SEP}{_Q})(?:bearer{_SPACE}|basic\s{{1,8}})?{_VALUE}"),
      r"\1***"),
+    (re.compile(rf"(?i)(\bbearer{_SPACE}){_VALUE}"), r"\1***"),
+    (re.compile(rf"(?i)({_Q}\b(?:x[-_])?api[-_]key{_Q}{_SEP}{_Q}){_VALUE}"), r"\1***"),
     (re.compile(r"\bsk-[A-Za-z0-9_\-]{8,}"), "sk-***"),
     (re.compile(r"\bAIza[A-Za-z0-9_\-]{20,}"), "AIza***"),
     (re.compile(r"\bhf_[A-Za-z0-9]{20,}"), "hf_***"),
-    (re.compile(r"(?im)((?:^|[?&;\s])(?:api[_-]?key|key|token|access_token)=)[^&\s'\"]+"),
-     r"\1***"),
+    (re.compile(rf"(?im)((?:^|[?&;\s])(?:api[_-]?key|key|token|access_token)=){_NOT_A_VALUE}"
+                r"[^&\s'\"]{8,}"), r"\1***"),
     # userinfo, up to the last `@` of the authority: a password may hold one
-    (re.compile(r"(?i)(\b[a-z][a-z0-9+.-]*://)[^/\s'\"?#]*@"), r"\1***@"),
-    (re.compile(r"(/accounts/)[^/\s'\"]+"), r"\1***"),
+    (re.compile(r"(?i)(\b[a-z][a-z0-9+.-]{0,31}://)[^/\s'\"?#]{1,512}@"), r"\1***@"),
+    # the account segment of a Workers AI URL: an id, not a word such as `settings`
+    (re.compile(r"(/accounts/)[A-Za-z0-9]{16,}(?![A-Za-z0-9])"), r"\1***"),
 )
 
 CREDENTIAL_VARS = ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY", "LLM_API_KEY",
@@ -135,7 +140,9 @@ CREDENTIAL_VARS = ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY", "LLM
                    "HUGGING_FACE_HUB_TOKEN", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID")
 _CREDENTIAL_NAME = re.compile(r"(?:^|_)(?:API_KEY|KEY|TOKEN|SECRET|PASSWORD|ACCOUNT_ID)$")
 MIN_SECRET = 8           # shorter values are not masked: masking them would garble plain text
-MIN_PREFIX = 12          # a key cut short by a length limit is masked from this many characters
+MIN_PIECE = 12           # any piece of a held key this long, from anywhere in it, is masked
+MAX_TEXT = 64_000        # characters read; a longer message is cut first, then masked
+MAX_GAPS = 3             # gaps (`_UNIT`) between two characters of a key that still join them
 
 
 def credential_values() -> list[str]:
@@ -145,62 +152,114 @@ def credential_values() -> list[str]:
     return [v for n in names if (v := os.environ.get(n, "").strip())]
 
 
-# What may stand between two characters of an echoed key: whitespace, a JSON-escaped newline,
-# carriage return or tab, a zero-width character, raw or escaped. An escape may carry more than
-# one backslash: a message that was JSON-encoded twice.
-_GAP = (r"(?:\s|[\u200b\u200c\u200d\ufeff]"
-        r"|\\+(?:[nrt]|u000[9ad]|u200[bcd]|ufeff))*")
+# One unit of text as a key may be echoed in it: a JSON `\\uXXXX` escape (either case of hex,
+# up to four backslashes: a message encoded more than once), an escaped newline, carriage
+# return or tab, `\\/`, a percent-encoded byte, or one character. Every alternative has a
+# bounded length, so reading a text unit by unit is linear in its length.
+_UNIT = re.compile(r"\\{1,4}u([0-9A-Fa-f]{4})|\\{1,4}([nrt])|\\{1,4}(/)|%([0-9A-Fa-f]{2})|(.)",
+                   re.DOTALL)
+_ZERO_WIDTH = {"\u200b", "\u200c", "\u200d", "\ufeff"}
+_BREAK = "\x00"          # stands where too many gaps part two characters; no key holds it
 
 
-def _char(c: str) -> str:
-    """One character of a key as it may be echoed: itself, a JSON `\\u` escape (either case
-    of hex, one or more backslashes), percent-encoded, `\\/` for a slash, `+` for a space."""
-    alts = [re.escape(c), rf"\\+u{ord(c):04x}"]
-    if ord(c) < 128:
-        alts.append(f"%{ord(c):02x}")
-    if c == "/":
-        alts.append(r"\\+/")
-    if c == " ":
-        alts.append(r"\+")
-    return "(?:" + "|".join(alts) + ")"
+def _units(text: str) -> tuple[str, list[int], list[int]]:
+    """`text` as the characters it stands for, lower-cased, with whitespace and zero-width
+    characters (raw or escaped) dropped, and where each of them starts and ends in `text`.
+    More than MAX_GAPS gaps in a row become `_BREAK`, so no match joins across them."""
+    chars: list[str] = []
+    starts: list[int] = []
+    ends: list[int] = []
+    gaps = 0
+    for m in _UNIT.finditer(text):
+        hexa, esc, slash, pct, one = m.groups()
+        if hexa is not None:
+            c = chr(int(hexa, 16))
+        elif esc is not None:
+            c = "\n"
+        elif slash is not None:
+            c = "/"
+        elif pct is not None:
+            c = chr(int(pct, 16))
+        else:
+            c = one
+        if c.isspace() or c in _ZERO_WIDTH:
+            gaps += 1
+            if gaps == MAX_GAPS + 1:
+                chars.append(_BREAK)
+                starts.append(m.start())
+                ends.append(m.end())
+            continue
+        gaps = 0
+        low = c.lower()
+        chars.append(low if len(low) == 1 else c)
+        starts.append(m.start())
+        ends.append(m.end())
+    return "".join(chars), starts, ends
 
 
-@functools.lru_cache(maxsize=64)
-def _held_pattern(secret: str) -> re.Pattern:
-    """`secret` in any letter case, each character in any of its echoed forms (`_char`), any
-    `_GAP` between two of them; from MIN_PREFIX characters on, the rest is optional, so a key
-    cut short by a length limit is masked whatever follows the cut."""
-    head = _GAP.join(_char(c) for c in secret[:MIN_PREFIX])
-    tail = ""
-    for c in reversed(secret[MIN_PREFIX:]):
-        tail = f"(?:{_GAP}{_char(c)}{tail})?"
-    return re.compile(head + tail, re.IGNORECASE)
+def _pieces(secret: str) -> set[str]:
+    """Every MIN_PIECE-character window of `secret` as `_units` reads it (the whole of a
+    shorter one)."""
+    canon = _units(secret)[0].replace(_BREAK, "")
+    n = min(MIN_PIECE, len(canon))
+    return {canon[i:i + n] for i in range(len(canon) - n + 1)} if n else set()
 
 
 def _encodings(secret: str) -> set[str]:
-    """The whole-value encodings of `secret` a character-by-character match cannot see."""
+    """The whole-value encodings of `secret` that a unit-by-unit reading cannot see."""
     raw = secret.encode()
     forms = {base64.b64encode(raw).decode(), base64.urlsafe_b64encode(raw).decode()}
     forms |= {f.rstrip("=") for f in forms}
     return {f for f in forms if len(f) >= MIN_SECRET}
 
 
-def _mask_held(text: str, secret: str) -> str:
-    for form in sorted(_encodings(secret), key=len, reverse=True):
-        text = text.replace(form, "***")
-    return _held_pattern(secret).sub("***", text)
+def _mask_held(text: str, secrets: list[str]) -> str:
+    """`text` with every piece of every one of `secrets` masked: each window (`_pieces`) found
+    in its unit reading marks the units it covers; overlapping or touching marks merge into
+    one span of `text`, replaced by `***`."""
+    for s in secrets:
+        for form in sorted(_encodings(s), key=len, reverse=True):
+            text = text.replace(form, "***")
+    canon, starts, ends = _units(text)
+    hits: list[tuple[int, int]] = []
+    for piece in set().union(*(_pieces(s) for s in secrets)):
+        i = canon.find(piece)
+        while i != -1:
+            hits.append((i, i + len(piece)))
+            i = canon.find(piece, i + 1)
+    if not hits:
+        return text
+    hits.sort()
+    merged = [list(hits[0])]
+    for a, b in hits[1:]:
+        if a <= merged[-1][1]:
+            merged[-1][1] = max(merged[-1][1], b)
+        else:
+            merged.append([a, b])
+    out, at = [], 0
+    for a, b in merged:
+        out.append(text[at:starts[a]])
+        out.append("***")
+        at = ends[b - 1]
+    out.append(text[at:])
+    return "".join(out)
 
 
 def redact(text: str, *secrets: str | None) -> str:
     """`text` with every credential masked before it leaves judge-audit: each of `secrets`
     (the key, token or account id a judge holds) and the value of every credential variable
-    set in the process, in every form they may be echoed in (`_held_pattern`, `_encodings`),
-    then any value shaped like a credential (`_SECRET_SHAPES`), whatever server, proxy or
-    library sent it. Every message judge-audit prints or returns passes through it
-    (`runner.scrub`); a message is masked whole first, and only then cut to a length."""
-    every = {x for x in (*secrets, *credential_values()) if x and len(x) >= MIN_SECRET}
-    for s in sorted(every, key=len, reverse=True):
-        text = _mask_held(text, s)
+    set in the process, whole or any piece of MIN_PIECE characters, in every form they may be
+    echoed in (`_mask_held`), then any value shaped like a credential (`_SECRET_SHAPES`),
+    whatever server, proxy or library sent it. A text longer than MAX_TEXT is cut to it first
+    and says so; the time is linear in what is read. Every message judge-audit prints or
+    returns passes through it (`runner.scrub`); a message is masked whole first, and only then
+    cut to a length."""
+    cut = len(text) > MAX_TEXT
+    text = text[:MAX_TEXT]
+    every = sorted({x for x in (*secrets, *credential_values()) if x and len(x) >= MIN_SECRET},
+                   key=len, reverse=True)
+    if every:
+        text = _mask_held(text, every)
     for pattern, repl in _SECRET_SHAPES:
         text = pattern.sub(repl, text)
-    return text
+    return text + " [cut]" if cut else text
