@@ -25,7 +25,7 @@ from .judges.base import Judge
 from .judges.simulated import SIMULATED_TAG
 from .report import IncompatibleBaseline
 from .report import check_drift as _check_drift
-from .runner import display_path, load_dataset, scrub, write_judgments
+from .runner import display_path, load_dataset, normalise_path, scrub, write_judgments
 from .runner import run_audit as _run_audit
 
 try:
@@ -131,8 +131,9 @@ JUDGE_INFO: dict[str, dict[str, object]] = {
 
 
 def _resolve(path: str) -> str | None:
-    """Absolute path if the file exists, else None. Relative paths resolve from cwd."""
-    full = os.path.abspath(path)
+    """Absolute path if the file exists, else None. Read as provenance reads a path
+    (`normalise_path`: quotes stripped, `~` expanded); relative paths resolve from cwd."""
+    full = normalise_path(path)
     return full if os.path.isfile(full) else None
 
 
@@ -194,7 +195,7 @@ def run_audit(labels_path: str, judge: str = "simulated",
     if err or j is None:
         return err or {"error": "internal: no rows or judge"}
     try:
-        result = _run_audit(j, rows, labels_path=os.path.abspath(labels_path),
+        result = _run_audit(j, rows, labels_path=normalise_path(labels_path),
                             dataset_meta=dataset_meta)
     except Exception as exc:  # judge/network failure: report, do not crash the server
         return {"error": scrub(f"audit failed: {type(exc).__name__}: {exc}", labels_path)}
@@ -205,8 +206,8 @@ def run_audit(labels_path: str, judge: str = "simulated",
         out["tag"] = tag
     if judgments_path:
         try:
-            write_judgments(result, judgments_path)
-            out["judgments_path"] = display_path(os.path.abspath(judgments_path))
+            write_judgments(result, normalise_path(judgments_path))
+            out["judgments_path"] = display_path(judgments_path)
         except OSError as exc:
             out["judgments_error"] = (f"cannot write {display_path(judgments_path)}: "
                                       f"{type(exc).__name__}")
@@ -233,7 +234,7 @@ def check_drift(labels_path: str, baseline_path: str, judge: str = "simulated",
     if err or j is None:
         return err or {"error": "internal: no rows or judge"}
     try:
-        result = _run_audit(j, rows, labels_path=os.path.abspath(labels_path),
+        result = _run_audit(j, rows, labels_path=normalise_path(labels_path),
                             dataset_meta=dataset_meta)
         failures = _check_drift(result, baseline, max_ece_drift, max_acc_drop,
                                 allow_incompatible=allow_incompatible)
@@ -247,7 +248,7 @@ def check_drift(labels_path: str, baseline_path: str, judge: str = "simulated",
     out = {"ok": not failures, "failures": failures,
            "ece": result.ece, "accuracy": result.accuracy, "n": result.n,
            "ground_truth": ground_truth_of(result.run).tier,
-           "baseline": baseline}
+           "baseline": display_path(baseline)}
     if tag:
         out["tag"] = tag
     return out

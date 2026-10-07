@@ -72,12 +72,18 @@ def _is_local_url(url: str) -> bool:
     return host in {"localhost", "127.0.0.1", "::1"}
 
 
+# RFC 6598 shared address space (carrier-grade NAT, and overlay networks that reuse it):
+# not public, and `ipaddress` does not count it as private.
+_SHARED_ADDRESS_SPACE = ipaddress.ip_network("100.64.0.0/10")
+
+
 def _is_on_premises(url: str) -> bool:
     """Whether an endpoint may be a server the auditor runs (this computer or its network),
     whose system_fingerprint then describes the auditor's hardware: loopback, unspecified,
-    private and link-local addresses, `localhost`, `*.local`, `host.docker.internal` and a
-    single-label name, which only resolves on a local network. A URL whose host cannot be
-    read counts as on premises: when in doubt provenance keeps versions only."""
+    private, link-local and shared (100.64.0.0/10) addresses, `localhost`, `*.local`,
+    `host.docker.internal` and a single-label name, which only resolves on a local network.
+    A URL whose host cannot be read counts as on premises: when in doubt provenance keeps
+    versions only."""
     try:
         host = (urllib.parse.urlparse(url).hostname or "").rstrip(".").lower()
     except ValueError:
@@ -90,7 +96,8 @@ def _is_on_premises(url: str) -> bool:
         ip = ipaddress.ip_address(host)
     except ValueError:
         return "." not in host
-    return ip.is_loopback or ip.is_private or ip.is_link_local or ip.is_unspecified
+    return (ip.is_loopback or ip.is_private or ip.is_link_local or ip.is_unspecified
+            or ip in _SHARED_ADDRESS_SPACE)
 
 
 # mlx_lm.server's system_fingerprint: "<mlx-lm version>-<mlx version>-<platform>-<gpu>".

@@ -76,7 +76,7 @@ its sha256 identifies it). It records nothing that identifies the computer: no h
 name, home or absolute path, operating-system build, or CPU or GPU model. A chat model
 served on the same computer reports a `system_fingerprint` that includes the platform and
 GPU class; for a local endpoint only its library versions are kept (`mlx-lm 0.31.3 / mlx
-0.32.2`), and another shape is dropped. A hosted model's fingerprint is kept as its server
+0.32.2`), and another shape is dropped. On premises means this computer or its network: loopback, private, link-local and shared (100.64.0.0/10) addresses, `localhost`, `*.local`, `host.docker.internal`, a single-label name, or a host that cannot be read. A hosted model's fingerprint is kept as its server
 reports it: it names the vendor's serving build. Checkpoints written before this rule keep
 what they recorded.
 
