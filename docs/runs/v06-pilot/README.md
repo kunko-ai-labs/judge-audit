@@ -42,6 +42,16 @@ Not run: Clef-flash (about 19 GB in bf16, does not fit the 16 GB machine); `gemi
 4. A run that dies is resumed by the driver (it refuses to resume under a different configuration). A row that keeps failing is left missing and counted.
 5. Hosted cost: Jev at v0.5's recorded rate (about $0.013 for 308 rows) is about $0.03 for 690 rows; the checkpoint's `cost_usd` total is reported.
 
-## 5. Results of the runs (filled when the runs finish)
+## 5. What the runs recorded
 
-Rows, blank answers, not-sent rows and cost per checkpoint; no accuracy or calibration figure is published from the pilot.
+All 15 runs finished on 2026-10-07 (first call 06:52Z, last 07:30Z; times in each header), with no restart. Every checkpoint holds the 230 rows of its locale once; no row has a blank answer, none was not sent (Laya's budgets above held), every judgment parsed, and `scripts/reparse_checkpoints.py --dry-run` reports 0 changed judgments. `scripts/check_complete.py` covers them.
+
+| slug | rows per locale (en-US / es-ES / ca-ES) | blank or not sent | reference check | cost |
+|---|---|---|---|---|
+| `decision2-kai-0.6b` | 230 / 230 / 230 | 0 | passed (CPU) | $0 (local) |
+| `laya-multilingual` | 230 / 230 / 230 | 0 | — (none recorded for Laya) | $0 (local) |
+| `jev` | 230 / 230 / 230 | 0 | — (hosted; served `jev-1.13.0`) | $0.0229 in all, from the checkpoints' `cost_usd` |
+| `decider-2b` (exploratory) | 230 / 230 / 230 | 0 | unchecked (MPS) | $0 (local) |
+| `strands-decider-2b` (exploratory) | 230 / 230 / 230 | 0 | passed (MPS) | $0 (local) |
+
+`gemini-3.6-flash` was not run in the pilot. No accuracy or calibration figure is published from these checkpoints: they are planning inputs.
