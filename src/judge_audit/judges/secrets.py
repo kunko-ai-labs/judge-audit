@@ -142,7 +142,6 @@ _CREDENTIAL_NAME = re.compile(r"(?:^|_)(?:API_KEY|KEY|TOKEN|SECRET|PASSWORD|ACCO
 MIN_SECRET = 8           # shorter values are not masked: masking them would garble plain text
 MIN_PIECE = 12           # any piece of a held key this long, from anywhere in it, is masked
 MAX_TEXT = 64_000        # characters read; a longer message is cut first, then masked
-MAX_GAPS = 3             # gaps (`_UNIT`) between two characters of a key that still join them
 
 
 def credential_values() -> list[str]:
@@ -159,17 +158,15 @@ def credential_values() -> list[str]:
 _UNIT = re.compile(r"\\{1,4}u([0-9A-Fa-f]{4})|\\{1,4}([nrt])|\\{1,4}(/)|%([0-9A-Fa-f]{2})|(.)",
                    re.DOTALL)
 _ZERO_WIDTH = {"\u200b", "\u200c", "\u200d", "\ufeff"}
-_BREAK = "\x00"          # stands where too many gaps part two characters; no key holds it
 
 
 def _units(text: str) -> tuple[str, list[int], list[int]]:
     """`text` as the characters it stands for, lower-cased, with whitespace and zero-width
     characters (raw or escaped) dropped, and where each of them starts and ends in `text`.
-    More than MAX_GAPS gaps in a row become `_BREAK`, so no match joins across them."""
+    A run of them, however long (a wrapped and indented line), joins the characters around it."""
     chars: list[str] = []
     starts: list[int] = []
     ends: list[int] = []
-    gaps = 0
     for m in _UNIT.finditer(text):
         hexa, esc, slash, pct, one = m.groups()
         if hexa is not None:
@@ -183,13 +180,7 @@ def _units(text: str) -> tuple[str, list[int], list[int]]:
         else:
             c = one
         if c.isspace() or c in _ZERO_WIDTH:
-            gaps += 1
-            if gaps == MAX_GAPS + 1:
-                chars.append(_BREAK)
-                starts.append(m.start())
-                ends.append(m.end())
             continue
-        gaps = 0
         low = c.lower()
         chars.append(low if len(low) == 1 else c)
         starts.append(m.start())
@@ -200,7 +191,7 @@ def _units(text: str) -> tuple[str, list[int], list[int]]:
 def _pieces(secret: str) -> set[str]:
     """Every MIN_PIECE-character window of `secret` as `_units` reads it (the whole of a
     shorter one)."""
-    canon = _units(secret)[0].replace(_BREAK, "")
+    canon = _units(secret)[0]
     n = min(MIN_PIECE, len(canon))
     return {canon[i:i + n] for i in range(len(canon) - n + 1)} if n else set()
 

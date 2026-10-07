@@ -140,6 +140,10 @@ def _forms(key: str) -> dict[str, str]:
         "truncated prefix": key[:14],
         # a JSON body that splits the key with an escaped newline, or zero-width characters
         "split by a JSON \\n": key[:10] + "\\n" + key[10:],
+        # wrapped and indented: every fragment shorter than 12 characters
+        "wrapped and indented": key[:8] + "\n    " + key[8:16] + "\n    " + key[16:],
+        "wrapped, CRLF and tabs": key[:8] + "\r\n\t\t\t\t" + key[8:16] + "\r\n\t\t\t\t" + key[16:],
+        "JSON \\n then spaces": key[:8] + "\\n        " + key[8:16] + "\\n        " + key[16:],
         "split by a JSON \\r\\n": key[:10] + "\\r\\n" + key[10:],
         "split by a JSON \\u000a": key[:10] + "\\u000a" + key[10:],
         "zero-width characters inside": (key[:4] + "\u200b" + key[4:8] + "\u200c" + key[8:12]
