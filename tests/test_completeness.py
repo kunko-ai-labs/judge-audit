@@ -326,3 +326,18 @@ def test_a_judge_without_its_own_advice_gets_the_generic_one(over_length_warning
     message, variables = over_length_warning(Plain())
     assert "(over length)" in message and variables == set()
     assert "shorten the state or the options, or ask fewer questions per row" in message
+
+
+def test_a_scratch_dataset_is_read_from_its_committed_copy_with_the_same_digest():
+    import hashlib
+    import json
+    import sys
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+    import check_complete
+    for name, path in check_complete.SCRATCH.items():
+        ckpt = next((check_complete.ROOT / "docs" / "runs").rglob(name))
+        header = json.loads(ckpt.read_text(encoding="utf-8").splitlines()[0])["run"]["dataset"]
+        data = (check_complete.ROOT / path).read_bytes()
+        assert hashlib.sha256(data).hexdigest() == header["sha256"], name   # the same file, renamed
+        assert check_complete.gaps(ckpt) == []

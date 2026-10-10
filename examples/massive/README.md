@@ -29,11 +29,13 @@ All 60 intents (18 scenarios) occur in train; **dev has no `audio_volume_other`,
 | `labels-pilot-en-US.jsonl` | 230 | 230 | 0 / 0 | 1 | — | 340,196 | `91332858c78227ae4aa27d20abdc312735a46815b7cff2f3081680a8e50e0889` |
 | `labels-pilot-es-ES.jsonl` | 230 | 230 | 0 / 0 | 8 | 5 / 0 | 348,814 | `0d4ccb0fc92f5e55067113eded12a28896b46a29a90c71668492987fa880a0e0` |
 | `labels-pilot-ca-ES.jsonl` | 230 | 230 | 0 / 0 | 6 | 5 / 0 | 348,870 | `7972fdec8972ea049215e36d5f120a19837f090ed4bbe8dcc56b80e238801017` |
+| `labels-pilot-en-US.first40.jsonl` | 40 | 40 | 0 / 0 | — | — | 61,454 | `6d5ed014d93dc64bf1b789556ae516ef884dbe95751ab5572443451b9202a5e5` |
 
 - **Repeated texts** follow the repository's one rule (`normalise`: case and whitespace ignored), within one file; each header names the rows that repeat a text, and clustered statistics must count them as one text. The Spanish and Catalan files repeat a text more often than the English one (25 and 33 groups against 4). In `ca-ES`, rows 17 and 1426 hold one text labelled `calendar_query` and `datetime_query`.
 - **Test texts also in train or dev** (same locale, same rule) are marked `_meta.text_in_train_or_dev`. The name differs on purpose from BANKING77's `_meta.text_in_train`, which covers its train split only.
 - **Pilot texts also in test** (same locale, same rule) are marked `_meta.text_in_test`: 1, 8 and 6 in en-US, es-ES and ca-ES. No pilot item is a test item (different ids), but those texts are; the pilot is never scored, and must not become prompt wording or few-shot examples without dropping them.
 - **The pilot** is up to 4 `dev` utterances per intent, drawn with `random.Random(2026)` over the intents in alphabetical order, the same items in every locale; dev has fewer for four intents (`audio_volume_other` 0, `cooking_query`, `general_greet` and `music_dislikeness` 2), hence 230 rows, not 240. It comes from dev, not train, so a classifier fine-tuned on train has never seen it. It is for token counts, throughput and variance before the pre-registration fixes *n*, never to score a judge.
+- **`labels-pilot-en-US.first40.jsonl`** is the first 41 lines of `labels-pilot-en-US.jsonl` (its header and rows 0–39, `head -41`), byte for byte: the dataset the v0.6 pilot's between-run repeats read (`docs/runs/v06-pilot/README.md` §6). It adds no item.
 - **Not committed:** the whole train and dev splits (about 51 MB and 9 MB in this format for the three locales), for fine-tuning a classifier: `python scripts/fetch_real_datasets.py --massive-full DIR` writes `labels-{train,dev}-<locale>.jsonl` to `DIR` from the same pinned archive.
 
 ## Questions and criteria: one language arm today

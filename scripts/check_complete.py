@@ -23,6 +23,10 @@ from judge_audit.runner import answer_gaps, load_jsonl  # noqa: E402
 LEGACY = {"audit-jev-real.ckpt.jsonl": "examples/email-routing/labels.jsonl",
           "audit-jev-adversarial.ckpt.jsonl": "examples/email-routing-adversarial/labels.jsonl",
           "audit-jev-router.ckpt.jsonl": "examples/task-routing/labels.jsonl"}
+# Runs whose header names a scratch copy of a committed file (same sha256 in the header):
+# the committed file is read instead, and the header is left as the run wrote it.
+SCRATCH = {"gpt-6-luna-en-US.repeat40.ckpt.jsonl": "examples/massive/labels-pilot-en-US.first40.jsonl",
+           "claude-sonnet-4.5-en-US.repeat40.ckpt.jsonl": "examples/massive/labels-pilot-en-US.first40.jsonl"}
 
 
 def stopped(ckpt: Path, written: int) -> bool:
@@ -43,7 +47,7 @@ def gaps(ckpt: Path) -> list[str]:
     lines = [json.loads(x) for x in ckpt.read_text(encoding="utf-8").splitlines() if x.strip()]
     headers = [x["run"] for x in lines if x["idx"] == -1]
     run = headers[-1] if headers else {}  # the readers take the last header
-    labels = (run.get("dataset") or {}).get("path") or LEGACY.get(ckpt.name)
+    labels = SCRATCH.get(ckpt.name) or (run.get("dataset") or {}).get("path") or LEGACY.get(ckpt.name)
     if not labels:
         return [f"{ckpt}: no dataset path in the header and no legacy mapping"]
     rows = load_jsonl(str(ROOT / labels))

@@ -86,6 +86,6 @@ All 6 runs and the 2 repeats finished on 2026-10-10, with no restart. The first 
 - `gpt-6-luna` gave the same decision on 40 of 40 rows, and the confidence did not change on any row.
 - `claude-sonnet-4.5` gave the same decision on 40 of 40 rows. Its mean absolute confidence change was 0.0013, and the largest was 0.05.
 - The repeats cost $0.0028 and $0.1064.
-- The repeats read `first40-en-US.jsonl`, which is the first 41 lines of `examples/massive/labels-pilot-en-US.jsonl`: the header and rows 0–39 (`head -41`), sha256 `6d5ed014d93dc64bf1b789556ae516ef884dbe95751ab5572443451b9202a5e5`, as recorded in their headers.
+- The repeats read `first40-en-US.jsonl`, which is the first 41 lines of `examples/massive/labels-pilot-en-US.jsonl`: the header and rows 0–39 (`head -41`), sha256 `6d5ed014d93dc64bf1b789556ae516ef884dbe95751ab5572443451b9202a5e5`, as recorded in their headers. That file is committed as `examples/massive/labels-pilot-en-US.first40.jsonl` (same bytes, same sha256), and `scripts/check_complete.py` reads it for these two checkpoints (`SCRATCH`). The headers are left as the runs wrote them.
 
 Total cost of the amendment, repeats included: $2.12, within the $5 ceiling. No accuracy or calibration figure is published from these checkpoints: they are planning inputs.
