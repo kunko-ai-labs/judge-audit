@@ -72,3 +72,20 @@ Committed before any call written to this directory for these judges. The v0.6 p
 3. Gate: §4 rule 3 as corrected and §5, plus for `claude-sonnet-4.5` (free text) `scripts/reparse_checkpoints.py` is not applicable either, so the gate is: every judgment parsed with a known confidence or counted as unknown, no blank answer, `scripts/check_complete.py` 0 gaps. More than 5 % unparsed among the first 40 rows stops the run.
 4. Between-run spread: 40 `en-US` rows run a second time per judge into `<slug>-en-US.repeat40.ckpt.jsonl`, the first 40 rows of the file, for the plan's §5.
 5. Cost ceiling: $5 for both judges together (estimate: `gpt-6-luna` about $0.06, `claude-sonnet-4.5` about $2.2, plus the 40-row repeats). The checkpoints' `cost_usd` total is reported; a run that would pass the ceiling is stopped.
+
+### What the amended runs recorded
+
+All 6 runs and the 2 repeats finished on 2026-10-10, with no restart. The first header time is 2026-10-10T10:49:27+00:00, and the last run started at 2026-10-10T11:11:12+00:00; each header gives its own time. Every checkpoint holds the 230 rows of its locale once, and `scripts/check_complete.py` reports 0 gaps. The 5-row scratch checks passed for both judges before the first run and were not committed.
+
+| slug | rows per locale (en-US / es-ES / ca-ES) | no answer | cost, from the checkpoints' `cost_usd` |
+|---|---|---|---|
+| `gpt-6-luna` | 230 / 230 / 230 | 3 per locale (1.3 %), all refusals flagged by the API (`raw.refusal`); 0 among the first 40 rows of each run | $0.0483 in all |
+| `claude-sonnet-4.5` | 230 / 230 / 230 | 0; every confidence known | $1.9642 in all |
+
+**Between-run spread.** Both judges reran the first 40 `en-US` rows into `<slug>-en-US.repeat40.ckpt.jsonl`.
+- `gpt-6-luna` gave the same decision on 40 of 40 rows, and the confidence did not change on any row.
+- `claude-sonnet-4.5` gave the same decision on 40 of 40 rows. Its mean absolute confidence change was 0.0013, and the largest was 0.05.
+- The repeats cost $0.0028 and $0.1064.
+- The repeats read `first40-en-US.jsonl`, which is the first 41 lines of `examples/massive/labels-pilot-en-US.jsonl`: the header and rows 0–39 (`head -41`), sha256 `6d5ed014d93dc64bf1b789556ae516ef884dbe95751ab5572443451b9202a5e5`, as recorded in their headers.
+
+Total cost of the amendment, repeats included: $2.12, within the $5 ceiling. No accuracy or calibration figure is published from these checkpoints: they are planning inputs.
