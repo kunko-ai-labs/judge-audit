@@ -18,7 +18,7 @@ Up to 4 dev utterances per intent, seed 2026, the same items in the three locale
 
 ## 3. Judges
 
-Apple silicon, one local model in memory at a time; Python 3.12.8, torch 2.14.0, transformers 5.17.0, laya 0.3.20, mlx 0.32.2 installed. Checkpoint slug `<slug>-<locale>.ckpt.jsonl`.
+One machine with a GPU, one local model in memory at a time; Python 3.12.8, torch 2.14.0, transformers 5.17.0, laya 0.3.20, mlx 0.32.2 installed. Checkpoint slug `<slug>-<locale>.ckpt.jsonl`.
 
 | slug | judge | model and pin | device and precision | settings |
 |---|---|---|---|---|
@@ -57,6 +57,8 @@ All 15 runs finished on 2026-10-07 (first call 06:52Z, last 07:30Z; times in eac
 | `strands-decider-2b` (exploratory) | 230 / 230 / 230 | 0 | passed (MPS) | $0 (local) |
 
 `gemini-3.6-flash` was not run in the pilot. No accuracy or calibration figure is published from these checkpoints: they are planning inputs.
+
+*Wording note, 2026-10-10: §3's first line named the computer's platform; it now states the requirement only (a GPU), as the house rule on hardware asks (#152). No setting, device or result changes: each checkpoint header still records the device each run used (`cpu`, `mps`), which a reproducer needs.*
 
 ## 6. Amendment, 2026-10-10: the two new primary judges
 
