@@ -57,3 +57,18 @@ All 15 runs finished on 2026-10-07 (first call 06:52Z, last 07:30Z; times in eac
 | `strands-decider-2b` (exploratory) | 230 / 230 / 230 | 0 | passed (MPS) | $0 (local) |
 
 `gemini-3.6-flash` was not run in the pilot. No accuracy or calibration figure is published from these checkpoints: they are planning inputs.
+
+## 6. Amendment, 2026-10-10: the two new primary judges
+
+Committed before any call written to this directory for these judges. The v0.6 plan's roster was changed before its freeze: Jev, `gpt-6-luna` and `claude-sonnet-4.5` are the primary judges. This amendment adds the pilot of the two new ones on the same 690 dev rows (§2), with the same rules (§4) and the same use: planning inputs, no score published. **No test row is called.**
+
+| slug | judge | model | confidence | settings |
+|---|---|---|---|---|
+| `gpt-6-luna` | `openai-decisions` | `gpt-6-luna` (OpenAI Decisions API), provider `hosted-api` | P(chosen option) from the per-option probabilities; the API's `confidence` kept in `raw.native_confidence` | `DECISIONS_QUESTIONS_PER_REQUEST=1` (default) |
+| `claude-sonnet-4.5` | `llm` | `claude-sonnet-4.5`, provider `hosted-api` | verbalized (model-reported probability), v0.5 prompt | temperature 0 (default), one call per row |
+
+1. Code: judge-audit 0.6.0rc2 (with the #155 fixes), Python 3.12.8.
+2. Order: a 5-row run per judge on `en-US` into a scratch directory (parse, cost recorded, served model), not committed; then `gpt-6-luna` on the three locales, then `claude-sonnet-4.5`, each with `scripts/audit_resumable.py`, checkpoints `docs/runs/v06-pilot/<slug>-<locale>.ckpt.jsonl`.
+3. Gate: §4 rule 3 as corrected and §5, plus for `claude-sonnet-4.5` (free text) `scripts/reparse_checkpoints.py` is not applicable either, so the gate is: every judgment parsed with a known confidence or counted as unknown, no blank answer, `scripts/check_complete.py` 0 gaps. More than 5 % unparsed among the first 40 rows stops the run.
+4. Between-run spread: 40 `en-US` rows run a second time per judge into `<slug>-en-US.repeat40.ckpt.jsonl`, the first 40 rows of the file, for the plan's §5.
+5. Cost ceiling: $5 for both judges together (estimate: `gpt-6-luna` about $0.06, `claude-sonnet-4.5` about $2.2, plus the 40-row repeats). The checkpoints' `cost_usd` total is reported; a run that would pass the ceiling is stopped.
