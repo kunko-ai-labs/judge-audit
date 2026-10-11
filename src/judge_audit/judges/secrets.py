@@ -19,13 +19,16 @@ escaped newline or a zero-width character), its base64, the value of every crede
 set in the process, and any value shaped like a credential (bearer and Authorization values,
 `x-api-key` and `api-key` headers quoted or not, `sk-`, `AIza` and `hf_` keys, `key=` /
 `api_key=` / `token=` query values, userinfo in a URL, the account segment of a Workers AI
-URL, an account number between the colons of a resource identifier). It reads at most
-`MAX_TEXT` characters, in time linear in them. A message is masked whole before it is cut to a
-length limit, so no cut leaves 12 characters of a key unmasked.
+URL, a resource identifier whole, a 12-digit account number as a path segment), also once a
+percent-encoded run of text is decoded, once or twice. It reads at most `MAX_TEXT` characters
+of a message, in time linear in them. A message is masked whole before it is cut to a length
+limit, so no cut leaves 12 characters of a key unmasked.
 
-`redact_evidence` applies `redact` to every string of a JSON value (a judgment's `raw`, a run
-header), and `evidence_raw` marks a `raw` it changed with `redacted: true`: a successful reply
-is evidence too, and a server may echo a credential in it as well as in an error.
+`redact_evidence` masks every string of a JSON value (a judgment's `raw`, a run header) the
+same way, never cut, and every value under a credential field name (`Authorization`,
+`x-api-key`, `token`...) whole; `evidence_raw` marks a `raw` it changed with `redacted: true`:
+a successful reply is evidence too, and a server may echo a credential in it as well as in an
+error.
 """
 from __future__ import annotations
 
@@ -122,6 +125,9 @@ _SEP = r"\s{0,8}[:=]\s{0,8}"
 # A word that stands where a credential would, but is not one: never masked.
 _NOT_A_VALUE = r"(?!(?:null|none|true|false|required|undefined|missing)(?![A-Za-z0-9]))"
 _VALUE = rf"{_NOT_A_VALUE}{_TOKEN}{{8,}}"
+# The resource part of an identifier: up to 512 characters, not ending on the punctuation
+# that closes a sentence.
+_RESOURCE = r"(?:[^\s'\"<>(){}\[\],;]{0,511}[^\s'\"<>(){}\[\],;.:!?])"
 # Shapes a credential takes in a message, masked whatever its value. Every repetition is
 # bounded or anchored on a literal, so no input makes one slow.
 _SECRET_SHAPES = (
@@ -138,10 +144,21 @@ _SECRET_SHAPES = (
     (re.compile(r"(?i)(\b[a-z][a-z0-9+.-]{0,31}://)[^/\s'\"?#]{1,512}@"), r"\1***@"),
     # the account segment of a Workers AI URL: an id, not a word such as `settings`
     (re.compile(r"(/accounts/)[A-Za-z0-9]{16,}(?![A-Za-z0-9])"), r"\1***"),
-    # a 12-digit account number between the colons of a resource identifier
-    # (`urn:...:zone-1:123456789012:profile/x`): it names whose infrastructure served it
-    (re.compile(r"(?<=:)\d{12}(?=:)"), "***"),
+    # a resource identifier, whole (`scheme:partition:service:zone:account:resource`, the
+    # account a 12-digit number or empty): its segments name whose infrastructure served it
+    (re.compile(r"(?i)\b[a-z]{2,8}:[a-z][a-z0-9-]{0,31}:[a-z0-9-]{0,63}:[a-z0-9-]{0,63}:"
+                rf"(?:\d{{12}}(?![0-9])(?::{_RESOURCE})?|:{_RESOURCE})"), "***"),
+    # a 12-digit account number as a path segment; a timestamp (yyyymmddhhmm) is kept
+    (re.compile(r"(?<=/)\d{12}(?=[/?#\s\"']|$)"),
+     lambda m: m.group(0) if _timestamp12(m.group(0)) else "***"),
 )
+
+
+def _timestamp12(digits: str) -> bool:
+    """Whether 12 digits read as a time, yyyymmddhhmm (1990-2099), not an account number."""
+    y, mo, d, h, mi = (int(digits[:4]), int(digits[4:6]), int(digits[6:8]), int(digits[8:10]),
+                       int(digits[10:]))
+    return 1990 <= y <= 2099 and 1 <= mo <= 12 and 1 <= d <= 31 and h <= 23 and mi <= 59
 
 CREDENTIAL_VARS = ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY", "LLM_API_KEY",
                    "TYPESAFE_API_KEY", "AI_GATEWAY_API_KEY", "JEV_API_KEY", "HF_TOKEN",
@@ -262,37 +279,132 @@ def _held(secrets) -> list[str]:
                   key=len, reverse=True)
 
 
-def _redact_with(text: str, every: list[str]) -> str:
-    cut = len(text) > MAX_TEXT
-    text = text[:MAX_TEXT]
+def _redact_with(text: str, every: list[str], cut_at: int | None = MAX_TEXT) -> str:
+    cut = cut_at is not None and len(text) > cut_at
+    if cut:
+        text = text[:cut_at]
     if every:
         text = _mask_held(text, every)
-    for pattern, repl in _SECRET_SHAPES:
-        text = pattern.sub(repl, text)
+    text = _shapes(text)
+    if "%" in text:
+        text = _ENCODED_RUN.sub(lambda m: _decoded_masked(m.group(0)), text)
     return text + " [cut]" if cut else text
 
 
-def _walk(value, every: list[str], changed: list[bool]):
+def _shapes(text: str) -> str:
+    for pattern, repl in _SECRET_SHAPES:
+        text = pattern.sub(repl, text)
+    return text
+
+
+# A run of text without whitespace or quotes (read in one linear pass); one that holds a
+# percent-encoded byte, a URL or a header encoded once or twice (`%253A`), is decoded, up to
+# twice, and scanned again.
+_ENCODED_RUN = re.compile(r"[^\s'\"<>]+")
+_PCT = re.compile(r"%[0-9A-Fa-f]{2}")
+
+
+def _decoded_masked(run: str) -> str:
+    """`run` as it was when it holds no encoded byte or no shape is found in its decodings;
+    else its decoding, masked."""
+    if not _PCT.search(run):
+        return run
+    once = urllib.parse.unquote(run)
+    twice = urllib.parse.unquote(once)
+    for form in (twice, once):
+        masked = _shapes(form)
+        if masked != form:
+            return masked
+    return run
+
+
+# Field names whose value is a credential whatever it holds (compared lower-cased, `-` read as
+# `_`), and the endings that make one: `gateway_key`, `refresh_token`, `client_secret`.
+SENSITIVE_NAMES = frozenset({
+    "authorization", "proxy_authorization", "x_api_key", "api_key", "apikey", "key", "token",
+    "access_token", "auth_token", "x_auth_token", "secret", "password", "passwd", "cookie",
+    "set_cookie", "credential", "credentials", "bearer"})
+_SENSITIVE_ENDINGS = ("_key", "_token", "_secret", "_password", "_cookie", "_credential")
+# Field names that hold an account, tenant or owner id: their id-like values are masked whole.
+_ACCOUNT_WORDS = ("account", "owner", "tenant")
+
+
+def _norm(name: str) -> str:
+    return re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", name.strip()).lower().replace("-", "_")
+
+
+def sensitive_name(name: str) -> bool:
+    """Whether a field called `name` holds a credential (`SENSITIVE_NAMES`, or an ending in
+    `_key`, `_token`, `_secret`...). `input_tokens` is a count, not a token."""
+    n = _norm(name)
+    return n in SENSITIVE_NAMES or n.endswith(_SENSITIVE_ENDINGS)
+
+
+def _account_name(name: str) -> bool:
+    n = _norm(name)
+    return any(w in n for w in _ACCOUNT_WORDS)
+
+
+def _id_like(value) -> bool:
+    """A value that can be an id: a string of 8 characters or more, or an integer of 8 digits
+    or more (a probability of 0 or 1, or a count, is not)."""
+    if isinstance(value, bool):
+        return False
+    return (isinstance(value, str) and len(value.strip()) >= MIN_SECRET) or \
+        (isinstance(value, int) and abs(value) >= 10_000_000)
+
+
+def _mask_whole(value, changed: list[bool], only_ids: bool = False):
+    """`value` under a credential name: every string in it (an id-like one under an account
+    name) and every id-like integer replaced by `***`; floats, booleans and None are kept."""
+    if isinstance(value, dict):
+        return {k: _mask_whole(v, changed, only_ids) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_mask_whole(v, changed, only_ids) for v in value]
+    if (isinstance(value, str) and value and not only_ids) or _id_like(value):
+        changed[0] = True
+        return "***"
+    return value
+
+
+def _walk(value, every: list[str], changed: list[bool], cut_at: int | None = MAX_TEXT):
     if isinstance(value, str):
-        out = _redact_with(value, every)
+        out = _redact_with(value, every, cut_at)
         if out != value:
             changed[0] = True
         return out
     if isinstance(value, dict):
-        return {_walk(k, every, changed) if isinstance(k, str) else k: _walk(v, every, changed)
-                for k, v in value.items()}
+        out: dict = {}
+        for k, v in value.items():
+            if isinstance(k, str) and sensitive_name(k):
+                v = _mask_whole(v, changed)
+            elif isinstance(k, str) and _account_name(k):
+                v = _mask_whole(v, changed, only_ids=True)
+            key = _walk(k, every, changed, cut_at) if isinstance(k, str) else k
+            n = 2
+            while key in out:                   # two names masked alike: both entries kept
+                key = f"{key.rsplit('#', 1)[0] if n > 2 else key}#{n}"
+                n += 1
+            out[key] = _walk(v, every, changed, cut_at)
+        return out
     if isinstance(value, (list, tuple)):
-        return [_walk(v, every, changed) for v in value]
+        if len(value) == 2 and isinstance(value[0], str) and sensitive_name(value[0]):
+            value = [value[0], _mask_whole(value[1], changed)]     # a [name, value] pair
+        return [_walk(v, every, changed, cut_at) for v in value]
     return value
 
 
 def redact_evidence(value, *secrets: str | None):
     """`value` (a JSON value: a judgment's `raw`, a run header) with every string in it, keys
     included, passed through `redact` with `secrets` (the key, token or account id a judge
-    holds). Numbers, booleans and None are kept; a tuple becomes a list, as JSON writes it.
-    The credential variables are read once per call. A string longer than MAX_TEXT is cut as
-    `redact` cuts it, and says so."""
-    return _walk(value, _held(secrets), [False])
+    holds), whole: evidence is never cut, so a stored reply re-parses to what was recorded.
+    A value under a credential field name (`sensitive_name`: `Authorization`, `x-api-key`,
+    `token`, `*_secret`..., in a dict or a [name, value] pair, at any depth) is masked whole
+    whatever it holds, and an id under an account, owner or tenant name likewise. Numbers
+    (other than such ids), booleans and None are kept; a tuple becomes a list, as JSON writes
+    it; two names masked alike stay two entries (`***`, `***#2`). The credential variables
+    are read once per call."""
+    return _walk(value, _held(secrets), [False], None)
 
 
 def evidence_raw(raw, *secrets: str | None):
@@ -301,7 +413,7 @@ def evidence_raw(raw, *secrets: str | None):
     and the record says that what it keeps was altered after. A `raw` that is not a dict is
     masked and returned without the mark."""
     changed = [False]
-    out = _walk(raw, _held(secrets), changed)
+    out = _walk(raw, _held(secrets), changed, None)
     if changed[0] and isinstance(out, dict):
         out["redacted"] = True
     return out

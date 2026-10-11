@@ -90,10 +90,105 @@ def test_evidence_raw_keeps_tuples_as_json_would_without_flagging():
     assert out == {"pair": ["a", "b"]} and "redacted" not in out
 
 
-def test_an_account_number_inside_a_resource_identifier_is_masked():
-    rid = "urn:example:svc:zone-1:123456789012:profile/model-x"
-    out = redact_evidence({"served": {"model": rid}})
-    assert "123456789012" not in json.dumps(out) and "profile/model-x" in json.dumps(out)
+@pytest.mark.parametrize("rid", [
+    "urn:example:svc:zone-1:123456789012:profile/model-x",
+    "urn:example:svc:zone-1:123456789012",                 # the account last
+    "urn:example:svc:zone-1::profile/model-x",             # no account: the rest still names
+    "urn:example:svc:zone-1:123456789012:profile/a:b",
+])
+def test_a_resource_identifier_is_replaced_whole(rid):
+    """Its partition, service and zone segments can name whose infrastructure served the
+    model, so none of it is kept, not only the account number."""
+    out = redact_evidence({"served": {"model": rid}, "text": f"served by {rid}."})
+    text = json.dumps(out)
+    for part in ("example:svc", "zone-1", "123456789012", "profile/"):
+        assert part not in text, text
+    assert out["text"].startswith("served by ") and out["text"].endswith(".")
+
+
+@pytest.mark.parametrize("value", [
+    "/v1/123456789012/run", "https://h.test/projects/123456789012?x=1",
+    {"owner_id": "123456789012"}, {"account": 123456789012}, {"accountId": "123456789012"},
+    {"Account-Id": "abcdef123456"}, {"tenant": "abcdef123456"},
+])
+def test_an_account_in_other_positions_and_forms_is_masked(value):
+    out = redact_evidence(value)
+    assert "123456789012" not in json.dumps(out) and "abcdef123456" not in json.dumps(out)
+
+
+@pytest.mark.parametrize("text", [
+    "t:202610071230:x", "at 12:34:56", "build 202610071230", "/runs/202610071230/x",
+    '{"answers": {"intent": {"decision": "alarm_set", "confidence": 1.0}}}',
+])
+def test_timestamps_and_plain_text_are_not_masked(text):
+    assert evidence_raw({"text": text}) == {"text": text}
+
+
+@pytest.mark.parametrize("raw", [
+    {"headers": {"Authorization": "plainOPAQUEvalue123"}},
+    {"headers": {"authorization": "Basic plainOPAQUEvalue123"}},
+    {"headers": {"Proxy-Authorization": "plainOPAQUEvalue123"}},
+    {"x-api-key": "plainOPAQUEvalue123"}, {"X-Api-Key": "plainOPAQUEvalue123"},
+    {"api-key": "plainOPAQUEvalue123"}, {"api_key": "plainOPAQUEvalue123"},
+    {"apikey": "plainOPAQUEvalue123"}, {"token": "plainOPAQUEvalue123"},
+    {"access_token": "plainOPAQUEvalue123"}, {"refresh-token": "plainOPAQUEvalue123"},
+    {"client_secret": "plainOPAQUEvalue123"}, {"password": "plainOPAQUEvalue123"},
+    {"Cookie": "sid=plainOPAQUEvalue123"}, {"Set-Cookie": "sid=plainOPAQUEvalue123; Path=/"},
+    {"gateway_key": "plainOPAQUEvalue123"}, {"X-Auth-Token": "plainOPAQUEvalue123"},
+    {"deep": [{"inner": {"API_KEY": "plainOPAQUEvalue123"}}]},
+    {"token": {"value": "plainOPAQUEvalue123", "n": 12345678901}},
+    {"headers": [["x-api-key", "plainOPAQUEvalue123"]]},
+    {"headers": [("Authorization", "Bearer plainOPAQUEvalue123")]},
+])
+def test_a_value_under_a_credential_name_is_masked_whole(raw):
+    """No key is held and the value has no credential shape: its field name is what says it
+    is one, at any depth, in any letter case, as a dict entry or a [name, value] pair."""
+    out = evidence_raw(raw)
+    assert "OPAQUE" not in json.dumps(out) and out["redacted"] is True, out
+
+
+def test_counts_and_probabilities_under_ordinary_names_are_kept():
+    raw = {"usage": {"input_tokens": 625, "output_tokens": 48, "max_tokens": 4096,
+                     "prompt_tokens_details": {"cached_tokens": 0}},
+           "probabilities": {"terminate_account": 1, "token": 0.0, "password_reset": 0.0},
+           "answer": {"choice": "terminate_account"}}
+    assert evidence_raw(raw) == raw
+
+
+def test_masked_field_names_never_merge_entries():
+    raw = {"probabilities": {"sk-aaaaaaaa1": 0.4, "sk-aaaaaaaa2": 0.6}}
+    out = evidence_raw(raw)["probabilities"]
+    assert len(out) == 2 and sorted(out.values()) == [0.4, 0.6]
+    assert "aaaaaaaa" not in json.dumps(out)
+
+
+@pytest.mark.parametrize("text", [
+    "see https%3A%2F%2Fh.test%2Fx%3Fkey%3DplainOPAQUEvalue123 now",
+    "see https%253A%252F%252Fh.test%252Fx%253Fkey%253DplainOPAQUEvalue123 now",   # twice
+    "see https%3A%2F%2Fuser%3AplainOPAQUEvalue123%40h.test%2Fx now",
+    "hdr Authorization%3A%20Bearer%20plainOPAQUEvalue123 end",
+])
+def test_percent_encoded_shapes_are_decoded_before_they_are_scanned(text):
+    out = evidence_raw({"text": text})
+    assert "OPAQUE" not in out["text"] and out["redacted"] is True, out
+    assert out["text"].split()[0] == text.split()[0] and out["text"].split()[-1] == \
+        text.split()[-1]                                  # the words around it are kept
+
+
+def test_a_long_reply_is_never_cut_and_reparses_the_same():
+    """A reply over 64,000 characters: masking keeps every character it does not mask, so
+    the stored text gives the decision, confidence and cost the judge recorded."""
+    reasoning = "Thinking about it. " * 3400                     # ~64,600 characters
+    text = (reasoning + f"(key {HELD}) "
+            + '{"answers": {"category": {"decision": "spam", "confidence": 0.9}}}')
+    assert len(text) > 64_000
+    before = llm.parse_reply(text, [CATEGORY])["category"]
+    raw = {"text": text, "usage": {"input_tokens": 9, "output_tokens": 70_000}}
+    out = evidence_raw(raw, HELD)
+    after = llm.parse_reply(out["text"], [CATEGORY])["category"]
+    assert after == before and before[:2] == ("spam", 0.9)
+    assert out["usage"] == raw["usage"] and "[cut]" not in out["text"]
+    assert _clean(out, HELD) and len(out["text"]) == len(text) - len(HELD) + 3
 
 
 # --- the hosted decision APIs: a 200 reply that echoes the credentials ----------------------
