@@ -15,6 +15,10 @@ Two backends:
 The audited "confidence" is P(chosen option) from the per-option
 probability distribution — the actual probabilistic claim. TypeSafe's
 separate `confidence` statistic is preserved in `raw` for analysis.
+
+Every `raw` passes through `evidence_raw` before it is returned: the key and every
+credential-shaped value a reply may echo are masked, and a record it changed says
+`redacted: true`.
 """
 from __future__ import annotations
 
@@ -34,6 +38,7 @@ from .base import (
     Question,
     QuestionType,
     checked_endpoint,
+    evidence_raw,
     redact,
     served_of,
 )
@@ -193,12 +198,13 @@ class JevJudge(Judge):
                 question=q.name, decision=decision, confidence=confidence,
                 latency_s=latency / max(len(questions), 1),
                 cost_usd=None if cost is None else cost / max(len(questions), 1),
-                raw={"answer": ans,
-                     "typesafe_confidence": ts_meta.get(q.name),
-                     "usage": usage,
-                     # The SDK's response.modelId echoes the id we sent, not what was
-                     # served; the gateway reports no version, so it is recorded unknown.
-                     "served": served_of(None)},
+                raw=evidence_raw({"answer": ans,
+                                  "typesafe_confidence": ts_meta.get(q.name),
+                                  "usage": usage,
+                                  # The SDK's response.modelId echoes the id we sent, not
+                                  # what was served; the gateway reports no version, so it
+                                  # is recorded unknown.
+                                  "served": served_of(None)}, self.api_key),
             ))
         return out
 
@@ -270,9 +276,10 @@ class JevJudge(Judge):
                 question=q.name, decision=decision, confidence=confidence,
                 latency_s=latency / max(len(questions), 1),
                 cost_usd=None if cost is None else cost / max(len(questions), 1),
-                raw={"answer": ans, "typesafe_confidence": ans.get("confidence"),
-                     "usage": usage, "model": body.get("model"),
-                     "served": served_of({"model": body.get("model")})},
+                raw=evidence_raw({"answer": ans, "typesafe_confidence": ans.get("confidence"),
+                                  "usage": usage, "model": body.get("model"),
+                                  "served": served_of({"model": body.get("model")})},
+                                 self.api_key),
             ))
         return out
 

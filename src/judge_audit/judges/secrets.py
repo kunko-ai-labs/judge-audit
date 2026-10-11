@@ -19,8 +19,13 @@ escaped newline or a zero-width character), its base64, the value of every crede
 set in the process, and any value shaped like a credential (bearer and Authorization values,
 `x-api-key` and `api-key` headers quoted or not, `sk-`, `AIza` and `hf_` keys, `key=` /
 `api_key=` / `token=` query values, userinfo in a URL, the account segment of a Workers AI
-URL). It reads at most `MAX_TEXT` characters, in time linear in them. A message is masked
-whole before it is cut to a length limit, so no cut leaves 12 characters of a key unmasked.
+URL, an account number between the colons of a resource identifier). It reads at most
+`MAX_TEXT` characters, in time linear in them. A message is masked whole before it is cut to a
+length limit, so no cut leaves 12 characters of a key unmasked.
+
+`redact_evidence` applies `redact` to every string of a JSON value (a judgment's `raw`, a run
+header), and `evidence_raw` marks a `raw` it changed with `redacted: true`: a successful reply
+is evidence too, and a server may echo a credential in it as well as in an error.
 """
 from __future__ import annotations
 
@@ -133,6 +138,9 @@ _SECRET_SHAPES = (
     (re.compile(r"(?i)(\b[a-z][a-z0-9+.-]{0,31}://)[^/\s'\"?#]{1,512}@"), r"\1***@"),
     # the account segment of a Workers AI URL: an id, not a word such as `settings`
     (re.compile(r"(/accounts/)[A-Za-z0-9]{16,}(?![A-Za-z0-9])"), r"\1***"),
+    # a 12-digit account number between the colons of a resource identifier
+    # (`urn:...:zone-1:123456789012:profile/x`): it names whose infrastructure served it
+    (re.compile(r"(?<=:)\d{12}(?=:)"), "***"),
 )
 
 CREDENTIAL_VARS = ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY", "LLM_API_KEY",
@@ -245,12 +253,55 @@ def redact(text: str, *secrets: str | None) -> str:
     and says so; the time is linear in what is read. Every message judge-audit prints or
     returns passes through it (`runner.scrub`); a message is masked whole first, and only then
     cut to a length."""
+    return _redact_with(text, _held(secrets))
+
+
+def _held(secrets) -> list[str]:
+    """`secrets` and the credential variables' values worth masking, longest first."""
+    return sorted({x for x in (*secrets, *credential_values()) if x and len(x) >= MIN_SECRET},
+                  key=len, reverse=True)
+
+
+def _redact_with(text: str, every: list[str]) -> str:
     cut = len(text) > MAX_TEXT
     text = text[:MAX_TEXT]
-    every = sorted({x for x in (*secrets, *credential_values()) if x and len(x) >= MIN_SECRET},
-                   key=len, reverse=True)
     if every:
         text = _mask_held(text, every)
     for pattern, repl in _SECRET_SHAPES:
         text = pattern.sub(repl, text)
     return text + " [cut]" if cut else text
+
+
+def _walk(value, every: list[str], changed: list[bool]):
+    if isinstance(value, str):
+        out = _redact_with(value, every)
+        if out != value:
+            changed[0] = True
+        return out
+    if isinstance(value, dict):
+        return {_walk(k, every, changed) if isinstance(k, str) else k: _walk(v, every, changed)
+                for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_walk(v, every, changed) for v in value]
+    return value
+
+
+def redact_evidence(value, *secrets: str | None):
+    """`value` (a JSON value: a judgment's `raw`, a run header) with every string in it, keys
+    included, passed through `redact` with `secrets` (the key, token or account id a judge
+    holds). Numbers, booleans and None are kept; a tuple becomes a list, as JSON writes it.
+    The credential variables are read once per call. A string longer than MAX_TEXT is cut as
+    `redact` cuts it, and says so."""
+    return _walk(value, _held(secrets), [False])
+
+
+def evidence_raw(raw, *secrets: str | None):
+    """A judgment's `raw` as evidence may keep it (`redact_evidence`), with `redacted: true`
+    added when masking changed any of it: the decision was read from the reply as it arrived,
+    and the record says that what it keeps was altered after. A `raw` that is not a dict is
+    masked and returned without the mark."""
+    changed = [False]
+    out = _walk(raw, _held(secrets), changed)
+    if changed[0] and isinstance(out, dict):
+        out["redacted"] = True
+    return out

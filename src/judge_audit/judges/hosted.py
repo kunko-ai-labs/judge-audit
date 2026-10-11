@@ -32,8 +32,9 @@ and why:
 - **What was served**: any model id and response id the response carries.
 - **Credentials from the environment only.** No key, token or account id is recorded or
   printed: every error message passes through `_redact`, which masks the token, the account
-  id and the URL segment that holds it. A server that cannot be reached is reported within
-  `CONNECT_BUDGET_S`.
+  id and the URL segment that holds it, and every `raw`, a successful reply's included,
+  through `evidence_raw` (a record it changed says `redacted: true`). A server that cannot
+  be reached is reported within `CONNECT_BUDGET_S`.
 
 Environment:
   openai-decisions  OPENAI_API_KEY; DECISIONS_MODEL (default gpt-6-luna);
@@ -64,6 +65,7 @@ from .base import (
     Question,
     QuestionType,
     checked_endpoint,
+    evidence_raw,
     redact,
     served_of,
 )
@@ -273,9 +275,17 @@ def as_evidence(value):
     return value
 
 
-def _no_answer(q: Question, latency: float, cost: float | None, raw: dict) -> Judgment:
+def evidence(raw: dict, secrets: tuple[str, ...]) -> dict:
+    """`raw` as a judgment keeps it: non-finite numbers as text (`as_evidence`), then the
+    judge's secrets and every credential-shaped value masked (`evidence_raw`): a server may
+    echo them in a reply it answers as well as in an error."""
+    return evidence_raw(as_evidence(raw), *secrets)
+
+
+def _no_answer(q: Question, latency: float, cost: float | None, raw: dict,
+               secrets: tuple[str, ...]) -> Judgment:
     return Judgment(question=q.name, decision="", confidence=None, latency_s=latency,
-                    cost_usd=cost, raw=as_evidence(raw), parse_status="no_answer")
+                    cost_usd=cost, raw=evidence(raw, secrets), parse_status="no_answer")
 
 
 class _HostedDecisionJudge(Judge):
@@ -389,7 +399,8 @@ class OpenAIDecisionsJudge(_HostedDecisionJudge):
         body = {"model": self.model, "input": state,
                 "questions": [self.wire_question(q) for q in questions]}
         t0 = time.monotonic()
-        reply = post_json(self.endpoint, body, "the OpenAI Decisions API", (self._key,))
+        secrets = (self._key,)
+        reply = post_json(self.endpoint, body, "the OpenAI Decisions API", secrets)
         latency = (time.monotonic() - t0) / max(len(questions), 1)
         answers = {a.get("name"): a for a in reply.get("answers") or [] if isinstance(a, dict)}
         usage = reply.get("usage") or None
@@ -405,17 +416,18 @@ class OpenAIDecisionsJudge(_HostedDecisionJudge):
                                          if isinstance(x, dict)))
             if not isinstance(ans, dict) or ans.get("type") == "refusal":
                 refused = isinstance(ans, dict) and ans.get("type") == "refusal"
-                out.append(_no_answer(q, latency, cost, {**base, "refusal": refused}))
+                out.append(_no_answer(q, latency, cost, {**base, "refusal": refused}, secrets))
                 continue
             got = self.read(q, ans)
             if isinstance(got, str):
-                out.append(_no_answer(q, latency, cost, {**base, "invalid": got}))
+                out.append(_no_answer(q, latency, cost, {**base, "invalid": got}, secrets))
                 continue
             decision, confidence, probs = got
             out.append(Judgment(question=q.name, decision=decision, confidence=confidence,
                                 latency_s=latency, cost_usd=cost,
-                                raw=as_evidence({**base, "probabilities": probs,
-                                                 "native_confidence": ans.get("confidence")})))
+                                raw=evidence({**base, "probabilities": probs,
+                                              "native_confidence": ans.get("confidence")},
+                                             secrets)))
         return out
 
 
@@ -488,7 +500,7 @@ class ClefHostedJudge(_HostedDecisionJudge):
             if isinstance(ans, dict) and isinstance(ans.get("probabilities"), dict):
                 base.update(declared_sum(ans["probabilities"].values()))
             if not isinstance(ans, dict) or "error" in ans:
-                out.append(_no_answer(q, latency, cost, base))
+                out.append(_no_answer(q, latency, cost, base, secrets))
                 continue
             probs = ans.get("probabilities")
             chosen = ans.get("choice")
@@ -497,11 +509,12 @@ class ClefHostedJudge(_HostedDecisionJudge):
                                else {}, ans.get("noul"),
                                None if chosen is None else str(chosen))
             if isinstance(got, str):
-                out.append(_no_answer(q, latency, cost, {**base, "invalid": got}))
+                out.append(_no_answer(q, latency, cost, {**base, "invalid": got}, secrets))
                 continue
             decision, confidence, checked = got
             out.append(Judgment(question=q.name, decision=decision, confidence=confidence,
                                 latency_s=latency, cost_usd=cost,
-                                raw=as_evidence({**base, "probabilities": checked,
-                                                 "native_confidence": ans.get("confidence")})))
+                                raw=evidence({**base, "probabilities": checked,
+                                              "native_confidence": ans.get("confidence")},
+                                             secrets)))
         return out

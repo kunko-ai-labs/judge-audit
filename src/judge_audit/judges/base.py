@@ -40,12 +40,15 @@ from .secrets import (  # noqa: E402
     RedirectRefused,
     checked_endpoint,
     credential_values,
+    evidence_raw,
     redact,
+    redact_evidence,
 )
 
 __all__ = [
     "Judge", "Judgment", "Question", "QuestionType", "served_of",
     "OPENER", "Endpoint", "RedirectRefused", "checked_endpoint", "credential_values", "redact",
+    "redact_evidence", "evidence_raw",
 ]
 
 
