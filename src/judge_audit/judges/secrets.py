@@ -369,10 +369,10 @@ def _mask_whole(value, changed: list[bool], only_ids: bool = False):
 
 def _walk(value, every: list[str], changed: list[bool], cut_at: int | None = MAX_TEXT):
     if isinstance(value, str):
-        out = _redact_with(value, every, cut_at)
-        if out != value:
+        text = _redact_with(value, every, cut_at)
+        if text != value:
             changed[0] = True
-        return out
+        return text
     if isinstance(value, dict):
         out: dict = {}
         for k, v in value.items():
