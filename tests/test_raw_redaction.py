@@ -144,7 +144,8 @@ def test_a_value_under_a_credential_name_is_masked_whole(raw):
     """No key is held and the value has no credential shape: its field name is what says it
     is one, at any depth, in any letter case, as a dict entry or a [name, value] pair."""
     out = evidence_raw(raw)
-    assert "OPAQUE" not in json.dumps(out) and out["redacted"] is True, out
+    assert "OPAQUE" not in json.dumps(out), out
+    assert out.get("redacted") is True or out.get("dropped_fields"), out   # never silent
 
 
 def test_counts_and_probabilities_under_ordinary_names_are_kept():
@@ -224,7 +225,8 @@ def test_decisions_refusal_echoing_the_key_is_masked_in_raw(monkeypatch):
     _wire(monkeypatch, {"answers": [{"type": "refusal", "name": "route",
                                      "message": f"refused for key {HELD}"}]})
     (j,) = hosted.OpenAIDecisionsJudge(api_key=HELD).decide("x", [ROUTE])
-    assert j.parse_status == "no_answer" and _clean(j.raw, HELD) and j.raw["redacted"]
+    assert j.parse_status == "no_answer" and _clean(j.raw, HELD)
+    assert "answer.message" in j.raw["dropped_fields"]          # left out, not kept masked
 
 
 def test_decisions_clean_reply_is_stored_as_before(monkeypatch):
@@ -294,7 +296,8 @@ def test_jev_gateway_reply_echoing_the_key_is_masked_in_raw(monkeypatch):
     monkeypatch.setattr(jev.subprocess, "run", lambda *a, **k: types.SimpleNamespace(
         returncode=0, stdout=json.dumps(out).encode(), stderr=b""))
     (j,) = judge.decide("x", [ROUTE])
-    assert j.decision == "billing" and _clean(j.raw, HELD) and j.raw["redacted"] is True
+    assert j.decision == "billing" and _clean(j.raw, HELD)
+    assert {"answer.echo", "usage.gateway"} <= set(j.raw["dropped_fields"])
 
 
 # --- chat models: the OpenAI-compatible path, the custom module, the Anthropic SDK -----------
@@ -506,3 +509,150 @@ def test_an_anthropic_reply_echoing_the_key_is_masked_in_raw(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY")
     (j,) = llm.LLMJudge(api_key=HELD).decide("x", [CATEGORY])
     assert j.decision == "spam" and _clean(j.raw, HELD) and j.raw["redacted"] is True
+
+
+# --- deny by default: an adapter keeps only the fields the audit reads (#161, round 2) -------
+
+TOK = "plainOPAQUEvalue123"
+
+
+def test_decisions_keeps_only_the_fields_the_audit_reads(monkeypatch):
+    _wire(monkeypatch, {
+        "id": "dec_1", "model": "gpt-6-luna", "headers": {"Authorization": TOK},
+        "usage": {"input_tokens": 10, "input_tokens_details": {"cached_tokens": 2},
+                  "service_tier": TOK},
+        "answers": [{"type": "choice", "name": "route", "choice": "billing", "confidence": 0.9,
+                     "debug": {"headers": [{"name": "x-api-key", "value": TOK}]},
+                     "trace": TOK,
+                     "probabilities": [{"value": "billing", "probability": 0.9, "note": TOK},
+                                       {"value": "returns", "probability": 0.1}]}]})
+    (j,) = hosted.OpenAIDecisionsJudge(api_key=HELD).decide("x", [ROUTE])
+    assert (j.decision, j.confidence) == ("billing", 0.9)
+    assert "OPAQUE" not in json.dumps(j.raw), j.raw
+    assert j.raw["usage"] == {"input_tokens": 10, "input_tokens_details": {"cached_tokens": 2}}
+    assert j.raw["native_confidence"] == 0.9 and j.raw["served"]["model"] == "gpt-6-luna"
+    assert {"answer.debug", "answer.trace", "answer.probabilities.note",
+            "usage.service_tier"} <= set(j.raw["dropped_fields"])
+
+
+def test_clef_keeps_only_the_fields_the_audit_reads(monkeypatch):
+    _wire(monkeypatch, {"success": True, "result": {
+        "model": "clef-flash", "usage": {"input_tokens": 3, "request": TOK},
+        "answers": {"route": {"choice": "billing", "confidence": 0.7, "meta": {"cookie": TOK},
+                              "probabilities": {"billing": 0.8, "returns": 0.2}}}}})
+    (j,) = hosted.ClefHostedJudge(token=HELD, account=ACCOUNT).decide("x", [ROUTE])
+    assert j.decision == "billing" and "OPAQUE" not in json.dumps(j.raw)
+    assert j.raw["answer"]["probabilities"] == {"billing": 0.8, "returns": 0.2}
+    assert {"answer.meta", "usage.request"} <= set(j.raw["dropped_fields"])
+
+
+def test_a_clean_reply_drops_nothing(monkeypatch):
+    _wire(monkeypatch, {"answers": [{"type": "choice", "name": "route", "choice": "billing",
+                                     "confidence": 0.9,
+                                     "probabilities": [{"value": "billing", "probability": 1.0}]
+                                     }], "usage": {"input_tokens": 4}})
+    (j,) = hosted.OpenAIDecisionsJudge(api_key=HELD).decide("x", [ROUTE])
+    assert "dropped_fields" not in j.raw and "redacted" not in j.raw
+
+
+def test_jev_gateway_keeps_only_the_fields_the_audit_reads(monkeypatch):
+    judge = jev.JevJudge.__new__(jev.JevJudge)
+    judge.backend, judge.model, judge.api_key = "gateway", "typesafe-ai/jev", HELD
+    out = [{"ok": True, "answers": {"route": {"probabilities": {"billing": 0.7, "other": 0.3},
+                                              "rawResponse": {"headers": {"x-api-key": TOK}}}},
+            "usage": {"inputTokens": 4, "gateway": {"routing": TOK}}, "latencyMs": 10}]
+    monkeypatch.setattr(jev, "_throttle", lambda: None)
+    monkeypatch.setattr(jev.subprocess, "run", lambda *a, **k: types.SimpleNamespace(
+        returncode=0, stdout=json.dumps(out).encode(), stderr=b""))
+    (j,) = judge.decide("x", [ROUTE])
+    assert j.decision == "billing" and "OPAQUE" not in json.dumps(j.raw)
+    assert j.raw["usage"] == {"inputTokens": 4}
+    assert {"answer.rawResponse", "usage.gateway"} <= set(j.raw["dropped_fields"])
+
+
+def test_jev_direct_keeps_only_the_fields_the_audit_reads(echo_server, monkeypatch):
+    monkeypatch.setenv("JEV_ENDPOINT", echo_server)
+    (j,) = jev.JevJudge(api_key=HELD, backend="typesafe").decide("x", [ROUTE])
+    assert "seen" not in j.raw["answer"] and "auth" not in j.raw["usage"]
+    assert {"answer.seen", "usage.auth"} <= set(j.raw["dropped_fields"])
+
+
+def test_a_custom_module_cannot_put_more_than_the_served_version_in_raw(monkeypatch, tmp_path):
+    mod = tmp_path / "p.py"
+    mod.write_text("def call(model, system, user, temperature=None):\n"
+                   "    return ('{\"answers\": {\"category\": {\"decision\": \"spam\", "
+                   "\"confidence\": 0.7}}}', 1, 1, {\"model\": \"m-1\", \"headers\": "
+                   f"{{\"Authorization\": \"{TOK}\"}}}})\n")
+    monkeypatch.setenv("LLM_PROVIDER", "custom")
+    monkeypatch.setenv("LLM_PROVIDER_MODULE", str(mod))
+    monkeypatch.setenv("LLM_MODEL", "m")
+    (j,) = llm.LLMJudge().decide("x", [CATEGORY])
+    assert set(j.raw) == {"text", "usage", "parsed", "priced", "served"}
+    assert "OPAQUE" not in json.dumps(j.raw)
+
+
+# --- the second layer: headers at any depth, name/value pairs, text shapes ------------------
+
+@pytest.mark.parametrize("raw", [
+    {"headers": [{"name": "Authorization", "value": TOK}]},
+    {"headers": [{"key": "x-api-key", "value": TOK}]},
+    {"headers": [{"header": "X-Auth-Token", "value": TOK}]},
+    {"headers": [["x-api-key", TOK]]},
+    {"headers": {"Authorization": TOK, "Content-Type": "application/json"}},
+    {"deep": [{"response": {"response_headers": [{"name": "Set-Cookie", "value": TOK}]}}]},
+    {"list": ["x-api-key", TOK, "accept", "json"]}, {"list": ["x-api-key", TOK, "x"]},
+    {"pair": {"name": "Authorization", "value": TOK}},
+    {"field": {"key": "x-api-key", "value": TOK}},
+])
+def test_header_lists_in_every_form_and_depth_hold_no_credential(raw):
+    out = evidence_raw(raw)
+    assert "OPAQUE" not in json.dumps(out), out
+
+
+def test_only_harmless_headers_are_kept_and_the_rest_is_recorded():
+    raw = {"response": {"headers": {"Content-Type": "application/json", "Authorization": TOK,
+                                    "X-Request-Id": "r-1"}}}
+    out = evidence_raw(raw)
+    assert out["response"]["headers"] == {"Content-Type": "application/json"}
+    assert {"response.headers.Authorization", "response.headers.X-Request-Id"} <= \
+        set(out["dropped_fields"])
+
+
+def test_a_name_value_pair_keeps_its_name():
+    out = evidence_raw({"field": {"key": "x-api-key", "value": TOK}})
+    assert out["field"] == {"key": "x-api-key", "value": "***"}
+
+
+@pytest.mark.parametrize("text", [
+    f'{{"token": "{TOK}"}}', f'{{"Vendor-Subscription-Key": "{TOK}"}}',
+    f"X-Auth-Token: {TOK}", f"Cookie: session={TOK}; theme=dark", f"set-cookie: sid={TOK}",
+    f"Authorization: Token {TOK}",
+])
+def test_credential_names_in_text_mask_their_value(text):
+    assert "OPAQUE" not in evidence_raw({"text": text})["text"]
+
+
+@pytest.mark.parametrize("raw", [
+    {"x.api.key": TOK}, {"api key": TOK}, {"Authorization:": TOK}, {"session_id": TOK},
+    {"sig": TOK}, {"jwt": TOK}, {"acct": "123456789012"}, {"account": 123456789012.0},
+])
+def test_more_credential_and_account_names(raw):
+    assert "OPAQUE" not in json.dumps(evidence_raw(raw))
+    assert "123456789012" not in json.dumps(evidence_raw(raw))
+
+
+def test_text_encoded_three_times_is_scanned():
+    from urllib.parse import quote
+    url = f"https://h.test/x?key={TOK}"
+    text = "see " + quote(quote(quote(url, safe=""), safe=""), safe="") + " now"
+    assert "OPAQUE" not in evidence_raw({"text": text})["text"]
+
+
+@pytest.mark.parametrize("text", [
+    "svc:zone-1:123456789012:profile/x", "p1:svc:zone-1:123456789012:model/x",
+    "longschemename:p:svc:zone-1:123456789012:x", "account 123456789012",
+    "acct no. 1234-5678-9012",
+])
+def test_partial_resource_ids_and_plain_text_accounts_are_masked(text):
+    out = evidence_raw({"text": f"from {text}."})["text"]
+    assert "123456789012" not in out and "5678" not in out and "zone-1" not in out, out

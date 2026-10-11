@@ -128,10 +128,12 @@ _VALUE = rf"{_NOT_A_VALUE}{_TOKEN}{{8,}}"
 # The resource part of an identifier: up to 512 characters, not ending on the punctuation
 # that closes a sentence.
 _RESOURCE = r"(?:[^\s'\"<>(){}\[\],;]{0,511}[^\s'\"<>(){}\[\],;.:!?])"
+_WORDS = {"null", "none", "true", "false", "required", "undefined", "missing", ""}
 # Shapes a credential takes in a message, masked whatever its value. Every repetition is
 # bounded or anchored on a literal, so no input makes one slow.
 _SECRET_SHAPES = (
-    (re.compile(rf"(?i)(authorization{_Q}{_SEP}{_Q})(?:bearer{_SPACE}|basic\s{{1,8}})?{_VALUE}"),
+    (re.compile(rf"(?i)(authorization{_Q}{_SEP}{_Q})(?:bearer{_SPACE}|(?:basic|token)\s{{1,8}})?"
+                rf"{_VALUE}"),
      r"\1***"),
     (re.compile(rf"(?i)(\bbearer{_SPACE}){_VALUE}"), r"\1***"),
     (re.compile(rf"(?i)({_Q}\b(?:x[-_])?api[-_]key{_Q}{_SEP}{_Q}){_VALUE}"), r"\1***"),
@@ -146,8 +148,25 @@ _SECRET_SHAPES = (
     (re.compile(r"(/accounts/)[A-Za-z0-9]{16,}(?![A-Za-z0-9])"), r"\1***"),
     # a resource identifier, whole (`scheme:partition:service:zone:account:resource`, the
     # account a 12-digit number or empty): its segments name whose infrastructure served it
-    (re.compile(r"(?i)\b[a-z]{2,8}:[a-z][a-z0-9-]{0,31}:[a-z0-9-]{0,63}:[a-z0-9-]{0,63}:"
+    (re.compile(r"(?i)\b[a-z]{2,32}:[a-z][a-z0-9-]{0,31}:[a-z0-9-]{0,63}:[a-z0-9-]{0,63}:"
                 rf"(?:\d{{12}}(?![0-9])(?::{_RESOURCE})?|:{_RESOURCE})"), "***"),
+    # and any part of one that still holds the account: two segments or more, then 12 digits
+    (re.compile(r"(?i)\b[a-z0-9][a-z0-9-]{0,62}(?::[a-z0-9-]{0,63}){1,6}:\d{12}(?![0-9])"
+                rf"(?::{_RESOURCE})?"), "***"),
+    # an account number in plain text: `account 123456789012`, `acct no. 1234-5678-9012`
+    (re.compile(r"(?i)(\b(?:account|acct|owner|tenant)\b[ \t]{0,4}(?:id|number|no\.?|#)?"
+                r"[ \t]{0,4}[:=#]?[ \t]{0,4})\d{4}[- ]?\d{4}[- ]?\d{4}(?![0-9])"), r"\1***"),
+    # a header written as text whose value is a credential whatever it looks like
+    (re.compile(r"(?im)(\b(?:x-auth-token|proxy-authorization|set-cookie|cookie"
+                r"|x-[a-z0-9-]{0,40}-(?:key|token|secret))[ \t]{0,8}:[ \t]{0,8}(?![ \t]))"
+                rf"{_NOT_A_VALUE}[^\r\n\"]{{1,512}}"),
+     r"\1***"),
+    # a quoted `"name": "value"` whose name is a credential name (`sensitive_name`)
+    (re.compile(r"([\"'])([A-Za-z0-9 ._-]{1,48})\1([ \t]{0,8}:[ \t]{0,8})([\"'])"
+                r"([^\"'\\\r\n]{1,512})\4"),
+     lambda m: (f"{m.group(1)}{m.group(2)}{m.group(1)}{m.group(3)}{m.group(4)}***{m.group(4)}"
+                if sensitive_name(m.group(2)) and m.group(5).strip().lower() not in _WORDS
+                else m.group(0))),
     # a 12-digit account number as a path segment; a timestamp (yyyymmddhhmm) is kept
     (re.compile(r"(?<=/)\d{12}(?=[/?#\s\"']|$)"),
      lambda m: m.group(0) if _timestamp12(m.group(0)) else "***"),
@@ -305,13 +324,14 @@ _PCT = re.compile(r"%[0-9A-Fa-f]{2}")
 
 
 def _decoded_masked(run: str) -> str:
-    """`run` as it was when it holds no encoded byte or no shape is found in its decodings;
-    else its decoding, masked."""
+    """`run` as it was when it holds no encoded byte or no shape is found in its decodings
+    (up to three: a URL encoded once, twice or three times); else its decoding, masked."""
     if not _PCT.search(run):
         return run
-    once = urllib.parse.unquote(run)
-    twice = urllib.parse.unquote(once)
-    for form in (twice, once):
+    forms = [urllib.parse.unquote(run)]
+    for _ in range(2):
+        forms.append(urllib.parse.unquote(forms[-1]))
+    for form in reversed(forms):
         masked = _shapes(form)
         if masked != form:
             return masked
@@ -323,14 +343,24 @@ def _decoded_masked(run: str) -> str:
 SENSITIVE_NAMES = frozenset({
     "authorization", "proxy_authorization", "x_api_key", "api_key", "apikey", "key", "token",
     "access_token", "auth_token", "x_auth_token", "secret", "password", "passwd", "cookie",
-    "set_cookie", "credential", "credentials", "bearer"})
+    "set_cookie", "credential", "credentials", "bearer", "session", "session_id", "sid",
+    "sig", "signature", "jwt"})
 _SENSITIVE_ENDINGS = ("_key", "_token", "_secret", "_password", "_cookie", "_credential")
 # Field names that hold an account, tenant or owner id: their id-like values are masked whole.
-_ACCOUNT_WORDS = ("account", "owner", "tenant")
+_ACCOUNT_WORDS = ("account", "acct", "owner", "tenant")
+# Containers of HTTP headers, and the only header names evidence keeps from them.
+HEADER_CONTAINERS = frozenset({"headers", "header", "request_headers", "response_headers",
+                               "http_headers"})
+HARMLESS_HEADERS = frozenset({"content_type", "content_length"})
+# The fields of a name/value pair (`{"name": "Authorization", "value": ...}`).
+_PAIR_NAMES = ("name", "key", "header", "field")
 
 
 def _norm(name: str) -> str:
-    return re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", name.strip()).lower().replace("-", "_")
+    """A field name compared as one: camelCase split, lower-cased, `-`, `.` and spaces read as
+    `_`, a trailing `:` dropped (`X-Api-Key`, `x.api.key`, `api key`, `Authorization:`)."""
+    name = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", name.strip().rstrip(":").strip())
+    return re.sub(r"[-. ]", "_", name.lower())
 
 
 def sensitive_name(name: str) -> bool:
@@ -346,17 +376,18 @@ def _account_name(name: str) -> bool:
 
 
 def _id_like(value) -> bool:
-    """A value that can be an id: a string of 8 characters or more, or an integer of 8 digits
-    or more (a probability of 0 or 1, or a count, is not)."""
+    """A value that can be an id: a string of 8 characters or more, or a number of 8 digits
+    or more (a probability, or a count, is not)."""
     if isinstance(value, bool):
         return False
     return (isinstance(value, str) and len(value.strip()) >= MIN_SECRET) or \
-        (isinstance(value, int) and abs(value) >= 10_000_000)
+        (isinstance(value, (int, float)) and abs(value) >= 10_000_000)
 
 
 def _mask_whole(value, changed: list[bool], only_ids: bool = False):
     """`value` under a credential name: every string in it (an id-like one under an account
-    name) and every id-like integer replaced by `***`; floats, booleans and None are kept."""
+    name) and every id-like number replaced by `***`; probabilities, booleans and None are
+    kept."""
     if isinstance(value, dict):
         return {k: _mask_whole(v, changed, only_ids) for k, v in value.items()}
     if isinstance(value, (list, tuple)):
@@ -367,30 +398,85 @@ def _mask_whole(value, changed: list[bool], only_ids: bool = False):
     return value
 
 
-def _walk(value, every: list[str], changed: list[bool], cut_at: int | None = MAX_TEXT):
+def _pair_name(value: dict) -> str | None:
+    """The name of a name/value pair (`{"name": "Authorization", "value": ...}`), or None."""
+    if "value" not in value:
+        return None
+    for field in _PAIR_NAMES:
+        if isinstance(value.get(field), str):
+            return value[field]
+    return None
+
+
+def _header_name(item) -> str | None:
+    """The header name of one entry of a header list: a pair object or a [name, value] list."""
+    if isinstance(item, dict):
+        return _pair_name(item)
+    if isinstance(item, (list, tuple)) and len(item) == 2 and isinstance(item[0], str):
+        return item[0]
+    return None
+
+
+def _headers_kept(value, path: str, dropped: list[str]):
+    """A container of HTTP headers with only `HARMLESS_HEADERS` kept, in the form it came in
+    (a mapping, a list of pairs or of [name, value] lists, a flat [name, value, ...] list);
+    every other header is recorded by name in `dropped`, never kept."""
+    def keep(name: str) -> bool:
+        if _norm(name) in HARMLESS_HEADERS:
+            return True
+        dropped.append(f"{path}.{name}")
+        return False
+    if isinstance(value, dict):
+        return {k: v for k, v in value.items() if isinstance(k, str) and keep(k)}
+    if isinstance(value, (list, tuple)):
+        if value and all(isinstance(x, str) for x in value) and len(value) % 2 == 0:
+            pairs = list(zip(value[::2], value[1::2], strict=True))
+            return [x for n, v in pairs if keep(n) for x in (n, v)]
+        names = [_header_name(x) for x in value]
+        if all(n is not None for n in names):
+            return [x for n, x in zip(names, value, strict=True) if keep(str(n))]
+    if value is not None:
+        dropped.append(path)
+    return None
+
+
+def _walk(value, every: list[str], changed: list[bool], cut_at: int | None = MAX_TEXT,
+          path: str = "", dropped: list[str] | None = None):
+    dropped = [] if dropped is None else dropped
     if isinstance(value, str):
         text = _redact_with(value, every, cut_at)
         if text != value:
             changed[0] = True
         return text
     if isinstance(value, dict):
+        pair = _pair_name(value)
         out: dict = {}
         for k, v in value.items():
-            if isinstance(k, str) and sensitive_name(k):
+            here = f"{path}.{k}" if path else str(k)
+            if isinstance(k, str) and _norm(k) in HEADER_CONTAINERS:
+                v = _headers_kept(v, here, dropped)
+            elif pair is not None and k == "value":
+                if sensitive_name(pair):
+                    v = _mask_whole(v, changed)
+            elif pair is not None and k in _PAIR_NAMES and v == pair:
+                pass                            # the pair's name: a field name, not a secret
+            elif isinstance(k, str) and sensitive_name(k):
                 v = _mask_whole(v, changed)
             elif isinstance(k, str) and _account_name(k):
                 v = _mask_whole(v, changed, only_ids=True)
-            key = _walk(k, every, changed, cut_at) if isinstance(k, str) else k
+            key = _walk(k, every, changed, cut_at, here, dropped) if isinstance(k, str) else k
             n = 2
             while key in out:                   # two names masked alike: both entries kept
                 key = f"{key.rsplit('#', 1)[0] if n > 2 else key}#{n}"
                 n += 1
-            out[key] = _walk(v, every, changed, cut_at)
+            out[key] = _walk(v, every, changed, cut_at, here, dropped)
         return out
     if isinstance(value, (list, tuple)):
-        if len(value) == 2 and isinstance(value[0], str) and sensitive_name(value[0]):
-            value = [value[0], _mask_whole(value[1], changed)]     # a [name, value] pair
-        return [_walk(v, every, changed, cut_at) for v in value]
+        items = list(value)
+        for i in range(len(items) - 1):        # [name, value, ...]: the item after a name
+            if isinstance(items[i], str) and sensitive_name(items[i]):
+                items[i + 1] = _mask_whole(items[i + 1], changed)
+        return [_walk(v, every, changed, cut_at, path, dropped) for v in items]
     return value
 
 
@@ -399,21 +485,95 @@ def redact_evidence(value, *secrets: str | None):
     included, passed through `redact` with `secrets` (the key, token or account id a judge
     holds), whole: evidence is never cut, so a stored reply re-parses to what was recorded.
     A value under a credential field name (`sensitive_name`: `Authorization`, `x-api-key`,
-    `token`, `*_secret`..., in a dict or a [name, value] pair, at any depth) is masked whole
-    whatever it holds, and an id under an account, owner or tenant name likewise. Numbers
-    (other than such ids), booleans and None are kept; a tuple becomes a list, as JSON writes
-    it; two names masked alike stay two entries (`***`, `***#2`). The credential variables
-    are read once per call."""
+    `token`, `*_secret`..., as a dict entry, a name/value pair or the item after a name in a
+    list, at any depth) is masked whole whatever it holds, and an id under an account, owner
+    or tenant name likewise. A container of HTTP headers keeps only `HARMLESS_HEADERS`.
+    Numbers (other than such ids), booleans and None are kept; a tuple becomes a list, as JSON
+    writes it; two names masked alike stay two entries (`***`, `***#2`). The credential
+    variables are read once per call."""
     return _walk(value, _held(secrets), [False], None)
 
 
 def evidence_raw(raw, *secrets: str | None):
     """A judgment's `raw` as evidence may keep it (`redact_evidence`), with `redacted: true`
-    added when masking changed any of it: the decision was read from the reply as it arrived,
-    and the record says that what it keeps was altered after. A `raw` that is not a dict is
-    masked and returned without the mark."""
-    changed = [False]
-    out = _walk(raw, _held(secrets), changed, None)
-    if changed[0] and isinstance(out, dict):
-        out["redacted"] = True
+    added when masking changed any of it (the decision was read from the reply as it arrived,
+    and the record says that what it keeps was altered after), and the headers it dropped
+    added to `dropped_fields`. A `raw` that is not a dict is masked and returned without the
+    marks."""
+    changed: list[bool] = [False]
+    dropped: list[str] = []
+    out = _walk(raw, _held(secrets), changed, None, "", dropped)
+    if isinstance(out, dict):
+        if dropped:
+            prior = out.get("dropped_fields")
+            had: list = prior if isinstance(prior, list) else []
+            out["dropped_fields"] = sorted({*had, *(_redact_with(d, [], None) for d in dropped)})
+        if changed[0]:
+            out["redacted"] = True
     return out
+
+
+# --- what evidence keeps of a provider's reply ------------------------------------------------
+
+SCALAR = "scalar"        # a string, a number, a boolean or None
+SCALARS = "scalars"      # scalars at any depth (an error object)
+NUMBERS = "numbers"      # numbers only, at any depth (a usage record's counts)
+_DROP = object()
+
+
+def kept_fields(value, spec, path: str, dropped: list[str]):
+    """`value` with only the fields `spec` names: deny by default. `spec` is SCALAR, SCALARS,
+    NUMBERS, a dict of field name -> spec (`"*"`: any name, for a mapping keyed by option
+    labels) or a one-item list (the spec of every item). Every field left out is recorded by
+    its path in `dropped` (`answer.debug`); list items share their list's path. A value left
+    out whole is None."""
+    got = _keep(value, spec, path, dropped)
+    return None if got is _DROP else got
+
+
+def _keep(value, spec, path: str, dropped: list[str]):
+    scalar = value is None or isinstance(value, (str, int, float, bool))
+    if spec == SCALAR:
+        return value if scalar else _skip(path, dropped)
+    if spec in (SCALARS, NUMBERS):
+        numeric = isinstance(value, (int, float)) and not isinstance(value, bool)
+        if isinstance(value, dict):
+            out = {k: _keep(v, spec, f"{path}.{k}" if path else str(k), dropped)
+                   for k, v in value.items()}
+            out = {k: v for k, v in out.items() if v is not _DROP}
+            # an object that held only what is left out goes too: `{}` would say nothing
+            return _skip(path, dropped) if value and not out else out
+        if isinstance(value, (list, tuple)):
+            items = [_keep(v, spec, path, dropped) for v in value]
+            return [v for v in items if v is not _DROP]
+        return value if (numeric if spec == NUMBERS else scalar) else _skip(path, dropped)
+    if isinstance(spec, list):
+        if not isinstance(value, (list, tuple)):
+            return value if value is None else _skip(path, dropped)
+        items = [_keep(v, spec[0], path, dropped) for v in value]
+        return [v for v in items if v is not _DROP]
+    if not isinstance(value, dict):
+        return value if value is None else _skip(path, dropped)
+    out = {}
+    for k, v in value.items():
+        here = f"{path}.{k}" if path else str(k)
+        sub = spec.get(k, spec.get("*"))
+        if sub is None:
+            dropped.append(here)
+            continue
+        got = _keep(v, sub, here, dropped)
+        if got is not _DROP:
+            out[k] = got
+    return out
+
+
+def _skip(path: str, dropped: list[str]):
+    dropped.append(path)
+    return _DROP
+
+
+def with_dropped(raw: dict, dropped: list[str]) -> dict:
+    """`raw` with `dropped_fields` (sorted, unique) when anything was left out."""
+    if dropped:
+        raw["dropped_fields"] = sorted(set(dropped))
+    return raw

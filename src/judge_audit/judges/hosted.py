@@ -30,6 +30,10 @@ and why:
   with another tokenizer. The Decisions API's documentation describes no `usage` field,
   but the live API returns `usage.input_tokens` (2026-10-07); it is read when present.
 - **What was served**: any model id and response id the response carries.
+- **Only what the audit reads is kept** (deny by default): of an answer, its type, choice,
+  score, probabilities, confidence and refusal (`DECISIONS_ANSWER`, `CLEF_ANSWER`); of a
+  usage record, its counts. Every other field, a header, a trace or a debug object, is left
+  out and named in `raw.dropped_fields`.
 - **Credentials from the environment only.** No key, token or account id is recorded or
   printed: every error message passes through `_redact`, which masks the token, the account
   id and the URL segment that holds it, and every `raw`, a successful reply's included,
@@ -69,6 +73,7 @@ from .base import (
     redact,
     served_of,
 )
+from .secrets import NUMBERS, SCALAR, SCALARS, kept_fields, with_dropped
 from .systemone import CRITERIA_VERSION, systemone_question
 
 DECISIONS_ENDPOINT = "https://api.openai.com/v1/decisions"
@@ -275,6 +280,24 @@ def as_evidence(value):
     return value
 
 
+# What evidence keeps of an answer: the fields the audit reads, nothing else (deny by default).
+# Every other field is left out and named in `raw.dropped_fields`.
+DECISIONS_ANSWER = {"type": SCALAR, "name": SCALAR, "choice": SCALAR, "probability": SCALAR,
+                    "score": SCALAR, "confidence": SCALAR, "refusal": SCALAR,
+                    "probabilities": [{"value": SCALAR, "label": SCALAR,
+                                       "probability": SCALAR}]}
+CLEF_ANSWER = {"type": SCALAR, "choice": SCALAR, "noul": SCALAR, "score": SCALAR,
+               "confidence": SCALAR, "probabilities": {"*": SCALAR}, "error": SCALARS}
+
+
+def kept_reply(answer, usage, spec) -> dict:
+    """`answer` and `usage` as evidence keeps them: the answer's fields in `spec`, the usage
+    record's counts; what was left out is named in `dropped_fields`."""
+    dropped: list[str] = []
+    return with_dropped({"answer": kept_fields(answer, spec, "answer", dropped),
+                         "usage": kept_fields(usage, NUMBERS, "usage", dropped)}, dropped)
+
+
 def evidence(raw: dict, secrets: tuple[str, ...]) -> dict:
     """`raw` as a judgment keeps it: non-finite numbers as text (`as_evidence`), then the
     judge's secrets and every credential-shaped value masked (`evidence_raw`): a server may
@@ -409,8 +432,8 @@ class OpenAIDecisionsJudge(_HostedDecisionJudge):
         out: list[Judgment] = []
         for q in questions:
             ans = answers.get(q.name)
-            base = {"answer": ans, "usage": usage, "served": served,
-                    "response_id": reply.get("id")}
+            base = {**kept_reply(ans, usage, DECISIONS_ANSWER), "served": served,
+                    "response_id": kept_fields(reply.get("id"), SCALAR, "response_id", [])}
             if isinstance(ans, dict) and isinstance(ans.get("probabilities"), list):
                 base.update(declared_sum(x.get("probability") for x in ans["probabilities"]
                                          if isinstance(x, dict)))
@@ -496,7 +519,7 @@ class ClefHostedJudge(_HostedDecisionJudge):
         out: list[Judgment] = []
         for q in questions:
             ans = answers.get(q.name)
-            base = {"answer": ans, "usage": usage, "served": served}
+            base = {**kept_reply(ans, usage, CLEF_ANSWER), "served": served}
             if isinstance(ans, dict) and isinstance(ans.get("probabilities"), dict):
                 base.update(declared_sum(ans["probabilities"].values()))
             if not isinstance(ans, dict) or "error" in ans:
