@@ -72,8 +72,30 @@ def dataset_changed(ckpt: Path, run: dict, labels: Path) -> list[str]:
     now = {sha256_of(str(labels)), sha256_rows_of(str(labels))}
     if recorded & now:
         return []
-    return [f"{ckpt}: dataset sha256 changed since the run: {labels} is "
+    return [f"{rel(ckpt)}: dataset sha256 changed since the run: {rel(labels)} is "
             f"{sha256_rows_of(str(labels))!r} (rows), the run recorded {sorted(recorded)}"]
+
+
+def subset_changed(ckpt: Path, subset: dict, split: Path, wanted: list[int]) -> list[str]:
+    """Gaps when the split file is not the one the run recorded under `rows_subset`: its
+    sha256, and the number of rows its part names. A header without them is not held to
+    them. A cut of the split would otherwise pass: every row it still names is answered."""
+    out = []
+    if subset.get("sha256") is not None and sha256_of(str(split)) != subset["sha256"]:
+        out.append(f"{rel(ckpt)}: split sha256 changed since the run: {rel(split)} is "
+                   f"{sha256_of(str(split))!r}, the run recorded {subset['sha256']!r}")
+    if subset.get("n") is not None and len(wanted) != subset["n"]:
+        out.append(f"{rel(ckpt)}: the run recorded {subset['n']} rows in "
+                   f"{rel(split)}:{subset['part']}, it names {len(wanted)} now")
+    return out
+
+
+def rel(path: Path) -> str:
+    """A path as the repo names it: never the machine's absolute path in a CI log."""
+    try:
+        return str(Path(path).relative_to(ROOT))
+    except ValueError:
+        return str(path)
 
 
 def gaps(ckpt: Path) -> list[str]:
@@ -90,7 +112,11 @@ def gaps(ckpt: Path) -> list[str]:
     rows = load_jsonl(str(ROOT / labels))
     subset = run.get("rows_subset")
     if subset:
-        wanted = sorted(json.loads((ROOT / subset["split"]).read_text())[subset["part"]])
+        split = ROOT / subset["split"]
+        wanted = sorted(json.loads(split.read_text())[subset["part"]])
+        changed = subset_changed(ckpt, subset, split, wanted)
+        if changed:   # not the rows the run was made on: the row checks below mean nothing
+            return changed
     else:
         wanted = list(range(len(rows)))
     # Every reader counts every row line, so a row written twice is counted twice: a gap.

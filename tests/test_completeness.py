@@ -509,6 +509,94 @@ def test_a_legacy_checkpoint_is_held_to_its_pinned_rows_digest(tmp_path, monkeyp
     assert len(found) == 1 and "dataset sha256" in found[0]
 
 
+def test_the_dataset_gap_names_paths_relative_to_the_repo(tmp_path, monkeypatch):
+    cc, ckpt, labels = _hashed_run(tmp_path, monkeypatch)
+    monkeypatch.setattr(cc, "ROOT", tmp_path)
+    labels.write_text(labels.read_text().replace('"b": "y"', '"b": "x"', 1))
+    [found] = cc.gaps(ckpt)
+    assert found.startswith("x.ckpt.jsonl: dataset sha256 changed") and " labels.jsonl is " in found
+    assert str(tmp_path) not in found
+
+
+def _subset_run(tmp_path, monkeypatch, split_rows, recorded_sha=None, recorded_n=None):
+    """A checkpoint over a split's `heldout` part of a 70-row dataset, every row answered."""
+    import json
+    from pathlib import Path
+
+    _scripts()
+    import check_complete
+
+    from judge_audit.runner import sha256_of
+
+    labels = tmp_path / "labels.jsonl"
+    labels.write_text("\n".join(json.dumps(r) for r in rows(70)) + "\n")
+    split = tmp_path / "split.json"
+    split.write_text(json.dumps({"heldout": split_rows}))
+    subset = {"split": str(split), "part": "heldout",
+              "sha256": recorded_sha or sha256_of(str(split)),
+              "n": len(split_rows) if recorded_n is None else recorded_n}
+    ans = [{"question": "a", "decision": "x"}, {"question": "b", "decision": "y"}]
+    lines = [{"idx": -1, "run": {"dataset": {"path": str(labels)}, "rows_subset": subset}}]
+    lines += [{"idx": i, "judgments": ans} for i in sorted(split_rows)]
+    ckpt = tmp_path / "s.ckpt.jsonl"
+    ckpt.write_text("\n".join(json.dumps(x) for x in lines) + "\n")
+    monkeypatch.setattr(check_complete, "ROOT", Path("/"))
+    return check_complete, ckpt, split
+
+
+def test_a_subset_run_on_its_recorded_split_passes(tmp_path, monkeypatch):
+    cc, ckpt, _ = _subset_run(tmp_path, monkeypatch, list(range(0, 60)))
+    assert cc.gaps(ckpt) == []
+
+
+def test_a_cut_of_the_heldout_split_fails_the_completeness_check(tmp_path, monkeypatch):
+    """task-routing's 60-row held-out split cut to its first 30 rows, the checkpoint holding
+    only those 30: every row it covers is answered, but it is not the split the run named."""
+    import json
+    from pathlib import Path
+
+    from judge_audit.runner import sha256_of
+
+    committed = (Path(__file__).resolve().parent.parent / "examples" / "task-routing"
+                 / "split-heldout.json")
+    heldout = sorted(json.loads(committed.read_text(encoding="utf-8"))["heldout"])
+    assert len(heldout) == 60
+    cut = heldout[:30]
+    # the header recorded the committed split; the file it names now holds 30 rows
+    cc, ckpt, _ = _subset_run(tmp_path, monkeypatch, cut,
+                              recorded_sha=sha256_of(str(committed)), recorded_n=60)
+    found = cc.gaps(ckpt)
+    assert any("split" in g and "sha256 changed" in g for g in found), found
+    assert any("60 rows" in g and "30" in g for g in found), found
+    # the same cut with a matching digest but the original size still fails on n
+    cc, ckpt, _ = _subset_run(tmp_path, monkeypatch, cut, recorded_n=60)
+    assert [g for g in cc.gaps(ckpt) if "60 rows" in g], cc.gaps(ckpt)
+
+
+def test_the_cost_probe_split_is_held_to_its_recorded_digest(tmp_path, monkeypatch):
+    """The v05 pilot's cost probe (docs/runs/v05-pilot/cost-probe-rows.json) is checked too:
+    its committed checkpoints pass, and the same checkpoint with another recorded digest
+    does not."""
+    import json
+
+    _scripts()
+    import check_complete
+
+    probes = [c for c in sorted((check_complete.ROOT / "docs" / "runs").rglob("*.ckpt.jsonl"))
+              if "cost-probe-rows.json" in c.read_text(encoding="utf-8").splitlines()[0]]
+    assert probes
+    for ckpt in probes:
+        assert check_complete.gaps(ckpt) == [], ckpt
+    lines = probes[0].read_text(encoding="utf-8").splitlines()
+    head = json.loads(lines[0])
+    assert head["run"]["rows_subset"]["split"] == "docs/runs/v05-pilot/cost-probe-rows.json"
+    head["run"]["rows_subset"]["sha256"] = "00" * 32
+    moved = tmp_path / probes[0].name
+    moved.write_text("\n".join([json.dumps(head)] + lines[1:]) + "\n")
+    found = check_complete.gaps(moved)
+    assert any("cost-probe-rows.json" in g and "sha256 changed" in g for g in found), found
+
+
 def test_the_legacy_pins_are_the_digests_of_the_files_the_first_audits_read():
     # the rows digest of each file as committed with its checkpoint (v0.2.0): a header
     # line added later does not move it, a changed row would

@@ -669,7 +669,7 @@ def render(data: dict) -> str:
               "a new prompt.",
               f"- **Cost**: $0 per row after {te.get('wall_time_s', 0):.0f} s (emails) and "
               f"{tr.get('wall_time_s', 0):.0f} s (router) of training on {device_of(te)}; "
-              f"p50 latency {secs(clean.get('p50_latency_s', 0), 3)} per row.",
+              f"p50 latency {secs(clean.get('p50_latency_s'), 3)} per row.",
               ""]
         L += reading_run2(judges, training)
     present = [s for s in FINETUNED_RUNS if s in judges]

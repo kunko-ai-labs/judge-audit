@@ -241,6 +241,8 @@ Each number carries the same 95 % interval as the others (§ Confidence interval
 
 p50 and p99 are interpolated between order statistics (Hyndman–Fan type 7: numpy's default, `statistics.quantiles(method="inclusive")`), the same rule the bootstrap uses to cut its interval. With 200 rows a p99 sits between the second- and third-slowest rows, so one or two stalled calls barely move it: every report that prints a p99 (run reports, the adversarial audit, the Action's PR comment) therefore prints the slowest call next to it.
 
+A question the judge skipped has no latency: it is left out of the percentiles, not counted as instant. A judge that answered nothing has no latency at all: `p50_latency_s`, `p99_latency_s` and `max_latency_s` are `null` in the result JSON, and every report prints `unknown`, never `0.0 s`. A jury in the consensus table with such a member has no mean latency (`—`).
+
 ## Confidence intervals
 
 Every headline number — accuracy, ECE, zero-error coverage, and the majority accuracy of a jury — is a statistic of a few hundred rows at most, so each one is published with a 95 % interval in the compact form `66.7% [52.5, 80.3]` (Jev on the bare-label router): how far the number would move on another sample of the same size, drawn the same way. Two methods produce those intervals — a clustered bootstrap by default, and the exact binomial interval at the boundary where the bootstrap degenerates — and every table says which one it printed.
