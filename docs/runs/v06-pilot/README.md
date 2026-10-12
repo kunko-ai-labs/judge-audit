@@ -236,7 +236,7 @@ Both runs took place on 2026-10-12, after this amendment was pushed (commit `569
   | `deepseek-r1-en-US.first40.repeat.ckpt.jsonl` | 2026-10-12T16:02:36+00:00 | `332828b91f16ff2452da0d516b0856e11eff9f81e95087ec4f1667be790ede09` |
 
   Each holds the 40 rows of `labels-pilot-en-US.first40.jsonl` once.
-- **Gate (item 4).** 0 unparsed, blank or not-sent rows and no truncation (largest output 1,291 tokens of the 4,096 budget); every confidence is known; `scripts/check_complete.py` reports 0 gaps. The route reports no served model id, so none is recorded.
+- **Gate (item 4).** 0 unparsed, blank or not-sent rows and no truncation (largest output 767 tokens in the run and 1,291 in the repeat, of the 4,096 budget); every confidence is known; `scripts/check_complete.py` reports 0 gaps. The route reports no served model id, so none is recorded, and the plan's served-model check (§4 of the plan) cannot detect a change of model for this judge; the study report says so.
 - **Between-run spread.** The repeat gave the same decision on 38 of 40 rows. The confidence changed by 0.021 on average, and by 0.10 for the row that changed most. A planning input for the study's §5, not a finding.
 - **Tokens.** About 567 input and 319 output tokens per row in the first run (the plan's §10 assumed 620 and 640).
 - **Cost.** $0.0994 for the first run and $0.1045 for the repeat, $0.2039 in all, from the checkpoints' `cost_usd`; within the $2 ceiling.
