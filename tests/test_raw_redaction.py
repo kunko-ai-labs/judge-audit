@@ -53,7 +53,8 @@ def no_ambient_credentials(monkeypatch):
                  "JEV_API_KEY", "ANTHROPIC_BASE_URL", "LLM_TEMPERATURE", "LLM_SAMPLES",
                  "LLM_EXTRA_BODY", "LLM_PROMPT_TEMPLATE", "DECISIONS_ENDPOINT",
                  "CLEF_HOSTED_ENDPOINT", "DECISIONS_QUESTIONS_PER_REQUEST",
-                 "CLEF_HOSTED_QUESTIONS_PER_REQUEST"):
+                 "CLEF_HOSTED_QUESTIONS_PER_REQUEST", "OPENROUTER_API_KEY",
+                 "MICROSOFT_DECISION_ENDPOINT", "MICROSOFT_DECISION_VERSION"):
         monkeypatch.delenv(name, raising=False)
 
 

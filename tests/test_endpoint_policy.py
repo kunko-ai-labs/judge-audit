@@ -81,7 +81,9 @@ def test_plain_http_to_a_lan_server_is_allowed_only_without_a_key():
     ({"CLOUDFLARE_API_TOKEN": KEY, "CLOUDFLARE_ACCOUNT_ID": ACCOUNT,
       "CLEF_HOSTED_ENDPOINT": "{url}"},
      lambda: __import__("judge_audit.judges.hosted", fromlist=["x"]).ClefHostedJudge()),
-], ids=["jev", "llm", "openai-decisions", "clef-hosted"])
+    ({"OPENROUTER_API_KEY": KEY, "MICROSOFT_DECISION_ENDPOINT": "{url}"},
+     lambda: __import__("judge_audit.judges.hosted", fromlist=["x"]).MicrosoftDecisionJudge()),
+], ids=["jev", "llm", "openai-decisions", "clef-hosted", "microsoft-decision"])
 @pytest.mark.parametrize("url", ["http://example.com\\@127.0.0.1/", "http://api.example.test/v1",
                                  "https://u:p@api.example.test/v1"])
 def test_every_keyed_endpoint_follows_the_rule(monkeypatch, env, make, url):

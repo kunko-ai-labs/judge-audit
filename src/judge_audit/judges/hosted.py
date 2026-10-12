@@ -1,7 +1,8 @@
-"""Hosted decision models behind an HTTP API: the OpenAI Decisions API (`openai-decisions`)
-and Clef / Clef-flash on Workers AI (`clef-hosted`).
+"""Hosted decision models behind an HTTP API: the OpenAI Decisions API (`openai-decisions`),
+Clef / Clef-flash on Workers AI (`clef-hosted`) and Microsoft-Decision-1 through OpenRouter's
+Decisions route (`microsoft-decision`).
 
-Both take a state and typed questions and return a probability per option. What is recorded,
+Each takes a state and typed questions and return a probability per option. What is recorded,
 and why:
 
 - **Confidence is the probability of the chosen option**, read from the answer's per-option
@@ -30,6 +31,16 @@ and why:
   with another tokenizer. The Decisions API's documentation describes no `usage` field,
   but the live API returns `usage.input_tokens` (2026-10-07); it is read when present.
 - **What was served**: any model id and response id the response carries.
+- **Microsoft-Decision-1 is pinned.** OpenRouter routes a model to any provider serving it
+  unless told not to: the request names the model's one listed endpoint with
+  `allow_fallbacks: false`, and a reply that names another served version or provider stops
+  the run (`MICROSOFT_DECISION_VERSION` moves the pin on purpose). The served model and
+  provider are kept as typed fields, and OpenRouter's own `usage.cost` beside the cost
+  computed here (`reported_cost_usd`). Always one question per request.
+- **Over length is no answer, never a truncated one.** A request the route refuses for its
+  length (a 413, or a 400 that says so), or a reply reporting more input tokens than the
+  model's context, is no answer with `raw.error` `max_length_exceeded`, counted against the
+  judge. The tokenizer is not public, so nothing is counted before sending.
 - **Only what the audit reads is kept** (deny by default): of an answer, its type, choice,
   score, probabilities, confidence and refusal (`DECISIONS_ANSWER`, `CLEF_ANSWER`); of a
   usage record, its counts. Every other field, a header, a trace or a debug object, is left
@@ -46,9 +57,14 @@ Environment:
   clef-hosted       CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID; CLEF_HOSTED_MODEL
                     (clef-flash | clef, default clef-flash);
                     CLEF_HOSTED_QUESTIONS_PER_REQUEST (1 | all, default 1)
-  both              HOSTED_MIN_INTERVAL_S (seconds between calls, default 0);
-                    DECISIONS_ENDPOINT, CLEF_HOSTED_ENDPOINT (another server speaking the
-                    same API, e.g. a proxy; CLEF_HOSTED_ENDPOINT may hold {model_id})
+  microsoft-decision
+                    OPENROUTER_API_KEY; MICROSOFT_DECISION_VERSION (the served version it
+                    pins, default microsoft/microsoft-decision-1-20261009); always one
+                    question per request
+  all               HOSTED_MIN_INTERVAL_S (seconds between calls, default 0);
+                    DECISIONS_ENDPOINT, CLEF_HOSTED_ENDPOINT, MICROSOFT_DECISION_ENDPOINT
+                    (another server speaking the same API, e.g. a proxy;
+                    CLEF_HOSTED_ENDPOINT may hold {model_id})
 """
 from __future__ import annotations
 
@@ -85,7 +101,9 @@ from .secrets import (
     OPTION,
     ROWS,
     USAGE,
+    count,
     kept_fields,
+    model_id,
     one_of,
     with_dropped,
 )
@@ -103,7 +121,7 @@ CLEF_MODELS = {"clef-flash": ("@cf/cloudflare/clef-flash", 0.09),
                "clef": ("@cf/cloudflare/clef", 0.24)}
 CLEF_MAX_QUESTIONS = 64            # per request, as the Workers AI schema says
 
-RETRY_STATUS = (429, 500, 502, 503, 504, 529)
+RETRY_STATUS = (429, 500, 502, 503, 504, 524, 529)
 ATTEMPTS = 6                       # for a server that answers busy
 CONNECT_BUDGET_S = 20.0            # total backoff for a server that cannot be reached
 TIMEOUT_S = 120
@@ -170,11 +188,21 @@ def _redact(text: str, secrets: tuple[str, ...]) -> str:
     return redact(text, *secrets)
 
 
+class HostedHTTPError(RuntimeError):
+    """An HTTP error a hosted API answered and that is not retried, with its `status`; its
+    text is already masked (`_redact`) and cut."""
+
+    def __init__(self, message: str, status: int):
+        super().__init__(message)
+        self.status = status
+
+
 def post_json(url: str, body: dict, label: str, secrets: tuple[str, ...]) -> dict:
     """POST `body` with the first secret as the bearer token; the reply's JSON. A busy server
     (429, 5xx) is retried with backoff; one that cannot be reached is retried within
     `CONNECT_BUDGET_S`. Every error names the service (`label`) and the status, with the
-    secrets and the account segment of the URL masked."""
+    secrets and the account segment of the URL masked; one that is not retried is a
+    `HostedHTTPError` carrying its status."""
     data = json.dumps(body, allow_nan=False).encode()
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {secrets[0]}"}
     last, waited, unreachable = "", 0.0, False
@@ -187,7 +215,7 @@ def post_json(url: str, body: dict, label: str, secrets: tuple[str, ...]) -> dic
             last = _redact(f"{e.code}: {e.read().decode(errors='replace')}", secrets)[:300]
             unreachable = False
             if e.code not in RETRY_STATUS:
-                raise RuntimeError(f"{label} returned {last}") from None
+                raise HostedHTTPError(f"{label} returned {last}", e.code) from None
             wait = min(2 ** attempt * 2 + random.uniform(0, 1), 60)
         except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as e:
             # reported by class only: its text can hold the URL, and the URL the account
@@ -601,3 +629,146 @@ class ClefHostedJudge(_HostedDecisionJudge):
                                                   ans.get("confidence"), NUMBER,
                                                   "native_confidence", [])}, secrets)))
         return out
+
+
+# Microsoft-Decision-1 through OpenRouter's Decisions route (alpha), checked 2026-10-12: one
+# endpoint, served version `microsoft/microsoft-decision-1-20261009`, context 32,768 tokens,
+# $0.042 per million input tokens, output not billed, no sampling parameter.
+MICROSOFT_ENDPOINT = "https://openrouter.ai/api/alpha/decisions"
+MICROSOFT_MODEL = "microsoft/microsoft-decision-1"
+MICROSOFT_VERSION = "microsoft/microsoft-decision-1-20261009"
+MICROSOFT_ROUTE_PROVIDER = "azure"          # OpenRouter's slug for the model's one endpoint
+MICROSOFT_PRICE_PER_MTOK = 0.042
+MICROSOFT_MAX_INPUT_TOKENS = 32_768
+MICROSOFT_ANSWER = {**CLEF_ANSWER, "refusal": BOOL}
+OVER_LENGTH = "max_length_exceeded"
+# what a server says when it refuses a request for its length (a 413 always is one)
+_TOO_LONG = re.compile(r"context[ _-]?(?:length|window)|too (?:long|large)|too many tokens|"
+                       r"token limit|max_length_exceeded", re.I)
+
+
+class MicrosoftDecisionJudge(_HostedDecisionJudge):
+    """Microsoft-Decision-1 through OpenRouter's Decisions route (`POST /api/alpha/decisions`):
+    a System One request, the provider pinned without fallback, the served version checked."""
+
+    name = "microsoft-decision"
+    price = MICROSOFT_PRICE_PER_MTOK
+    max_input_tokens = MICROSOFT_MAX_INPUT_TOKENS
+    over_length_advice = ("shorten the state or the options: Microsoft-Decision-1 reads at "
+                          f"most {MICROSOFT_MAX_INPUT_TOKENS:,} tokens per request")
+
+    def __init__(self, api_key: str | None = None):
+        self._key = api_key or os.environ.get("OPENROUTER_API_KEY", "")
+        if not self._key:
+            raise RuntimeError("OPENROUTER_API_KEY is not set (Microsoft-Decision-1 through "
+                               "OpenRouter)")
+        version = (os.environ.get("MICROSOFT_DECISION_VERSION") or MICROSOFT_VERSION).strip()
+        if model_id(version) != version:
+            raise ValueError("MICROSOFT_DECISION_VERSION must be a plain model id such as "
+                             f"{MICROSOFT_VERSION}")
+        self.version = version
+        self.model = MICROSOFT_MODEL
+        self.per_request = 1
+        self._override = endpoint_override("MICROSOFT_DECISION_ENDPOINT")
+        self.endpoint = self._override.url if self._override else MICROSOFT_ENDPOINT
+
+    def describe(self) -> dict:
+        return {"name": self.name, "provider": "hosted-api", "model": self.model,
+                "served_version": self.version, "route": "openrouter",
+                "route_provider": MICROSOFT_ROUTE_PROVIDER, "allow_fallbacks": False,
+                **self._endpoint_provenance(MICROSOFT_ENDPOINT),
+                "criteria_version": CRITERIA_VERSION,
+                "confidence_method": "P(chosen option), from the answer's per-option "
+                                     "probabilities (yes/no: of the answer given)",
+                "native_confidence": "the route's `confidence` field, not defined as "
+                                     "P(chosen option); kept in raw as native_confidence, "
+                                     "not audited",
+                "temperature": "n/a",
+                "questions_per_request": 1,
+                "max_input_tokens": self.max_input_tokens,
+                "input_price_per_mtok_usd": self.price, "output_price_per_mtok_usd": 0.0,
+                "sum_tolerance": "options x 0.5 x 10^-decimals (rounding)"}
+
+    def _over_length(self, q: Question, latency: float, cost: float | None, problem: str,
+                     extra: dict | None = None) -> Judgment:
+        """No answer for a request the route would not read whole (`max_length_exceeded`):
+        counted against the judge, never truncated and answered."""
+        return _no_answer(q, latency, cost, {**(extra or {}), "error": OVER_LENGTH,
+                                             "max_len": self.max_input_tokens,
+                                             "problems": [problem]}, (self._key,))
+
+    def _check_served(self, reply: dict) -> None:
+        """Stop unless the reply says it was served by the pinned version and provider: a
+        judgment is never recorded under a version it was not made by."""
+        served = model_id(reply.get("model"))
+        provider = model_id(reply.get("provider"))
+        if served != self.version or (provider or "").lower() != MICROSOFT_ROUTE_PROVIDER:
+            raise RuntimeError(
+                f"Microsoft-Decision-1 was served as {served or 'an unnamed model'} by "
+                f"{provider or 'an unnamed provider'}, not the pinned {self.version} by "
+                f"{MICROSOFT_ROUTE_PROVIDER}; nothing was recorded for this row. Set "
+                "MICROSOFT_DECISION_VERSION to pin another version on purpose")
+
+    def _call(self, state: str, questions: list[Question]) -> list[Judgment]:
+        (q,) = questions                                  # one question per request
+        body = {"model": self.model,
+                "provider": {"order": [MICROSOFT_ROUTE_PROVIDER], "allow_fallbacks": False},
+                "state": state, "questions": {q.name: systemone_question(q)}}
+        secrets = (self._key,)
+        t0 = time.monotonic()
+        try:
+            reply = post_json(self.endpoint, body, "OpenRouter's Decisions route", secrets)
+        except HostedHTTPError as e:
+            if e.status == 413 or (e.status == 400 and _TOO_LONG.search(str(e))):
+                # refused before it was read; whether it was billed is not known
+                return [self._over_length(q, time.monotonic() - t0, None,
+                                          f"the route refused the request as over length "
+                                          f"(HTTP {e.status})")]
+            raise
+        latency = time.monotonic() - t0
+        if not isinstance(reply, dict):
+            raise RuntimeError("OpenRouter's Decisions route returned no JSON object")
+        self._check_served(reply)
+        answers = reply.get("answers")
+        ans = answers.get(q.name) if isinstance(answers, dict) else None
+        usage = reply.get("usage") or None
+        cost = self._cost(usage)                              # billed whatever the answer
+        dropped: list[str] = []
+        base = {**kept_reply(ans, usage, MICROSOFT_ANSWER, q),
+                "served": served_of({"model": reply.get("model")}),
+                "served_provider": kept_fields(reply.get("provider"), ID, "provider", dropped),
+                "response_id": kept_fields(reply.get("id"), ID, "response_id", dropped),
+                "reported_cost_usd": kept_fields(usage.get("cost") if isinstance(usage, dict)
+                                                 else None, NUMBER, "usage.cost", dropped)}
+        if isinstance(ans, dict) and isinstance(ans.get("probabilities"), dict):
+            base.update(declared_sum(ans["probabilities"].values()))
+        tokens = usage.get("input_tokens") if isinstance(usage, dict) else None
+        if count(tokens) is not None and tokens > self.max_input_tokens:
+            return [self._over_length(q, latency, cost,
+                                      f"the route reports {tokens} input tokens, more than "
+                                      f"its context of {self.max_input_tokens}", base)]
+        if isinstance(ans, dict) and ans.get("error") == OVER_LENGTH:
+            return [self._over_length(q, latency, cost,
+                                      "the route refused the question as over length", base)]
+        if not isinstance(ans, dict) or "error" in ans or ans.get("type") == "refusal":
+            refused = isinstance(ans, dict) and ans.get("type") == "refusal"
+            return [_no_answer(q, latency, cost, {**base, "refusal": refused}, secrets)]
+        chosen = ans.get("choice")
+        if q.type is QuestionType.CHOICE and (chosen is None or str(chosen).strip() == ""):
+            return [_no_answer(q, latency, cost, {**base, "blank": True}, secrets)]
+        probs = ans.get("probabilities")
+        got = read_checked(q, ans.get("type", ""),
+                           {str(k): v for k, v in probs.items()} if isinstance(probs, dict)
+                           else {}, ans.get("noul"), None if chosen is None else str(chosen))
+        if isinstance(got, str):
+            return [_no_answer(q, latency, cost, {**base, "invalid": safe_reason(got, q)},
+                               secrets)]
+        decision, confidence, checked = got
+        if decision == UNSENT:
+            base["invalid"] = UNSENT_REASON
+        return [Judgment(question=q.name, decision=decision, confidence=confidence,
+                         latency_s=latency, cost_usd=cost,
+                         raw=evidence({**base, "probabilities": kept_probabilities(checked, q),
+                                       "native_confidence": kept_fields(
+                                           ans.get("confidence"), NUMBER,
+                                           "native_confidence", [])}, secrets))]

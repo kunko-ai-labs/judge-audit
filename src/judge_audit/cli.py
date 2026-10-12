@@ -21,7 +21,7 @@ from .judges.clef import ClefJudge
 from .judges.decider import DeciderJudge
 from .judges.decision2 import Decision2Judge
 from .judges.finetuned import FinetunedJudge
-from .judges.hosted import ClefHostedJudge, OpenAIDecisionsJudge
+from .judges.hosted import ClefHostedJudge, MicrosoftDecisionJudge, OpenAIDecisionsJudge
 from .judges.jev import JevJudge
 from .judges.laya import LayaJudge
 from .judges.llm import LLMJudge
@@ -53,7 +53,7 @@ from .runner import (
 )
 
 JUDGES = ("jev", "llm", "nli", "finetuned", "laya", "decision2", "decider", "strands", "clef",
-          "openai-decisions", "clef-hosted", "logprob", "simulated")
+          "openai-decisions", "clef-hosted", "microsoft-decision", "logprob", "simulated")
 
 
 def _die(msg: str) -> NoReturn:
@@ -120,6 +120,8 @@ def _judge(name: str, rows: list | None = None):
         return OpenAIDecisionsJudge(), ""
     if name == "clef-hosted":
         return ClefHostedJudge(), ""
+    if name == "microsoft-decision":
+        return MicrosoftDecisionJudge(), ""
     if name == "simulated":
         return SimulatedJudge(rows or []), SIMULATED_TAG
     _die(f"unknown judge '{name}' (available: {', '.join(JUDGES)})")
@@ -141,7 +143,8 @@ def _parser() -> argparse.ArgumentParser:
                         "decision2 / decider / strands / clef: open decision models, local, "
                         "pinned revision · openai-decisions: the OpenAI Decisions API, "
                         "OPENAI_API_KEY · clef-hosted: Clef / Clef-flash on Workers AI, "
-                        "CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID · "
+                        "CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID · microsoft-decision: "
+                        "Microsoft-Decision-1 through OpenRouter, OPENROUTER_API_KEY · "
                         "logprob: an open model's own option probabilities, MLX · see "
                         "docs/judges.md · simulated: nothing")
     r.add_argument("--format", choices=["md", "html"], default="md")

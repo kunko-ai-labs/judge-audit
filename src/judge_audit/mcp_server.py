@@ -138,6 +138,14 @@ JUDGE_INFO: dict[str, dict[str, object]] = {
                 ("CLEF_HOSTED_MODEL (clef-flash | clef), CLEF_HOSTED_QUESTIONS_PER_REQUEST "
                  "(1 | all; optional)")],
     },
+    "microsoft-decision": {
+        "description": "Microsoft-Decision-1 through OpenRouter's Decisions route, hosted, "
+                       "provider and served version pinned. Confidence is P(chosen option) "
+                       "from its per-option probabilities; its own confidence field is kept "
+                       "in raw, not audited. One question per request.",
+        "env": ["OPENROUTER_API_KEY", ("MICROSOFT_DECISION_VERSION (the served version "
+                                       "pinned; optional)")],
+    },
     "simulated": {
         "description": "Seeded simulator to see the pipeline without a key. Not a real "
                        "vendor audit; every result is tagged SIMULATED.",
