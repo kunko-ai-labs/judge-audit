@@ -30,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from judge_audit import __version__  # noqa: E402
 from judge_audit.cli import _judge, nll_text  # noqa: E402
 from judge_audit.ground_truth import parse_ground_truth  # noqa: E402
+from judge_audit.judges.secrets import evidence_raw  # noqa: E402
 from judge_audit.judges.simulated import SIMULATED_TAG  # noqa: E402
 from judge_audit.report import fmt4, render_html, render_markdown  # noqa: E402
 from judge_audit.runner import (  # noqa: E402
@@ -141,7 +142,7 @@ def checkpoint_row(idx: int, row: dict, judgments: list) -> dict:
     return {"idx": idx,
             "judgments": [{"question": j.question, "decision": j.decision,
                            "confidence": j.confidence, "latency_s": j.latency_s,
-                           "cost_usd": j.cost_usd, "raw": j.raw,
+                           "cost_usd": j.cost_usd, "raw": evidence_raw(j.raw),
                            "parse_status": j.parse_status} for j in judgments]
             + [missing_answer(q, judgments) for q in gap["missing"]]}
 

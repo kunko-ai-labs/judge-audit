@@ -15,7 +15,7 @@ from pathlib import Path
 
 from .certificate import DEFAULT_TARGETS, PRIMARY_TARGET, automation_certificate
 from .ground_truth import parse_ground_truth
-from .judges.base import Judge, Question, QuestionType
+from .judges.base import Judge, Question, QuestionType, evidence_raw, redact_evidence
 from .metrics.calibration import (
     CI_LEVEL,
     EQUAL_MASS,
@@ -364,7 +364,8 @@ def run_metadata(judge: Judge, labels_path: str | None = None,
     meta = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "judge_audit_version": __version__,
-        "judge": judge.describe(),
+        # what an adapter or a provider module describes is masked as every message is
+        "judge": redact_evidence(judge.describe()),
         "python": platform.python_version(),
     }
     if labels_path:
@@ -549,7 +550,8 @@ def record_of(idx: int, row: dict, judgment, expected: str) -> dict:
         "latency_s": judgment.latency_s,
         "cost_usd": judgment.cost_usd,
         "meta": row.get("_meta", {}),
-        "raw": judgment.raw,
+        # whatever the adapter masked itself: no credential reaches evidence (#161)
+        "raw": evidence_raw(judgment.raw),
     }
 
 

@@ -30,10 +30,15 @@ and why:
   with another tokenizer. The Decisions API's documentation describes no `usage` field,
   but the live API returns `usage.input_tokens` (2026-10-07); it is read when present.
 - **What was served**: any model id and response id the response carries.
+- **Only what the audit reads is kept** (deny by default): of an answer, its type, choice,
+  score, probabilities, confidence and refusal (`DECISIONS_ANSWER`, `CLEF_ANSWER`); of a
+  usage record, its counts. Every other field, a header, a trace or a debug object, is left
+  out and named in `raw.dropped_fields`.
 - **Credentials from the environment only.** No key, token or account id is recorded or
   printed: every error message passes through `_redact`, which masks the token, the account
-  id and the URL segment that holds it. A server that cannot be reached is reported within
-  `CONNECT_BUDGET_S`.
+  id and the URL segment that holds it, and every `raw`, a successful reply's included,
+  through `evidence_raw` (a record it changed says `redacted: true`). A server that cannot
+  be reached is reported within `CONNECT_BUDGET_S`.
 
 Environment:
   openai-decisions  OPENAI_API_KEY; DECISIONS_MODEL (default gpt-6-luna);
@@ -51,6 +56,7 @@ import json
 import math
 import os
 import random
+import re
 import time
 import urllib.error
 import urllib.parse
@@ -64,8 +70,24 @@ from .base import (
     Question,
     QuestionType,
     checked_endpoint,
+    evidence_raw,
     redact,
     served_of,
+)
+from .secrets import (
+    BOOL,
+    ERROR,
+    ID,
+    KEYED,
+    NUMBER,
+    NUMBER_OR_OPTION,
+    OPAQUE,
+    OPTION,
+    ROWS,
+    USAGE,
+    kept_fields,
+    one_of,
+    with_dropped,
 )
 from .systemone import CRITERIA_VERSION, systemone_question
 
@@ -231,6 +253,12 @@ def declared_sum(values) -> dict:
             "probability_decimals": max(decimals(v) for v in nums)}
 
 
+# The decision recorded for a chosen option that is not one of the options sent: it matches
+# no option, so it is scored wrong at the confidence declared; the label itself is not kept.
+UNSENT = "<unsent_option>"
+UNSENT_REASON = "chosen option is not among the options sent"
+
+
 def read_checked(q: Question, kind: str, probs: dict[str, float],
                  yes: float | None, chosen: str | None) -> tuple[str, float, dict] | str:
     """(decision, P(decision), probabilities), or the reason the answer cannot be used.
@@ -250,6 +278,10 @@ def read_checked(q: Question, kind: str, probs: dict[str, float],
         if reason:
             return reason
         assert chosen is not None
+        if chosen not in q.options:
+            # an answer, wrong, at the confidence it declared, as every other judge scores it;
+            # the label it invented is never stored (`UNSENT`)
+            return UNSENT, probs[chosen], probs
         return chosen, probs[chosen], probs
     reason = valid_distribution(probs)
     if reason:
@@ -273,9 +305,60 @@ def as_evidence(value):
     return value
 
 
-def _no_answer(q: Question, latency: float, cost: float | None, raw: dict) -> Judgment:
+# What evidence keeps of an answer: the fields the audit reads, each of the type it reads
+# (deny by default). A choice, a value or a probability's key is kept only when it is one of
+# the options sent. Every other field is left out and counted in `raw.dropped_fields`.
+ANSWER_TYPES = one_of("choice", "score", "predicate", "noul", "boolean", "refusal")
+DECISIONS_ANSWER = {"type": ANSWER_TYPES, "name": OPTION, "choice": OPTION,
+                    "probability": NUMBER, "score": NUMBER_OR_OPTION, "confidence": NUMBER,
+                    "refusal": BOOL,
+                    "probabilities": ROWS({"value": OPTION, "label": OPTION,
+                                           "probability": NUMBER}, "value")}
+CLEF_ANSWER = {"type": ANSWER_TYPES, "choice": OPTION, "noul": NUMBER,
+               "score": NUMBER_OR_OPTION, "confidence": NUMBER,
+               "probabilities": KEYED(NUMBER), "error": ERROR}
+
+
+def options_of(q: Question) -> list[str]:
+    """What a question's answer may name: its options, `true` / `false` for a yes/no one,
+    and the question's own name (a Decisions answer names its question)."""
+    return [*(q.options if q.type is not QuestionType.NOUL else ["true", "false"]), q.name]
+
+
+def kept_reply(answer, usage, spec, q: Question) -> dict:
+    """`answer` and `usage` as evidence keeps them: the answer's fields in `spec`, typed, the
+    usage record's known counts; what was left out is counted in `dropped_fields`."""
+    dropped: list[str] = []
+    return with_dropped({"answer": kept_fields(answer, spec, "answer", dropped, options_of(q)),
+                         "usage": kept_fields(usage, USAGE, "usage", dropped)}, dropped)
+
+
+def kept_probabilities(probs: dict, q: Question) -> dict:
+    """The checked probabilities as evidence keeps them: of the options sent only."""
+    return kept_fields(probs, KEYED(NUMBER), "probabilities", [], options_of(q)) or {}
+
+
+_QUOTED = re.compile(r"'[^']*'|\"[^\"]*\"")
+
+
+def safe_reason(reason: str, q: Question) -> str:
+    """Why an answer was not used, without echoing what the server sent: a quoted name that
+    is not one of the options sent is `<opaque>`."""
+    opts = set(options_of(q))
+    return _QUOTED.sub(lambda m: m.group(0) if m.group(0)[1:-1] in opts else OPAQUE, reason)
+
+
+def evidence(raw: dict, secrets: tuple[str, ...]) -> dict:
+    """`raw` as a judgment keeps it: non-finite numbers as text (`as_evidence`), then the
+    judge's secrets and every credential-shaped value masked (`evidence_raw`): a server may
+    echo them in a reply it answers as well as in an error."""
+    return evidence_raw(as_evidence(raw), *secrets)
+
+
+def _no_answer(q: Question, latency: float, cost: float | None, raw: dict,
+               secrets: tuple[str, ...]) -> Judgment:
     return Judgment(question=q.name, decision="", confidence=None, latency_s=latency,
-                    cost_usd=cost, raw=as_evidence(raw), parse_status="no_answer")
+                    cost_usd=cost, raw=evidence(raw, secrets), parse_status="no_answer")
 
 
 class _HostedDecisionJudge(Judge):
@@ -389,7 +472,8 @@ class OpenAIDecisionsJudge(_HostedDecisionJudge):
         body = {"model": self.model, "input": state,
                 "questions": [self.wire_question(q) for q in questions]}
         t0 = time.monotonic()
-        reply = post_json(self.endpoint, body, "the OpenAI Decisions API", (self._key,))
+        secrets = (self._key,)
+        reply = post_json(self.endpoint, body, "the OpenAI Decisions API", secrets)
         latency = (time.monotonic() - t0) / max(len(questions), 1)
         answers = {a.get("name"): a for a in reply.get("answers") or [] if isinstance(a, dict)}
         usage = reply.get("usage") or None
@@ -398,24 +482,30 @@ class OpenAIDecisionsJudge(_HostedDecisionJudge):
         out: list[Judgment] = []
         for q in questions:
             ans = answers.get(q.name)
-            base = {"answer": ans, "usage": usage, "served": served,
-                    "response_id": reply.get("id")}
+            base = {**kept_reply(ans, usage, DECISIONS_ANSWER, q), "served": served,
+                    "response_id": kept_fields(reply.get("id"), ID, "response_id", [])}
             if isinstance(ans, dict) and isinstance(ans.get("probabilities"), list):
                 base.update(declared_sum(x.get("probability") for x in ans["probabilities"]
                                          if isinstance(x, dict)))
             if not isinstance(ans, dict) or ans.get("type") == "refusal":
                 refused = isinstance(ans, dict) and ans.get("type") == "refusal"
-                out.append(_no_answer(q, latency, cost, {**base, "refusal": refused}))
+                out.append(_no_answer(q, latency, cost, {**base, "refusal": refused}, secrets))
                 continue
             got = self.read(q, ans)
             if isinstance(got, str):
-                out.append(_no_answer(q, latency, cost, {**base, "invalid": got}))
+                out.append(_no_answer(q, latency, cost,
+                                      {**base, "invalid": safe_reason(got, q)}, secrets))
                 continue
             decision, confidence, probs = got
+            if decision == UNSENT:
+                base["invalid"] = UNSENT_REASON
             out.append(Judgment(question=q.name, decision=decision, confidence=confidence,
                                 latency_s=latency, cost_usd=cost,
-                                raw=as_evidence({**base, "probabilities": probs,
-                                                 "native_confidence": ans.get("confidence")})))
+                                raw=evidence({**base,
+                                              "probabilities": kept_probabilities(probs, q),
+                                              "native_confidence": kept_fields(
+                                                  ans.get("confidence"), NUMBER,
+                                                  "native_confidence", [])}, secrets)))
         return out
 
 
@@ -484,11 +574,11 @@ class ClefHostedJudge(_HostedDecisionJudge):
         out: list[Judgment] = []
         for q in questions:
             ans = answers.get(q.name)
-            base = {"answer": ans, "usage": usage, "served": served}
+            base = {**kept_reply(ans, usage, CLEF_ANSWER, q), "served": served}
             if isinstance(ans, dict) and isinstance(ans.get("probabilities"), dict):
                 base.update(declared_sum(ans["probabilities"].values()))
             if not isinstance(ans, dict) or "error" in ans:
-                out.append(_no_answer(q, latency, cost, base))
+                out.append(_no_answer(q, latency, cost, base, secrets))
                 continue
             probs = ans.get("probabilities")
             chosen = ans.get("choice")
@@ -497,11 +587,17 @@ class ClefHostedJudge(_HostedDecisionJudge):
                                else {}, ans.get("noul"),
                                None if chosen is None else str(chosen))
             if isinstance(got, str):
-                out.append(_no_answer(q, latency, cost, {**base, "invalid": got}))
+                out.append(_no_answer(q, latency, cost,
+                                      {**base, "invalid": safe_reason(got, q)}, secrets))
                 continue
             decision, confidence, checked = got
+            if decision == UNSENT:
+                base["invalid"] = UNSENT_REASON
             out.append(Judgment(question=q.name, decision=decision, confidence=confidence,
                                 latency_s=latency, cost_usd=cost,
-                                raw=as_evidence({**base, "probabilities": checked,
-                                                 "native_confidence": ans.get("confidence")})))
+                                raw=evidence({**base,
+                                              "probabilities": kept_probabilities(checked, q),
+                                              "native_confidence": kept_fields(
+                                                  ans.get("confidence"), NUMBER,
+                                                  "native_confidence", [])}, secrets)))
         return out

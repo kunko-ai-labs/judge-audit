@@ -40,21 +40,26 @@ from .secrets import (  # noqa: E402
     RedirectRefused,
     checked_endpoint,
     credential_values,
+    evidence_raw,
     redact,
+    redact_evidence,
 )
 
 __all__ = [
     "Judge", "Judgment", "Question", "QuestionType", "served_of",
     "OPENER", "Endpoint", "RedirectRefused", "checked_endpoint", "credential_values", "redact",
+    "redact_evidence", "evidence_raw",
 ]
 
 
 def served_of(reported: dict | None) -> dict:
     """What the provider said it served: model id and fingerprint as returned, None where it
     returned nothing — never the model name we asked for, which is what drift would hide."""
-    reported = reported or {}
-    return {"model": reported.get("model") or None,
-            "system_fingerprint": reported.get("system_fingerprint") or None}
+    from .secrets import model_id
+    reported = reported if isinstance(reported, dict) else {}
+    # a short plain id each, else `<unrecognised>`: an object or a longer string is never kept
+    return {"model": model_id(reported.get("model")),
+            "system_fingerprint": model_id(reported.get("system_fingerprint"))}
 
 
 class Judge:

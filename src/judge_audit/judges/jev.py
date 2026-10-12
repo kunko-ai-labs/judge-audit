@@ -15,6 +15,12 @@ Two backends:
 The audited "confidence" is P(chosen option) from the per-option
 probability distribution — the actual probabilistic claim. TypeSafe's
 separate `confidence` statistic is preserved in `raw` for analysis.
+
+Every `raw` keeps only the answer and usage fields the audit reads (`JEV_ANSWER`, the usage
+counts; the rest is named in `raw.dropped_fields`) and passes through `evidence_raw` before
+it is returned: the key and every
+credential-shaped value a reply may echo are masked, and a record it changed says
+`redacted: true`.
 """
 from __future__ import annotations
 
@@ -34,8 +40,20 @@ from .base import (
     Question,
     QuestionType,
     checked_endpoint,
+    evidence_raw,
     redact,
     served_of,
+)
+from .secrets import (
+    ID,
+    KEYED,
+    NUMBER,
+    NUMBER_OR_OPTION,
+    OPTION,
+    USAGE,
+    kept_fields,
+    one_of,
+    with_dropped,
 )
 
 # Version of what the judge is shown: `_sdk_question` / `_direct_question`, the criteria
@@ -48,6 +66,20 @@ DIRECT_MODEL = "jev-latest"
 INPUT_PRICE_PER_MTOK = 0.042  # USD, per TypeSafe's published pricing (output free)
 
 _BRIDGE = Path(__file__).with_name("bridge") / "jev_bridge.mjs"
+
+
+# What evidence keeps of an answer: the fields the audit reads, nothing else (deny by default).
+# Each of the type the audit reads; a choice or a probability's key only when it is one of
+# the options sent.
+JEV_ANSWER = {"type": one_of("choice", "score", "noul", "boolean"), "choice": OPTION,
+              "score": NUMBER_OR_OPTION, "confidence": NUMBER, "probability": NUMBER,
+              "noul": NUMBER, "probabilities": KEYED(NUMBER)}
+
+
+def _kept(answer, usage, options) -> tuple[dict, list[str]]:
+    dropped: list[str] = []
+    return {"answer": kept_fields(answer, JEV_ANSWER, "answer", dropped, options),
+            "usage": kept_fields(usage, USAGE, "usage", dropped)}, dropped
 
 
 class _RateLimited(RuntimeError):
@@ -193,14 +225,28 @@ class JevJudge(Judge):
                 question=q.name, decision=decision, confidence=confidence,
                 latency_s=latency / max(len(questions), 1),
                 cost_usd=None if cost is None else cost / max(len(questions), 1),
-                raw={"answer": ans,
-                     "typesafe_confidence": ts_meta.get(q.name),
-                     "usage": usage,
-                     # The SDK's response.modelId echoes the id we sent, not what was
-                     # served; the gateway reports no version, so it is recorded unknown.
-                     "served": served_of(None)},
+                raw=evidence_raw(self._raw(ans, usage, ts_meta.get(q.name), None, q),
+                                 self.api_key),
             ))
         return out
+
+    @staticmethod
+    def _raw(ans, usage, typesafe_confidence, model, q: Question,
+             direct: bool = False) -> dict:
+        """What a judgment keeps: the answer's and usage's fields the audit reads (deny by
+        default; the rest named in `dropped_fields`), TypeSafe's own confidence and what was
+        served. The gateway SDK's response.modelId echoes the id we sent, not what was
+        served; the gateway reports no version, so it is recorded unknown."""
+        options = [*(q.options if q.type is not QuestionType.NOUL else ["true", "false"])]
+        raw, dropped = _kept(ans, usage, options)
+        raw["typesafe_confidence"] = kept_fields(typesafe_confidence, NUMBER,
+                                                 "typesafe_confidence", dropped)
+        if direct:
+            raw["model"] = kept_fields(model, ID, "model", dropped)
+            raw["served"] = served_of({"model": raw["model"]})
+        else:
+            raw["served"] = served_of(None)
+        return with_dropped(raw, dropped)
 
     @staticmethod
     def _sdk_question(q: Question) -> dict:
@@ -270,9 +316,8 @@ class JevJudge(Judge):
                 question=q.name, decision=decision, confidence=confidence,
                 latency_s=latency / max(len(questions), 1),
                 cost_usd=None if cost is None else cost / max(len(questions), 1),
-                raw={"answer": ans, "typesafe_confidence": ans.get("confidence"),
-                     "usage": usage, "model": body.get("model"),
-                     "served": served_of({"model": body.get("model")})},
+                raw=evidence_raw(self._raw(ans, usage, ans.get("confidence"),
+                                           body.get("model"), q, direct=True), self.api_key),
             ))
         return out
 

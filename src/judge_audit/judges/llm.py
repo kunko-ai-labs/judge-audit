@@ -34,6 +34,14 @@ the k samples that gave it (Wang et al. 2023; Xiong et al. 2024). Each sample's 
 verbalized number are kept in the checkpoint. With both variables unset, nothing changes: one
 call at temperature 0, verbalized confidence. A custom provider's `call` must then accept a
 `temperature` keyword (None = the platform's default).
+
+The anthropic SDK dropped the `temperature` keyword from `messages.create` in 1.0 (#161):
+passing it raises TypeError. The temperature is then sent in the request body
+(`extra_body`), never dropped; `describe()` records the SDK version and how it was sent.
+
+Every `raw` passes through `evidence_raw`: a key, token or credential-shaped value a reply,
+a gateway or a provider module echoes is masked before it is kept, and the record says
+`redacted: true`.
 """
 from __future__ import annotations
 
@@ -62,9 +70,11 @@ from .base import (
     QuestionType,
     RedirectRefused,
     checked_endpoint,
+    evidence_raw,
     redact,
     served_of,
 )
+from .secrets import count, kept_describe, with_dropped
 
 # HTTP statuses worth waiting out: rate limit, overloaded, unavailable, gateway timeout.
 TRANSIENT = {429, 503, 529, 502, 504}
@@ -200,6 +210,19 @@ def _anthropic_client_args(anthropic, api_key: str | None, endpoint) -> dict:
                            "refuses redirects cannot be built; upgrade the anthropic package")
     args["http_client"] = make(follow_redirects=False)
     return args
+
+
+def temperature_route(create) -> str:
+    """How `create` (an anthropic SDK's `messages.create`) takes a temperature: `keyword`
+    when its signature names one or takes any keyword, else `extra_body` (SDK 1.0 onward,
+    where the keyword raises TypeError). A signature that cannot be read is `keyword`."""
+    try:
+        params = inspect.signature(create).parameters.values()
+    except (TypeError, ValueError):
+        return "keyword"
+    takes = any((p.name == "temperature" and p.kind in (p.POSITIONAL_OR_KEYWORD, p.KEYWORD_ONLY))
+                or p.kind is p.VAR_KEYWORD for p in params)
+    return "keyword" if takes else "extra_body"
 
 
 def _fetch_json(req: urllib.request.Request, deadline: float) -> dict:
@@ -585,13 +608,21 @@ class LLMJudge(Judge):
                 owned = {k: d[k] for k in ("name", "confidence_method", "temperature",
                                            "samples", "prompt_template", "prompt_sha256")
                          if k in d}
-                d.update(extra(self.model))
+                # only the fields a header records, typed (`kept_describe`); the rest is
+                # counted, never copied: a module's describe() can hold anything
+                kept, dropped = kept_describe(extra(self.model))
+                d.update(kept)
                 d.update(owned)             # what this judge measures, not the module's say
+                with_dropped(d, dropped)
         elif self.provider == "anthropic":
             ep = getattr(self, "_endpoint", None)
             d["endpoint_overridden"] = ep is not None       # ANTHROPIC_BASE_URL: host only
             if ep is not None:
                 d["endpoint_host"] = ep.host
+            sdk = getattr(self, "_anthropic", None)
+            d["sdk"] = f"anthropic {getattr(sdk, '__version__', None) or 'unknown'}"
+            if self.temperature is not None:
+                d["temperature_sent_as"] = self._temperature_route()
         elif self.base_url:
             d["base_url"] = self.base_url
             ep = getattr(self, "_endpoint", None)
@@ -626,12 +657,26 @@ class LLMJudge(Judge):
             return out[0], out[1], out[2]
         return self._call_openai_compatible(user)
 
+    def _temperature_route(self) -> str:
+        """`temperature_route` of this client's `messages.create`, read once."""
+        route = getattr(self, "_temperature_via", None)
+        if route is None:
+            route = self._temperature_via = temperature_route(self._client.messages.create)
+        return route
+
+    def _held_key(self) -> str:
+        """The key this judge holds, if any (a custom module holds its own)."""
+        return getattr(self, "api_key", "") or ""
+
     def _call_anthropic(self, user: str) -> tuple[str, int, int]:
         kwargs: dict = {}
         if self.effort:
             kwargs["output_config"] = {"effort": self.effort}
         if self.temperature is not None:        # same as the OpenAI-compatible path
-            kwargs["temperature"] = self.temperature
+            if self._temperature_route() == "keyword":
+                kwargs["temperature"] = self.temperature
+            else:                               # SDK 1.0 onward: no keyword, same request
+                kwargs["extra_body"] = {"temperature": self.temperature}
         try:
             resp = self._client.messages.create(
                 model=self.model, max_tokens=int(os.environ.get("LLM_MAX_TOKENS", "1024")),
@@ -733,6 +778,7 @@ class LLMJudge(Judge):
         self._upstream = None
         self._hidden = 0
         text, in_tok, out_tok = self._call(self._render(state, questions))
+        in_tok, out_tok = count(in_tok), count(out_tok)     # a count, or unknown: never text
         served = served_of(self._served)
         latency = time.monotonic() - t0
         usage = self._usage(in_tok, out_tok)
@@ -745,9 +791,10 @@ class LLMJudge(Judge):
                 question=q.name, decision=decision, confidence=confidence,
                 latency_s=latency / max(len(questions), 1),
                 cost_usd=cost / max(len(questions), 1) if cost is not None else None,
-                raw={"text": text, "usage": usage,
-                     "parsed": ans, "priced": priced, "served": served,
-                     **({"upstream_provider": self._upstream} if self._upstream else {})},
+                raw=evidence_raw({"text": text, "usage": usage,
+                                  "parsed": ans, "priced": priced, "served": served,
+                                  **({"upstream_provider": self._upstream}
+                                     if self._upstream else {})}, self._held_key()),
                 parse_status=status,
             ))
         return out
@@ -762,6 +809,7 @@ class LLMJudge(Judge):
             self._upstream = None
             self._hidden = 0
             text, in_tok, out_tok = self._call(user)
+            in_tok, out_tok = count(in_tok), count(out_tok)
             samples.append({"text": text,
                             "usage": self._usage(in_tok, out_tok),
                             "served": served_of(self._served),
@@ -783,11 +831,13 @@ class LLMJudge(Judge):
                 question=q.name, decision=decision, confidence=confidence,
                 latency_s=latency / max(len(questions), 1),
                 cost_usd=cost / max(len(questions), 1) if cost is not None else None,
-                raw={"samples": samples, "votes": votes,
-                     "verbalized": [p[q.name][1] for p in parsed],
-                     "usage": {"input_tokens": in_all, "output_tokens": out_all,
-                               **({"hidden_output_tokens": hidden_all} if hidden_all else {})},
-                     "priced": priced, "served": served_across(samples)},
+                raw=evidence_raw({"samples": samples, "votes": votes,
+                                  "verbalized": [p[q.name][1] for p in parsed],
+                                  "usage": {"input_tokens": in_all, "output_tokens": out_all,
+                                            **({"hidden_output_tokens": hidden_all}
+                                               if hidden_all else {})},
+                                  "priced": priced, "served": served_across(samples)},
+                                 self._held_key()),
                 parse_status=status,
             ))
         return out
