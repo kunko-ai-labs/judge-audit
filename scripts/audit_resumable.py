@@ -14,6 +14,12 @@ Usage:
 indices that part of a pre-registered split names; the checkpoint header then
 records the split file, its sha256, the part and its size under `rows_subset`,
 and the report's n is the subset's. A run without `--rows` judges every row.
+
+`--max-usd X` stops the run before any request once the checkpoint's recorded cost, every
+session of it counted, is at or above X, or once a judgment's cost is unknown (the ceiling
+can no longer be enforced). It exits 3; the rows written stay a valid, resumable checkpoint.
+The header records the ceiling as `max_usd`, and a checkpoint resumes only under the
+ceiling it was started with. Recorded cost can be below the provider's bill.
 """
 from __future__ import annotations
 
@@ -23,6 +29,7 @@ import os
 import sys
 import time
 from datetime import datetime, timezone
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
@@ -37,6 +44,7 @@ from judge_audit.runner import (  # noqa: E402
     AuditResult,
     IncompleteAnswers,
     answer_gaps,
+    checkpoint_cost,
     checkpoint_record,
     dataset_gaps,
     display_path,
@@ -81,6 +89,44 @@ def rows_subset(spec: str | None, n_rows: int) -> tuple[list[int], dict | None]:
     if idx and (idx[0] < 0 or idx[-1] >= n_rows):
         raise SystemExit(f"{path}:{part} names rows outside 0..{n_rows - 1}")
     return idx, {"split": path, "sha256": sha256_of(path), "part": part, "n": len(idx)}
+
+
+def usd(text: str) -> Decimal:
+    """A --max-usd value: a positive, finite dollar amount, kept exact."""
+    try:
+        value = Decimal(text)
+    except InvalidOperation:
+        raise argparse.ArgumentTypeError(f"not a dollar amount: {text!r}") from None
+    if not value.is_finite() or value <= 0:
+        raise argparse.ArgumentTypeError(f"must be a positive dollar amount, got {text!r}")
+    return value
+
+
+def recorded_cost(records, run: dict | None) -> tuple[Decimal, int]:
+    """The recorded cost of checkpoint rows and how many of their judgments have none.
+
+    Each judgment's cost is the one the report totals (`checkpoint_cost`), so an unknown
+    cost is never counted as $0. The recorded values are summed as decimals: in floats
+    0.7 + 0.1 falls short of a 0.8 ceiling and one more request would be sent."""
+    spent, unknown = Decimal(0), 0
+    for rec in records:
+        for j in rec.get("judgments", []):
+            cost = checkpoint_cost(j, run)
+            if cost is None:
+                unknown += 1
+            else:
+                spent += Decimal(repr(cost))
+    return spent, unknown
+
+
+def ceiling_stop(spent: Decimal, unknown: int, max_usd: Decimal) -> str | None:
+    """Why --max-usd stops the run before its next request, or None to send it."""
+    if unknown:
+        return (f"cost ceiling cannot be enforced: {unknown} judgment(s) recorded with "
+                f"unknown cost (${spent:f} known, ceiling ${max_usd:f})")
+    if spent >= max_usd:
+        return f"cost ceiling reached: ${spent:f} recorded of ${max_usd:f}"
+    return None
 
 
 def build_result(judge_name: str, rows: list[dict], dataset_meta: dict, wanted: list[int],
@@ -195,7 +241,11 @@ def main() -> None:
     ap.add_argument("--cluster-labels", default=None,
                     help="labels file whose row texts are the interval's clusters (default: "
                          "LABELS; a deliberation round passes the original dataset)")
+    ap.add_argument("--max-usd", type=usd, default=None, metavar="X",
+                    help="stop before the next request once the checkpoint's recorded cost "
+                         "reaches X dollars (recorded cost can be below the provider's bill)")
     args = ap.parse_args()
+    max_usd = float(args.max_usd) if args.max_usd is not None else None
 
     rows, dataset_meta = load_dataset(args.labels)
     wanted, subset = rows_subset(args.rows, len(rows))
@@ -237,8 +287,19 @@ def main() -> None:
                 raise SystemExit(f"{ckpt} was started with LLM_EXTRA_BODY {was!r}, not {now!r}; "
                                  "resume with the same routing or use a new checkpoint")
             same_method(ckpt, done[-1]["run"].get("judge") or {}, started["judge"])
+            # The ceiling that governed the first session governs the rest: another one, or
+            # none, would leave the header recording a ceiling that no longer held.
+            was_max = done[-1]["run"].get("max_usd")
+            if was_max != max_usd:
+                started_with = ("without --max-usd" if was_max is None
+                                else f"with --max-usd {was_max}")
+                raise SystemExit(f"{ckpt} was started {started_with}, this run has "
+                                 f"{args.max_usd if max_usd is not None else 'none'}; "
+                                 "resume under the same ceiling or use a new checkpoint")
     if subset:
         started["rows_subset"] = subset
+    if max_usd is not None:
+        started["max_usd"] = max_usd
 
     with open(ckpt, "a", encoding="utf-8") as f:
         if not done:
@@ -247,6 +308,9 @@ def main() -> None:
             f.write(json.dumps(header, allow_nan=False) + "\n")
             done[-1] = header  # the report reads the run time from here, as a rerun would
         warned = False  # one not-sent warning per invocation, at the first such row
+        run = (done.get(-1) or {}).get("run")
+        # Every session's rows count, so a resumed run cannot reset the ceiling's count.
+        spent, unknown = recorded_cost((done[k] for k in done if k >= 0), run)
         for idx in wanted:
             row = rows[idx]
             if idx in done:
@@ -255,6 +319,12 @@ def main() -> None:
                 dataset_gaps(idx, row)  # a dataset error stops the run before the paid call
             except IncompleteAnswers as e:
                 raise SystemExit(str(e)) from e
+            stop = (ceiling_stop(spent, unknown, args.max_usd)
+                    if args.max_usd is not None else None)
+            if stop:
+                print(f"{stop}; {sum(1 for k in done if k >= 0)} rows kept in "
+                      f"{display_path(ckpt)}", file=sys.stderr)
+                raise SystemExit(3)
             # If the gateway's rate-limit window outlasts the adapter's backoff,
             # or a call stalls (timeout), sleep it off and retry instead of
             # losing the whole run.
@@ -292,6 +362,8 @@ def main() -> None:
             f.flush()
             done[idx] = rec
             n_done += 1
+            row_spent, row_unknown = recorded_cost([rec], run)
+            spent, unknown = spent + row_spent, unknown + row_unknown
             if n_done % 10 == 0:
                 print(f"  {n_done}/{len(wanted)}", flush=True)
 
