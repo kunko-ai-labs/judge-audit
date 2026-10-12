@@ -32,7 +32,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from judge_audit.runner import _percentile, checkpoint_record  # noqa: E402
+from judge_audit.runner import _percentile, _round_or_none, checkpoint_record  # noqa: E402
 
 LABELS = "examples/email-routing-adversarial/labels.jsonl"
 CHECKPOINT = "docs/runs/audit-jev-adversarial.ckpt.jsonl"
@@ -150,9 +150,12 @@ def compute(rows, *, checkpoint=CHECKPOINT, labels=LABELS, n_templates=None):
     mean_conf = fsum(r["confidence"] for r in known) / len(known) if known else None
     costs = [r["cost_usd"] for r in rows]
     total_cost = fsum(costs) if all(cost is not None for cost in costs) else None
-    lat = [r["latency_s"] for r in rows]
-    p50, p99 = round(_percentile(lat, 50), 3), round(_percentile(lat, 99), 3)  # type 7
-    slowest = round(max(lat), 3)  # printed next to p99: one stalled call hides behind it
+    # a skipped question has no latency; with no answer at all it is unknown, not 0 s (#80)
+    lat = [r["latency_s"] for r in rows if r["latency_s"] is not None]
+    p50 = _round_or_none(_percentile(lat, 50), 3)  # type 7
+    p99 = _round_or_none(_percentile(lat, 99), 3)
+    # printed next to p99: one stalled call hides behind it
+    slowest = _round_or_none(max(lat, default=None), 3)
 
     by_attack = defaultdict(list)
     for r in rows:
@@ -235,6 +238,11 @@ def compute(rows, *, checkpoint=CHECKPOINT, labels=LABELS, n_templates=None):
 
 def word(k: int) -> str:
     return WORDS[k] if 0 <= k < len(WORDS) else str(k)
+
+
+def secs(x: float | None, digits: int) -> str:
+    """`0.41 s`, or `unknown` when no answer carried a latency (#80)."""
+    return "unknown" if x is None else f"{x:.{digits}f} s"
 
 
 def pct(x: float) -> str:
@@ -398,8 +406,8 @@ def render(m: dict, states: dict) -> str:
          f"**n={n}** ({n_clean} clean controls + {n - n_clean} attacked) · accuracy "
          f"**{pct(m['accuracy'])}** ({right}/{n}) · confidence known "
          f"**{m['confidence']['known']}/{m['confidence']['total']}** · ECE **{ece_text}** · cost "
-         f"**{cost_text}** · p50 **{m['latency_p50_s']:.2f} s** · p99 "
-         f"**{m['latency_p99_s']:.1f} s** · slowest **{m['latency_max_s']:.1f} s**", "",
+         f"**{cost_text}** · p50 **{secs(m['latency_p50_s'], 2)}** · p99 "
+         f"**{secs(m['latency_p99_s'], 1)}** · slowest **{secs(m['latency_max_s'], 1)}**", "",
          "## Read this first", "", *read_this_first(m, states), "",
          "## Threat model", "", *threat_model(m), "",
          "## By attack", "",

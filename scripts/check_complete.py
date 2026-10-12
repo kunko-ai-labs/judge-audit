@@ -1,10 +1,13 @@
-"""Every committed checkpoint answers every labelled question of every row it covers, once.
+"""Every committed checkpoint answers every labelled question of every row it covers, once,
+of the dataset it recorded.
 
 The live runner counts a skipped question as a wrong no-answer (US-004-015); a report rebuilt
 from a checkpoint reads only the judgments the checkpoint holds. This check closes that gap:
 a checkpoint with a row missing or written twice, a labelled question unanswered or answered
 twice, or a blank label fails CI,
-so no published number rests on a denominator that quietly shrank.
+so no published number rests on a denominator that quietly shrank. The dataset read must
+also be the one the run recorded: its sha256 (whole file) or sha256_rows (rows only) must
+match the header's, either one as `check_drift` accepts, so a relabelled dataset fails (#80).
 
   python scripts/check_complete.py      # exit 1 listing each gap
 """
@@ -17,12 +20,22 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from judge_audit.runner import answer_gaps, load_jsonl  # noqa: E402
+from judge_audit.runner import answer_gaps, load_jsonl, sha256_of, sha256_rows_of  # noqa: E402
 
-# The three first audits predate run headers; their dataset is fixed by name.
-LEGACY = {"audit-jev-real.ckpt.jsonl": "examples/email-routing/labels.jsonl",
-          "audit-jev-adversarial.ckpt.jsonl": "examples/email-routing-adversarial/labels.jsonl",
-          "audit-jev-router.ckpt.jsonl": "examples/task-routing/labels.jsonl"}
+# The three first audits predate run headers; their dataset is fixed by name, and pinned by
+# the rows digest of the file as committed with the checkpoint (v0.2.0). The ground-truth
+# header line added later does not move a rows digest; a changed row does.
+LEGACY = {
+    "audit-jev-real.ckpt.jsonl": (
+        "examples/email-routing/labels.jsonl",
+        "c5b4c111290aa657236ea520a8043b14ce23e9b26af01a6c5e7ec9b87082e1cf"),
+    "audit-jev-adversarial.ckpt.jsonl": (
+        "examples/email-routing-adversarial/labels.jsonl",
+        "74741868f533bf0c17b622cfbae43b917e52a964cd1c9e51fb9b74905c802e24"),
+    "audit-jev-router.ckpt.jsonl": (
+        "examples/task-routing/labels.jsonl",
+        "27250d78eda62c5e5ad07906abd3c7fdeaecb1131a7d13e12146bed30f55ec8d"),
+}
 # Runs whose header names a scratch copy of a committed file (same sha256 in the header):
 # the committed file is read instead, and the header is left as the run wrote it.
 SCRATCH = {"gpt-6-luna-en-US.repeat40.ckpt.jsonl": "examples/massive/labels-pilot-en-US.first40.jsonl",
@@ -43,13 +56,37 @@ def stopped(ckpt: Path, written: int) -> bool:
     return bool(note.get("stopped")) and note.get("rows") == written
 
 
+def dataset_changed(ckpt: Path, run: dict, labels: Path) -> list[str]:
+    """A gap when the dataset file is not the one the run recorded.
+
+    The header's `dataset.sha256` (whole file) and `sha256_rows` (rows only) are both
+    accepted, and either matches either, as `check_drift` does: a run made before the
+    ground-truth header line recorded the whole file, which is today's rows digest. A header
+    that records neither is held to its legacy pin, if it has one; otherwise to nothing."""
+    ds = run.get("dataset") or {}
+    recorded = {ds.get("sha256"), ds.get("sha256_rows")} - {None}
+    if not recorded and ckpt.name in LEGACY:
+        recorded = {LEGACY[ckpt.name][1]}
+    if not recorded:
+        return []
+    now = {sha256_of(str(labels)), sha256_rows_of(str(labels))}
+    if recorded & now:
+        return []
+    return [f"{ckpt}: dataset sha256 changed since the run: {labels} is "
+            f"{sha256_rows_of(str(labels))!r} (rows), the run recorded {sorted(recorded)}"]
+
+
 def gaps(ckpt: Path) -> list[str]:
     lines = [json.loads(x) for x in ckpt.read_text(encoding="utf-8").splitlines() if x.strip()]
     headers = [x["run"] for x in lines if x["idx"] == -1]
     run = headers[-1] if headers else {}  # the readers take the last header
-    labels = SCRATCH.get(ckpt.name) or (run.get("dataset") or {}).get("path") or LEGACY.get(ckpt.name)
+    legacy = LEGACY[ckpt.name][0] if ckpt.name in LEGACY else None
+    labels = SCRATCH.get(ckpt.name) or (run.get("dataset") or {}).get("path") or legacy
     if not labels:
         return [f"{ckpt}: no dataset path in the header and no legacy mapping"]
+    changed = dataset_changed(ckpt, run, ROOT / labels)
+    if changed:   # the labels are not the ones answered: the row checks below mean nothing
+        return changed
     rows = load_jsonl(str(ROOT / labels))
     subset = run.get("rows_subset")
     if subset:

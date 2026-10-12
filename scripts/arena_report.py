@@ -91,6 +91,12 @@ def records(labels: str, ckpt: Path, question: str) -> tuple[list[dict], dict]:
     return recs, run
 
 
+def median_latency(recs: list[dict]) -> float | None:
+    """Median seconds over the answers that carried a latency; None when none did."""
+    timed = [r["latency_s"] for r in recs if r["latency_s"] is not None]
+    return round(statistics.median(timed), 3) if timed else None
+
+
 def summarize(recs: list[dict], dataset: str, rows: list[dict] | None = None) -> dict:
     """Per-judge statistics of one dataset.
 
@@ -142,9 +148,9 @@ def summarize(recs: list[dict], dataset: str, rows: list[dict] | None = None) ->
         "no_confidence": sum(1 for r in recs if r.get("parse_status") == "no_confidence"),
         "cost_usd": (round(math.fsum(costs), 4)
                      if all(cost is not None for cost in costs) else None),
-        # a skipped question has no latency: left out, never counted as instant
-        "p50_latency_s": round(statistics.median(
-            [r["latency_s"] for r in recs if r["latency_s"] is not None] or [0.0]), 3),
+        # a skipped question has no latency: left out, never counted as instant; with no
+        # answer at all the latency is unknown (None), not 0.0 s (#80)
+        "p50_latency_s": median_latency(recs),
     }
     if dataset == "email-adversarial":
         pi = [r for r in recs if r["meta"].get("attack") == "prompt_injection"]

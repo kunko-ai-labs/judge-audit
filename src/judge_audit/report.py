@@ -391,11 +391,18 @@ def fmt_cost(value: float | None, bold: tuple[str, str] = ("**", "**")) -> str:
     return f"{b0}${value:.4f}{b1}" if value is not None else f"{b0}unknown{b1}"
 
 
+def fmt_latency(value: float | None, bold: tuple[str, str] = ("**", "**")) -> str:
+    """Seconds as the result records them, or an explicit unknown when no answer carried a
+    latency (the judge answered nothing): never 0.0 s, which would read as instant (#80)."""
+    b0, b1 = bold
+    return f"{b0}{value}s{b1}" if value is not None else f"{b0}unknown{b1}"
+
+
 def slowest(d: dict, bold=("**", "**")) -> str:
     """` · slowest **x s**` when the result carries it (older JSON does not)."""
-    if d.get("max_latency_s") is None:
+    if "max_latency_s" not in d:
         return ""
-    return f" · slowest {bold[0]}{d['max_latency_s']}s{bold[1]}"
+    return f" · slowest {fmt_latency(d['max_latency_s'], bold)}"
 
 
 def completeness_line(d: dict, bold=("**", "**")) -> str:
@@ -520,8 +527,8 @@ def render_markdown(result: AuditResult) -> str:
         f"**n={d['n']}** · accuracy **{d['accuracy']:.1%}**{acc_ci} · "
         f"confidence known **{confidence['known']}/{confidence['total']}** · "
         f"ECE **{fmt4(d.get('ece'))}**{ece_ci}" + calibration_numbers(d),
-        f"· cost {fmt_cost(d.get('total_cost_usd'))} · p50 **{d['p50_latency_s']}s** · "
-        f"p99 **{d['p99_latency_s']}s**{slowest(d)}",
+        f"· cost {fmt_cost(d.get('total_cost_usd'))} · p50 {fmt_latency(d['p50_latency_s'])} · "
+        f"p99 {fmt_latency(d['p99_latency_s'])}{slowest(d)}",
         *([complete] if complete else []),
         *([withheld] if (withheld := not_sent_line(d)) else []),
         "",
@@ -626,7 +633,8 @@ def _key_figures(d: dict, acc_ci: str, ece_ci: str) -> str:
     cards.append(_kpi("Accuracy", f"{d['accuracy']:.1%}", acc_sub))
     cards.append(_kpi("Calibration error (ECE)", html.escape(fmt4(d.get("ece"))), ece_sub))
     cards.append(_kpi("Cost · latency", fmt_cost(d.get("total_cost_usd"), ("", "")),
-                      f"p50 {d['p50_latency_s']}s · p99 {d['p99_latency_s']}s"))
+                      f"p50 {fmt_latency(d['p50_latency_s'], ('', ''))} · "
+                      f"p99 {fmt_latency(d['p99_latency_s'], ('', ''))}"))
     return '<div class="kpis">' + "".join(cards) + "</div>"
 
 
@@ -781,7 +789,7 @@ def render_html(result: AuditResult, tag: str = "") -> str:
 <p><em>A perfectly honest judge sits on the diagonal: avg confidence == accuracy in every bin.</em></p>
 <h2>All metrics and method notes</h2>
 <p class="metric"><b>{d['n']}</b> decisions · accuracy <b>{d['accuracy']:.1%}</b>{acc_ci} · confidence known <b>{confidence['known']}/{confidence['total']}</b> · ECE <b>{fmt4(d.get('ece'))}</b>{ece_ci}{calibration_numbers(d, ("<b>", "</b>"))}<br>
-cost {fmt_cost(d.get('total_cost_usd'), ("<b>", "</b>"))} · p50 <b>{d['p50_latency_s']}s</b> · p99 <b>{d['p99_latency_s']}s</b>{slowest(d, ("<b>", "</b>"))}</p>
+cost {fmt_cost(d.get('total_cost_usd'), ("<b>", "</b>"))} · p50 {fmt_latency(d['p50_latency_s'], ("<b>", "</b>"))} · p99 {fmt_latency(d['p99_latency_s'], ("<b>", "</b>"))}{slowest(d, ("<b>", "</b>"))}</p>
 {complete}
 {ci_note}
 <footer><p>{html.escape(THREE_NUMBERS_NOTE)}</p>

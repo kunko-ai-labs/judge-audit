@@ -377,7 +377,7 @@ def test_latency_percentiles_are_type_7_and_agree_with_numpy_default():
     # type 7: position p * (n - 1) between order statistics
     assert _percentile(xs, 50) == pytest.approx((s[4] + s[5]) / 2)
     assert _percentile(xs, 99) == pytest.approx(s[8] + 0.91 * (s[9] - s[8]))
-    assert _percentile([], 99) == 0.0
+    assert _percentile([], 99) is None   # no latency measured: unknown, not instant (#80)
     np = pytest.importorskip("numpy")
     assert _percentile(xs, 99) == pytest.approx(float(np.percentile(xs, 99)))
 

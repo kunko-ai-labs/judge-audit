@@ -166,6 +166,15 @@ def _metric(value: object, spec: str) -> str:
     return "unknown" if value is None else format(value, spec)
 
 
+def _latency(result: dict, key: str, absent: str = "unknown") -> str:
+    """`0.407 s`; `unknown` when the judge answered nothing (null, #80), never `0 s`.
+    `absent` is for a key an older result does not carry."""
+    if key not in result:
+        return absent
+    value = result[key]
+    return "unknown" if value is None else f"{_md(value)} s"
+
+
 def build(result: dict, drift: dict | None = None, artifact_url: str = "",
           marker: str = MARKER) -> str:
     run = result.get("run", {}) or {}
@@ -189,8 +198,8 @@ def build(result: dict, drift: dict | None = None, artifact_url: str = "",
               f"{_metric(result.get('ece'), '.4f')} | "
               f"{zec_cell} | "
               f"{('$' + format(result['total_cost_usd'], '.4f')) if result.get('total_cost_usd') is not None else 'unknown'} | "
-              f"{result.get('p50_latency_s', 0)} s | {result.get('p99_latency_s', 0)} s | "
-              f"{_md(result['max_latency_s']) + ' s' if result.get('max_latency_s') is not None else '—'} |", "",
+              f"{_latency(result, 'p50_latency_s')} | {_latency(result, 'p99_latency_s')} | "
+              f"{_latency(result, 'max_latency_s', absent='—')} |", "",
               f"_{gt_line}_", ""]
     if drift is not None:
         base = _md(drift.get("baseline", "baseline"))

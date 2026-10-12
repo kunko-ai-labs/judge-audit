@@ -196,6 +196,17 @@ def records(labels: str, ckpt: Path, question: str, keep: set[int] | None,
     return recs, run, seen
 
 
+def median_latency(recs: list[dict]) -> float | None:
+    """Median seconds over the answers that carried a latency; None when none did."""
+    timed = [r["latency_s"] for r in recs if r["latency_s"] is not None]
+    return round(statistics.median(timed), 3) if timed else None
+
+
+def secs(value: float | None, digits: int) -> str:
+    """`0.41 s`, or `unknown` when the judge answered nothing and no latency was measured."""
+    return "unknown" if value is None else f"{value:.{digits}f} s"
+
+
 def summarize(recs: list[dict], dataset: str) -> dict:
     all_ok = [r["correct"] for r in recs]
     known_idx = [i for i, r in enumerate(recs) if r["confidence"] is not None]
@@ -233,9 +244,9 @@ def summarize(recs: list[dict], dataset: str) -> dict:
         "no_answer": sum(r["no_answer"] for r in recs),
         "cost_usd": (round(math.fsum(r["cost_usd"] for r in recs), 4)
                      if all(r["cost_usd"] is not None for r in recs) else None),
-        # a skipped question has no latency: left out, never counted as instant
-        "p50_latency_s": round(statistics.median(
-            [r["latency_s"] for r in recs if r["latency_s"] is not None] or [0.0]), 3),
+        # a skipped question has no latency: left out, never counted as instant; with no
+        # answer at all the latency is unknown (None), not 0.0 s (#80)
+        "p50_latency_s": median_latency(recs),
     }
     if dataset == "email-adversarial":
         pi = [r for r in recs if r["meta"].get("attack") == "prompt_injection"]
@@ -604,7 +615,7 @@ def render(data: dict) -> str:
                 row += (f" {s['hard_routed_strong']} / {s['hard_n']} | "
                         f"{s['attack_success']} / {s['attack_n']} | ${s['cost_usd']:.3f} |")
             else:
-                row += f" ${s['cost_usd']:.3f} | {s['p50_latency_s']:.2f} s |"
+                row += f" ${s['cost_usd']:.3f} | {secs(s['p50_latency_s'], 2)} |"
             row += f" {fmt(s['accuracy_unseen_text'], True)} (n={s['unseen_text_n']}) |"
             L.append(row)
         if not any(ds in j["datasets"] for j in judges.values()):
@@ -658,7 +669,7 @@ def render(data: dict) -> str:
               "a new prompt.",
               f"- **Cost**: $0 per row after {te.get('wall_time_s', 0):.0f} s (emails) and "
               f"{tr.get('wall_time_s', 0):.0f} s (router) of training on {device_of(te)}; "
-              f"p50 latency {clean.get('p50_latency_s', 0):.3f} s per row.",
+              f"p50 latency {secs(clean.get('p50_latency_s', 0), 3)} per row.",
               ""]
         L += reading_run2(judges, training)
     present = [s for s in FINETUNED_RUNS if s in judges]
@@ -684,7 +695,7 @@ def render(data: dict) -> str:
                          f"{fmt(s['zero_error_coverage'], True)}"
                          f"{interval_of(s, 'zero_error_coverage_ci', pct=True)} | "
                          f"{fmt(s['mean_conf_correct'])} / "
-                         f"{fmt(s['mean_conf_wrong'])} | {s['p50_latency_s']:.3f} s |")
+                         f"{fmt(s['mean_conf_wrong'])} | {secs(s['p50_latency_s'], 3)} |")
         L.append("")
     L += ["## How to read the intervals", "",
           "- **[a, b]** after accuracy, ECE and zero-error coverage: 95 % percentile-bootstrap "

@@ -320,6 +320,14 @@ def spearman(xs: list[float], ys: list[float]) -> float | None:
     return round(cov / var, 4) if var else None
 
 
+def jury_latency(members: list[dict | None]) -> float | None:
+    """Mean of the members' p50 latency; None when a member has no Arena summary or its
+    latency is unknown (it answered nothing, #80): never a mean that drops a member."""
+    if not all(m is not None and m.get("p50_latency_s") is not None for m in members):
+        return None
+    return round(statistics.mean(m["p50_latency_s"] for m in members if m is not None), 3)
+
+
 def jury_composition(votes: dict[str, list[dict]], rows: list[dict], question: str,
                      idxs: list[int], panel: list[str], costs: dict[str, dict]) -> dict:
     """Every 3-judge jury from the frozen panel, one row each: majority accuracy (a tie is
@@ -361,8 +369,7 @@ def jury_composition(votes: dict[str, list[dict]], rows: list[dict], question: s
             "cost_usd": (round(math.fsum(m["cost_usd"] for m in members), 4)
                          if all(m is not None and m.get("cost_usd") is not None
                                 for m in members) else None),
-            "p50_latency_s": (round(statistics.mean(m["p50_latency_s"] for m in members), 3)
-                              if all(members) else None),
+            "p50_latency_s": jury_latency(members),
         })
     juries.sort(key=lambda j: (-j["majority_accuracy"], -(j["majority_accuracy_decided"] or 0),
                                j["jury"]))

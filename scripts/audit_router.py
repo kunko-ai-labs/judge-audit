@@ -40,6 +40,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from judge_audit.metrics.calibration import expected_calibration_error  # noqa: E402
 from judge_audit.runner import (  # noqa: E402
     _percentile,
+    _round_or_none,
     checkpoint_record,
     display_path,
     load_jsonl,
@@ -122,7 +123,9 @@ def main() -> None:
                 "accuracy": round(sum(r["correct"] for r in rs) / n, 4),
                 "ece": ece,
                 "mean_confidence": round(math.fsum(conf) / len(conf), 4) if conf else None,
-                "p50_latency_s": round(_percentile([r["latency_s"] for r in rs], 50), 3),
+                # unknown (None) when no answer carried a latency, never 0.0 s (#80)
+                "p50_latency_s": _round_or_none(_percentile(
+                    [r["latency_s"] for r in rs if r["latency_s"] is not None], 50), 3),
                 "judge_cost_usd": (round(math.fsum(costs), 6)
                                    if all(cost is not None for cost in costs) else None)}
 

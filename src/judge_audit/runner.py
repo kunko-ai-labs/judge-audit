@@ -55,10 +55,11 @@ class AuditResult:
     curve: list[dict] = field(default_factory=list)
     zero_error: dict = field(default_factory=dict)
     total_cost_usd: float | None = 0.0
-    p50_latency_s: float = 0.0
-    p99_latency_s: float = 0.0
+    # None when no answer carried a latency (the judge answered nothing): unknown, not instant.
+    p50_latency_s: float | None = 0.0
+    p99_latency_s: float | None = 0.0
     # The slowest call, printed next to the p99: with n=200 a p99 hides one or two stalls.
-    max_latency_s: float = 0.0
+    max_latency_s: float | None = 0.0
     run: dict = field(default_factory=dict)
     # When a committed report was rebuilt from its checkpoint by a later version: its own
     # time, version and script. Kept apart from `run`, which is what the run itself said.
@@ -110,9 +111,9 @@ class AuditResult:
             **({"high_confidence_error": self.high_confidence} if self.high_confidence else {}),
             "total_cost_usd": (round(self.total_cost_usd, 6)
                                if self.total_cost_usd is not None else None),
-            "p50_latency_s": round(self.p50_latency_s, 3),
-            "p99_latency_s": round(self.p99_latency_s, 3),
-            "max_latency_s": round(self.max_latency_s, 3),
+            "p50_latency_s": _round_or_none(self.p50_latency_s, 3),
+            "p99_latency_s": _round_or_none(self.p99_latency_s, 3),
+            "max_latency_s": _round_or_none(self.max_latency_s, 3),
             "run": self.run,
         }
         if self.judgments_sha256 is not None:
@@ -137,13 +138,18 @@ class AuditResult:
         return d
 
 
-def _percentile(xs: list[float], p: float) -> float:
+def _percentile(xs: list[float], p: float) -> float | None:
     """p-th percentile (0..100) of the latencies: linear interpolation between order
     statistics (Hyndman–Fan type 7 — numpy's default, `statistics.quantiles` inclusive),
-    the same rule as the bootstrap's interval cut. 0.0 for no rows."""
+    the same rule as the bootstrap's interval cut. None for no rows: a judge that answered
+    nothing has an unknown latency, not an instant one (#80)."""
     if not xs:
-        return 0.0
+        return None
     return interpolated_quantile(sorted(xs), p / 100)
+
+
+def _round_or_none(x: float | None, digits: int) -> float | None:
+    return None if x is None else round(x, digits)
 
 
 NOT_SENT_ERROR = "max_length_exceeded"
@@ -481,7 +487,7 @@ def summarize(judge_name: str, records: list[dict], run: dict | None = None,
         total_cost_usd=total_cost,
         p50_latency_s=_percentile(latencies, 50),
         p99_latency_s=_percentile(latencies, 99),
-        max_latency_s=max(latencies, default=0.0),
+        max_latency_s=max(latencies, default=None),
         run=run or {},
         accuracy_ci=accuracy_ci([bool(r["correct"]) for r in records], groups=groups)
         if ci and total else None,
