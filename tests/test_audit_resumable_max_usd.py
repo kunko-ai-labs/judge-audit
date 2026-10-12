@@ -121,25 +121,83 @@ def test_the_header_records_the_ceiling(tmp_path, labels, monkeypatch):
     assert json.loads((tmp_path / "r.json").read_text())["run"]["max_usd"] == 2.5
 
 
-@pytest.mark.parametrize("flags", [(), ("--max-usd", "0.06")])
-def test_a_checkpoint_resumes_only_under_the_ceiling_it_was_started_with(
-        tmp_path, labels, monkeypatch, capsys, flags):
-    """The header is written once: another ceiling, or none, would leave it recording a
-    ceiling that did not govern the rest of the run."""
+AMEND = "v06-plan amendment 2026-10-20"
+
+
+@pytest.mark.parametrize("flags", [(), ("--max-usd", "0.06"), ("--max-usd", "0.04")])
+def test_another_ceiling_without_an_amendment_is_refused(tmp_path, labels, monkeypatch,
+                                                         flags):
+    """Without a dated amendment the header's ceiling governs the rest of the run: another
+    ceiling, or none, would leave it recording one that no longer held."""
     assert drive(monkeypatch, tmp_path, labels, Priced([0.01] * 10), "--max-usd", "0.05") == 3
     before = (tmp_path / "c.ckpt.jsonl").read_text()
     judge = Priced([0.01] * 10)
     code = drive(monkeypatch, tmp_path, labels, judge, *flags)
-    assert code and "was started with --max-usd 0.05" in str(code) and judge.calls == 0
-    assert (tmp_path / "c.ckpt.jsonl").read_text() == before  # nothing appended
+    assert "was started with --max-usd 0.05" in str(code) and judge.calls == 0
+    assert ("--ceiling-amendment" in str(code)) == bool(flags)
+    assert (tmp_path / "c.ckpt.jsonl").read_text() == before  # nothing written
 
 
-def test_a_ceiling_is_not_added_to_a_checkpoint_started_without_one(tmp_path, labels,
-                                                                     monkeypatch):
+def test_an_amendment_does_not_lift_the_ceiling(tmp_path, labels, monkeypatch, capsys):
+    """Resuming without --max-usd stays refused: an amendment changes a ceiling, never
+    removes it, and --ceiling-amendment alone is a usage error."""
+    assert drive(monkeypatch, tmp_path, labels, Priced([0.01] * 10), "--max-usd", "0.05") == 3
+    before = (tmp_path / "c.ckpt.jsonl").read_text()
+    judge = Priced([0.01] * 10)
+    assert drive(monkeypatch, tmp_path, labels, judge, "--ceiling-amendment", AMEND) == 2
+    assert "--ceiling-amendment needs --max-usd" in capsys.readouterr().err
+    assert judge.calls == 0 and (tmp_path / "c.ckpt.jsonl").read_text() == before
+
+
+def test_a_raised_ceiling_with_an_amendment_resumes_and_is_recorded(tmp_path, labels,
+                                                                    monkeypatch):
+    """The run continues on the same checkpoint, without paying again for its rows, and
+    stops at the new ceiling. Only the header line changes: it records the new ceiling and
+    appends the old one, the rows judged under it and the amendment to `max_usd_history`."""
+    assert drive(monkeypatch, tmp_path, labels, Priced([0.01] * 10), "--max-usd", "0.05") == 3
+    body = (tmp_path / "c.ckpt.jsonl").read_text().splitlines(keepends=True)[1:]
+    judge = Priced([0.01] * 10)
+    assert drive(monkeypatch, tmp_path, labels, judge, "--max-usd", "0.08",
+                 "--ceiling-amendment", AMEND) == 3
+    assert judge.calls == 3
+    after = (tmp_path / "c.ckpt.jsonl").read_text().splitlines(keepends=True)
+    assert after[1:1 + len(body)] == body and len(after) == 1 + 8  # earlier rows untouched
+    run = json.loads(after[0])["run"]
+    assert run["max_usd"] == 0.08
+    (entry,) = run["max_usd_history"]
+    assert {k: entry[k] for k in ("max_usd", "until_rows", "amendment")} == {
+        "max_usd": 0.05, "until_rows": 5, "amendment": AMEND}
+    assert entry["changed_utc"].endswith("+00:00")
+    # The same ceiling again needs no amendment; a second change appends a second entry.
+    assert drive(monkeypatch, tmp_path, labels, Priced([0.01] * 10), "--max-usd", "0.08") == 3
+    assert drive(monkeypatch, tmp_path, labels, Priced([0.01] * 10), "--max-usd", "1",
+                 "--ceiling-amendment", "second amendment") == 0
+    run = lines(tmp_path)[0]["run"]
+    assert run["max_usd"] == 1.0 and [(e["max_usd"], e["until_rows"], e["amendment"])
+                                      for e in run["max_usd_history"]] == [
+        (0.05, 5, AMEND), (0.08, 8, "second amendment")]
+    report = json.loads((tmp_path / "r.json").read_text())["run"]
+    assert report["max_usd"] == 1.0 and len(report["max_usd_history"]) == 2
+
+
+def test_a_ceiling_is_added_to_a_checkpoint_started_without_one_only_by_amendment(
+        tmp_path, labels, monkeypatch):
     assert drive(monkeypatch, tmp_path, labels, Priced([0.01] * 10, fail_at=2)) == 2
     judge = Priced([0.01] * 10)
-    code = drive(monkeypatch, tmp_path, labels, judge, "--max-usd", "1")
+    code = drive(monkeypatch, tmp_path, labels, judge, "--max-usd", "0.03")
     assert "was started without --max-usd" in str(code) and judge.calls == 0
+    assert drive(monkeypatch, tmp_path, labels, judge, "--max-usd", "0.03",
+                 "--ceiling-amendment", AMEND) == 3
+    assert judge.calls == 1
+    (entry,) = lines(tmp_path)[0]["run"]["max_usd_history"]
+    assert entry["max_usd"] is None and entry["until_rows"] == 2
+
+
+@pytest.mark.parametrize("ref", ["", "   ", "two\nlines", "x" * 201])
+def test_an_amendment_reference_is_one_short_line(tmp_path, labels, monkeypatch, capsys, ref):
+    code = drive(monkeypatch, tmp_path, labels, Priced([]), "--max-usd", "1",
+                 "--ceiling-amendment", ref)
+    assert code == 2 and "--ceiling-amendment" in capsys.readouterr().err
 
 
 def test_without_the_flag_nothing_changes(tmp_path, labels, monkeypatch):

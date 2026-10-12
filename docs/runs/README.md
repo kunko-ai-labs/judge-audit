@@ -68,7 +68,9 @@ Some headers also carry `rows_subset` (the run covered only one part of a pre-re
 split; the split file and its sha256 are recorded) or `reparsed` (when, and with which
 judge-audit version, `scripts/reparse_checkpoints.py` re-derived decisions from the
 committed raw responses, and how many changed) or `max_usd` (the `--max-usd` cost ceiling
-the run was held to, checked against recorded cost, which can be below the provider's bill).
+the run was held to, checked against recorded cost, which can be below the provider's bill;
+`max_usd_history` lists each earlier ceiling changed by a dated amendment, with the rows
+judged under it, the amendment's reference and the time of the change).
 
 **What provenance records.** Provenance records what a reproducer needs: library versions,
 the device (`cpu`, `mps`, `cuda`) and dtype, and file paths relative to the working
