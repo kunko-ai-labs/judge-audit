@@ -815,3 +815,43 @@ def test_a_custom_describe_keeps_only_known_typed_fields(monkeypatch, tmp_path):
     assert judge["provider"] == "hosted-api" and judge["max_tokens"] == 4096
     assert judge["prices_usd_per_mtok"] == [3.0, 15.0] and judge["model"] == "m"
     assert judge["dropped_fields"]["count"] == 3
+
+
+# --- an option that was never sent: wrong, at the confidence declared (#161, round 4) ---------
+
+def _unsent_rows():
+    return [{"state": "x", "questions": [{"name": "route", "type": "choice",
+                                          "instructions": "Which team?",
+                                          "options": ["billing", "returns", "other"]}],
+             "labels": {"route": "billing"}}]
+
+
+def _assert_wrong_at_097(judge):
+    """Scored as `llm`, Jev and the local judges score it: an answer, wrong, keeping the
+    confidence the judge declared, so it counts in calibration and in the high-confidence
+    error rate. The invented label is never stored."""
+    from judge_audit.runner import run_audit
+    result = run_audit(judge, _unsent_rows(), ci=False)
+    (rec,) = result.records
+    assert rec["decision"] == "<unsent_option>" and rec["correct"] is False
+    assert rec["confidence"] == 0.97 and rec["parse_status"] == "parsed"
+    assert rec["raw"]["invalid"] == "chosen option is not among the options sent"
+    assert "refunds" not in json.dumps(rec)
+    levels = {x["confidence_at_least"]: x
+              for x in result.to_dict()["high_confidence_error"]["levels"]}
+    assert levels[0.95]["n"] == 1 and levels[0.95]["errors"] == 1, levels
+
+
+def test_decisions_an_unsent_option_is_wrong_at_its_confidence(monkeypatch):
+    _wire(monkeypatch, {"answers": [{"type": "choice", "name": "route", "choice": "refunds",
+                                     "confidence": 0.97,
+                                     "probabilities": [{"value": "refunds", "probability": 0.97},
+                                                       {"value": "billing",
+                                                        "probability": 0.03}]}]})
+    _assert_wrong_at_097(hosted.OpenAIDecisionsJudge(api_key=HELD))
+
+
+def test_clef_an_unsent_option_is_wrong_at_its_confidence(monkeypatch):
+    _wire(monkeypatch, {"success": True, "result": {"answers": {"route": {
+        "choice": "refunds", "probabilities": {"refunds": 0.97, "billing": 0.03}}}}})
+    _assert_wrong_at_097(hosted.ClefHostedJudge(token=HELD, account=ACCOUNT))

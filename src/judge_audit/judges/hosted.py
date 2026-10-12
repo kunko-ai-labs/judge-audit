@@ -253,6 +253,12 @@ def declared_sum(values) -> dict:
             "probability_decimals": max(decimals(v) for v in nums)}
 
 
+# The decision recorded for a chosen option that is not one of the options sent: it matches
+# no option, so it is scored wrong at the confidence declared; the label itself is not kept.
+UNSENT = "<unsent_option>"
+UNSENT_REASON = "chosen option is not among the options sent"
+
+
 def read_checked(q: Question, kind: str, probs: dict[str, float],
                  yes: float | None, chosen: str | None) -> tuple[str, float, dict] | str:
     """(decision, P(decision), probabilities), or the reason the answer cannot be used.
@@ -273,7 +279,9 @@ def read_checked(q: Question, kind: str, probs: dict[str, float],
             return reason
         assert chosen is not None
         if chosen not in q.options:
-            return "chosen option is not among the options sent"
+            # an answer, wrong, at the confidence it declared, as every other judge scores it;
+            # the label it invented is never stored (`UNSENT`)
+            return UNSENT, probs[chosen], probs
         return chosen, probs[chosen], probs
     reason = valid_distribution(probs)
     if reason:
@@ -489,6 +497,8 @@ class OpenAIDecisionsJudge(_HostedDecisionJudge):
                                       {**base, "invalid": safe_reason(got, q)}, secrets))
                 continue
             decision, confidence, probs = got
+            if decision == UNSENT:
+                base["invalid"] = UNSENT_REASON
             out.append(Judgment(question=q.name, decision=decision, confidence=confidence,
                                 latency_s=latency, cost_usd=cost,
                                 raw=evidence({**base,
@@ -581,6 +591,8 @@ class ClefHostedJudge(_HostedDecisionJudge):
                                       {**base, "invalid": safe_reason(got, q)}, secrets))
                 continue
             decision, confidence, checked = got
+            if decision == UNSENT:
+                base["invalid"] = UNSENT_REASON
             out.append(Judgment(question=q.name, decision=decision, confidence=confidence,
                                 latency_s=latency, cost_usd=cost,
                                 raw=evidence({**base,

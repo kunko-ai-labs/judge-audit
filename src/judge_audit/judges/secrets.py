@@ -673,7 +673,7 @@ def _keep(value, spec, path: str, dropped: list[str], options: tuple):
         out = {}
         for k, v in value.items():
             if not _is_option(k, options):
-                dropped.append(f"{path}.{k}")
+                dropped.append(f"{path}.{OPAQUE}")      # a key not sent is never named
                 continue
             got = _keep(v, spec[1], f"{path}.{k}", dropped, options)
             if got is not _DROP and got is not None:
