@@ -74,6 +74,7 @@ from .base import (
     redact,
     served_of,
 )
+from .secrets import count, kept_describe, with_dropped
 
 # HTTP statuses worth waiting out: rate limit, overloaded, unavailable, gateway timeout.
 TRANSIENT = {429, 503, 529, 502, 504}
@@ -607,8 +608,12 @@ class LLMJudge(Judge):
                 owned = {k: d[k] for k in ("name", "confidence_method", "temperature",
                                            "samples", "prompt_template", "prompt_sha256")
                          if k in d}
-                d.update(extra(self.model))
+                # only the fields a header records, typed (`kept_describe`); the rest is
+                # counted, never copied: a module's describe() can hold anything
+                kept, dropped = kept_describe(extra(self.model))
+                d.update(kept)
                 d.update(owned)             # what this judge measures, not the module's say
+                with_dropped(d, dropped)
         elif self.provider == "anthropic":
             ep = getattr(self, "_endpoint", None)
             d["endpoint_overridden"] = ep is not None       # ANTHROPIC_BASE_URL: host only
@@ -773,6 +778,7 @@ class LLMJudge(Judge):
         self._upstream = None
         self._hidden = 0
         text, in_tok, out_tok = self._call(self._render(state, questions))
+        in_tok, out_tok = count(in_tok), count(out_tok)     # a count, or unknown: never text
         served = served_of(self._served)
         latency = time.monotonic() - t0
         usage = self._usage(in_tok, out_tok)
@@ -803,6 +809,7 @@ class LLMJudge(Judge):
             self._upstream = None
             self._hidden = 0
             text, in_tok, out_tok = self._call(user)
+            in_tok, out_tok = count(in_tok), count(out_tok)
             samples.append({"text": text,
                             "usage": self._usage(in_tok, out_tok),
                             "served": served_of(self._served),

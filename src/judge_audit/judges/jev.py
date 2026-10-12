@@ -44,7 +44,17 @@ from .base import (
     redact,
     served_of,
 )
-from .secrets import NUMBERS, SCALAR, SCALARS, kept_fields, with_dropped
+from .secrets import (
+    ID,
+    KEYED,
+    NUMBER,
+    NUMBER_OR_OPTION,
+    OPTION,
+    USAGE,
+    kept_fields,
+    one_of,
+    with_dropped,
+)
 
 # Version of what the judge is shown: `_sdk_question` / `_direct_question`, the criteria
 # map built from each question's options and descriptions. Jev has no text prompt, so this
@@ -59,14 +69,17 @@ _BRIDGE = Path(__file__).with_name("bridge") / "jev_bridge.mjs"
 
 
 # What evidence keeps of an answer: the fields the audit reads, nothing else (deny by default).
-JEV_ANSWER = {"type": SCALAR, "choice": SCALAR, "score": SCALAR, "confidence": SCALAR,
-              "probability": SCALAR, "noul": SCALAR, "probabilities": {"*": SCALAR}}
+# Each of the type the audit reads; a choice or a probability's key only when it is one of
+# the options sent.
+JEV_ANSWER = {"type": one_of("choice", "score", "noul", "boolean"), "choice": OPTION,
+              "score": NUMBER_OR_OPTION, "confidence": NUMBER, "probability": NUMBER,
+              "noul": NUMBER, "probabilities": KEYED(NUMBER)}
 
 
-def _kept(answer, usage) -> tuple[dict, list[str]]:
+def _kept(answer, usage, options) -> tuple[dict, list[str]]:
     dropped: list[str] = []
-    return {"answer": kept_fields(answer, JEV_ANSWER, "answer", dropped),
-            "usage": kept_fields(usage, NUMBERS, "usage", dropped)}, dropped
+    return {"answer": kept_fields(answer, JEV_ANSWER, "answer", dropped, options),
+            "usage": kept_fields(usage, USAGE, "usage", dropped)}, dropped
 
 
 class _RateLimited(RuntimeError):
@@ -212,22 +225,24 @@ class JevJudge(Judge):
                 question=q.name, decision=decision, confidence=confidence,
                 latency_s=latency / max(len(questions), 1),
                 cost_usd=None if cost is None else cost / max(len(questions), 1),
-                raw=evidence_raw(self._raw(ans, usage, ts_meta.get(q.name), None),
+                raw=evidence_raw(self._raw(ans, usage, ts_meta.get(q.name), None, q),
                                  self.api_key),
             ))
         return out
 
     @staticmethod
-    def _raw(ans, usage, typesafe_confidence, model, direct: bool = False) -> dict:
+    def _raw(ans, usage, typesafe_confidence, model, q: Question,
+             direct: bool = False) -> dict:
         """What a judgment keeps: the answer's and usage's fields the audit reads (deny by
         default; the rest named in `dropped_fields`), TypeSafe's own confidence and what was
         served. The gateway SDK's response.modelId echoes the id we sent, not what was
         served; the gateway reports no version, so it is recorded unknown."""
-        raw, dropped = _kept(ans, usage)
-        raw["typesafe_confidence"] = kept_fields(typesafe_confidence, SCALARS,
+        options = [*(q.options if q.type is not QuestionType.NOUL else ["true", "false"])]
+        raw, dropped = _kept(ans, usage, options)
+        raw["typesafe_confidence"] = kept_fields(typesafe_confidence, NUMBER,
                                                  "typesafe_confidence", dropped)
         if direct:
-            raw["model"] = kept_fields(model, SCALAR, "model", dropped)
+            raw["model"] = kept_fields(model, ID, "model", dropped)
             raw["served"] = served_of({"model": raw["model"]})
         else:
             raw["served"] = served_of(None)
@@ -302,7 +317,7 @@ class JevJudge(Judge):
                 latency_s=latency / max(len(questions), 1),
                 cost_usd=None if cost is None else cost / max(len(questions), 1),
                 raw=evidence_raw(self._raw(ans, usage, ans.get("confidence"),
-                                           body.get("model"), direct=True), self.api_key),
+                                           body.get("model"), q, direct=True), self.api_key),
             ))
         return out
 

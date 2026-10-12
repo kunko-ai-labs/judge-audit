@@ -56,6 +56,7 @@ import json
 import math
 import os
 import random
+import re
 import time
 import urllib.error
 import urllib.parse
@@ -73,7 +74,21 @@ from .base import (
     redact,
     served_of,
 )
-from .secrets import NUMBERS, SCALAR, SCALARS, kept_fields, with_dropped
+from .secrets import (
+    BOOL,
+    ERROR,
+    ID,
+    KEYED,
+    NUMBER,
+    NUMBER_OR_OPTION,
+    OPAQUE,
+    OPTION,
+    ROWS,
+    USAGE,
+    kept_fields,
+    one_of,
+    with_dropped,
+)
 from .systemone import CRITERIA_VERSION, systemone_question
 
 DECISIONS_ENDPOINT = "https://api.openai.com/v1/decisions"
@@ -257,6 +272,8 @@ def read_checked(q: Question, kind: str, probs: dict[str, float],
         if reason:
             return reason
         assert chosen is not None
+        if chosen not in q.options:
+            return "chosen option is not among the options sent"
         return chosen, probs[chosen], probs
     reason = valid_distribution(probs)
     if reason:
@@ -280,22 +297,47 @@ def as_evidence(value):
     return value
 
 
-# What evidence keeps of an answer: the fields the audit reads, nothing else (deny by default).
-# Every other field is left out and named in `raw.dropped_fields`.
-DECISIONS_ANSWER = {"type": SCALAR, "name": SCALAR, "choice": SCALAR, "probability": SCALAR,
-                    "score": SCALAR, "confidence": SCALAR, "refusal": SCALAR,
-                    "probabilities": [{"value": SCALAR, "label": SCALAR,
-                                       "probability": SCALAR}]}
-CLEF_ANSWER = {"type": SCALAR, "choice": SCALAR, "noul": SCALAR, "score": SCALAR,
-               "confidence": SCALAR, "probabilities": {"*": SCALAR}, "error": SCALARS}
+# What evidence keeps of an answer: the fields the audit reads, each of the type it reads
+# (deny by default). A choice, a value or a probability's key is kept only when it is one of
+# the options sent. Every other field is left out and counted in `raw.dropped_fields`.
+ANSWER_TYPES = one_of("choice", "score", "predicate", "noul", "boolean", "refusal")
+DECISIONS_ANSWER = {"type": ANSWER_TYPES, "name": OPTION, "choice": OPTION,
+                    "probability": NUMBER, "score": NUMBER_OR_OPTION, "confidence": NUMBER,
+                    "refusal": BOOL,
+                    "probabilities": ROWS({"value": OPTION, "label": OPTION,
+                                           "probability": NUMBER}, "value")}
+CLEF_ANSWER = {"type": ANSWER_TYPES, "choice": OPTION, "noul": NUMBER,
+               "score": NUMBER_OR_OPTION, "confidence": NUMBER,
+               "probabilities": KEYED(NUMBER), "error": ERROR}
 
 
-def kept_reply(answer, usage, spec) -> dict:
-    """`answer` and `usage` as evidence keeps them: the answer's fields in `spec`, the usage
-    record's counts; what was left out is named in `dropped_fields`."""
+def options_of(q: Question) -> list[str]:
+    """What a question's answer may name: its options, `true` / `false` for a yes/no one,
+    and the question's own name (a Decisions answer names its question)."""
+    return [*(q.options if q.type is not QuestionType.NOUL else ["true", "false"]), q.name]
+
+
+def kept_reply(answer, usage, spec, q: Question) -> dict:
+    """`answer` and `usage` as evidence keeps them: the answer's fields in `spec`, typed, the
+    usage record's known counts; what was left out is counted in `dropped_fields`."""
     dropped: list[str] = []
-    return with_dropped({"answer": kept_fields(answer, spec, "answer", dropped),
-                         "usage": kept_fields(usage, NUMBERS, "usage", dropped)}, dropped)
+    return with_dropped({"answer": kept_fields(answer, spec, "answer", dropped, options_of(q)),
+                         "usage": kept_fields(usage, USAGE, "usage", dropped)}, dropped)
+
+
+def kept_probabilities(probs: dict, q: Question) -> dict:
+    """The checked probabilities as evidence keeps them: of the options sent only."""
+    return kept_fields(probs, KEYED(NUMBER), "probabilities", [], options_of(q)) or {}
+
+
+_QUOTED = re.compile(r"'[^']*'|\"[^\"]*\"")
+
+
+def safe_reason(reason: str, q: Question) -> str:
+    """Why an answer was not used, without echoing what the server sent: a quoted name that
+    is not one of the options sent is `<opaque>`."""
+    opts = set(options_of(q))
+    return _QUOTED.sub(lambda m: m.group(0) if m.group(0)[1:-1] in opts else OPAQUE, reason)
 
 
 def evidence(raw: dict, secrets: tuple[str, ...]) -> dict:
@@ -432,8 +474,8 @@ class OpenAIDecisionsJudge(_HostedDecisionJudge):
         out: list[Judgment] = []
         for q in questions:
             ans = answers.get(q.name)
-            base = {**kept_reply(ans, usage, DECISIONS_ANSWER), "served": served,
-                    "response_id": kept_fields(reply.get("id"), SCALAR, "response_id", [])}
+            base = {**kept_reply(ans, usage, DECISIONS_ANSWER, q), "served": served,
+                    "response_id": kept_fields(reply.get("id"), ID, "response_id", [])}
             if isinstance(ans, dict) and isinstance(ans.get("probabilities"), list):
                 base.update(declared_sum(x.get("probability") for x in ans["probabilities"]
                                          if isinstance(x, dict)))
@@ -443,14 +485,17 @@ class OpenAIDecisionsJudge(_HostedDecisionJudge):
                 continue
             got = self.read(q, ans)
             if isinstance(got, str):
-                out.append(_no_answer(q, latency, cost, {**base, "invalid": got}, secrets))
+                out.append(_no_answer(q, latency, cost,
+                                      {**base, "invalid": safe_reason(got, q)}, secrets))
                 continue
             decision, confidence, probs = got
             out.append(Judgment(question=q.name, decision=decision, confidence=confidence,
                                 latency_s=latency, cost_usd=cost,
-                                raw=evidence({**base, "probabilities": probs,
-                                              "native_confidence": ans.get("confidence")},
-                                             secrets)))
+                                raw=evidence({**base,
+                                              "probabilities": kept_probabilities(probs, q),
+                                              "native_confidence": kept_fields(
+                                                  ans.get("confidence"), NUMBER,
+                                                  "native_confidence", [])}, secrets)))
         return out
 
 
@@ -519,7 +564,7 @@ class ClefHostedJudge(_HostedDecisionJudge):
         out: list[Judgment] = []
         for q in questions:
             ans = answers.get(q.name)
-            base = {**kept_reply(ans, usage, CLEF_ANSWER), "served": served}
+            base = {**kept_reply(ans, usage, CLEF_ANSWER, q), "served": served}
             if isinstance(ans, dict) and isinstance(ans.get("probabilities"), dict):
                 base.update(declared_sum(ans["probabilities"].values()))
             if not isinstance(ans, dict) or "error" in ans:
@@ -532,12 +577,15 @@ class ClefHostedJudge(_HostedDecisionJudge):
                                else {}, ans.get("noul"),
                                None if chosen is None else str(chosen))
             if isinstance(got, str):
-                out.append(_no_answer(q, latency, cost, {**base, "invalid": got}, secrets))
+                out.append(_no_answer(q, latency, cost,
+                                      {**base, "invalid": safe_reason(got, q)}, secrets))
                 continue
             decision, confidence, checked = got
             out.append(Judgment(question=q.name, decision=decision, confidence=confidence,
                                 latency_s=latency, cost_usd=cost,
-                                raw=evidence({**base, "probabilities": checked,
-                                              "native_confidence": ans.get("confidence")},
-                                             secrets)))
+                                raw=evidence({**base,
+                                              "probabilities": kept_probabilities(checked, q),
+                                              "native_confidence": kept_fields(
+                                                  ans.get("confidence"), NUMBER,
+                                                  "native_confidence", [])}, secrets)))
         return out

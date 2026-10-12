@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import base64
 import ipaddress
+import math
 import os
 import re
 import urllib.parse
@@ -505,63 +506,200 @@ def evidence_raw(raw, *secrets: str | None):
     out = _walk(raw, _held(secrets), changed, None, "", dropped)
     if isinstance(out, dict):
         if dropped:
-            prior = out.get("dropped_fields")
-            had: list = prior if isinstance(prior, list) else []
-            out["dropped_fields"] = sorted({*had, *(_redact_with(d, [], None) for d in dropped)})
+            with_dropped(out, dropped)
         if changed[0]:
             out["redacted"] = True
     return out
 
 
 # --- what evidence keeps of a provider's reply ------------------------------------------------
+#
+# Deny by default, and typed: a field is kept only when the audit reads it, and only with the
+# type and shape the audit expects. A spec is an atom (a function of the value and the
+# question's options that returns what to keep, or _DROP), a dict of field name -> spec, or
+# a one-item list (the spec of every item).
 
-SCALAR = "scalar"        # a string, a number, a boolean or None
-SCALARS = "scalars"      # scalars at any depth (an error object)
-NUMBERS = "numbers"      # numbers only, at any depth (a usage record's counts)
 _DROP = object()
+UNRECOGNISED = "<unrecognised>"
+OPAQUE = "<opaque>"
+_ID = re.compile(r"[A-Za-z0-9._:/-]{1,80}")
+# the one fingerprint judge-audit writes itself, for a server on this computer (llm.py)
+_LOCAL_FINGERPRINT = re.compile(r"mlx-lm [0-9][0-9.]{0,15} / mlx [0-9][0-9.]{0,15}")
+_WORD = re.compile(r"[a-z][a-z0-9_]{0,39}")
 
 
-def kept_fields(value, spec, path: str, dropped: list[str]):
-    """`value` with only the fields `spec` names: deny by default. `spec` is SCALAR, SCALARS,
-    NUMBERS, a dict of field name -> spec (`"*"`: any name, for a mapping keyed by option
-    labels) or a one-item list (the spec of every item). Every field left out is recorded by
-    its path in `dropped` (`answer.debug`); list items share their list's path. A value left
+def model_id(value) -> str | None:
+    """A served model id or fingerprint as evidence keeps it: None when none was given, the
+    string when it is a short plain id (`[A-Za-z0-9._:/-]{1,80}`), else `<unrecognised>`:
+    an object, or a string that could carry more than an id, is never kept."""
+    if value is None or value == "":
+        return None
+    ok = isinstance(value, str) and (_ID.fullmatch(value) or _LOCAL_FINGERPRINT.fullmatch(value))
+    return value if ok else UNRECOGNISED
+
+
+def count(value) -> int | None:
+    """A token count as evidence keeps it: a non-negative integer, else None (unknown)."""
+    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 \
+        else None
+
+
+def NUMBER(value, options):
+    """A finite number (not a boolean, not a string)."""
+    ok = isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
+    return value if ok else _DROP
+
+
+def BOOL(value, options):
+    return value if isinstance(value, bool) else _DROP
+
+
+def ID(value, options):
+    """A short plain id, else `<unrecognised>`; None stays None."""
+    return model_id(value)
+
+
+def one_of(*allowed: str):
+    def check(value, options):
+        return value if isinstance(value, str) and value in allowed else _DROP
+    return check
+
+
+def _is_option(value, options) -> bool:
+    """One of the options sent, or a level's index (a score's levels may be named by it)."""
+    if isinstance(value, str):
+        return value in options or (value.isdigit() and int(value) < len(options))
+    return isinstance(value, int) and not isinstance(value, bool) and 0 <= value < len(options)
+
+
+def OPTION(value, options):
+    """One of the options the question sent (or a level index), never another string."""
+    return value if _is_option(value, options) else _DROP
+
+
+def NUMBER_OR_OPTION(value, options):
+    got = NUMBER(value, options)
+    return got if got is not _DROP else OPTION(value, options)
+
+
+_ERROR_FIELDS = ("code", "type")
+
+
+def ERROR(value, options):
+    """An error as evidence keeps it: a code (`max_length_exceeded`) or, of an object, its
+    `code` / `type` when each is a plain word and its HTTP `status`; anything else is
+    `<unrecognised>`: an error's text can echo what was sent."""
+    if isinstance(value, str):
+        return value if _WORD.fullmatch(value) else UNRECOGNISED
+    if isinstance(value, dict):
+        kept = {k: value[k] for k in _ERROR_FIELDS
+                if isinstance(value.get(k), str) and _WORD.fullmatch(value[k])}
+        status = value.get("status")
+        if isinstance(status, int) and not isinstance(status, bool) and 100 <= status <= 599:
+            kept["status"] = status
+        return kept or UNRECOGNISED
+    return UNRECOGNISED
+
+
+# The counts a usage record may hold (`inputTokens` is read as `input_tokens`); any other
+# field, whatever it holds, is left out.
+USAGE_COUNTS = frozenset({
+    "input_tokens", "output_tokens", "total_tokens", "hidden_output_tokens", "cached_tokens",
+    "cache_write_tokens", "cache_read_tokens", "cache_creation_input_tokens",
+    "cache_read_input_tokens", "cached_input_tokens", "reasoning_tokens", "prompt_tokens",
+    "completion_tokens", "audio_tokens", "accepted_prediction_tokens",
+    "rejected_prediction_tokens"})
+USAGE_DETAILS = frozenset({"input_tokens_details", "output_tokens_details",
+                           "prompt_tokens_details", "completion_tokens_details",
+                           "input_token_details", "output_token_details"})
+
+
+def USAGE(value, options, path: str = "usage", dropped: list[str] | None = None):
+    """A usage record: its known counts as finite numbers, its known detail objects likewise."""
+    dropped = [] if dropped is None else dropped
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        dropped.append(path)
+        return _DROP
+    out = {}
+    for k, v in value.items():
+        here = f"{path}.{k}"
+        name = _norm(k) if isinstance(k, str) else ""
+        if name in USAGE_COUNTS and NUMBER(v, options) is not _DROP:
+            out[k] = v
+        elif name in USAGE_DETAILS and isinstance(v, dict):
+            got = USAGE(v, options, here, dropped)
+            if got is not _DROP:
+                out[k] = got
+        else:
+            dropped.append(here)
+    return out
+
+
+def KEYED(value_spec):
+    """A mapping keyed by the options sent (per-option probabilities): any other key is left
+    out, whatever its value."""
+    return ("keyed", value_spec)
+
+
+def ROWS(row_spec: dict, required: str):
+    """A list of objects (`row_spec` each); a row whose `required` field is not kept is left
+    out whole."""
+    return ("rows", row_spec, required)
+
+
+def kept_fields(value, spec, path: str, dropped: list[str], options=()):
+    """`value` with only the fields `spec` names, each of the type it names: deny by default.
+    Every field left out is recorded by its path in `dropped` (`answer.debug`). A value left
     out whole is None."""
-    got = _keep(value, spec, path, dropped)
+    got = _keep(value, spec, path, dropped, tuple(options))
     return None if got is _DROP else got
 
 
-def _keep(value, spec, path: str, dropped: list[str]):
-    scalar = value is None or isinstance(value, (str, int, float, bool))
-    if spec == SCALAR:
-        return value if scalar else _skip(path, dropped)
-    if spec in (SCALARS, NUMBERS):
-        numeric = isinstance(value, (int, float)) and not isinstance(value, bool)
-        if isinstance(value, dict):
-            out = {k: _keep(v, spec, f"{path}.{k}" if path else str(k), dropped)
-                   for k, v in value.items()}
-            out = {k: v for k, v in out.items() if v is not _DROP}
-            # an object that held only what is left out goes too: `{}` would say nothing
-            return _skip(path, dropped) if value and not out else out
-        if isinstance(value, (list, tuple)):
-            items = [_keep(v, spec, path, dropped) for v in value]
-            return [v for v in items if v is not _DROP]
-        return value if (numeric if spec == NUMBERS else scalar) else _skip(path, dropped)
-    if isinstance(spec, list):
+def _keep(value, spec, path: str, dropped: list[str], options: tuple):
+    if spec is USAGE:
+        return USAGE(value, options, path, dropped)
+    if callable(spec):
+        if value is None:
+            return None
+        got = spec(value, options)
+        if got is _DROP:
+            dropped.append(path)
+        return got
+    if isinstance(spec, tuple) and spec[0] == "keyed":
+        if not isinstance(value, dict):
+            return value if value is None else _skip(path, dropped)
+        out = {}
+        for k, v in value.items():
+            if not _is_option(k, options):
+                dropped.append(f"{path}.{k}")
+                continue
+            got = _keep(v, spec[1], f"{path}.{k}", dropped, options)
+            if got is not _DROP and got is not None:
+                out[k] = got
+        return out
+    if isinstance(spec, tuple) and spec[0] == "rows":
         if not isinstance(value, (list, tuple)):
             return value if value is None else _skip(path, dropped)
-        items = [_keep(v, spec[0], path, dropped) for v in value]
-        return [v for v in items if v is not _DROP]
+        rows = []
+        for v in value:
+            got = _keep(v, spec[1], path, dropped, options)
+            if isinstance(got, dict) and got.get(spec[2]) is not None:
+                rows.append(got)
+            elif got is not _DROP:
+                dropped.append(f"{path}.{spec[2]}")
+        return rows
     if not isinstance(value, dict):
         return value if value is None else _skip(path, dropped)
     out = {}
     for k, v in value.items():
         here = f"{path}.{k}" if path else str(k)
-        sub = spec.get(k, spec.get("*"))
+        sub = spec.get(k)
         if sub is None:
             dropped.append(here)
             continue
-        got = _keep(v, sub, here, dropped)
+        got = _keep(v, sub, here, dropped, options)
         if got is not _DROP:
             out[k] = got
     return out
@@ -572,8 +710,61 @@ def _skip(path: str, dropped: list[str]):
     return _DROP
 
 
+_HEADER_CASE = re.compile(r"[A-Z][a-z0-9]*(?:-[A-Z]?[a-z0-9]+){0,7}")
+
+
+def _safe_name(path: str) -> str:
+    """A dropped field's path as evidence records it: each part that is a plain lower-case
+    word (`trace_id`, `x-request-id`) or a header name in its usual case (`X-Request-Id`),
+    lower-cased with `-` as `_`; any other part is `<opaque>` (`rawResponse` too): a field
+    name a server chose can itself be a token."""
+    parts = []
+    for part in str(path).split("."):
+        name = part.replace("-", "_").lower()
+        plain = _WORD.fullmatch(part.replace("-", "_")) or _HEADER_CASE.fullmatch(part)
+        parts.append(name if plain and _WORD.fullmatch(name) else OPAQUE)
+    return ".".join(parts)
+
+
 def with_dropped(raw: dict, dropped: list[str]) -> dict:
-    """`raw` with `dropped_fields` (sorted, unique) when anything was left out."""
-    if dropped:
-        raw["dropped_fields"] = sorted(set(dropped))
+    """`raw` with `dropped_fields`, `{"count": n, "names": [...]}`, when anything was left
+    out: how many fields, and the plain-word paths of them (`_safe_name`)."""
+    if not dropped:
+        return raw
+    found = raw.get("dropped_fields")
+    prior: dict = found if isinstance(found, dict) else {}
+    n: int = prior["count"] if isinstance(prior.get("count"), int) else 0
+    had = [x for x in prior.get("names") or [] if isinstance(x, str)]
+    raw["dropped_fields"] = {"count": n + len(dropped),
+                             "names": sorted({*had, *(_safe_name(d) for d in dropped)})}
     return raw
+
+
+# What a run header keeps of a provider module's `describe()`: these fields, typed.
+def _prices(value, options):
+    ok = isinstance(value, (list, tuple)) and len(value) == 2 and \
+        all(NUMBER(x, ()) is not _DROP for x in value)
+    return list(value) if ok else _DROP
+
+
+DESCRIBE_FIELDS = {"provider": ID, "model": ID, "model_id": ID, "max_tokens": NUMBER,
+                   "prices_usd_per_mtok": _prices, "input_price_per_mtok_usd": NUMBER,
+                   "output_price_per_mtok_usd": NUMBER}
+
+
+def kept_describe(extra) -> tuple[dict, list[str]]:
+    """A provider module's `describe()` as the run header keeps it (`DESCRIBE_FIELDS`), and
+    what was left out. A value of the wrong type, or an id that is not a short plain one, is
+    left out, never kept as `<unrecognised>`."""
+    dropped: list[str] = []
+    if not isinstance(extra, dict):
+        return {}, ["describe"]
+    out = {}
+    for k, v in extra.items():
+        check = DESCRIBE_FIELDS.get(k) if isinstance(k, str) else None
+        got = check(v, ()) if check is not None and v is not None else _DROP
+        if got is _DROP or got == UNRECOGNISED:
+            dropped.append(f"describe.{k}")
+        else:
+            out[k] = got
+    return out, dropped
