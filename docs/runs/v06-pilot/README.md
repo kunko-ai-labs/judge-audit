@@ -203,3 +203,43 @@ All runs took place on 2026-10-12, after this amendment was pushed (commit `b7a7
 
 No accuracy or calibration figure is published from these checkpoints: they are planning inputs.
 
+
+## 9. Amendment, 2026-10-12: deepseek-r1, the 40-row pilot that sets its study ceiling
+
+This amendment is committed before any call for this judge is written to this directory. The v0.6 plan keeps `deepseek-r1` as an **exploratory** judge and says it runs in the study only after a 40-row pilot on the dev pilot items sets its cost ceiling, recorded in a dated amendment before its study run. This is that pilot. The rules of §4 apply, and the use is the same: planning input, no score published. **No test row is called.**
+
+| slug | judge | model | confidence | settings |
+|---|---|---|---|---|
+| `deepseek-r1` (exploratory) | `llm` | `deepseek-r1`, provider `hosted-api` (the transport used for its Arena runs, `docs/runs/arena/deepseek-r1/`) | verbalized (model-reported probability), v0.5 prompt | temperature 0, one call per row, 4,096 output tokens (`docs/judges.md`, reasoning models) |
+
+1. **Code.** judge-audit at commit `766fcbd427f62a3e0a9044accd705fdf972a93eb` on `main`, Python 3.12. Credentials come from the environment only.
+2. **Order.**
+   - A 5-row run on `en-US`, written to a scratch directory and not committed. It checks parsing, the recorded cost and the served model.
+   - Then the 40-row run with `scripts/audit_resumable.py examples/massive/labels-pilot-en-US.first40.jsonl --judge llm --checkpoint docs/runs/v06-pilot/deepseek-r1-en-US.first40.ckpt.jsonl`.
+   - Then a second run of the same 40 rows into `deepseek-r1-en-US.first40.repeat.ckpt.jsonl`, for between-run spread.
+   - es-ES and ca-ES are not run.
+3. **Data.** `examples/massive/labels-pilot-en-US.first40.jsonl`, sha256 `6d5ed014d93dc64bf1b789556ae516ef884dbe95751ab5572443451b9202a5e5` (§6, item 4).
+4. **Gate.** As §8 item 4: every judgment parsed with a known confidence or counted as unknown; no blank answer; `scripts/check_complete.py` 0 gaps; 3 or more unparsed, blank or not-sent rows among the 40 stop the run and are reported. A reply with an empty text and its output tokens at the 4,096 budget is a truncation: it is counted as unparsed, never re-sent.
+5. **Cost ceiling.** $2 for this amendment, repeat included. The estimate is about $0.35: 80 requests at about 620 input and 640 output tokens at $1.35 / $5.40 per million (the plan's §10 assumptions). The total comes from the checkpoints' `cost_usd`. A run that would pass the ceiling is stopped.
+6. **The study ceiling it sets.** By the plan's §10 rule: the mean recorded `cost_usd` per row of the first run × 8,922 rows × 1.5, rounded up to the next whole dollar. If that would take the study's ceilings above its $115 budget, the ceiling is the remainder. The ceiling is written under "What the amended run recorded" below, before the study's `deepseek-r1` run, which uses it as `--max-usd`. The rate comes from 40 English rows; Spanish and Catalan rows may use more tokens, which is why the study run carries the automatic stop.
+7. **Training data.** Whether MASSIVE was in this model's training data is not documented, so it is stated as unknown.
+
+### What the amended run recorded
+
+Both runs took place on 2026-10-12, after this amendment was pushed (commit `569cf370598ef1274d5caae6810a8e4e377deac5`, branch pushed at 15:59:15Z), with no restart.
+- **Scratch check.** The 5-row scratch run passed (parsing, recorded cost on every row) and was not committed.
+- **Checkpoints.**
+
+  | checkpoint | header time | sha256 |
+  |---|---|---|
+  | `deepseek-r1-en-US.first40.ckpt.jsonl` | 2026-10-12T16:00:45+00:00 | `22719663fbc127de6cf987df9c5616553d0fed2ce154e249d4a733a3b175bda9` |
+  | `deepseek-r1-en-US.first40.repeat.ckpt.jsonl` | 2026-10-12T16:02:36+00:00 | `332828b91f16ff2452da0d516b0856e11eff9f81e95087ec4f1667be790ede09` |
+
+  Each holds the 40 rows of `labels-pilot-en-US.first40.jsonl` once.
+- **Gate (item 4).** 0 unparsed, blank or not-sent rows and no truncation (largest output 767 tokens in the run and 1,291 in the repeat, of the 4,096 budget); every confidence is known; `scripts/check_complete.py` reports 0 gaps. The route reports no served model id, so none is recorded, and the plan's served-model check (§4 of the plan) cannot detect a change of model for this judge; the study report says so.
+- **Between-run spread.** The repeat gave the same decision on 38 of 40 rows. The confidence changed by 0.021 on average, and by 0.10 for the row that changed most. A planning input for the study's §5, not a finding.
+- **Tokens.** About 567 input and 319 output tokens per row in the first run (the plan's §10 assumed 620 and 640).
+- **Cost.** $0.0994 for the first run and $0.1045 for the repeat, $0.2039 in all, from the checkpoints' `cost_usd`; within the $2 ceiling.
+- **The study ceiling it sets (item 6).** deepseek-r1's study ceiling under v0.6 plan §10: **$34**. The first run's mean recorded cost per row ($0.0994 / 40) × 8,922 rows is $22.18; × 1.5 is $33.26, rounded up to $34. The remainder rule does not apply: the other ceilings ($47) plus this pilot ($0.20) plus $34 is $81.20, under the $115 budget.
+
+No accuracy or calibration figure is published from these checkpoints: they are planning inputs.
