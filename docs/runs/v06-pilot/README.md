@@ -143,3 +143,14 @@ This amendment is committed before any call for this judge is written to this di
    - The text overlap between typed-decisions and these 40 rows has **not been measured**, so it is reported as **unknown**, never as "unseen".
    - #166 commits to an overlap table of typed-decisions against MASSIVE (same method as the MASSIVE preparation). That table goes next to every number from this judge.
 10. **Deadline.** The judge enters the v0.6 study as an exploratory row only if this pilot passes the gate by 2026-10-20. Otherwise it runs after the release, under a new dated amendment.
+
+### What the amended run recorded
+
+The run took place on 2026-10-12, after this amendment was pushed (commit `80171c6890581fdef39167659fe2956c32ebd85c`). Its header is dated 2026-10-12T10:07:17+00:00.
+- Checkpoint `unsloth-decision-4b-en-US.first40.ckpt.jsonl`, sha256 `37474db485e153381a98d9922a0c97cad5416752b8baf8fde485ca69998cda7f`. It holds the 40 rows of `labels-pilot-en-US.first40.jsonl` once each.
+- Gate (item 7): 0 unparsed, blank or not-sent rows among the 40. `scripts/check_complete.py` reports 0 gaps. For rows 0, 19 and 39 the adapter's answers equal a direct `predict` call (same decisions; largest probability difference 0.0).
+- The base model was loaded at the pinned revision: the Hub's default branch was at `3764fa35…` when it loaded.
+- Cost: $0.
+
+No accuracy or calibration figure is published from this checkpoint. It is a planning input, like the rest of this pilot.
+
