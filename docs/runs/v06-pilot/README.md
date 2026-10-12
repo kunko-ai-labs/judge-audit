@@ -198,7 +198,7 @@ All runs took place on 2026-10-12, after this amendment was pushed (commit `b7a7
 
   Each holds the 40 rows of `labels-pilot-en-US.first40.jsonl` once.
 - **Gate (item 4).** Every reply named the pinned served version `microsoft/microsoft-decision-1-20261009`. There were 0 unparsed, blank, refused or not-sent rows, and `scripts/check_complete.py` reports 0 gaps.
-- **Between-run spread.** The repeat gave the same decision on 40 of 40 rows. The audited confidence changed by 0.0064 on average, and by at most 0.0957. Repeated requests to this route are therefore not bit-identical in confidence. This is a planning input for the study's §5, not a finding.
+- **Between-run spread.** The repeat gave the same decision on 40 of 40 rows. The audited confidence changed by 0.0064 on average, and by 0.0957 for the row that changed most. Repeated requests to this route are therefore not bit-identical in confidence. This is a planning input for the study's §5, not a finding.
 - **Cost.** $0.000658 per run, $0.0013 for both, from the checkpoints' `cost_usd`. That is within the $1 ceiling.
 
 No accuracy or calibration figure is published from these checkpoints: they are planning inputs.
