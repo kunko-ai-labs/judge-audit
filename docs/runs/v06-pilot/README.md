@@ -128,7 +128,7 @@ This amendment is committed before any call for this judge is written to this di
    - It records `predict`'s outputs on 21 fixed synthetic requests, which are the reference outputs.
    - The reference check runs on the recipe notebook's example.
    
-   These are checks of the setup. They are not results of the audit. They ran on 2026-10-12, before this amendment, and read no MASSIVE row: the recipe's evaluation came within tolerance (accuracy gap 0.000, ECE gap 0.0004), and the reference outputs were recorded.
+   These are checks of the setup. They are not results of the audit. They ran on 2026-10-12, before this amendment, and read no MASSIVE row: the recipe's evaluation came within the 0.02 tolerance, and the reference outputs were recorded. These setup outputs stay with the private runner and are not committed, so no figure from them is given here.
 6. **Data.** `examples/massive/labels-pilot-en-US.first40.jsonl`: the first 40 rows of the `en-US` pilot file, sha256 `6d5ed014d93dc64bf1b789556ae516ef884dbe95751ab5572443451b9202a5e5` (§6, item 4). The run verifies this sha256 first. The run is one session of `scripts/audit_resumable.py`'s driver, and the checkpoint is `docs/runs/v06-pilot/unsloth-decision-4b-en-US.first40.ckpt.jsonl`. es-ES and ca-ES are not run.
 7. **Gate.** This is the gate of §4 rule 3, as corrected, and of §6 item 3:
    - every judgment parsed, with no blank answer;
@@ -148,7 +148,7 @@ This amendment is committed before any call for this judge is written to this di
 
 The run took place on 2026-10-12, after this amendment was pushed (commit `80171c6890581fdef39167659fe2956c32ebd85c`). Its header is dated 2026-10-12T10:07:17+00:00.
 - Checkpoint `unsloth-decision-4b-en-US.first40.ckpt.jsonl`, sha256 `37474db485e153381a98d9922a0c97cad5416752b8baf8fde485ca69998cda7f`. It holds the 40 rows of `labels-pilot-en-US.first40.jsonl` once each.
-- Gate (item 7): 0 unparsed, blank or not-sent rows among the 40. `scripts/check_complete.py` reports 0 gaps. For rows 0, 19 and 39 the adapter's answers equal a direct `predict` call (same decisions; largest probability difference 0.0).
+- Gate (item 7): 0 unparsed, blank or not-sent rows among the 40. `scripts/check_complete.py` reports 0 gaps. For rows 0, 19 and 39 the adapter's answers equal a direct `predict` call (same decisions; largest probability difference 0.0). The gate's record, including which rows were compared, is committed as `unsloth-decision-4b-en-US.first40.checks.json`.
 - The base model was loaded at the pinned revision: the Hub's default branch was at `3764fa35…` when it loaded.
 - Cost: $0.
 
