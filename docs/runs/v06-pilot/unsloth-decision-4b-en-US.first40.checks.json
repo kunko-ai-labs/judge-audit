@@ -1,0 +1,38 @@
+{
+  "check_complete_gaps": [],
+  "checkpoint": "docs/runs/v06-pilot/unsloth-decision-4b-en-US.first40.ckpt.jsonl",
+  "checkpoint_sha256": "37474db485e153381a98d9922a0c97cad5416752b8baf8fde485ca69998cda7f",
+  "direct_predict": [
+    {
+      "max_abs_diff": 0.0,
+      "question": "intent",
+      "row": 0,
+      "same_decision": true,
+      "same_options": true
+    },
+    {
+      "max_abs_diff": 0.0,
+      "question": "intent",
+      "row": 19,
+      "same_decision": true,
+      "same_options": true
+    },
+    {
+      "max_abs_diff": 0.0,
+      "question": "intent",
+      "row": 39,
+      "same_decision": true,
+      "same_options": true
+    }
+  ],
+  "direct_predict_passed": true,
+  "gate": {
+    "first_40_unparsed_or_blank": 0,
+    "not_sent": 0,
+    "passed": true,
+    "rows": 40,
+    "share": 0.0,
+    "threshold": 0.05
+  },
+  "header_timestamp_utc": "2026-10-12T10:07:17+00:00"
+}

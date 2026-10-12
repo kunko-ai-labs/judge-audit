@@ -91,3 +91,66 @@ All 6 runs and the 2 repeats finished on 2026-10-10, with no restart. The first 
 - The repeats read `first40-en-US.jsonl`, which is the first 41 lines of `examples/massive/labels-pilot-en-US.jsonl`: the header and rows 0–39 (`head -41`), sha256 `6d5ed014d93dc64bf1b789556ae516ef884dbe95751ab5572443451b9202a5e5`, as recorded in their headers. That file is committed as `examples/massive/labels-pilot-en-US.first40.jsonl` (same bytes, same sha256), and `scripts/check_complete.py` reads it for these two checkpoints (`SCRATCH`). The headers are left as the runs wrote them.
 
 Total cost of the amendment, repeats included: $2.12, within the $5 ceiling. No accuracy or calibration figure is published from these checkpoints: they are planning inputs.
+
+## 7. Amendment, 2026-10-12: exploratory decision model trained from a public recipe (#166)
+
+This amendment is committed before any call for this judge is written to this directory. It adds one **exploratory** judge to the pilot. The rules of §4 apply, and the use is the same: planning input, no score published. **No test row is called.** The judge is something we audit, not something we ship or recommend. Every number from it is labelled "exploratory" and "trained by Kunko following the vendor's public notebook, a methods demo".
+
+| slug | judge | model | confidence | settings |
+|---|---|---|---|---|
+| `unsloth-decision-4b` (exploratory) | `unsloth-decision` (adapter outside this repository, see 3) | LoRA adapter and joint decision head over `unsloth/Qwen3.5-4B` at `3764fa359b9082ea5a1e4a5e3ac3aaf6e9671636`, 4-bit; artifact sha256 `fe13d15957422d75fd49244b446b54aefb8e7d9010780705217ad7a4bfc88f56` | P(chosen option) from the per-option probabilities of Unsloth's `FastDecisionModel.predict`; `predict`'s own `confidence` field is kept in `raw.native_confidence` | the model as the recipe ships it: per-question-type temperatures from `unsloth_decision_config.json`, applied by `predict` |
+
+1. **How it was trained.** We followed Unsloth's public notebook `nb/Qwen3_5_(4B)-Decision.ipynb` (`unslothai/notebooks`, commit `59d5a1b8216e5f67c5e3ccf37a5ecae94a950a14`) without changing the recipe:
+   - LoRA r = 16, alpha 16, seed 3407, 60 steps, a 4-bit base and float16 compute.
+   - Training data: `LocalLLaMA/typed-decisions`, config `all`, revision `6a7927fa3c8ac114e29f5300eacb86f6f37a6447`. That is 1,200 training rows; the recipe trains on 1,120 of them and holds out 80 to fit its temperatures.
+   - Base model: `unsloth/Qwen3.5-4B` at `3764fa359b9082ea5a1e4a5e3ac3aaf6e9671636`.
+   - Libraries: Unsloth at git commit `2afec3cbf48816a25356f658313009b39b3b4a9a`, unsloth_zoo at `f787f63d3411c00633d1768f617348ee6867ed37`, transformers 5.2.0, torch 2.8.0, peft 0.21.1 and trl 0.22.2.
+   - Output: one artifact, sha256 `fe13d15957422d75fd49244b446b54aefb8e7d9010780705217ad7a4bfc88f56`. Its manifest gives the sha256 of every file it holds (the LoRA adapter, the joint head and the temperature config, all as safetensors or JSON).
+   
+   The vendor's own figures, from its holdout calibration and its test evaluation, are its claim. They are not audited and are not reported here.
+2. **Where it runs (requirement).** A CUDA GPU in a hosted notebook. The 4-bit weights (bitsandbytes) and Unsloth's kernels need CUDA, so this run is not supported on CPU or MPS. Each checkpoint header records:
+   - the device, the GPU model and the precision (4-bit weights, compute and autocast dtypes);
+   - the base model and its revision;
+   - the artifact's sha256 and the Unsloth commits;
+   - the commit of this amendment.
+
+   At the time of this amendment, Unsloth loads the base of an adapter folder from the Hub's default branch. The run therefore checks that this branch is still at the pinned revision; if it is not, the run loads the pinned snapshot. The header says which of the two happened.
+3. **Code.** judge-audit 0.6.0rc2 is installed from GitHub at commit `67ab8438bc7b678d67c89304bc765acb21047830`. The adapter lives outside this repository, so no Unsloth code is copied into or imported by judge-audit. It subclasses `LocalSystemOneJudge` (`src/judge_audit/judges/systemone.py`), and its `system_one` call is `FastDecisionModel.predict`. Everything else comes from judge-audit unchanged:
+   - turning a row into a request (`systemone_question`);
+   - the confidence rule (`read_answer`);
+   - the reference check;
+   - the driver (`scripts/audit_resumable.py`).
+   
+   The checkpoint is the evidence, as for every other run. The weights are not published at the time of this amendment. Until they are, with their sha256, any number from this run is labelled "not independently reproducible".
+4. **Over-length input.** The shared rule of §4 and `systemone.py` applies. Each request is measured with the runtime's own encoder against `predict`'s window of 16,384 tokens. A longer request is not sent: its questions are recorded as no answer (`max_length_exceeded`) and counted against the judge. The model was trained with a 2,048-token cut. The token count of every pilot row is recorded before the first call; this counts tokens only and reads no answer.
+5. **Before the pilot, with no MASSIVE row:**
+   - The run re-runs the recipe's own evaluation on the 400 typed-decisions test rows. If the result is more than 0.02 from the recipe-reported accuracy or ECE, the pilot does not start.
+   - It records `predict`'s outputs on 21 fixed synthetic requests, which are the reference outputs.
+   - The reference check runs on the recipe notebook's example.
+   
+   These are checks of the setup. They are not results of the audit. They ran on 2026-10-12, before this amendment, and read no MASSIVE row: the recipe's evaluation came within the 0.02 tolerance, and the reference outputs were recorded. These setup outputs stay with the private runner and are not committed, so no figure from them is given here.
+6. **Data.** `examples/massive/labels-pilot-en-US.first40.jsonl`: the first 40 rows of the `en-US` pilot file, sha256 `6d5ed014d93dc64bf1b789556ae516ef884dbe95751ab5572443451b9202a5e5` (§6, item 4). The run verifies this sha256 first. The run is one session of `scripts/audit_resumable.py`'s driver, and the checkpoint is `docs/runs/v06-pilot/unsloth-decision-4b-en-US.first40.ckpt.jsonl`. es-ES and ca-ES are not run.
+7. **Gate.** This is the gate of §4 rule 3, as corrected, and of §6 item 3:
+   - every judgment parsed, with no blank answer;
+   - `scripts/check_complete.py` reports 0 gaps;
+   - more than 5 % unparsed, blank or not-sent rows among the 40 (that is, 3 or more) stops the run and is reported;
+   - the adapter's answers for rows 0, 19 and 39 must equal a direct `predict` call (same decisions, every probability within 1e-4).
+   
+   A checkpoint that fails the gate is not committed as evidence.
+8. **Cost.** $0. No paid API is called, and the notebook's GPU runtime has no charge.
+9. **Overlap with the training data.**
+   - typed-decisions (config `all`) is synthetic English text in four workflows: customer service, invoice processing, security incidents and agent traces. MASSIVE is not among its sources as its card describes them.
+   - The text overlap between typed-decisions and these 40 rows has **not been measured**, so it is reported as **unknown**, never as "unseen".
+   - #166 commits to an overlap table of typed-decisions against MASSIVE (same method as the MASSIVE preparation). That table goes next to every number from this judge.
+10. **Deadline.** The judge enters the v0.6 study as an exploratory row only if this pilot passes the gate by 2026-10-20. Otherwise it runs after the release, under a new dated amendment.
+
+### What the amended run recorded
+
+The run took place on 2026-10-12, after this amendment was pushed (commit `80171c6890581fdef39167659fe2956c32ebd85c`). Its header is dated 2026-10-12T10:07:17+00:00.
+- Checkpoint `unsloth-decision-4b-en-US.first40.ckpt.jsonl`, sha256 `37474db485e153381a98d9922a0c97cad5416752b8baf8fde485ca69998cda7f`. It holds the 40 rows of `labels-pilot-en-US.first40.jsonl` once each.
+- Gate (item 7): 0 unparsed, blank or not-sent rows among the 40. `scripts/check_complete.py` reports 0 gaps. For rows 0, 19 and 39 the adapter's answers equal a direct `predict` call (same decisions; largest probability difference 0.0). The gate's record, including which rows were compared, is committed as `unsloth-decision-4b-en-US.first40.checks.json`.
+- The base model was loaded at the pinned revision: the Hub's default branch was at `3764fa35…` when it loaded.
+- Cost: $0.
+
+No accuracy or calibration figure is published from this checkpoint. It is a planning input, like the rest of this pilot.
+
