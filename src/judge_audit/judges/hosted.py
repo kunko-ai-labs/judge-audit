@@ -37,10 +37,12 @@ and why:
   the run (`MICROSOFT_DECISION_VERSION` moves the pin on purpose). The served model and
   provider are kept as typed fields, and OpenRouter's own `usage.cost` beside the cost
   computed here (`reported_cost_usd`). Always one question per request.
-- **Over length is no answer, never a truncated one.** A request the route refuses for its
-  length (a 413, or a 400 that says so), or a reply reporting more input tokens than the
+- **Over length is no answer, never a truncated one.** A request whose text is over a
+  conservative byte bound (`MICROSOFT_MAX_REQUEST_BYTES`) is withheld unsent; one the route
+  refuses with its own context-length error, or a reply reporting input tokens at or over the
   model's context, is no answer with `raw.error` `max_length_exceeded`, counted against the
-  judge. The tokenizer is not public, so nothing is counted before sending.
+  judge. Any other 400 or 413 stops the run. The tokenizer is not public, so no exact count
+  is made before sending.
 - **Only what the audit reads is kept** (deny by default): of an answer, its type, choice,
   score, probabilities, confidence and refusal (`DECISIONS_ANSWER`, `CLEF_ANSWER`); of a
   usage record, its counts. Every other field, a header, a trace or a debug object, is left
@@ -640,11 +642,18 @@ MICROSOFT_VERSION = "microsoft/microsoft-decision-1-20261009"
 MICROSOFT_ROUTE_PROVIDER = "azure"          # OpenRouter's slug for the model's one endpoint
 MICROSOFT_PRICE_PER_MTOK = 0.042
 MICROSOFT_MAX_INPUT_TOKENS = 32_768
+# A conservative pre-send bound: a request whose text (state, instructions, options) is over
+# 4 UTF-8 bytes per token of context is withheld without a call. Text that long is past the
+# context in most languages; a row under the bound that is still too long is caught by the
+# route's own refusal or by the input tokens it reports. The tokenizer is not public, so no
+# exact count is made before sending.
+MICROSOFT_MAX_REQUEST_BYTES = 4 * MICROSOFT_MAX_INPUT_TOKENS
 MICROSOFT_ANSWER = {**CLEF_ANSWER, "refusal": BOOL}
 OVER_LENGTH = "max_length_exceeded"
-# what a server says when it refuses a request for its length (a 413 always is one)
-_TOO_LONG = re.compile(r"context[ _-]?(?:length|window)|too (?:long|large)|too many tokens|"
-                       r"token limit|max_length_exceeded", re.I)
+# OpenRouter's own context-length error, and nothing broader: any other 400 or 413 (a schema,
+# quota or size error) stops the run rather than be counted as the judge's over-length row.
+OVER_CONTEXT_STATUS = (400, 413)
+_OVER_CONTEXT = re.compile(r"maximum context length is \d+ tokens")
 
 
 class MicrosoftDecisionJudge(_HostedDecisionJudge):
@@ -686,6 +695,7 @@ class MicrosoftDecisionJudge(_HostedDecisionJudge):
                 "temperature": "n/a",
                 "questions_per_request": 1,
                 "max_input_tokens": self.max_input_tokens,
+                "max_request_bytes": MICROSOFT_MAX_REQUEST_BYTES,
                 "input_price_per_mtok_usd": self.price, "output_price_per_mtok_usd": 0.0,
                 "sum_tolerance": "options x 0.5 x 10^-decimals (rounding)"}
 
@@ -703,11 +713,13 @@ class MicrosoftDecisionJudge(_HostedDecisionJudge):
         served = model_id(reply.get("model"))
         provider = model_id(reply.get("provider"))
         if served != self.version or (provider or "").lower() != MICROSOFT_ROUTE_PROVIDER:
-            raise RuntimeError(
+            # masked here, whatever the caller does: a server can echo the key as an id
+            raise RuntimeError(_redact(
                 f"Microsoft-Decision-1 was served as {served or 'an unnamed model'} by "
                 f"{provider or 'an unnamed provider'}, not the pinned {self.version} by "
                 f"{MICROSOFT_ROUTE_PROVIDER}; nothing was recorded for this row. Set "
-                "MICROSOFT_DECISION_VERSION to pin another version on purpose")
+                "MICROSOFT_DECISION_VERSION to pin another version on purpose",
+                (self._key,)))
 
     def _call(self, state: str, questions: list[Question]) -> list[Judgment]:
         (q,) = questions                                  # one question per request
@@ -715,11 +727,17 @@ class MicrosoftDecisionJudge(_HostedDecisionJudge):
                 "provider": {"order": [MICROSOFT_ROUTE_PROVIDER], "allow_fallbacks": False},
                 "state": state, "questions": {q.name: systemone_question(q)}}
         secrets = (self._key,)
+        size = len(json.dumps({"state": state, "questions": body["questions"]},
+                              ensure_ascii=False).encode())
+        if size > MICROSOFT_MAX_REQUEST_BYTES:            # withheld, never sent: costs nothing
+            return [self._over_length(q, 0.0, 0.0,
+                                      f"the request text is {size} UTF-8 bytes, over the "
+                                      f"pre-send bound of {MICROSOFT_MAX_REQUEST_BYTES} bytes")]
         t0 = time.monotonic()
         try:
             reply = post_json(self.endpoint, body, "OpenRouter's Decisions route", secrets)
         except HostedHTTPError as e:
-            if e.status == 413 or (e.status == 400 and _TOO_LONG.search(str(e))):
+            if e.status in OVER_CONTEXT_STATUS and _OVER_CONTEXT.search(str(e)):
                 # refused before it was read; whether it was billed is not known
                 return [self._over_length(q, time.monotonic() - t0, None,
                                           f"the route refused the request as over length "
@@ -742,16 +760,19 @@ class MicrosoftDecisionJudge(_HostedDecisionJudge):
                                                  else None, NUMBER, "usage.cost", dropped)}
         if isinstance(ans, dict) and isinstance(ans.get("probabilities"), dict):
             base.update(declared_sum(ans["probabilities"].values()))
-        tokens = usage.get("input_tokens") if isinstance(usage, dict) else None
-        if count(tokens) is not None and tokens > self.max_input_tokens:
+        with_dropped(base, dropped)
+        tokens = count(usage.get("input_tokens")) if isinstance(usage, dict) else None
+        if tokens is not None and tokens >= self.max_input_tokens:
+            # at or past the context: what was read whole cannot be told from what was cut
             return [self._over_length(q, latency, cost,
-                                      f"the route reports {tokens} input tokens, more than "
+                                      f"the route reports {tokens} input tokens, at or over "
                                       f"its context of {self.max_input_tokens}", base)]
         if isinstance(ans, dict) and ans.get("error") == OVER_LENGTH:
             return [self._over_length(q, latency, cost,
                                       "the route refused the question as over length", base)]
-        if not isinstance(ans, dict) or "error" in ans or ans.get("type") == "refusal":
-            refused = isinstance(ans, dict) and ans.get("type") == "refusal"
+        refused = isinstance(ans, dict) and (ans.get("type") == "refusal"
+                                             or ans.get("refusal") is True)
+        if not isinstance(ans, dict) or "error" in ans or refused:
             return [_no_answer(q, latency, cost, {**base, "refusal": refused}, secrets)]
         chosen = ans.get("choice")
         if q.type is QuestionType.CHOICE and (chosen is None or str(chosen).strip() == ""):

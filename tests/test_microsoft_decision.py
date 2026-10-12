@@ -7,6 +7,7 @@ import io
 import json
 import os
 import urllib.error
+import urllib.parse
 
 import pytest
 
@@ -167,6 +168,8 @@ def test_an_unsent_option_is_a_wrong_answer_at_its_confidence(wire):
 
 @pytest.mark.parametrize("answer, flag", [
     ({"type": "refusal"}, "refusal"),
+    ({"type": "choice", "choice": "billing", "refusal": True,
+      "probabilities": {"billing": 1.0}}, "refusal"),
     ({"type": "choice", "choice": "", "probabilities": {"billing": 1.0}}, "blank"),
     ({"type": "choice", "choice": None, "probabilities": {"billing": 1.0}}, "blank"),
     ({"type": "choice", "choice": "   "}, "blank"),
@@ -234,6 +237,23 @@ def test_another_served_version_or_provider_stops_the_run(wire, field, value):
     assert SECRET not in str(e.value)
 
 
+@pytest.mark.parametrize("field", ["model", "provider"])
+def test_the_stop_message_masks_a_key_echoed_as_the_served_model(wire, monkeypatch, field):
+    """Masked at the source, not only by the CLI: the key is not in the environment here."""
+    monkeypatch.delenv("OPENROUTER_API_KEY")
+    wire(reply(**{field: SECRET}))
+    with pytest.raises(RuntimeError, match="pinned") as e:
+        MicrosoftDecisionJudge(api_key=SECRET).decide("x", [ROUTE])
+    assert SECRET not in str(e.value)
+
+
+def test_a_reported_cost_that_is_not_a_number_is_counted_as_dropped(wire):
+    wire(reply(cost="0.01 USD"))
+    (j,) = MicrosoftDecisionJudge().decide("x", [ROUTE])
+    assert j.raw["reported_cost_usd"] is None
+    assert "usage.cost" in j.raw["dropped_fields"]["names"]
+
+
 def test_the_pinned_version_can_be_moved_explicitly_and_is_recorded(wire, monkeypatch):
     monkeypatch.setenv("MICROSOFT_DECISION_VERSION", "microsoft/microsoft-decision-1-20261201")
     wire(reply(model="microsoft/microsoft-decision-1-20261201"))
@@ -291,12 +311,13 @@ def test_provenance_names_the_model_pin_and_price_never_the_key():
 
 # --- over length ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("status, text", [
-    (400, '{"error": {"message": "This endpoint\'s maximum context length is 32768 tokens. '
-          'However, you requested about 40000 tokens."}}'),
-    (413, '{"error": {"message": "Payload too large"}}'),
-])
-def test_a_refusal_for_length_is_no_answer_not_a_crash(wire, status, text):
+CONTEXT_ERROR = ('{"error": {"message": "This endpoint\'s maximum context length is 32768 '
+                 'tokens. However, you requested about 40000 tokens."}}')
+
+
+@pytest.mark.parametrize("status", [400, 413])
+def test_the_route_s_context_length_error_is_no_answer_not_a_crash(wire, status):
+    text = CONTEXT_ERROR
     wire((status, text))
     (j,) = MicrosoftDecisionJudge().decide("x", [ROUTE])
     assert j.parse_status == "no_answer" and j.confidence is None and j.decision == ""
@@ -304,10 +325,51 @@ def test_a_refusal_for_length_is_no_answer_not_a_crash(wire, status, text):
     assert j.raw["problems"] and j.cost_usd is None
 
 
-def test_another_400_is_still_an_error(wire):
-    wire((400, '{"error": {"message": "questions must not be empty"}}'))
-    with pytest.raises(RuntimeError, match="400"):
+@pytest.mark.parametrize("status, message", [
+    (400, "questions must not be empty"),
+    (400, "max_tokens is too large"),
+    (400, "criteria description too long"),
+    (400, "question name too long"),
+    (400, "token limit reached for this key"),
+    (400, "context_length param unsupported"),
+    (413, "Payload too large"),
+])
+def test_any_other_refusal_stops_the_run_never_over_length(wire, status, message):
+    """A schema, quota or size error is not the judge's failure: never `max_length_exceeded`,
+    and the run stops with the status and the message, the key masked."""
+    wire((status, f'{{"error": {{"message": "{message} ({SECRET})"}}}}'))
+    with pytest.raises(RuntimeError, match=str(status)) as e:
         MicrosoftDecisionJudge().decide("x", [ROUTE])
+    assert message in str(e.value) and SECRET not in str(e.value)
+
+
+def test_a_reply_at_exactly_its_context_is_over_length(wire):
+    wire(reply(tokens=32_768))
+    (j,) = MicrosoftDecisionJudge().decide("x", [ROUTE])
+    assert j.parse_status == "no_answer" and j.raw["error"] == "max_length_exceeded"
+
+
+def test_a_reply_just_under_its_context_is_used(wire):
+    wire(reply(tokens=32_767))
+    (j,) = MicrosoftDecisionJudge().decide("x", [ROUTE])
+    assert j.parse_status == "parsed"
+
+
+def test_a_request_over_the_byte_bound_is_never_sent(wire):
+    w = wire()
+    big = "a" * (hosted.MICROSOFT_MAX_REQUEST_BYTES + 1)
+    (j,) = MicrosoftDecisionJudge().decide(big, [ROUTE])
+    assert w.requests == []
+    assert j.parse_status == "no_answer" and j.raw["error"] == "max_length_exceeded"
+    assert j.cost_usd == 0.0 and "bytes" in j.raw["problems"][0]
+
+
+def test_the_byte_bound_counts_utf8_bytes_and_a_request_under_it_is_sent(wire):
+    w = wire(reply())
+    MicrosoftDecisionJudge().decide("é" * 1000, [ROUTE])          # 2,000 bytes
+    assert len(w.requests) == 1
+    assert hosted.MICROSOFT_MAX_REQUEST_BYTES == 4 * 32_768
+    assert MicrosoftDecisionJudge().describe()["max_request_bytes"] == 4 * 32_768
 
 
 def test_a_reply_that_read_more_than_its_context_is_not_used(wire):
@@ -325,7 +387,7 @@ def test_an_answer_error_for_length_is_over_length(wire):
 
 def test_the_runner_counts_an_over_length_row_as_not_sent(wire):
     from judge_audit.runner import is_not_sent
-    wire((413, "{}"))
+    wire((400, CONTEXT_ERROR))
     (j,) = MicrosoftDecisionJudge().decide("x", [ROUTE])
     assert is_not_sent(j.raw)
 
@@ -346,7 +408,9 @@ def test_an_endpoint_override_is_used_and_recorded_by_host_only(wire, monkeypatc
     w = wire(reply())
     judge = MicrosoftDecisionJudge()
     judge.decide("x", [ROUTE])
-    assert w.requests[0][0].startswith("https://proxy.example.test:9443/")
+    sent = urllib.parse.urlsplit(w.requests[0][0])
+    assert (sent.scheme, sent.hostname, sent.port, sent.path) == (
+        "https", "proxy.example.test", 9443, "/api/alpha/decisions")
     d = judge.describe()
     assert d["endpoint_overridden"] is True and d["endpoint"] is None
     assert d["endpoint_host"] == "proxy.example.test:9443" and "k=1" not in json.dumps(d)

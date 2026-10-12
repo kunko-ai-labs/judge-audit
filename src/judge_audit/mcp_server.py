@@ -144,7 +144,7 @@ JUDGE_INFO: dict[str, dict[str, object]] = {
                        "from its per-option probabilities; its own confidence field is kept "
                        "in raw, not audited. One question per request.",
         "env": ["OPENROUTER_API_KEY", ("MICROSOFT_DECISION_VERSION (the served version "
-                                       "pinned; optional)")],
+                                       "pinned), MICROSOFT_DECISION_ENDPOINT (optional)")],
     },
     "simulated": {
         "description": "Seeded simulator to see the pipeline without a key. Not a real "
