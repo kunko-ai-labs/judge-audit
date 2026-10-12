@@ -184,3 +184,22 @@ This amendment is committed before any call for this judge is written to this di
    The 40 pilot rows are short voice-assistant commands, far under both limits.
 6. **Cost ceiling.** $1 for this amendment, repeat included. The estimate is under $0.01: about 80 requests of a few hundred input tokens at $0.042 per million, with output not billed. The total comes from the checkpoints' `cost_usd`; OpenRouter's own `usage.cost` is kept beside it in `raw.reported_cost_usd`. A run that would pass the ceiling is stopped.
 7. **Training data.** Whether MASSIVE was in this model's training data is not known (#164). Until it is, any result from it on MASSIVE is read as possibly in-distribution.
+
+### What the amended runs recorded
+
+All runs took place on 2026-10-12, after this amendment was pushed (commit `b7a7be2ceeb8ce41f86f3a3946b98f5d59982cac`, at 13:39:08Z), with no restart.
+- **Scratch check.** The 5-row scratch run passed (parsing, recorded cost, served version) and was not committed.
+- **Checkpoints.**
+
+  | checkpoint | header time | sha256 |
+  |---|---|---|
+  | `microsoft-decision-1-en-US.first40.ckpt.jsonl` | 2026-10-12T13:39:43+00:00 | `df489db37622756a0e76783edbb36056d2c908ab3b7dfeda2ed29c5c6d161d24` |
+  | `microsoft-decision-1-en-US.first40.repeat.ckpt.jsonl` | 2026-10-12T13:40:03+00:00 | `ff65129a8c841be72c813b28fbf6c0fd7ef1107299c6a419bae981d65f2c90a4` |
+
+  Each holds the 40 rows of `labels-pilot-en-US.first40.jsonl` once.
+- **Gate (item 4).** Every reply named the pinned served version `microsoft/microsoft-decision-1-20261009`. There were 0 unparsed, blank, refused or not-sent rows, and `scripts/check_complete.py` reports 0 gaps.
+- **Between-run spread.** The repeat gave the same decision on 40 of 40 rows. The audited confidence changed by 0.0064 on average, and by at most 0.0957. Repeated requests to this route are therefore not bit-identical in confidence. This is a planning input for the study's §5, not a finding.
+- **Cost.** $0.000658 per run, $0.0013 for both, from the checkpoints' `cost_usd`. That is within the $1 ceiling.
+
+No accuracy or calibration figure is published from these checkpoints: they are planning inputs.
+
