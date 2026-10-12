@@ -38,10 +38,11 @@ and why:
   provider are kept as typed fields, and OpenRouter's own `usage.cost` beside the cost
   computed here (`reported_cost_usd`). Always one question per request.
 - **Over length is no answer, never a truncated one.** A request whose text is over a
-  conservative byte bound (`MICROSOFT_MAX_REQUEST_BYTES`) is withheld unsent; one the route
-  refuses with its own context-length error, or a reply reporting input tokens at or over the
-  model's context, is no answer with `raw.error` `max_length_exceeded`, counted against the
-  judge. Any other 400 or 413 stops the run. The tokenizer is not public, so no exact count
+  heuristic byte bound (`MICROSOFT_MAX_REQUEST_BYTES`) is withheld unsent. A request of at
+  least half the context in bytes that the route refuses with its own context-length error
+  (`route_over_context`), or a reply reporting input tokens at or over the model's context,
+  is no answer with `raw.error` `max_length_exceeded`, counted against the judge. Any other
+  400 or 413 stops the run. The tokenizer is not public, so no exact count
   is made before sending.
 - **Only what the audit reads is kept** (deny by default): of an answer, its type, choice,
   score, probabilities, confidence and refusal (`DECISIONS_ANSWER`, `CLEF_ANSWER`); of a
@@ -191,12 +192,13 @@ def _redact(text: str, secrets: tuple[str, ...]) -> str:
 
 
 class HostedHTTPError(RuntimeError):
-    """An HTTP error a hosted API answered and that is not retried, with its `status`; its
-    text is already masked (`_redact`) and cut."""
+    """An HTTP error a hosted API answered and that is not retried, with its `status` and
+    its `body`; both texts are already masked (`_redact`), the message cut."""
 
-    def __init__(self, message: str, status: int):
+    def __init__(self, message: str, status: int, body: str = ""):
         super().__init__(message)
         self.status = status
+        self.body = body
 
 
 def post_json(url: str, body: dict, label: str, secrets: tuple[str, ...]) -> dict:
@@ -214,10 +216,12 @@ def post_json(url: str, body: dict, label: str, secrets: tuple[str, ...]) -> dic
             with OPENER.open(req, timeout=TIMEOUT_S) as resp:      # refuses redirects
                 return json.load(resp)
         except urllib.error.HTTPError as e:
-            last = _redact(f"{e.code}: {e.read().decode(errors='replace')}", secrets)[:300]
+            answered = _redact(e.read().decode(errors="replace"), secrets)
+            last = f"{e.code}: {answered}"[:300]
             unreachable = False
             if e.code not in RETRY_STATUS:
-                raise HostedHTTPError(f"{label} returned {last}", e.code) from None
+                raise HostedHTTPError(f"{label} returned {last}", e.code,
+                                      answered[:4000]) from None
             wait = min(2 ** attempt * 2 + random.uniform(0, 1), 60)
         except (urllib.error.URLError, TimeoutError, ConnectionError, OSError) as e:
             # reported by class only: its text can hold the URL, and the URL the account
@@ -642,7 +646,7 @@ MICROSOFT_VERSION = "microsoft/microsoft-decision-1-20261009"
 MICROSOFT_ROUTE_PROVIDER = "azure"          # OpenRouter's slug for the model's one endpoint
 MICROSOFT_PRICE_PER_MTOK = 0.042
 MICROSOFT_MAX_INPUT_TOKENS = 32_768
-# A conservative pre-send bound: a request whose text (state, instructions, options) is over
+# A heuristic pre-send bound: a request whose text (state, instructions, options) is over
 # 4 UTF-8 bytes per token of context is withheld without a call. Text that long is past the
 # context in most languages; a row under the bound that is still too long is caught by the
 # route's own refusal or by the input tokens it reports. The tokenizer is not public, so no
@@ -652,8 +656,34 @@ MICROSOFT_ANSWER = {**CLEF_ANSWER, "refusal": BOOL}
 OVER_LENGTH = "max_length_exceeded"
 # OpenRouter's own context-length error, and nothing broader: any other 400 or 413 (a schema,
 # quota or size error) stops the run rather than be counted as the judge's over-length row.
+# Both must hold: the error is the route's (JSON `error.message` opening with its sentence,
+# the limit 32,768 and the count it read larger; `error.code`, when given, the status), and
+# the request is long enough to have filled the context: each token is at least one byte of
+# text, so a request under half the context in bytes cannot, whatever the route adds to it.
 OVER_CONTEXT_STATUS = (400, 413)
-_OVER_CONTEXT = re.compile(r"maximum context length is \d+ tokens")
+_OVER_CONTEXT = re.compile(r"This endpoint's maximum context length is (\d+) tokens\. "
+                           r"However, you requested about (\d+) tokens\b")
+MICROSOFT_MIN_OVER_LENGTH_BYTES = MICROSOFT_MAX_INPUT_TOKENS // 2
+
+
+def route_over_context(e: HostedHTTPError, size: int) -> bool:
+    """Whether `e` is the route's context-length refusal of a request of `size` bytes."""
+    if e.status not in OVER_CONTEXT_STATUS or size < MICROSOFT_MIN_OVER_LENGTH_BYTES:
+        return False
+    try:
+        err = json.loads(e.body).get("error")
+    except (ValueError, AttributeError):
+        return False
+    if not isinstance(err, dict) or not isinstance(err.get("message"), str):
+        return False
+    code = err.get("code")
+    if code is not None and (isinstance(code, bool) or code != e.status):
+        return False
+    m = _OVER_CONTEXT.match(err["message"])
+    if m is None:
+        return False
+    return int(m.group(1)) == MICROSOFT_MAX_INPUT_TOKENS \
+        and int(m.group(2)) >= MICROSOFT_MAX_INPUT_TOKENS
 
 
 class MicrosoftDecisionJudge(_HostedDecisionJudge):
@@ -696,6 +726,7 @@ class MicrosoftDecisionJudge(_HostedDecisionJudge):
                 "questions_per_request": 1,
                 "max_input_tokens": self.max_input_tokens,
                 "max_request_bytes": MICROSOFT_MAX_REQUEST_BYTES,
+                "min_over_length_bytes": MICROSOFT_MIN_OVER_LENGTH_BYTES,
                 "input_price_per_mtok_usd": self.price, "output_price_per_mtok_usd": 0.0,
                 "sum_tolerance": "options x 0.5 x 10^-decimals (rounding)"}
 
@@ -737,7 +768,7 @@ class MicrosoftDecisionJudge(_HostedDecisionJudge):
         try:
             reply = post_json(self.endpoint, body, "OpenRouter's Decisions route", secrets)
         except HostedHTTPError as e:
-            if e.status in OVER_CONTEXT_STATUS and _OVER_CONTEXT.search(str(e)):
+            if route_over_context(e, size):
                 # refused before it was read; whether it was billed is not known
                 return [self._over_length(q, time.monotonic() - t0, None,
                                           f"the route refused the request as over length "
@@ -757,7 +788,8 @@ class MicrosoftDecisionJudge(_HostedDecisionJudge):
                 "served_provider": kept_fields(reply.get("provider"), ID, "provider", dropped),
                 "response_id": kept_fields(reply.get("id"), ID, "response_id", dropped),
                 "reported_cost_usd": kept_fields(usage.get("cost") if isinstance(usage, dict)
-                                                 else None, NUMBER, "usage.cost", dropped)}
+                                                 else None, NUMBER, "usage.cost", [])}
+        # (a `usage.cost` that is not a number is counted once, by the usage record above)
         if isinstance(ans, dict) and isinstance(ans.get("probabilities"), dict):
             base.update(declared_sum(ans["probabilities"].values()))
         with_dropped(base, dropped)

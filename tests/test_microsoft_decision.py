@@ -251,7 +251,7 @@ def test_a_reported_cost_that_is_not_a_number_is_counted_as_dropped(wire):
     wire(reply(cost="0.01 USD"))
     (j,) = MicrosoftDecisionJudge().decide("x", [ROUTE])
     assert j.raw["reported_cost_usd"] is None
-    assert "usage.cost" in j.raw["dropped_fields"]["names"]
+    assert j.raw["dropped_fields"] == {"count": 1, "names": ["usage.cost"]}
 
 
 def test_the_pinned_version_can_be_moved_explicitly_and_is_recorded(wire, monkeypatch):
@@ -311,15 +311,25 @@ def test_provenance_names_the_model_pin_and_price_never_the_key():
 
 # --- over length ---------------------------------------------------------------------------
 
-CONTEXT_ERROR = ('{"error": {"message": "This endpoint\'s maximum context length is 32768 '
-                 'tokens. However, you requested about 40000 tokens."}}')
+def context_error(status=400, limit=32768, requested=40000, code=True):
+    """The route's context-length error, in OpenRouter's error shape."""
+    err: dict = {"message": f"This endpoint's maximum context length is {limit} tokens. "
+                            f"However, you requested about {requested} tokens. Please "
+                            "reduce the length of the messages."}
+    if code:
+        err["code"] = status
+    return status, json.dumps({"error": err})
+
+
+CONTEXT_ERROR = context_error()[1]
+# plausibly long: over the lower byte threshold, under the pre-send bound
+LONG = "charged twice " * 2_000                                     # 28,000 bytes
 
 
 @pytest.mark.parametrize("status", [400, 413])
 def test_the_route_s_context_length_error_is_no_answer_not_a_crash(wire, status):
-    text = CONTEXT_ERROR
-    wire((status, text))
-    (j,) = MicrosoftDecisionJudge().decide("x", [ROUTE])
+    wire(context_error(status))
+    (j,) = MicrosoftDecisionJudge().decide(LONG, [ROUTE])
     assert j.parse_status == "no_answer" and j.confidence is None and j.decision == ""
     assert j.raw["error"] == "max_length_exceeded" and j.raw["max_len"] == 32_768
     assert j.raw["problems"] and j.cost_usd is None
@@ -388,8 +398,46 @@ def test_an_answer_error_for_length_is_over_length(wire):
 def test_the_runner_counts_an_over_length_row_as_not_sent(wire):
     from judge_audit.runner import is_not_sent
     wire((400, CONTEXT_ERROR))
-    (j,) = MicrosoftDecisionJudge().decide("x", [ROUTE])
+    (j,) = MicrosoftDecisionJudge().decide(LONG, [ROUTE])
     assert is_not_sent(j.raw)
+
+
+@pytest.mark.parametrize("status, text, state", [
+    # the reviewer's case: a schema error that echoes the phrase from the input
+    (400, json.dumps({"error": {"code": 400, "message": "invalid criteria: 'maximum context "
+                                                        "length is 5 tokens'"}}), LONG),
+    # the route's exact error, but for a request far too short to have filled the context
+    (*context_error(), "x"),
+    # the exact sentence with another limit, or a count under the context
+    (*context_error(limit=8192), LONG),
+    (*context_error(requested=1200), LONG),
+    # an error code that is not the status, or the sentence not at the start of the message
+    (*context_error(code=False)[:1], json.dumps({"error": {"code": "invalid_request", "message":
+        "This endpoint's maximum context length is 32768 tokens. However, you requested about "
+        "40000 tokens."}}), LONG),
+    (400, json.dumps({"error": {"code": 400, "message": "bad field: This endpoint's maximum "
+                                "context length is 32768 tokens. However, you requested about "
+                                "40000 tokens."}}), LONG),
+    # not JSON at all
+    (400, "This endpoint's maximum context length is 32768 tokens. However, you requested "
+          "about 40000 tokens.", LONG),
+])
+def test_a_context_phrase_without_the_route_s_error_and_a_long_request_stops_the_run(
+        wire, status, text, state):
+    """Over length needs both: the route's own context-length error (its code the status, its
+    message the route's sentence with the 32,768 limit and a larger count) and a request long
+    enough to have filled the context. Anything else stops the run, the key masked."""
+    wire((status, text))
+    with pytest.raises(RuntimeError, match=str(status)) as e:
+        MicrosoftDecisionJudge().decide(state, [ROUTE])
+    assert SECRET not in str(e.value)
+
+
+def test_the_route_s_error_without_a_code_still_counts_for_a_long_request(wire):
+    wire(context_error(code=False))
+    (j,) = MicrosoftDecisionJudge().decide(LONG, [ROUTE])
+    assert j.raw["error"] == "max_length_exceeded"
+    assert hosted.MICROSOFT_MIN_OVER_LENGTH_BYTES == 16_384
 
 
 # --- the endpoint rule (#155) -----------------------------------------------------------------
