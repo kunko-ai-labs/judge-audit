@@ -3,6 +3,7 @@ its cost ceiling, counting the cost of every earlier session of the same checkpo
 from __future__ import annotations
 
 import json
+import stat
 import subprocess
 import sys
 from pathlib import Path
@@ -133,7 +134,7 @@ def test_another_ceiling_without_an_amendment_is_refused(tmp_path, labels, monke
     before = (tmp_path / "c.ckpt.jsonl").read_text()
     judge = Priced([0.01] * 10)
     code = drive(monkeypatch, tmp_path, labels, judge, *flags)
-    assert "was started with --max-usd 0.05" in str(code) and judge.calls == 0
+    assert "records --max-usd 0.05" in str(code) and judge.calls == 0
     assert ("--ceiling-amendment" in str(code)) == bool(flags)
     assert (tmp_path / "c.ckpt.jsonl").read_text() == before  # nothing written
 
@@ -165,11 +166,20 @@ def test_a_raised_ceiling_with_an_amendment_resumes_and_is_recorded(tmp_path, la
     run = json.loads(after[0])["run"]
     assert run["max_usd"] == 0.08
     (entry,) = run["max_usd_history"]
-    assert {k: entry[k] for k in ("max_usd", "until_rows", "amendment")} == {
-        "max_usd": 0.05, "until_rows": 5, "amendment": AMEND}
+    assert {k: entry[k] for k in ("max_usd", "until_rows", "unknown_cost_judgments",
+                                  "amendment")} == {
+        "max_usd": 0.05, "until_rows": 5, "unknown_cost_judgments": 0, "amendment": AMEND}
     assert entry["changed_utc"].endswith("+00:00")
-    # The same ceiling again needs no amendment; a second change appends a second entry.
+    # The same ceiling again needs no amendment, and an amendment that would change nothing
+    # is refused rather than recorded; a second change appends a second entry.
     assert drive(monkeypatch, tmp_path, labels, Priced([0.01] * 10), "--max-usd", "0.08") == 3
+    before = (tmp_path / "c.ckpt.jsonl").read_bytes()
+    for ref in (AMEND, "another amendment"):
+        judge = Priced([0.01] * 10)
+        code = drive(monkeypatch, tmp_path, labels, judge, "--max-usd", "0.08",
+                     "--ceiling-amendment", ref)
+        assert "changes nothing" in str(code) and judge.calls == 0
+    assert (tmp_path / "c.ckpt.jsonl").read_bytes() == before
     assert drive(monkeypatch, tmp_path, labels, Priced([0.01] * 10), "--max-usd", "1",
                  "--ceiling-amendment", "second amendment") == 0
     run = lines(tmp_path)[0]["run"]
@@ -185,7 +195,7 @@ def test_a_ceiling_is_added_to_a_checkpoint_started_without_one_only_by_amendmen
     assert drive(monkeypatch, tmp_path, labels, Priced([0.01] * 10, fail_at=2)) == 2
     judge = Priced([0.01] * 10)
     code = drive(monkeypatch, tmp_path, labels, judge, "--max-usd", "0.03")
-    assert "was started without --max-usd" in str(code) and judge.calls == 0
+    assert "records no --max-usd" in str(code) and judge.calls == 0
     assert drive(monkeypatch, tmp_path, labels, judge, "--max-usd", "0.03",
                  "--ceiling-amendment", AMEND) == 3
     assert judge.calls == 1
@@ -193,7 +203,88 @@ def test_a_ceiling_is_added_to_a_checkpoint_started_without_one_only_by_amendmen
     assert entry["max_usd"] is None and entry["until_rows"] == 2
 
 
-@pytest.mark.parametrize("ref", ["", "   ", "two\nlines", "x" * 201])
+def test_an_amendment_acknowledges_unknown_costs_and_a_new_one_stops_again(
+        tmp_path, labels, monkeypatch, capsys):
+    """A stop on an unknown cost is continued by a dated amendment under the same ceiling,
+    which acknowledges the unknown costs recorded so far; one more unknown stops the run
+    again, and acknowledging it needs another amendment."""
+    assert drive(monkeypatch, tmp_path, labels, Priced([0.01, None] + [0.01] * 8),
+                 "--max-usd", "1") == 3
+    judge = Priced([0.01] * 10)  # the same ceiling without an amendment: stopped again
+    assert drive(monkeypatch, tmp_path, labels, judge, "--max-usd", "1") == 3
+    assert judge.calls == 0 and "cost ceiling cannot be enforced" in capsys.readouterr().err
+    judge = Priced([0.01, 0.01, None] + [0.01] * 7)
+    assert drive(monkeypatch, tmp_path, labels, judge, "--max-usd", "1",
+                 "--ceiling-amendment", AMEND) == 3
+    assert judge.calls == 3 and len(lines(tmp_path)) == 1 + 5
+    assert "1 judgment(s) recorded with unknown cost beyond the 1 acknowledged" in \
+        capsys.readouterr().err
+    run = lines(tmp_path)[0]["run"]
+    (entry,) = run["max_usd_history"]
+    assert run["max_usd"] == 1.0 and {k: entry[k] for k in (
+        "max_usd", "until_rows", "unknown_cost_judgments", "amendment")} == {
+        "max_usd": 1.0, "until_rows": 2, "unknown_cost_judgments": 1, "amendment": AMEND}
+    # An amendment already recorded cannot acknowledge the new unknown cost.
+    judge = Priced([0.01] * 10)
+    code = drive(monkeypatch, tmp_path, labels, judge, "--max-usd", "1",
+                 "--ceiling-amendment", AMEND)
+    assert "already recorded" in str(code) and judge.calls == 0
+    judge = Priced([0.01] * 10)
+    assert drive(monkeypatch, tmp_path, labels, judge, "--max-usd", "1",
+                 "--ceiling-amendment", "second amendment") == 0
+    assert judge.calls == 5
+    second = lines(tmp_path)[0]["run"]["max_usd_history"][1]
+    assert (second["until_rows"], second["unknown_cost_judgments"]) == (5, 2)
+
+
+def test_an_amendment_rewrites_only_the_header_line(tmp_path, labels, monkeypatch):
+    """Row lines keep their bytes, CRLF and non-canonical JSON included; the header keeps
+    its line ending, the file keeps its mode, and the new file is synced before it replaces
+    the old one."""
+    def row(i):
+        return (f'{{"idx":{i},  "judgments":[{{"question":"a","decision":"x",'
+                f'"confidence":0.90,"latency_s":0.1,"cost_usd":0.010,'
+                f'"raw":{{"note":"\\u00e9"}}}}]}}\r\n').encode()
+    ckpt = tmp_path / "c.ckpt.jsonl"
+    header = b'{"idx": -1, "run": {"judge": {"name": "fake"}, "max_usd": 0.05}}\r\n'
+    body = b"".join(row(i) for i in range(5))
+    ckpt.write_bytes(header + body)
+    ckpt.chmod(0o640)
+    synced = []
+    real_fsync = audit_resumable.os.fsync
+    monkeypatch.setattr(audit_resumable.os, "fsync",
+                        lambda fd: (synced.append(fd), real_fsync(fd)))
+    judge = Priced([0.01] * 10)
+    assert drive(monkeypatch, tmp_path, labels, judge, "--max-usd", "0.08",
+                 "--ceiling-amendment", AMEND) == 3
+    assert judge.calls == 3 and synced
+    data = ckpt.read_bytes()
+    first, rest = data.split(b"\r\n", 1)
+    assert rest.startswith(body) and json.loads(first)["run"]["max_usd"] == 0.08
+    assert stat.S_IMODE(ckpt.stat().st_mode) == 0o640
+    assert not (tmp_path / "c.ckpt.jsonl.tmp").exists()
+
+
+def test_a_failed_header_rewrite_leaves_the_checkpoint_as_it_was(tmp_path, labels,
+                                                                 monkeypatch):
+    assert drive(monkeypatch, tmp_path, labels, Priced([0.01] * 10), "--max-usd", "0.05") == 3
+    ckpt = tmp_path / "c.ckpt.jsonl"
+    before = ckpt.read_bytes()
+
+    def fail(src, dst):
+        raise OSError("disk full")
+    monkeypatch.setattr(audit_resumable.os, "replace", fail)
+    judge = Priced([0.01] * 10)
+    code = drive(monkeypatch, tmp_path, labels, judge, "--max-usd", "0.08",
+                 "--ceiling-amendment", AMEND)
+    assert "could not rewrite the header" in str(code) and judge.calls == 0
+    assert ckpt.read_bytes() == before
+    assert [p.name for p in tmp_path.iterdir() if p.name.startswith("c.ckpt")] == [
+        "c.ckpt.jsonl"]
+
+
+@pytest.mark.parametrize("ref", ["", "   ", "two\nlines", "x" * 201, "a\u2028b", "a\x85b",
+                                 "tab\there", "nul\x00", "trailing\u2028"])
 def test_an_amendment_reference_is_one_short_line(tmp_path, labels, monkeypatch, capsys, ref):
     code = drive(monkeypatch, tmp_path, labels, Priced([]), "--max-usd", "1",
                  "--ceiling-amendment", ref)
@@ -217,15 +308,33 @@ def test_a_complete_checkpoint_recomputes_whatever_the_flag_says(tmp_path, label
     assert judge.calls == 0
 
 
-@pytest.mark.parametrize("value", ["0", "-1", "nan", "inf", "five"])
-def test_the_ceiling_must_be_a_positive_amount(tmp_path, labels, value):
+@pytest.mark.parametrize("value", ["0", "-0", "-1", "nan", "sNaN", "inf", "five", "1e999999",
+                                   "1000000.000001", "1e7", "0.0000001", "0.1234567"])
+def test_the_ceiling_must_be_a_sane_amount(tmp_path, labels, value):
+    """Above $0, up to $1,000,000, to 6 decimal places: refused with a usage error, no
+    traceback and no checkpoint."""
     p = subprocess.run([sys.executable, str(ROOT / "scripts" / "audit_resumable.py"),
                         str(labels), "--judge", "simulated",
                         "--checkpoint", str(tmp_path / "c.ckpt.jsonl"),
                         "--out", str(tmp_path / "r.md"), "--json", str(tmp_path / "r.json"),
                         "--max-usd", value], capture_output=True, text=True, cwd=tmp_path)
-    assert p.returncode == 2 and "--max-usd" in p.stderr
+    assert p.returncode == 2 and "--max-usd" in p.stderr and "Traceback" not in p.stderr
     assert not (tmp_path / "c.ckpt.jsonl").exists()
+
+
+@pytest.mark.parametrize("value", ["0.000003", "0.1", "2.5", "123456.789012",
+                                   "999999.999999", "1e6"])
+def test_the_header_records_the_ceiling_that_is_enforced(tmp_path, labels, monkeypatch,
+                                                         value):
+    """The header's number reads back as exactly the decimal typed, and the run stops on it."""
+    from decimal import Decimal
+    step = Decimal(value) / 3
+    judge = Priced([float(step)] * 10)
+    drive(monkeypatch, tmp_path, labels, judge, "--max-usd", value)
+    recorded = lines(tmp_path)[0]["run"]["max_usd"]
+    assert Decimal(repr(recorded)) == Decimal(value)
+    spent = sum(Decimal(repr(float(step))) for _ in range(judge.calls - 1))
+    assert spent < Decimal(value)  # every request but the last started below the ceiling
 
 
 def test_the_driver_stops_a_real_process_with_exit_3(tmp_path, labels):

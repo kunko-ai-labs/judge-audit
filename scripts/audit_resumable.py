@@ -15,20 +15,23 @@ indices that part of a pre-registered split names; the checkpoint header then
 records the split file, its sha256, the part and its size under `rows_subset`,
 and the report's n is the subset's. A run without `--rows` judges every row.
 
-`--max-usd X` stops the run before any request once the checkpoint's recorded cost, every
-session of it counted, is at or above X, or once a judgment's cost is unknown (the ceiling
-can no longer be enforced). It exits 3; the rows written stay a valid, resumable checkpoint.
-The header records the ceiling as `max_usd`. A checkpoint resumes under the ceiling its
-header records; another one needs `--ceiling-amendment <ref>` (the dated amendment that
-changed it), and then only the header line is rewritten: the new `max_usd`, with the old
-one, the rows judged under it and the reference appended to `max_usd_history`. Recorded
-cost can be below the provider's bill.
+`--max-usd X` (above $0, up to $1,000,000, to 6 decimal places) stops the run before any
+request once the checkpoint's recorded cost, every session of it counted, is at or above X,
+or once a judgment's cost is unknown (the ceiling can no longer be enforced). It exits 3;
+the rows written stay a valid, resumable checkpoint. The header records the ceiling as
+`max_usd`, and that is the value enforced. A checkpoint resumes under the ceiling its header
+records. `--ceiling-amendment <ref>` (the dated amendment) changes it, or, under the same
+ceiling, acknowledges the unknown costs recorded so far; only the header line is then
+rewritten, appending the previous ceiling, the rows and unknown-cost judgments recorded
+under it and the reference to `max_usd_history`. An amendment that changes nothing is
+refused. Recorded cost can be below the provider's bill.
 """
 from __future__ import annotations
 
 import argparse
 import json
 import os
+import stat
 import sys
 import time
 from datetime import datetime, timezone
@@ -94,45 +97,109 @@ def rows_subset(spec: str | None, n_rows: int) -> tuple[list[int], dict | None]:
     return idx, {"split": path, "sha256": sha256_of(path), "part": part, "n": len(idx)}
 
 
-def usd(text: str) -> Decimal:
-    """A --max-usd value: a positive, finite dollar amount, kept exact."""
+MAX_USD_LIMIT = Decimal(1_000_000)
+CENT_FRACTION = Decimal("0.000001")  # a ceiling is kept to 6 decimal places
+
+
+def usd(text: str) -> float:
+    """A --max-usd value: above $0, up to $1,000,000, to 6 decimal places.
+
+    Returned as the float the header records. Within these bounds the float's shortest
+    repr is the decimal typed, so `ceiling_of` enforces exactly what the header says."""
     try:
         value = Decimal(text)
     except InvalidOperation:
         raise argparse.ArgumentTypeError(f"not a dollar amount: {text!r}") from None
-    if not value.is_finite() or value <= 0:
-        raise argparse.ArgumentTypeError(f"must be a positive dollar amount, got {text!r}")
-    return value
+    if (not value.is_finite() or not 0 < value <= MAX_USD_LIMIT
+            or value != value.quantize(CENT_FRACTION)):
+        raise argparse.ArgumentTypeError(
+            f"must be above 0 and up to 1000000 dollars, to 6 decimal places; got {text!r}")
+    return float(value)
+
+
+def ceiling_of(max_usd: float) -> Decimal:
+    """The ceiling enforced for a header's `max_usd`: the decimal its number reads as."""
+    return Decimal(repr(max_usd))
 
 
 def amendment_ref(text: str) -> str:
-    """A --ceiling-amendment value: one short line naming the amendment."""
-    ref = text.strip()
-    if not ref or len(ref) > 200 or "\n" in ref or "\r" in ref:
-        raise argparse.ArgumentTypeError("one line of 1 to 200 characters naming the "
-                                         "amendment, e.g. 'v06-plan amendment 2026-10-20'")
+    """A --ceiling-amendment value: one short printable line naming the amendment."""
+    # isprintable() before strip(): strip() would drop a trailing U+2028 or U+0085.
+    ref = text.strip(" ")
+    if not ref or len(ref) > 200 or not text.isprintable():
+        raise argparse.ArgumentTypeError("one printable line of 1 to 200 characters naming "
+                                         "the amendment, e.g. 'v06-plan amendment 2026-10-20'")
     return ref
 
 
-def amend_ceiling(ckpt: Path, header: dict, max_usd: float, ref: str, until_rows: int) -> dict:
+def acknowledged_unknowns(run: dict | None) -> int:
+    """Judgments of unknown cost that a ceiling amendment has acknowledged so far."""
+    history = (run or {}).get("max_usd_history") or []
+    return max((int(e.get("unknown_cost_judgments") or 0) for e in history), default=0)
+
+
+def ceiling_change(ckpt: Path, run: dict, max_usd: float | None, ref: str | None,
+                   unknown: int) -> bool:
+    """Whether this session records a ceiling amendment in the header.
+
+    The header's ceiling governs the rest of the run. Another one, or none, would leave it
+    recording a ceiling that no longer held: a dated amendment may change it (never remove
+    it), or, under the same ceiling, acknowledge the unknown costs that stopped the run.
+    An amendment that would change nothing is refused rather than recorded."""
+    was = run.get("max_usd")
+    recorded = "records no --max-usd" if was is None else f"records --max-usd {was}"
+    unacknowledged = unknown > acknowledged_unknowns(run)
+    if was == max_usd:
+        if ref is None:
+            return False
+        if was is None or not unacknowledged:
+            raise SystemExit(f"{ckpt} {recorded} and no unknown cost to acknowledge: "
+                             f"--ceiling-amendment {ref!r} changes nothing; drop it")
+    elif max_usd is None:
+        raise SystemExit(f"{ckpt} {recorded}, this run has none; resume under the recorded "
+                         "ceiling")
+    elif ref is None:
+        raise SystemExit(f"{ckpt} {recorded}, this run has {max_usd}; a changed ceiling "
+                         "needs --ceiling-amendment <ref>, or use a new checkpoint")
+    if any(e.get("amendment") == ref for e in run.get("max_usd_history") or []):
+        raise SystemExit(f"{ckpt}: amendment {ref!r} is already recorded in its header; "
+                         "each change needs its own reference")
+    return True
+
+
+def amend_ceiling(ckpt: Path, header: dict, max_usd: float, ref: str, until_rows: int,
+                  unknown: int) -> dict:
     """Rewrite only the checkpoint's header line with a ceiling changed by amendment.
 
-    The previous ceiling, how many rows were judged under it and the amendment's reference
-    are appended to `max_usd_history`; every row line keeps its bytes. Written to a sibling
-    file and moved into place, so an interruption leaves the old checkpoint whole."""
+    The previous ceiling, how many rows and unknown-cost judgments were recorded under it
+    and the amendment's reference are appended to `max_usd_history`. Every other line keeps
+    its bytes, CRLF included, and the header keeps its line ending. The new file is written
+    beside the old one with its mode, synced, then moved into place: a failure leaves the
+    old checkpoint byte for byte and no temporary file."""
     run = dict(header["run"])
     run["max_usd_history"] = [*(run.get("max_usd_history") or []), {
-        "max_usd": run.get("max_usd"), "until_rows": until_rows, "amendment": ref,
+        "max_usd": run.get("max_usd"), "until_rows": until_rows,
+        "unknown_cost_judgments": unknown, "amendment": ref,
         "changed_utc": datetime.now(timezone.utc).isoformat(timespec="seconds")}]
     run["max_usd"] = max_usd
     new = {**header, "run": run}
-    lines = ckpt.read_text(encoding="utf-8").splitlines(keepends=True)
+    lines = ckpt.read_bytes().splitlines(keepends=True)
     at = next(i for i, line in enumerate(lines)
               if line.strip() and json.loads(line).get("idx") == -1)
-    lines[at] = json.dumps(new, allow_nan=False) + "\n"
+    ending = lines[at][len(lines[at].rstrip(b"\r\n")):] or b"\n"
+    lines[at] = json.dumps(new, allow_nan=False).encode("utf-8") + ending
     tmp = ckpt.with_name(ckpt.name + ".tmp")
-    tmp.write_text("".join(lines), encoding="utf-8")
-    os.replace(tmp, ckpt)
+    try:
+        with open(tmp, "wb") as f:
+            f.write(b"".join(lines))
+            f.flush()
+            os.fsync(f.fileno())
+        os.chmod(tmp, stat.S_IMODE(ckpt.stat().st_mode))
+        os.replace(tmp, ckpt)
+    except OSError as e:
+        tmp.unlink(missing_ok=True)
+        raise SystemExit(f"{display_path(ckpt)}: could not rewrite the header "
+                         f"({type(e).__name__}); the checkpoint is unchanged") from None
     return new
 
 
@@ -153,11 +220,15 @@ def recorded_cost(records, run: dict | None) -> tuple[Decimal, int]:
     return spent, unknown
 
 
-def ceiling_stop(spent: Decimal, unknown: int, max_usd: Decimal) -> str | None:
-    """Why --max-usd stops the run before its next request, or None to send it."""
-    if unknown:
-        return (f"cost ceiling cannot be enforced: {unknown} judgment(s) recorded with "
-                f"unknown cost (${spent:f} known, ceiling ${max_usd:f})")
+def ceiling_stop(spent: Decimal, unknown: int, max_usd: Decimal,
+                 acknowledged: int = 0) -> str | None:
+    """Why --max-usd stops the run before its next request, or None to send it. Unknown
+    costs that an amendment acknowledged no longer stop it; any further one does."""
+    if unknown > acknowledged:
+        beyond = f" beyond the {acknowledged} acknowledged" if acknowledged else ""
+        return (f"cost ceiling cannot be enforced: {unknown - acknowledged} judgment(s) "
+                f"recorded with unknown cost{beyond} (${spent:f} known, ceiling "
+                f"${max_usd:f}); a dated --ceiling-amendment can acknowledge them")
     if spent >= max_usd:
         return f"cost ceiling reached: ${spent:f} recorded of ${max_usd:f}"
     return None
@@ -285,7 +356,7 @@ def main() -> None:
     if args.ceiling_amendment is not None and args.max_usd is None:
         ap.error("--ceiling-amendment needs --max-usd: an amendment changes a ceiling, "
                  "it does not remove one")
-    max_usd = float(args.max_usd) if args.max_usd is not None else None
+    max_usd = args.max_usd  # the float the header records and `ceiling_of` enforces
 
     rows, dataset_meta = load_dataset(args.labels)
     wanted, subset = rows_subset(args.rows, len(rows))
@@ -327,24 +398,14 @@ def main() -> None:
                 raise SystemExit(f"{ckpt} was started with LLM_EXTRA_BODY {was!r}, not {now!r}; "
                                  "resume with the same routing or use a new checkpoint")
             same_method(ckpt, done[-1]["run"].get("judge") or {}, started["judge"])
-            # The header's ceiling governs the rest of the run. Another one, or none, would
-            # leave it recording a ceiling that no longer held; a dated amendment may change
-            # it (never remove it), and the header then records the change.
             was_max = done[-1]["run"].get("max_usd")
-            if was_max != max_usd:
-                started_with = ("without --max-usd" if was_max is None
-                                else f"with --max-usd {was_max}")
-                if max_usd is None:
-                    raise SystemExit(f"{ckpt} was started {started_with}, this run has none; "
-                                     "resume under the recorded ceiling")
-                if args.ceiling_amendment is None:
-                    raise SystemExit(f"{ckpt} was started {started_with}, this run has "
-                                     f"{args.max_usd}; a changed ceiling needs "
-                                     "--ceiling-amendment <ref>, or use a new checkpoint")
+            _, unknown = recorded_cost((done[k] for k in done if k >= 0), done[-1]["run"])
+            if ceiling_change(ckpt, done[-1]["run"], max_usd, args.ceiling_amendment, unknown):
+                assert max_usd is not None and args.ceiling_amendment is not None
                 done[-1] = amend_ceiling(ckpt, done[-1], max_usd, args.ceiling_amendment,
-                                         sum(1 for k in done if k >= 0))
-                print(f"ceiling changed from {was_max} to {max_usd} under "
-                      f"{args.ceiling_amendment!r}", flush=True)
+                                         sum(1 for k in done if k >= 0), unknown)
+                print(f"ceiling {was_max} -> {max_usd} under {args.ceiling_amendment!r}, "
+                      f"{unknown} unknown-cost judgment(s) acknowledged", flush=True)
     if subset:
         started["rows_subset"] = subset
     if max_usd is not None:
@@ -368,8 +429,9 @@ def main() -> None:
                 dataset_gaps(idx, row)  # a dataset error stops the run before the paid call
             except IncompleteAnswers as e:
                 raise SystemExit(str(e)) from e
-            stop = (ceiling_stop(spent, unknown, args.max_usd)
-                    if args.max_usd is not None else None)
+            stop = (ceiling_stop(spent, unknown, ceiling_of(max_usd),
+                                 acknowledged_unknowns(run))
+                    if max_usd is not None else None)
             if stop:
                 print(f"{stop}; {sum(1 for k in done if k >= 0)} rows kept in "
                       f"{display_path(ckpt)}", file=sys.stderr)
