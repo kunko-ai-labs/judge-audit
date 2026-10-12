@@ -154,3 +154,33 @@ The run took place on 2026-10-12, after this amendment was pushed (commit `80171
 
 No accuracy or calibration figure is published from this checkpoint. It is a planning input, like the rest of this pilot.
 
+## 8. Amendment, 2026-10-12: Microsoft-Decision-1, exploratory, through OpenRouter (#164)
+
+This amendment is committed before any call for this judge is written to this directory. It adds one **exploratory** judge to the pilot. The rules of §4 apply, and the use is the same: planning input, no score published. **No test row is called.** Every number from this judge is labelled "exploratory". The vendor's own figures are quoted only as vendor-reported, and they are never put next to ours as one comparison.
+
+| slug | judge | model | confidence | settings |
+|---|---|---|---|---|
+| `microsoft-decision-1` (exploratory) | `microsoft-decision` (`judges/hosted.py`) | Microsoft-Decision-1 via OpenRouter's Decisions route, served version `microsoft/microsoft-decision-1-20261009`, provider pinned with `allow_fallbacks: false`; provider label `hosted-api` | P(chosen option) from the per-option probabilities; the route's `confidence` field is kept in `raw.native_confidence` and never audited | one question per request; no sampling parameter (the route takes none) |
+
+1. **Code.** judge-audit at commit `e20a613c97284207e1704aec1dc93543c562e802` on `main` (#170 merged), Python 3.12. The credential comes from the environment only (`OPENROUTER_API_KEY`).
+2. **Order.**
+   - A 5-row run on `en-US`, written to a scratch directory and not committed. It checks parsing, the recorded cost and the served version.
+   - Then the 40-row run with `scripts/audit_resumable.py examples/massive/labels-pilot-en-US.first40.jsonl --judge microsoft-decision --checkpoint docs/runs/v06-pilot/microsoft-decision-1-en-US.first40.ckpt.jsonl`.
+   - Then a second run of the same 40 rows into `microsoft-decision-1-en-US.first40.repeat.ckpt.jsonl`, for between-run spread.
+   - es-ES and ca-ES are not run.
+3. **Data.** `examples/massive/labels-pilot-en-US.first40.jsonl`: the first 40 rows of the `en-US` pilot file, sha256 `6d5ed014d93dc64bf1b789556ae516ef884dbe95751ab5572443451b9202a5e5` (§6, item 4).
+4. **Gate.** This is the gate of §4 rule 3, as corrected, and of §6 item 3:
+   - every judgment is parsed, with a known confidence or counted as unknown;
+   - no blank answer;
+   - `scripts/check_complete.py` reports 0 gaps;
+   - more than 5 % unparsed, blank or not-sent rows among the 40 (that is, 3 or more) stops the run and is reported.
+   
+   A reply that names another served version or provider stops the run, and nothing is recorded for that row (`docs/judges.md`). A stop is reported, never retried silently.
+5. **Over-length input.** The rule in `docs/judges.md` (Microsoft-Decision-1, "Over length") applies:
+   - a request over 131,072 UTF-8 bytes is withheld without a call;
+   - the route's own context-length refusal, or a reply reporting at least 32,768 input tokens, is no answer (`max_length_exceeded`), counted against the judge;
+   - any other 400 or 413 stops the run.
+   
+   The 40 pilot rows are short voice-assistant commands, far under both limits.
+6. **Cost ceiling.** $1 for this amendment, repeat included. The estimate is under $0.01: about 80 requests of a few hundred input tokens at $0.042 per million, with output not billed. The total comes from the checkpoints' `cost_usd`; OpenRouter's own `usage.cost` is kept beside it in `raw.reported_cost_usd`. A run that would pass the ceiling is stopped.
+7. **Training data.** Whether MASSIVE was in this model's training data is not known (#164). Until it is, any result from it on MASSIVE is read as possibly in-distribution.
