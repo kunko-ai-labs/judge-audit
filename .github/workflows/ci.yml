@@ -144,3 +144,8 @@ jobs:
         run: python scripts/v05_pilot.py --check
       - name: v0.5 study results regenerate from their checkpoints (seeded, no API call)
         run: python scripts/v05_study.py --check
+      # Skipped until the study's checkpoints and results are committed (at the release).
+      - name: v0.6 study results regenerate from their checkpoints (seeded, no API call)
+        run: |
+          if [ -f docs/v06/results.json ]; then python scripts/v06_study.py --check
+          else echo "no v0.6 results committed yet"; fi
