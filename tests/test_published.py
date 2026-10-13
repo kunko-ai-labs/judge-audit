@@ -111,6 +111,8 @@ EVIDENCE = frozenset([
     *(f"docs/runs/finetuned/{d}.train{r}.json"
       for d in ("email-routing", "task-routing") for r in ("", "-run2")),
     "docs/finetuned-baseline-2026-09.json", "docs/v05-pilot-estimates.json",
+    # a judge's answer text about a MASSIVE utterance ("play the audio from the laptop")
+    "docs/runs/v06/claude-sonnet-4.5-es-ES.ckpt.jsonl",
 ])
 
 
@@ -127,7 +129,7 @@ def _tracked(root: Path) -> list[str]:
 
 def test_evidence_allowlist_is_exact(root):
     """Every listed evidence file exists, so the list cannot hide a stale path."""
-    assert len(EVIDENCE) == 19
+    assert len(EVIDENCE) == 20
     missing = sorted(f for f in EVIDENCE if not (root / f).is_file())
     assert not missing, missing
 
