@@ -1242,7 +1242,9 @@ def _refusal_section(add, R: dict, targets: list[float]) -> None:
         "out of the confidence metrics); then its refusals by MASSIVE scenario "
         "(`_meta.scenario`) and by gold intent, each out of that scenario's or intent's "
         "judged rows. Only scenarios and intents with a refusal are listed. Validated "
-        "coverage as in §5 (its † note applies).")
+        "coverage as in §5 (its † note applies). A refused row carries no confidence, so "
+        "the two rows of a pair can differ only in n and accuracy (and in validated "
+        "coverage, whose denominator is n); the confidence metrics are the same rows.")
     add("")
     V = R["views"]
     if not V:
