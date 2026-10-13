@@ -247,7 +247,7 @@ def load_run(path: Path, labels: dict, root: Path) -> dict:
     """The checkpoint's header, checked against the labels file it judged, and one record
     per labels row (`runner.checkpoint_record`; None where the checkpoint holds no answer).
     A row written more than once is refused: which answer counts would be a choice made
-    after the fact."""
+    after the fact. So is a row index outside the labels file."""
     done: dict[int, dict] = {}
     twice: list[int] = []
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -258,6 +258,10 @@ def load_run(path: Path, labels: dict, root: Path) -> dict:
             twice.append(rec["idx"])
         done[rec["idx"]] = rec
     shown = _rel(path, root)
+    outside = sorted(k for k in done if k != -1 and not 0 <= k < len(labels["rows"]))
+    if outside:
+        raise SystemExit(f"{shown}: {len(outside)} rows outside 0..{len(labels['rows']) - 1} "
+                         f"(first: {outside[:5]})")
     if twice:
         raise SystemExit(f"{shown}: {len(twice)} rows written more than once "
                          f"(first: {sorted(set(twice))[:5]})")
@@ -324,6 +328,23 @@ def incident_cost(path: Path) -> dict:
         return {"file": path.name, "recorded_usd": None, "note": "unreadable"}
     return {"file": path.name, "lines": len(rows), "recorded_usd": _usd(spent),
             "unknown_cost_judgments": unknown}
+
+
+def _judge_of(run: dict) -> tuple:
+    j = run["header"].get("judge") or {}
+    return (j.get("name"), j.get("model_id") or j.get("model"), j.get("loaded_revision"))
+
+
+def check_same_judge(runs: dict) -> None:
+    """A slug's three locales must name the same judge, model and revision in their
+    headers: a checkpoint renamed from another run would otherwise enter a test."""
+    by: dict[str, dict[str, tuple]] = {}
+    for (s, loc), run in runs.items():
+        by.setdefault(s, {})[loc] = _judge_of(run)
+    for s, locs in by.items():
+        if len(set(locs.values())) > 1:
+            raise SystemExit(f"{s}: a checkpoint names another judge or model than the "
+                             f"other locales: {locs}")
 
 
 def _served(raw: object) -> str | None:
@@ -522,17 +543,22 @@ def settle(tests: dict[str, dict]) -> dict[str, dict]:
     with p = 1, so it is not resolved and the others are adjusted as if it had run and
     failed. Resolved when the Holm-adjusted exact p is below ALPHA. Each test also gets
     the pooled lower bound at the level of its Holm step (ALPHA / (m − i) for the i-th
-    smallest p), beside the unadjusted one-sided 95 % bound."""
+    smallest p), beside the unadjusted one-sided 95 % bound, up to the first step that
+    fails: Holm is step-down and stops there, so a later test is not resolved whatever
+    its own p, and its bound at its level (`holm_stopped`) is not given."""
     if len(tests) != FAMILY_SIZE:
         raise ValueError(f"the family has {FAMILY_SIZE} tests, got {len(tests)}")
     p = {k: (v["pooled"]["p_exact"] if v["run"] else 1.0) for k, v in tests.items()}
     adj = holm(p, ALPHA)
+    stopped = False
     for i, (k, _) in enumerate(sorted(p.items(), key=lambda kv: kv[1])):   # holm's order
         v, level = tests[k], ALPHA / (FAMILY_SIZE - i)
         pooled = v["pooled"]
         v["holm_level"] = level
+        v["holm_stopped"] = stopped
         v["lower_at_holm_level"] = (error_lower_bound(pooled["errors"], pooled["n"], level)
-                                    if v["run"] and pooled.get("n") else None)
+                                    if v["run"] and pooled.get("n") and not stopped else None)
+        stopped = stopped or not adj[k]["resolved"]
     for k, v in tests.items():
         v["p_for_holm"] = p[k]
         v["p_holm"] = adj[k]["p_adjusted"]
@@ -720,6 +746,7 @@ def compute(runs_dir: Path = RUNS_DIR, root: Path = ROOT, predictions: Path | No
     if missing:
         raise MissingCheckpoints(", ".join(missing))
     runs = {k: load_run(p, labels[k[1]], root) for k, p in found.items()}
+    check_same_judge(runs)
     read = {k: read_rows(run) for k, run in runs.items()}
     pred = (load_predictions(predictions, root) if predictions is not None
             else load_plan_predictions(root))
@@ -830,6 +857,8 @@ def _cov(x: dict) -> str:
 
 
 def _holm_bound(v: dict) -> str:
+    if v["run"] and v.get("holm_stopped"):
+        return "— (Holm stopped at an earlier step)"
     if v["lower_at_holm_level"] is None:
         return "—"
     return f"{_pct(v['lower_at_holm_level'], 2)} (α / {round(ALPHA / v['holm_level'])})"
@@ -912,6 +941,8 @@ def markdown(r: dict) -> str:
         "is marked *partial* on every row that rests on it. No composite score: each "
         "number stands on its own.")
     add("")
+    add(DEGENERATE_NOTE)
+    add("")
 
     add("## 1. Transfer tests")
     add("")
@@ -929,7 +960,8 @@ def markdown(r: dict) -> str:
         "resolved). A half on which English validates no threshold admits no row; the test "
         "is not run only when neither half validates one. \"Lower at its Holm level\" is "
         "the pooled lower bound at the one-sided level of the test's Holm step (α / 6 for "
-        "the smallest p, then α / 5, …), next to the unadjusted 95 % bound. A row without a "
+        "the smallest p, then α / 5, …), next to the unadjusted 95 % bound, up to the first "
+        "step that fails: Holm stops there, and no later bound is given. A row without a "
         "confidence is never above a threshold. The English control is the English rows of "
         "the same halves above the same thresholds.")
     add("")
@@ -968,9 +1000,7 @@ def markdown(r: dict) -> str:
         "interval); AUROC, ECE (10 equal-width bins), MCE (its worst bin's rows in "
         "parentheses), Brier and overconfidence use the rows answered with a confidence; "
         "intervals are the bootstrap clustered by item. Cost is the recorded list-price "
-        "cost (the bill may be higher). No composite score.")
-    add("")
-    add(DEGENERATE_NOTE)
+        "cost (the bill may be higher). No composite score. ‡ as defined above.")
     add("")
     for loc in LOCALES:
         add(f"### `{loc}`")
@@ -1124,7 +1154,7 @@ def markdown(r: dict) -> str:
     for s, by in C["per_judge"].items():
         cks = {loc: C["checkpoints"].get(f"{s}/{loc}") for loc in LOCALES}
         cells = ["—" if by.get(loc) is None else f"${by[loc]:.4f}" for loc in LOCALES]
-        ceil = " / ".join("—" if not c or c["max_usd"] is None else f"${c['max_usd']:g}"
+        ceil = " / ".join("—" if not c or c["max_usd"] is None else f"${c['max_usd']!r}"
                           for c in cks.values())
         changes = sum(len(c["max_usd_history"]) for c in cks.values() if c)
         unknown = sum(c["unknown_cost_judgments"] for c in cks.values() if c)

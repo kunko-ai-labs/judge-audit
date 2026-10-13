@@ -18,7 +18,10 @@ study = importlib.util.module_from_spec(spec)
 sys.modules["v06_study"] = study
 spec.loader.exec_module(study)
 
-from judge_audit.metrics.selective import split_by_group  # noqa: E402
+from judge_audit.metrics.selective import (  # noqa: E402
+    paired_difference_ci,
+    split_by_group,
+)
 from judge_audit.runner import sha256_of  # noqa: E402
 
 LOCALES = ["en-US", "es-ES", "ca-ES"]
@@ -56,7 +59,7 @@ def _behaviour(slug: str, locale: str, i: int) -> tuple[str, float | None, str, 
         if locale == "en-US":                     # 2 errors, both less confident
             return (_wrong(i), 0.6, "parsed", raw) if i % 150 == 0 else (right, 0.95, "parsed",
                                                                           raw)
-        k = 5 if locale == "ca-ES" else 20        # ca: 20 % wrong; es: 5 % wrong
+        k = 20 if locale == "ca-ES" else 5        # ca: 5 % wrong; es: 20 % wrong
         return (_wrong(i) if i % k == 0 else right), 0.95, "parsed", raw
     if slug == "gpt-6-luna":
         raw["native_confidence"] = 0.5 if i % 4 == 0 else 0.9
@@ -114,7 +117,8 @@ def build(tmp: Path, judges=tuple(ADAPTER), predictions: bool = True) -> dict:
         for n, (loc, judge) in enumerate(((loc, j) for loc in ("ca-ES", "es-ES")
                                           for j in study.PRIMARY), 1):
             tests[f"T{n}"] = {"judge": judge, "target_locale": loc,
-                              "prediction": "resolved" if judge == "jev" else "not resolved"}
+                              "prediction": ("resolved" if (judge, loc) == ("gpt-6-luna", "es-ES")
+                                             else "not resolved")}
         pred.write_text(json.dumps({"tests": tests}), encoding="utf-8")
     return {"root": tmp, "runs": runs, "predictions": pred}
 
@@ -286,6 +290,35 @@ def test_holm_keeps_six_tests_and_a_test_not_run_counts_as_not_resolved():
     assert tests["T3"]["lower_at_holm_level"] is None and tests["T4"]["holm_level"] == 0.05 / 4
 
 
+def test_the_holm_level_bound_is_not_shown_after_the_first_failing_step():
+    """32 / 407 fails at α/6; 37 / 491 has p below α/5 but Holm has already stopped, so its
+    bound at α/5 (above 5 %) would contradict "not resolved": it is not shown."""
+    p1, p2 = study.binomial_tail(32, 407, 0.05), study.binomial_tail(37, 491, 0.05)
+    assert 0.05 / 6 < p1 < p2 < 0.05 / 5
+    assert study.error_lower_bound(37, 491, 0.05 / 5) > 0.05
+    tests = {"T1": {"run": True, "pooled": {"p_exact": p1, "n": 407, "errors": 32}},
+             "T2": {"run": True, "pooled": {"p_exact": p2, "n": 491, "errors": 37}},
+             "T3": {"run": True, "pooled": {"p_exact": 0.4, "n": 300, "errors": 16}},
+             "T4": {"run": True, "pooled": {"p_exact": 0.6, "n": 300, "errors": 14}},
+             "T5": {"run": False, "pooled": {"p_exact": None}},
+             "T6": {"run": True, "pooled": {"p_exact": 0.9, "n": 300, "errors": 10}}}
+    study.settle(tests)
+    assert [tests[t]["outcome"] for t in ("T1", "T2")] == ["not resolved", "not resolved"]
+    assert tests["T1"]["lower_at_holm_level"] == study.error_lower_bound(32, 407, 0.05 / 6)
+    assert tests["T1"]["lower_at_holm_level"] <= 0.05 and not tests["T1"]["holm_stopped"]
+    for t in ("T2", "T3", "T4", "T5", "T6"):
+        assert tests[t]["lower_at_holm_level"] is None and tests[t]["holm_stopped"], t
+    stub = {"judge": "j", "target_locale": "x-X", "partial": [], "prediction": None,
+            "as_predicted": None, "folds": [], "control": {"n": 0, "errors": 0}}
+    empty = {"n": 0, "errors": 0, "error_rate": None, "lower_95": None, "upper_95": None}
+    rows: list[str] = []
+    study._transfer_table(rows.append,
+                          {k: {**v, **stub, "pooled": {**empty, **v["pooled"]}}
+                           for k, v in tests.items()}, full=True, plabels={})
+    t2 = next(r for r in rows if r.startswith("| T2 "))
+    assert "— (Holm stopped at an earlier step)" in t2 and "(α / 5)" not in t2
+
+
 def test_holm_refuses_a_family_that_is_not_six():
     with pytest.raises(ValueError, match="6"):
         study.settle({"T1": {"run": True, "pooled": {"p_exact": 0.01}}})
@@ -297,17 +330,17 @@ def test_the_study_family_on_synthetic_checkpoints(result):
     by = {(v["judge"], v["target_locale"]): v for v in T.values()}
     jev_ca, jev_es = by[("jev", "ca-ES")], by[("jev", "es-ES")]
     # every jev target row is at 0.95, above any English threshold: all 300 items counted
-    assert (jev_ca["pooled"]["n"], jev_ca["pooled"]["errors"]) == (300, 60)
-    assert (jev_es["pooled"]["n"], jev_es["pooled"]["errors"]) == (300, 15)
-    assert jev_ca["resolved"] and not jev_es["resolved"]
+    assert (jev_ca["pooled"]["n"], jev_ca["pooled"]["errors"]) == (300, 15)
+    assert (jev_es["pooled"]["n"], jev_es["pooled"]["errors"]) == (300, 60)
+    assert jev_es["resolved"] and not jev_ca["resolved"]
     assert [f["validated_on"] for f in jev_ca["folds"]] == ["A", "B"]
     assert all(f["threshold"] is not None for f in jev_ca["folds"])
     assert jev_ca["partial"] == []
     for loc in ("ca-ES", "es-ES"):
         c = by[("claude-sonnet-4.5", loc)]
         assert not c["run"] and c["outcome"] == "not run" and c["reason"]
-    assert jev_ca["prediction"] == "resolved" and jev_ca["as_predicted"] is True
-    assert jev_es["as_predicted"] is False
+    assert jev_ca["prediction"] == "not resolved" and jev_ca["as_predicted"] is True
+    assert jev_es["prediction"] == "not resolved" and jev_es["as_predicted"] is False
 
 
 # --- predictions are read, never written ---------------------------------------------------
@@ -327,12 +360,12 @@ PLAN_TABLE = """# plan
 
 | id | judge | target locale | prediction |
 |---|---|---|---|
-| T1 | Jev | `ca-ES` | not resolved |
-| T2 | gpt-6-luna | `ca-ES` | resolved (some words) |
-| T3 | claude-sonnet-4.5 | `ca-ES` | resolved (some words) |
+| T1 | Jev | `ca-ES` | resolved (some words) |
+| T2 | gpt-6-luna | `ca-ES` | not resolved |
+| T3 | claude-sonnet-4.5 | `ca-ES` | not resolved |
 | T4 | Jev | `es-ES` | not resolved |
 | T5 | gpt-6-luna | `es-ES` | resolved (some words) |
-| T6 | claude-sonnet-4.5 | `es-ES` | resolved (some words) |
+| T6 | claude-sonnet-4.5 | `es-ES` | not resolved |
 
 | id | something else | prediction |
 |---|---|---|
@@ -356,8 +389,8 @@ def test_the_predictions_are_parsed_from_the_plan_once_its_hash_matches(tmp_path
     T = r["analyses"]["primary"]["transfer"]
     assert list(T) == ["T1", "T2", "T3", "T4", "T5", "T6"]
     assert (T["T1"]["judge"], T["T1"]["target_locale"], T["T1"]["prediction"]) == (
-        "jev", "ca-ES", "not resolved")
-    assert T["T6"]["prediction"] == "resolved"
+        "jev", "ca-ES", "resolved")
+    assert T["T5"]["prediction"] == "resolved" and T["T6"]["prediction"] == "not resolved"
     assert r["inputs"]["predictions"] == {"path": "docs/v06-plan.md",
                                           "sha256": sha256_of(str(plan)),
                                           "verified_against": "docs/v06-plan.sha256"}
@@ -436,6 +469,19 @@ def test_the_bootstrap_is_deterministic_and_does_not_depend_on_the_processes(tre
     again = compute(tree, jobs=1)
     two = compute(tree, jobs=2)
     assert one == again == two
+
+
+def test_the_overconfidence_interval_is_the_seeded_clustered_bootstrap():
+    import random
+    rng = random.Random(7)
+    a = [(rng.random(), rng.random() < 0.7) for _ in range(120)]
+    b = [(rng.random(), rng.random() < 0.7) for _ in range(120)]
+    ids = [f"i{k}" for k in range(120)]
+    got = study.paired_overconfidence(a, b, ids, n_boot=300)
+    ref = paired_difference_ci(a, b, study.overconfidence, 300, 2026, ids)
+    other = paired_difference_ci(a, b, study.overconfidence, 300, 2027, ids)
+    assert got["ci"] == [round(x, 6) for x in ref.ci[:2]]
+    assert got["ci"] != [round(x, 6) for x in other.ci[:2]]
 
 
 def test_the_paired_bootstrap_resamples_items():
@@ -584,6 +630,28 @@ def test_a_checkpoint_of_another_labels_file_is_refused(tmp_path):
         compute(t)
 
 
+def test_a_slug_whose_judge_differs_across_locales_is_refused(tmp_path):
+    t = build(tmp_path, judges=("jev", "gpt-6-luna", "claude-sonnet-4.5"))
+    p = t["runs"] / "jev-es-ES.ckpt.jsonl"
+    lines = p.read_text(encoding="utf-8").splitlines()
+    head = json.loads(lines[0])
+    head["run"]["judge"]["model"] = "another-model"
+    p.write_text("\n".join([json.dumps(head)] + lines[1:]) + "\n", encoding="utf-8")
+    with pytest.raises(SystemExit, match="another judge or model"):
+        compute(t)
+
+
+def test_a_row_index_outside_the_labels_is_refused(tmp_path):
+    t = build(tmp_path, judges=("jev", "gpt-6-luna", "claude-sonnet-4.5"))
+    p = t["runs"] / "jev-es-ES.ckpt.jsonl"
+    rec = json.loads(p.read_text(encoding="utf-8").splitlines()[1])
+    rec["idx"] = N_ITEMS
+    with p.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(rec) + "\n")
+    with pytest.raises(SystemExit, match="outside"):
+        compute(t)
+
+
 def test_a_missing_primary_checkpoint_stops_the_analysis(tmp_path):
     t = build(tmp_path, judges=("jev", "gpt-6-luna"))
     with pytest.raises(study.MissingCheckpoints, match="claude-sonnet-4.5/en-US"):
@@ -598,7 +666,7 @@ def test_an_incomplete_checkpoint_is_analysed_on_its_completed_rows_only(tmp_pat
     r = compute(t)
     m = r["analyses"]["primary"]["metrics"]["jev/ca-ES"]
     assert m["n"] == 250 and m["missing"] == 0                # unjudged rows never wrong
-    assert m["right"] == sum(1 for i in range(250) if i % 5)
+    assert m["right"] == sum(1 for i in range(250) if i % 20)
     label = "partial: 250 of 300 (incomplete)"
     assert m["partial"] == label
     assert r["inputs"]["checkpoints"]["jev/ca-ES"]["partial"] == label
@@ -623,6 +691,7 @@ def test_a_checkpoint_stopped_at_its_ceiling_says_so(tmp_path):
     assert r["inputs"]["checkpoints"]["jev/ca-ES"]["partial"] == (
         "partial: 250 of 300 (stopped at its ceiling)")
     ck = r["cost"]["checkpoints"]["jev/ca-ES"]
+    assert "$0.25 |" in study.markdown(r)
     assert ck["max_usd"] == 0.25 and ck["max_usd_history"] == [{"max_usd": 0.1,
                                                                 "until_rows": 90}]
 
@@ -647,6 +716,18 @@ def test_a_served_model_that_changes_is_reported_by_segment(tmp_path):
 # --- outputs and --check ---------------------------------------------------------------------
 
 
+def test_a_ceiling_is_printed_exactly_as_its_header_records_it(tmp_path):
+    t = build(tmp_path, judges=("jev", "gpt-6-luna", "claude-sonnet-4.5"))
+    massive = t["root"] / "examples" / "massive"
+    _write_checkpoint(t["runs"] / "gpt-6-luna-es-ES.ckpt.jsonl",
+                      massive / "labels-test-es-ES.jsonl", "gpt-6-luna", "es-ES",
+                      "openai-decisions", max_usd=2.718281,
+                      max_usd_history=[{"max_usd": 1.234567, "until_rows": 12}])
+    md = study.markdown(compute(t))
+    assert "$2.718281" in md and "$2.71828 " not in md and "$2.71828|" not in md
+    assert "ceiling $1.234567 until row 12" in md
+
+
 def test_check_mode_regenerates_and_diffs(tmp_path):
     t = build(tmp_path, judges=("jev", "gpt-6-luna", "claude-sonnet-4.5"))
     md, js = tmp_path / "README.md", tmp_path / "results.json"
@@ -668,6 +749,7 @@ def test_the_report_carries_the_caveats_and_no_banned_wording(result):
     assert "lower at its Holm level" in md and "sign" in md
     assert "## 10. Cost" in md
     assert md.count("only the transfer-test halves are fixed") == 2      # §5 and §7
+    assert "‡" in md and md.index("‡") == md.index(study.DEGENERATE_NOTE) + 2
     low = md.lower()
     for word in ("certified", "guaranteed", "compliant", "at most"):
         assert word not in low, word
