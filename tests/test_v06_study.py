@@ -26,6 +26,7 @@ from judge_audit.runner import sha256_of  # noqa: E402
 
 LOCALES = ["en-US", "es-ES", "ca-ES"]
 OPTIONS = ["alarm_set", "play_music", "weather_query"]
+SCENARIO = {"alarm_set": "alarm", "play_music": "play", "weather_query": "weather"}
 N_ITEMS = 300
 MAJORITY_NO = {("ca-ES", 5)}                       # two of three localisation judges said no
 ONE_NO = {("es-ES", 7)}                            # one said no: not a majority
@@ -37,6 +38,7 @@ OVERLAP = {("en-US", 9), ("ca-ES", 11)}            # text also in train or dev
 
 def _labels_row(locale: str, i: int) -> dict:
     meta = {"source": "synthetic", "locale": locale, "split": "test", "id": str(1000 + i),
+            "scenario": SCENARIO[OPTIONS[i % 3]],
             "text_in_train_or_dev": (locale, i) in OVERLAP}
     if locale != "en-US":
         meta["intent_judgments"] = ([0, 0, 1] if (locale, i) in MAJORITY_NO
@@ -64,7 +66,7 @@ def _behaviour(slug: str, locale: str, i: int) -> tuple[str, float | None, str, 
     if slug == "gpt-6-luna":
         raw["native_confidence"] = 0.5 if i % 4 == 0 else 0.9
         if locale == "es-ES" and i % 50 == 0:     # a refusal: no answer, no confidence
-            return "", None, "no_answer", {"served": {"model": slug}}
+            return "", None, "no_answer", {"served": {"model": slug}, "refusal": True}
         if locale == "en-US":
             return (_wrong(i), 0.55, "parsed", raw) if i % 150 == 0 else (right, 0.9, "parsed",
                                                                            raw)
@@ -756,3 +758,72 @@ def test_the_report_carries_the_caveats_and_no_banned_wording(result):
     for line in md.splitlines():
         if "decision2-kai-0.6b" in line and line.startswith("|"):
             assert "exploratory" in line
+
+
+# --- exploratory refusal views (amendment A4) -----------------------------------------------
+
+
+def test_refusal_views_cover_every_locale_of_a_judge_that_refused(result):
+    v = result["exploratory_refusals"]
+    assert v["label"] == "exploratory, not pre-registered (amendment A4)"
+    assert list(v["views"]) == ["gpt-6-luna/en-US", "gpt-6-luna/es-ES", "gpt-6-luna/ca-ES"]
+    assert [v["views"][k]["refused"] for k in v["views"]] == [0, 6, 0]
+
+
+def test_metrics_without_refused_rows_sit_next_to_the_plans(result):
+    es = result["exploratory_refusals"]["views"]["gpt-6-luna/es-ES"]
+    plan = result["analyses"]["primary"]["metrics"]["gpt-6-luna/es-ES"]
+    assert es["plan"]["n"] == plan["n"] == N_ITEMS
+    assert es["plan"]["accuracy"] == plan["accuracy"]
+    w = es["without_refusals"]
+    assert w["n"] == N_ITEMS - 6 and w["no_answer"] == 0
+    right = sum(1 for i in range(N_ITEMS) if i % 50 and i % 8)
+    assert w["right"] == right == plan["right"]
+    assert w["accuracy"] == round(right / (N_ITEMS - 6), 6) > plan["accuracy"]
+    assert set(w["validated_coverage"]) == {"0.01", "0.02", "0.05", "0.1"}
+    for key in ("auroc", "ece", "mce", "brier"):
+        assert key in w and key in es["plan"]
+
+
+def test_refusals_are_counted_by_scenario_and_by_gold_intent(result):
+    es = result["exploratory_refusals"]["views"]["gpt-6-luna/es-ES"]
+    # refused items 0, 50, …, 250: two per intent, each intent holds 100 of the 300 rows
+    assert es["by_scenario"] == {s: {"refused": 2, "rows": 100, "share": 0.02}
+                                 for s in ("alarm", "play", "weather")}
+    assert es["by_intent"] == {o: {"refused": 2, "rows": 100, "share": 0.02} for o in OPTIONS}
+    en = result["exploratory_refusals"]["views"]["gpt-6-luna/en-US"]
+    assert en["by_scenario"] == {} and en["by_intent"] == {}
+
+
+def test_refusal_views_enter_no_test(tmp_path):
+    """The same checkpoints without the refusal flag give the same tests, overconfidence
+    and plan metrics: the views add a key, nothing else."""
+    flagged = build(tmp_path / "a", judges=("jev", "gpt-6-luna", "claude-sonnet-4.5"))
+    plain = build(tmp_path / "b", judges=("jev", "gpt-6-luna", "claude-sonnet-4.5"))
+    p = plain["runs"] / "gpt-6-luna-es-ES.ckpt.jsonl"
+    p.write_text(p.read_text(encoding="utf-8").replace(', "refusal": true', ""),
+                 encoding="utf-8")
+    a, b = compute(flagged), compute(plain)
+    assert a["analyses"] == b["analyses"]
+    assert a["exploratory_refusals"]["views"] and not b["exploratory_refusals"]["views"]
+
+
+def test_a_refused_row_of_a_partial_checkpoint_counts_once_and_unjudged_rows_never(tmp_path):
+    t = build(tmp_path, judges=("jev", "gpt-6-luna", "claude-sonnet-4.5"))
+    massive = t["root"] / "examples" / "massive"
+    _write_checkpoint(t["runs"] / "gpt-6-luna-es-ES.ckpt.jsonl",
+                      massive / "labels-test-es-ES.jsonl", "gpt-6-luna", "es-ES",
+                      "openai-decisions", rows=120)
+    es = compute(t)["exploratory_refusals"]["views"]["gpt-6-luna/es-ES"]
+    assert es["refused"] == 3 and es["judged"] == 120 and es["partial"]
+    assert es["without_refusals"]["n"] == 117
+    assert sum(x["rows"] for x in es["by_intent"].values()) == 120
+
+
+def test_every_refusal_row_of_the_report_carries_the_label(result):
+    md = study.markdown(result)
+    sec = md[md.index("## 11."):]
+    label = "exploratory, not pre-registered (amendment A4)"
+    rows = [ln for ln in sec.splitlines() if ln.startswith("| gpt-6-luna")]
+    assert rows and all(label in ln for ln in rows)
+    assert "without refused rows" in sec and "plan's figures" in sec
