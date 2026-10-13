@@ -30,7 +30,7 @@
 | `gemini-3.6-flash` | exploratory | `ca-ES` | 2,974 | 2026-10-13T08:03:52+00:00 | $1.9002 | 5.154445 | `70e6cfef46aea2f3fb3ae8fc1109d96f8dc708d476fb81a6d78612c282c189f5` |
 | `deepseek-r1` | exploratory | `en-US` | 2,974 | 2026-10-13T10:34:30+00:00 | $7.4120 | 34.0 | `811853b15cfa7da86a1069f7ada8c84fbc788f3a1ce55486bf937661503a2868` |
 | `deepseek-r1` | exploratory | `es-ES` | 2,974 | 2026-10-13T13:24:51+00:00 | $7.7147 | 26.588039 | `9faa8afe5ba0a848ba84ad7ac8a8603199edb671fbdb6062573817b4c88aa8b8` |
-| `deepseek-r1` | exploratory | `ca-ES` | in progress, not committed yet | | | | |
+| `deepseek-r1` | exploratory | `ca-ES` | 2,974 | 2026-10-13T16:29:19+00:00 | $7.6644 | 18.873337 | `813bb62345cd39e9ee9165e1e03752c4e15189a4c5c2d4f00a02d2d5107b5dd9` |
 | `clef-flash` | exploratory | `en-US` | 2,974 | 2026-10-13T07:37:36+00:00 | $0.2659 | 1.0 | `fe575b5eaf39deb31c788474cec41aa24ac43211d0feac102bd9c74db164d90e` |
 | `clef-flash` | exploratory | `es-ES` | in progress, not committed yet | | | | |
 | `clef-flash` | exploratory | `ca-ES` | in progress, not committed yet | | | | |
@@ -51,7 +51,7 @@
 
 - `jev-en-US.ckpt.duplicate-writes.jsonl`: 3,516 row lines, 2,974 distinct rows, recorded cost $0.1163, sha256 `541587e3f0b1660c21196b2145dec34e42a315c070c4860ae9e5f3c19f43428c` (amendment A1).
 
-**Recorded cost of the study:** $48.3668, every checkpoint above included, against the $115 budget. Recorded cost can be below a provider's bill (pricing multipliers, reasoning tokens).
+**Recorded cost of the study:** $56.0312, every checkpoint above included, against the $115 budget. Recorded cost can be below a provider's bill (pricing multipliers, reasoning tokens).
 
 ## Run notes
 
