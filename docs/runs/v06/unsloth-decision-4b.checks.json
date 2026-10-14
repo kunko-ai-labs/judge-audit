@@ -1,0 +1,67 @@
+{
+  "check_complete_gaps": [],
+  "checkpoint": "docs/runs/v06/unsloth-decision-4b-en-US.ckpt.jsonl",
+  "checkpoint_sha256": "a0a4706bb37f0d4993ed06f873c5fb3e699175a47fe1d393b30d98d81757a296",
+  "direct_predict": [
+    {
+      "max_abs_diff": 0.0,
+      "question": "intent",
+      "row": 0,
+      "same_decision": true,
+      "same_options": true
+    },
+    {
+      "max_abs_diff": 0.0,
+      "question": "intent",
+      "row": 19,
+      "same_decision": true,
+      "same_options": true
+    },
+    {
+      "max_abs_diff": 0.0,
+      "question": "intent",
+      "row": 39,
+      "same_decision": true,
+      "same_options": true
+    }
+  ],
+  "direct_predict_passed": true,
+  "gate": {
+    "passed": true,
+    "per_checkpoint": {
+      "docs/runs/v06/unsloth-decision-4b-ca-ES.ckpt.jsonl": {
+        "first_40_unparsed_or_blank": 0,
+        "gaps": [],
+        "header_timestamp_utc": "2026-10-13T09:29:50+00:00",
+        "not_sent": 0,
+        "passed": true,
+        "rows": 2974,
+        "sha256": "e3633c52e2fda7fb7af5d0dbcd59e6974e5f57324d548d39f46bd68fb2533d36",
+        "unparsed_or_blank_all": 0
+      },
+      "docs/runs/v06/unsloth-decision-4b-en-US.ckpt.jsonl": {
+        "first_40_unparsed_or_blank": 0,
+        "gaps": [],
+        "header_timestamp_utc": "2026-10-13T07:44:41+00:00",
+        "not_sent": 0,
+        "passed": true,
+        "rows": 2974,
+        "sha256": "a0a4706bb37f0d4993ed06f873c5fb3e699175a47fe1d393b30d98d81757a296",
+        "unparsed_or_blank_all": 0
+      },
+      "docs/runs/v06/unsloth-decision-4b-es-ES.ckpt.jsonl": {
+        "first_40_unparsed_or_blank": 0,
+        "gaps": [],
+        "header_timestamp_utc": "2026-10-13T08:37:23+00:00",
+        "not_sent": 0,
+        "passed": true,
+        "rows": 2974,
+        "sha256": "6357aece380126e412de5214ea663b80d2fd4fff16ff31cd4b2fb1c9204309c3",
+        "unparsed_or_blank_all": 0
+      }
+    },
+    "threshold": 0.05
+  },
+  "header_timestamp_utc": "2026-10-13T07:44:41+00:00",
+  "mode": "study"
+}
