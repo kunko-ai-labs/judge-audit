@@ -256,17 +256,17 @@ def test_rewording_the_robustness_sentence_fails_instead_of_skipping():
         ("the BANKING77 gap of T1 is +0.022", "the BANKING77 gap of T1 is +0.023"),
         ("Qwen3-8B k = 10, gemini-3.6-flash k = 5", "Qwen3-8B k = 9, gemini-3.6-flash k = 5"),
         ("in 3 of the 4 tests", "in 4 of the 4 tests"),
-        ("41.0 % at ≤ 5 % (37 errors", "42.0 % at ≤ 5 % (37 errors"),
+        ("41.0 % at a 5 % target (37 errors", "42.0 % at a 5 % target (37 errors"),
         ("(37 errors / 1263 automated;", "(36 errors / 1263 automated;"),
-        ("72.3 % at ≤ 10 % (182 / 2225;", "72.3 % at ≤ 10 % (182 / 2226;"),
+        ("72.3 % at a 10 % target (182 / 2225;", "72.3 % at a 10 % target (182 / 2226;"),
         ("27.0 %–45.1 % over seeds", "27.0 %–46.1 % over seeds"),
         ("72.0 %–73.4 % over the same seeds", "72.0 %–74.4 % over the same seeds"),
         ("split seed 2026", "split seed 2027"),
-        ("14.3 % at ≤ 5 % (6 errors", "14.3 % at ≤ 5 % (7 errors"),
-        ("45.5 % at ≤ 10 % (59 / 1402)", "45.5 % at ≤ 10 % (59 / 1412)"),
+        ("14.3 % at a 5 % target (6 errors", "14.3 % at a 5 % target (7 errors"),
+        ("45.5 % at a 10 % target (59 / 1402)", "45.5 % at a 10 % target (59 / 1412)"),
         ("441 automated; 7.6 %–30.0 % over", "441 automated; 7.6 %–31.0 % over"),
         ("0 automated; 0.0 %–4.4 % over", "0 automated; 0.0 %–4.5 % over"),
-        ("12.5 % at ≤ 10 % (19 / 384)", "12.6 % at ≤ 10 % (19 / 384)"),
+        ("12.5 % at a 10 % target (19 / 384)", "12.6 % at a 10 % target (19 / 384)"),
         # verdicts and caveats are read too
         ("H2 is supported for Qwen3-8B", "H2 is strongly supported for Qwen3-8B"),
         ("H1-lp is not supported for Qwen3-8B", "H1-lp is supported for Qwen3-8B"),
@@ -275,11 +275,11 @@ def test_rewording_the_robustness_sentence_fails_instead_of_skipping():
         ("the held-out slice was not run", "the held-out slice was run"),
         # the quickstart's simulated line and its figure in the prose
         ("all_rows=65.5% …", "all_rows=66.5% …"),
-        ("bound=16.5% all_rows", "bound=16.6% all_rows"),
-        ("error target (75.0 %)", "error target (74.0 %)"),
-        ("(0.0–75.0 %) and", "(0.0–76.0 %) and"),
-        ("error rate (16.5 %,", "error rate (15.5 %,"),
+        ("bound=16.6%) all_rows", "bound=16.5%) all_rows"),
+        ("so the 75.0 % held out", "so the 74.0 % held out"),
+        ("error rate (16.6 %)", "error rate (15.5 %)"),
         ("`all_rows` (65.5 %)", "`all_rows` (64.5 %)"),
+        ("72.3 % (bound 9.2 %)", "72.3 % (bound 9.1 %)"),
         ("safe_automation@5%=none", "safe_automation@5%=12.0%"),
     ],
 )
@@ -491,8 +491,9 @@ def test_no_opposite_sign_test_does_not_read_as_worse(monkeypatch):
     "old,new",
     [
         ("| Jev, native probability | **41.0 %** |", "| Jev, native probability | **42.0 %** |"),
-        ("| 27.0–45.1 % | 72.3 % |", "| 27.0–46.1 % | 72.3 % |"),
-        ("| 7.6–30.0 % | 45.5 % |", "| 7.6–30.0 % | 46.5 % |"),
+        ("| 27.0–45.1 % | 72.3 % (", "| 27.0–46.1 % | 72.3 % ("),
+        ("| 7.6–30.0 % | 45.5 % (", "| 7.6–30.0 % | 46.5 % ("),
+        ("45.5 % (bound 5.3 %)", "45.5 % (bound 5.2 %)"),
         ("| Qwen3-8B, token log-probability | **none** |",
          "| Qwen3-8B, token log-probability | **1.0 %** |"),
         ("BANKING77, 3,080 human-labelled", "BANKING77, 3,081 human-labelled"),
@@ -503,7 +504,8 @@ def test_the_at_a_glance_table_is_checked_cell_by_cell(old, new):
 
 
 def test_a_dropped_row_of_the_at_a_glance_table_is_caught():
-    row = "| gemini-3.6-flash, verbalized | **14.3 %** | 2.7 % | 7.6–30.0 % | 45.5 % |\n"
+    row = ("| gemini-3.6-flash, verbalized | **14.3 %** | 2.7 % | 7.6–30.0 % | 45.5 % "
+           "(bound 5.3 %) |\n")
     assert row in README
     assert any("gemini-3.6-flash, verbalized" in f and "0 times" in f
                for f in check(README.replace(row, "")).failures)

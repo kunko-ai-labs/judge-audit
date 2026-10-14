@@ -36,4 +36,4 @@
 
 - Synthetic, seeded dataset; no real customer email. Regenerate with `python examples/email-routing/generate.py`.
 - Not comparable 1:1 with the external 1,565-email community benchmark (96.4 %): different data, different difficulty.
-- Retrospective on this dataset — not a production guarantee.
+- Retrospective on this dataset: what these rows show, not a forecast.

@@ -586,7 +586,7 @@ def v05_expected(d: dict) -> dict[str, list[str]]:
         p = m[f"banking77/{run}"]["strict"]["certification"][target]["pooled"]
         tail = (f"({p['errors']} errors / {p['covered']} automated)" if long
                 else f"({p['errors']} / {p['covered']})")
-        return f"{_pc(p['coverage'])} at ≤ {round(float(target) * 100)} % {tail}"
+        return f"{_pc(p['coverage'])} at a {round(float(target) * 100)} % target {tail}"
 
     jev10 = m["banking77/jev"]["strict"]["certification"]
     s5, s10 = jev10["0.05"]["spread_coverage"], jev10["0.1"]["spread_coverage"]
@@ -674,7 +674,7 @@ def v05_expected(d: dict) -> dict[str, list[str]]:
             f"Qwen3-8B token log-probability {cert('logprob-qwen3-8b', '0.05', True)[:-1]}; "
             f"{_pc(spread5('logprob-qwen3-8b')[0])}–{_pc(spread5('logprob-qwen3-8b')[1])} over the "
             f"same seeds) and {cert('logprob-qwen3-8b', '0.1', False)}",
-            *(["On BANKING77 no run automates anything at ≤ 1 % or ≤ 2 %"] if nothing_low else []),
+            *(["On BANKING77 no run automates anything at a 1 % or 2 % target"] if nothing_low else []),
             caveat + "every bound includes the datasets' own label errors, because label noise "
             + "was not measured",
             "the held-out slice was not run (#106)",
@@ -721,12 +721,14 @@ def check_v05_glance(ck: Checker, md: str) -> None:
         c = m[f"banking77/{run}"]["strict"]["certification"]
         five, ten = c["0.05"]["pooled"], c["0.1"]["pooled"]
         lo, hi = c["0.05"]["spread_coverage"]
-        up = (math.ceil(risk_upper_bound(five["errors"], five["covered"]) * 1000 - 1e-9) / 10
-              if five["covered"] else None)                    # rounded up, never down
-        bound = f"{up:.1f} %" if up is not None else "—"
-        want = [f"**{_pc(five['coverage']) if five['covered'] else 'none'}**", bound,
+        def up(p: dict) -> str:                                 # rounded up, never down
+            if not p["covered"]:
+                return "—"
+            return f"{math.ceil(risk_upper_bound(p['errors'], p['covered']) * 1000 - 1e-9) / 10:.1f} %"
+
+        want = [f"**{_pc(five['coverage']) if five['covered'] else 'none'}**", up(five),
                 f"{lo * 100:.1f}–{hi * 100:.1f} %",
-                _pc(ten["coverage"]) if ten["covered"] else "none"]
+                f"{_pc(ten['coverage'])} (bound {up(ten)})" if ten["covered"] else "none"]
         for where, got, exp in zip(("at 5 %", "bound", "spread", "at 10 %"), r[1:5], want,
                                    strict=True):
             ck.eq(f"v0.5 at a glance / {label} / {where}", got, exp)
@@ -908,12 +910,10 @@ def check_quickstart(ck: Checker, md: str) -> None:
     line = simulated_line("0.10")
     if not shown or not line.startswith(shown.group(1)):
         ck.failures.append(f"quickstart: the printed line is not the start of a fresh run: {line!r}")
-    held = re.search(r"safe_automation@10%=([\d.]+)% \[([\d.]+)%–([\d.]+)%\] "
-                     r"bound=([\d.]+)% all_rows=([\d.]+)%", line)
-    want = ([f"at a 10 % error target ({held.group(1)} %)",
-             f"over split seeds ({held.group(2)}–{held.group(3)} %)",
-             f"held-out error rate ({held.group(4)} %", f"`all_rows` ({held.group(5)} %)"]
-            if held else ["?"])
+    held = re.search(r"safe_automation@10%=not_met\(([\d.]+)% bound=([\d.]+)%\) "
+                     r"all_rows=([\d.]+)%", line)
+    want = ([f"so the {held.group(1)} % held out", f"held-out error rate ({held.group(2)} %)",
+             f"`all_rows` ({held.group(3)} %)"] if held else ["?"])
     for figure in want:
         if figure not in md:
             ck.failures.append(f"quickstart: the prose's figure {figure!r} is not the fresh "

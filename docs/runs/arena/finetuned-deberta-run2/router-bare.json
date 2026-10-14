@@ -404,7 +404,7 @@
                 0.0,
                 0.0
               ],
-              "reason": "the larger half holds 31 decisions with a confidence; the target needs 628"
+              "reason": "too few decisions to check on held-out data (each half needs 628, the larger has 31)"
             },
             "segments": [],
             "worst_segment": null,
@@ -450,7 +450,7 @@
                 0.0,
                 0.0
               ],
-              "reason": "the larger half holds 31 decisions with a confidence; the target needs 313"
+              "reason": "too few decisions to check on held-out data (each half needs 313, the larger has 31)"
             },
             "segments": [],
             "worst_segment": null,
@@ -496,7 +496,7 @@
                 0.0,
                 0.0
               ],
-              "reason": "the larger half holds 31 decisions with a confidence; the target needs 124"
+              "reason": "too few decisions to check on held-out data (each half needs 124, the larger has 31)"
             },
             "segments": [],
             "worst_segment": null,
@@ -542,7 +542,7 @@
                 0.0,
                 0.0
               ],
-              "reason": "the larger half holds 31 decisions with a confidence; the target needs 61"
+              "reason": "too few decisions to check on held-out data (each half needs 61, the larger has 31)"
             },
             "segments": [],
             "worst_segment": null,
@@ -564,7 +564,7 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-14T12:54:29+00:00",
+    "utc": "2026-10-14T13:25:02+00:00",
     "judge_audit_version": "0.6.0rc2",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/finetuned-deberta-run2/router-bare.ckpt.jsonl",

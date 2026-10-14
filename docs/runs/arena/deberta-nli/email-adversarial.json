@@ -367,7 +367,7 @@
                 0.0,
                 0.0
               ],
-              "reason": "the larger half holds 100 decisions with a confidence; the target needs 628"
+              "reason": "too few decisions to check on held-out data (each half needs 628, the larger has 100)"
             },
             "segments": [],
             "worst_segment": null,
@@ -413,7 +413,7 @@
                 0.0,
                 0.0
               ],
-              "reason": "the larger half holds 100 decisions with a confidence; the target needs 313"
+              "reason": "too few decisions to check on held-out data (each half needs 313, the larger has 100)"
             },
             "segments": [],
             "worst_segment": null,
@@ -441,7 +441,7 @@
             "errors": 0,
             "risk_upper": null,
             "min_units": 124,
-            "reason": "no threshold passes: the first cut tested holds 124 decisions with 36 errors (bound 36.5% > 5%)",
+            "reason": "no threshold passes: the first cut tested holds 124 decisions with 36 errors (95% upper bound on the error rate 36.5%, above the 5% target)",
             "first_cut": {
               "units": 124,
               "errors": 36,
@@ -463,7 +463,7 @@
                 0.0,
                 0.0
               ],
-              "reason": "the larger half holds 100 decisions with a confidence; the target needs 124"
+              "reason": "too few decisions to check on held-out data (each half needs 124, the larger has 100)"
             },
             "segments": [],
             "worst_segment": null,
@@ -476,7 +476,7 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "no threshold passes: the first cut tested holds 124 texts with 33 errors (bound 33.9% > 5%)",
+              "reason": "no threshold passes: the first cut tested holds 124 texts with 33 errors (95% upper bound on the error rate 34.0%, above the 5% target)",
               "first_cut": {
                 "units": 124,
                 "errors": 33,
@@ -495,7 +495,7 @@
             "errors": 0,
             "risk_upper": null,
             "min_units": 61,
-            "reason": "no threshold passes: the first cut tested holds 61 decisions with 16 errors (bound 37.1% > 10%)",
+            "reason": "no threshold passes: the first cut tested holds 61 decisions with 16 errors (95% upper bound on the error rate 37.1%, above the 10% target)",
             "first_cut": {
               "units": 61,
               "errors": 16,
@@ -530,7 +530,7 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "no threshold passes: the first cut tested holds 61 texts with 12 errors (bound 29.9% > 10%)",
+              "reason": "no threshold passes: the first cut tested holds 61 texts with 12 errors (95% upper bound on the error rate 30.0%, above the 10% target)",
               "first_cut": {
                 "units": 61,
                 "errors": 12,
@@ -543,7 +543,7 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-14T12:54:29+00:00",
+    "utc": "2026-10-14T13:25:02+00:00",
     "judge_audit_version": "0.6.0rc2",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/deberta-nli/email-adversarial.ckpt.jsonl",

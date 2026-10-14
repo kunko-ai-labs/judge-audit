@@ -5,7 +5,7 @@
 
 _judge `llm:gemini-3-flash-preview` · model `gemini-3-flash-preview` · run 2026-09-21T18:54:18+00:00 · judge-audit 0.3.2_
 _dataset `docs/runs/jury/router-bare/gemini-3-flash.r2.input.jsonl` · 120 rows · sha256 `bb3c4bd85d5e…`_
-_regenerated 2026-10-14T12:54:29+00:00 from `docs/runs/jury/router-bare/gemini-3-flash.r2.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.6.0rc2_
+_regenerated 2026-10-14T13:25:02+00:00 from `docs/runs/jury/router-bare/gemini-3-flash.r2.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.6.0rc2_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome; downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified; 40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted**
 
@@ -22,18 +22,18 @@ This labelled set repeats texts (120 decisions, 61 distinct texts). The bound ab
 | 1% | a target of 1 wrong in every 100 automated decisions | none: needs 628 decisions with a confidence to bound the error at 1%; has 120 | — | — |
 | 2% | a target of 1 wrong in every 50 automated decisions | none: needs 313 decisions with a confidence to bound the error at 2%; has 120 | — | — |
 | 5% (primary) | a target of 1 wrong in every 20 automated decisions | none: needs 124 decisions with a confidence to bound the error at 5%; has 120 | — | — |
-| 10% | a target of 1 wrong in every 10 automated decisions | none: no threshold passes: the first cut tested holds 96 decisions with 26 errors (bound 35.5% > 10%) | — | — |
+| 10% | a target of 1 wrong in every 10 automated decisions | none: no threshold passes: the first cut tested holds 96 decisions with 26 errors (95% upper bound on the error rate 35.6%, above the 10% target) | — | — |
 
 _Valid only for: judge `llm:gemini-3-flash-preview` · model `gemini-3-flash-preview` · data `docs/runs/jury/router-bare/gemini-3-flash.r2.input.jsonl` · sha256 `c651876c4619…` · measured 2026-09-21T18:54:18+00:00. Review by 2026-12-20, and measure again as soon as any of these changes._
 
-_The threshold is the lowest cut whose exact one-sided 95% upper bound on the error rate stays within the target. The bound speaks only for traffic drawn like these labelled decisions (a random sample of it, each decision an independent draw), judged by the judge and prompt above, with the labels taken as right. Label errors cut both ways: a wrong label the judge disagrees with counts as a judge error, one it agrees with hides an error. The primary target is the one passed with `--target` (here 5%), to be chosen before the run (this report was regenerated from an archived checkpoint with the default target: the target was not fixed in advance); every row is its own 95% statement; the 4 rows hold together with probability at least 80%; keeping the best-looking row after reading them is neither. The validated share chooses the threshold on half of the labelled decisions (split by distinct text, seed 0, range over other seeds) and applies it to the other half, both ways, with an exact bound on the held-out errors: a conservative check rather than a forecast. The share on all labelled decisions is what the threshold to deploy covers. A decision without a confidence is never automated. Exact one-sided binomial bound, fixed-sequence walk from the most confident down, starting at the cut that bounds the error with 2 errors (docs/judges.md § The safe automation rate). Statistical evidence on the labelled decisions, not a conformity assessment or a certification by a notified body._
+_The threshold is the lowest cut whose exact one-sided 95% upper bound on the error rate stays within the target. The bound speaks only for traffic drawn like these labelled decisions (a random sample of it, each decision an independent draw), judged by the judge and prompt above, with the labels taken as right. Label errors cut both ways: a wrong label the judge disagrees with counts as a judge error, one it agrees with hides an error. The primary target is the one passed with `--target` (here 5%), to be chosen before the run (this report was regenerated from an archived checkpoint with the default target: the target was not fixed in advance); every row is its own 95% statement; the 4 rows hold together with probability at least 80%; keeping the best-looking row after reading them is neither. The held-out check chooses the threshold on half of the labelled decisions (split by distinct text, seed 0, range over other seeds) and applies it to the other half, both ways; its bound pools the errors of both held-out halves, treating them as independent draws (an approximation: each half's threshold depends on the other half). It is a conservative check rather than a forecast, and its share is called validated only when that bound is within the target. The share on all labelled decisions is what the threshold to deploy covers. A decision without a confidence is never automated. Exact one-sided binomial bound, fixed-sequence walk from the most confident down, starting at the cut that bounds the error with 2 errors (docs/judges.md § The safe automation rate). Statistical evidence on the labelled decisions, not a conformity assessment or a certification by a notified body._
 
 ## When it says ≥ 90 / 95 / 99 %, how often is it wrong?
 
 | confidence | decisions | wrong | error rate | upper bound (95%) |
 |---|---|---|---|---|
 | ≥ 0.90 | 106 | 35 | 33.0% | 41.3% |
-| ≥ 0.95 | 96 | 26 | 27.1% | 35.5% |
+| ≥ 0.95 | 96 | 26 | 27.1% | 35.6% |
 | ≥ 0.99 | 58 | 4 | 6.9% | 15.1% |
 
 _0 decisions without a known confidence are left out of every row and counted here._

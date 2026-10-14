@@ -294,7 +294,7 @@
                 0.0,
                 0.0
               ],
-              "reason": "the larger half holds 63 decisions with a confidence; the target needs 628"
+              "reason": "too few decisions to check on held-out data (each half needs 628, the larger has 63)"
             },
             "segments": [],
             "worst_segment": null,
@@ -340,7 +340,7 @@
                 0.0,
                 0.0
               ],
-              "reason": "the larger half holds 63 decisions with a confidence; the target needs 313"
+              "reason": "too few decisions to check on held-out data (each half needs 313, the larger has 63)"
             },
             "segments": [],
             "worst_segment": null,
@@ -386,7 +386,7 @@
                 0.0,
                 0.0
               ],
-              "reason": "the larger half holds 63 decisions with a confidence; the target needs 124"
+              "reason": "too few decisions to check on held-out data (each half needs 124, the larger has 63)"
             },
             "segments": [],
             "worst_segment": null,
@@ -414,7 +414,7 @@
             "errors": 0,
             "risk_upper": null,
             "min_units": 61,
-            "reason": "no threshold passes: the first cut tested holds 75 decisions with 34 errors (bound 55.5% > 10%)",
+            "reason": "no threshold passes: the first cut tested holds 75 decisions with 34 errors (95% upper bound on the error rate 55.5%, above the 10% target)",
             "first_cut": {
               "units": 75,
               "errors": 34,
@@ -449,7 +449,7 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "no threshold passes: the first cut tested holds 61 texts with 37 errors (bound 71.2% > 10%)",
+              "reason": "no threshold passes: the first cut tested holds 61 texts with 37 errors (95% upper bound on the error rate 71.2%, above the 10% target)",
               "first_cut": {
                 "units": 61,
                 "errors": 37,
@@ -462,7 +462,7 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-14T12:54:29+00:00",
+    "utc": "2026-10-14T13:25:02+00:00",
     "judge_audit_version": "0.6.0rc2",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/deepseek-r1/router-bare.ckpt.jsonl",

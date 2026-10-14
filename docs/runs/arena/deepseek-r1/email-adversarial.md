@@ -5,7 +5,7 @@
 
 _judge `llm:deepseek-r1` · model `deepseek-r1` · run 2026-09-21T14:55:24+00:00 · judge-audit 0.3.2_
 _dataset `examples/email-routing-adversarial/labels.jsonl` · 200 rows · sha256 `74741868f533…`_
-_regenerated 2026-10-14T12:54:29+00:00 from `docs/runs/arena/deepseek-r1/email-adversarial.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.6.0rc2_
+_regenerated 2026-10-14T13:25:02+00:00 from `docs/runs/arena/deepseek-r1/email-adversarial.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.6.0rc2_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic and seeded: 60 clean controls plus 140 attacked rows built from the same templates; the label is the category of the underlying clean email by design; _meta.target is what the attacker wanted; measures resistance to attacks on synthetic mail, not accuracy on real mail**
 
@@ -14,27 +14,27 @@ _**†** exact 95 % Clopper–Pearson (binomial) interval, published where the e
 
 ## Can I automate this?
 
-**Validated on held-out decisions, at a 5% error target: none** — no threshold passes: the first cut tested holds 161 decisions with 30 errors (bound 24.4% > 5%).
+**Validated on held-out decisions, at a 5% error target: none** — no threshold passes: the first cut tested holds 161 decisions with 30 errors (95% upper bound on the error rate 24.5%, above the 5% target).
 
-This labelled set repeats texts (200 decisions, 189 distinct texts). The bound above treats the decisions as a random sample of your traffic, repeats included as they occur there. If the repeats were copied in instead, count each text once (at its highest confidence, wrong if any copy is: not always the more cautious reading when the copies of a text carry different confidences): at this target, none (no threshold passes: the first cut tested holds 155 texts with 31 errors (bound 26.0% > 5%)).
+This labelled set repeats texts (200 decisions, 189 distinct texts). The bound above treats the decisions as a random sample of your traffic, repeats included as they occur there. If the repeats were copied in instead, count each text once (at its highest confidence, wrong if any copy is: not always the more cautious reading when the copies of a text carry different confidences): at this target, none (no threshold passes: the first cut tested holds 155 texts with 31 errors (95% upper bound on the error rate 26.1%, above the 5% target)).
 
 | error target | in plain words | validated on held-out decisions | deploy at confidence ≥ | on all labelled decisions |
 |---|---|---|---|---|
 | 1% | a target of 1 wrong in every 100 automated decisions | none: needs 628 decisions with a confidence to bound the error at 1%; has 200 | — | — |
 | 2% | a target of 1 wrong in every 50 automated decisions | none: needs 313 decisions with a confidence to bound the error at 2%; has 200 | — | — |
-| 5% (primary) | a target of 1 wrong in every 20 automated decisions | none: no threshold passes: the first cut tested holds 161 decisions with 30 errors (bound 24.4% > 5%) | — | — |
-| 10% | a target of 1 wrong in every 10 automated decisions | none: no threshold passes: the first cut tested holds 161 decisions with 30 errors (bound 24.4% > 10%) | — | — |
+| 5% (primary) | a target of 1 wrong in every 20 automated decisions | none: no threshold passes: the first cut tested holds 161 decisions with 30 errors (95% upper bound on the error rate 24.5%, above the 5% target) | — | — |
+| 10% | a target of 1 wrong in every 10 automated decisions | none: no threshold passes: the first cut tested holds 161 decisions with 30 errors (95% upper bound on the error rate 24.5%, above the 10% target) | — | — |
 
 _Valid only for: judge `llm:deepseek-r1` · model `deepseek-r1` · data `examples/email-routing-adversarial/labels.jsonl` · sha256 `74741868f533…` · measured 2026-09-21T14:55:24+00:00. Review by 2026-12-20, and measure again as soon as any of these changes._
 
-_The threshold is the lowest cut whose exact one-sided 95% upper bound on the error rate stays within the target. The bound speaks only for traffic drawn like these labelled decisions (a random sample of it, each decision an independent draw), judged by the judge and prompt above, with the labels taken as right. Label errors cut both ways: a wrong label the judge disagrees with counts as a judge error, one it agrees with hides an error. The primary target is the one passed with `--target` (here 5%), to be chosen before the run (this report was regenerated from an archived checkpoint with the default target: the target was not fixed in advance); every row is its own 95% statement; the 4 rows hold together with probability at least 80%; keeping the best-looking row after reading them is neither. The validated share chooses the threshold on half of the labelled decisions (split by distinct text, seed 0, range over other seeds) and applies it to the other half, both ways, with an exact bound on the held-out errors: a conservative check rather than a forecast. The share on all labelled decisions is what the threshold to deploy covers. A decision without a confidence is never automated. Exact one-sided binomial bound, fixed-sequence walk from the most confident down, starting at the cut that bounds the error with 2 errors (docs/judges.md § The safe automation rate). Statistical evidence on the labelled decisions, not a conformity assessment or a certification by a notified body._
+_The threshold is the lowest cut whose exact one-sided 95% upper bound on the error rate stays within the target. The bound speaks only for traffic drawn like these labelled decisions (a random sample of it, each decision an independent draw), judged by the judge and prompt above, with the labels taken as right. Label errors cut both ways: a wrong label the judge disagrees with counts as a judge error, one it agrees with hides an error. The primary target is the one passed with `--target` (here 5%), to be chosen before the run (this report was regenerated from an archived checkpoint with the default target: the target was not fixed in advance); every row is its own 95% statement; the 4 rows hold together with probability at least 80%; keeping the best-looking row after reading them is neither. The held-out check chooses the threshold on half of the labelled decisions (split by distinct text, seed 0, range over other seeds) and applies it to the other half, both ways; its bound pools the errors of both held-out halves, treating them as independent draws (an approximation: each half's threshold depends on the other half). It is a conservative check rather than a forecast, and its share is called validated only when that bound is within the target. The share on all labelled decisions is what the threshold to deploy covers. A decision without a confidence is never automated. Exact one-sided binomial bound, fixed-sequence walk from the most confident down, starting at the cut that bounds the error with 2 errors (docs/judges.md § The safe automation rate). Statistical evidence on the labelled decisions, not a conformity assessment or a certification by a notified body._
 
 ## When it says ≥ 90 / 95 / 99 %, how often is it wrong?
 
 | confidence | decisions | wrong | error rate | upper bound (95%) |
 |---|---|---|---|---|
 | ≥ 0.90 | 188 | 32 | 17.0% | 22.2% |
-| ≥ 0.95 | 161 | 30 | 18.6% | 24.4% |
+| ≥ 0.95 | 161 | 30 | 18.6% | 24.5% |
 | ≥ 0.99 | 23 | 16 | 69.6% | 84.8% |
 
 _0 decisions without a known confidence are left out of every row and counted here._

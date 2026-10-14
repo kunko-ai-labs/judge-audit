@@ -29,11 +29,11 @@
 
 | Judge and confidence | Validated share at a 5 % error target | 95 % upper bound on the error rate | Range over split seeds | At a 10 % error target |
 |---|---|---|---|---|
-| Jev, native probability | **41.0 %** | 3.9 % | 27.0–45.1 % | 72.3 % |
-| gemini-3.6-flash, verbalized | **14.3 %** | 2.7 % | 7.6–30.0 % | 45.5 % |
-| Qwen3-8B, token log-probability | **none** | — | 0.0–4.4 % | 12.5 % |
+| Jev, native probability | **41.0 %** | 3.9 % | 27.0–45.1 % | 72.3 % (bound 9.2 %) |
+| gemini-3.6-flash, verbalized | **14.3 %** | 2.7 % | 7.6–30.0 % | 45.5 % (bound 5.3 %) |
+| Qwen3-8B, token log-probability | **none** | — | 0.0–4.4 % | 12.5 % (bound 7.2 %) |
 
-*Validated:* the threshold is chosen on one half of the texts and applied to the other, both ways; the bound is the exact one-sided Clopper–Pearson bound on the held-out errors. A share observed on all rows without a bound is not a basis for deployment.
+*Validated:* the threshold is chosen on one half of the texts and applied to the other, both ways, and the 95 % upper bound on the held-out error rate is within the target. The bound is the one-sided Clopper–Pearson bound on the held-out errors of both halves pooled, rounded up; it treats the two held-out halves as independent draws, an approximation since each half's threshold depends on the other half. A share observed on all rows without a bound is not a basis for deployment.
 
 Teams are shipping judgment models — TypeSafe's Jev, LLM-as-judge, guardrails, routers — that return a confidence with each decision. The literature studies calibration (Guo et al. 2017; Shao 2026; Huang et al. 2026); what a team needs before automating is the same measurement on *its own* decisions. judge-audit runs any judge in **shadow mode** against decisions your humans already made and answers the four questions that matter before you automate:
 
@@ -57,10 +57,10 @@ judge-audit check examples/email-routing/labels.jsonl --judge simulated --baseli
 The start of the `run` line, **SIMULATED**:
 
 ```text
-SIMULATED — not a real vendor audit · judge=simulated n=200 accuracy=85.5% [75.1, 93.7] safe_automation@10%=75.0% [0.0%–75.0%] bound=16.5% all_rows=65.5% …
+SIMULATED — not a real vendor audit · judge=simulated n=200 accuracy=85.5% [75.1, 93.7] safe_automation@10%=not_met(75.0% bound=16.6%) all_rows=65.5% …
 ```
 
-`simulated` is a seeded simulator so you can see the whole pipeline in ten seconds; every report it touches is stamped **SIMULATED**, and its figures say nothing about any real judge. `safe_automation@10%` leads with the share validated on held-out decisions at a 10 % error target (75.0 %), its range over split seeds (0.0–75.0 %) and the 95 % upper bound on its held-out error rate (16.5 %, above the target: on 200 rows the held-out check does not support automating). `all_rows` (65.5 %) is the share the threshold to deploy covers on every labelled decision, the share `check --min-safe-rate` gates. At the default target, 5 %, the simulator reaches no threshold and the line reads `safe_automation@5%=none`. `check --min-safe-rate 0.10:0.60` exits 0 here and exits 1 if that share falls below 60 %. To audit a real vendor, see [docs/real-audits.md](docs/real-audits.md).
+`simulated` is a seeded simulator so you can see the whole pipeline in ten seconds; every report it touches is stamped **SIMULATED**, and its figures say nothing about any real judge. `safe_automation@10%` leads with the held-out check at a 10 % error target: `not_met`, because the 95 % upper bound on the held-out error rate (16.6 %) is above the target, so the 75.0 % held out is not validated. A share is shown as validated only when that bound is within the target. `all_rows` (65.5 %) is the share the threshold to deploy covers on every labelled decision, the share `check --min-safe-rate` gates. At the default target, 5 %, the simulator reaches no threshold and the line reads `safe_automation@5%=none`. `check --min-safe-rate 0.10:0.60` exits 0 here and exits 1 if that share falls below 60 %. To audit a real vendor, see [docs/real-audits.md](docs/real-audits.md).
 
 In the [GitHub Action](docs/integrations.md#github-action) the same controls are inputs: `target` (the error rate the safe automation rate is headlined at, default `0.05`), `segment-by` (where to look for the worst segment: `label`, `meta.FIELD` or `none`) and `min-safe-rate` (`RISK:SHARE` minimums that fail the job). It returns `safe-automation-rate` (at the target) and `safe-automation-rates` (every target) as outputs.
 

@@ -407,12 +407,13 @@ def test_the_report_opens_with_the_rate_its_scope_and_its_conditions():
     section = md[md.index("## Can I automate this?"):md.index("## Observed on all rows")]
     # 100 decisions a half cannot clear the 5 % start (124): the validated share says so
     # first, then the threshold to deploy and its share on all labelled decisions
-    assert section.index("**Validated on held-out decisions, at a 5% error target: not "
-                         "checkable**") < section.index("| error target |")
-    assert ("To deploy: confidence ≥ 0.5425; on all labelled decisions it automates 92.0% "
-            "(184 of 200 decisions") in section
-    assert ("| 5% (primary) | a target of 1 wrong in every 20 automated decisions | not "
-            "checkable: the larger half holds 100 decisions") in section
+    assert section.index("**Validated on held-out decisions, at a 5% error target: too few "
+                         "decisions to check**") < section.index("| error target |")
+    assert ("Not validated: to deploy, confidence ≥ 0.5425; on all labelled decisions it "
+            "automates 92.0% (184 of 200 decisions") in section
+    assert ("| 5% (primary) | a target of 1 wrong in every 20 automated decisions | too few "
+            "decisions to check on held-out data (each half needs 124, the larger has 100)"
+            ) in section
     assert "| 0.5425 | 92.0% (184 of 200 decisions" in section
     assert "Worst segment above that threshold (true label): `" in section
     assert "none: needs 628 decisions with a confidence" in section  # never an unexplained 0
@@ -517,11 +518,13 @@ def test_the_pr_comment_opens_with_the_safe_automation_rate():
     res = _result().to_dict()
     md = _pr_comment().build(res)
     assert md.index("### Can I automate this?") < md.index("Judge `")
-    assert ("**Validated on held-out decisions, at a 5% error target: not checkable** — the "
-            "larger half holds 100 decisions") in md
+    assert ("**Validated on held-out decisions, at a 5% error target: too few decisions to "
+            "check** with 200 decisions. The check splits the decisions into two halves and "
+            "needs 124 scored decisions in a half (about 248 in all); the larger half has "
+            "100.") in md
     assert "on all labelled decisions it automates 92.0% (184 of 200 decisions" in md
     assert ("| 10% | a target of 1 wrong in every 10 automated decisions | 94.0% (188 of 200 "
-            "decisions; 8 wrong: 4.3%; 95% upper bound on the error rate: 7.5%; seeds 0–9: "
+            "decisions; 8 wrong: 4.3%; 95% upper bound on the error rate: 7.6%; seeds 0–9: "
             "93.5%–95.0%) | 0.5225 | 96.0% (192 of 200 decisions") in md
     assert "none: needs 628 decisions" in md
     assert "review by 2026-12-30" in md and "not a conformity assessment" in md
@@ -569,7 +572,7 @@ def test_the_summary_line_says_none_when_no_threshold_passes():
     assert certificate_summary({"certificate": none}) == "safe_automation@5%=none"
     # a result written before the held-out check: the validated share cannot be shown
     assert certificate_summary({"certificate": _cert_with()}) == (
-        "safe_automation@5%=not_checkable all_rows=40.0%")
+        "safe_automation@5%=unrecorded all_rows=40.0%")
 
 
 def test_the_reason_says_what_is_missing_without_the_word_certify():

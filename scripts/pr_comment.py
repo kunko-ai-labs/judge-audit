@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
+import re
 import sys
 from pathlib import Path
 
@@ -79,22 +81,37 @@ def _pct(x: float) -> str:
     return f"{x * 100:g}%"
 
 
+def _up(x: object) -> str:
+    """A bound as printed: rounded **up** to 0.1 %, never below the exact value."""
+    return f"{math.ceil(float(x) * 1000 - 1e-9) / 10:.1f}%"  # type: ignore[arg-type]
+
+
 def _bound(x: object, level: float) -> str:
-    return f"{level:.0%} upper bound on the error rate: {float(x):.1%}"  # type: ignore[arg-type]
+    return f"{level:.0%} upper bound on the error rate: {_up(x)}"
 
 
-def _checkable(t: dict) -> bool:
-    o = t.get("out_of_sample") or {}
-    return t.get("threshold") is not None and bool(o) and not (o.get("reason")
-                                                               and not o.get("automated"))
+def _status(t: dict) -> str:
+    """`none`, `unrecorded`, `too_few`, `not_met` or `met` (mirrors
+    `report.held_out_status`): only `met` is called validated."""
+    o = t.get("out_of_sample")
+    if t.get("threshold") is None:
+        return "none"
+    if not o:
+        return "unrecorded"
+    if o.get("reason") and not o.get("automated"):
+        return "too_few"
+    if "risk_upper" not in o:
+        return "unrecorded"
+    ru = o.get("risk_upper")
+    return "not_met" if ru is None or float(ru) > float(t["target_risk"]) else "met"
 
 
-def _held_out(o: dict, unit: str, level: float) -> str:
-    """The validated share's counts, bound and range over split seeds (not the share)."""
+def _held_out(o: dict, unit: str, level: float, bound: bool = True) -> str:
+    """The held-out share's counts, bound and range over split seeds (not the share)."""
     parts = [f"{int(o.get('automated') or 0):,} of {int(o.get('n') or 0):,} {unit}s; "
              f"{int(o.get('errors') or 0)} wrong"
              + (f": {float(o['risk']):.1%}" if o.get("risk") is not None else "")]
-    if o.get("risk_upper") is not None:
+    if bound and o.get("risk_upper") is not None:
         parts.append(_bound(o["risk_upper"], level))
     spread, seeds = o.get("spread_coverage") or [], o.get("spread_seeds") or []
     if len(spread) == 2 and len(seeds) == 2:
@@ -103,14 +120,42 @@ def _held_out(o: dict, unit: str, level: float) -> str:
     return "; ".join(parts)
 
 
+def _not_met(t: dict, level: float) -> str:
+    ru = (t.get("out_of_sample") or {}).get("risk_upper")
+    if ru is None:
+        return "no held-out decision reached the threshold chosen on the other half"
+    return (f"{level:.0%} upper bound on the error rate {_up(ru)}, above the "
+            f"{_pct(float(t['target_risk']))} target")
+
+
+def _too_few(t: dict, unit: str) -> str:
+    o = t.get("out_of_sample") or {}
+    need = t.get("min_units")
+    has = re.search(r"the larger has (\d+)", str(o.get("reason") or ""))
+    if need is None or has is None:
+        return f"{_md(o.get('reason') or 'the check could not be made')}."
+    return (f"The check splits the {unit}s into two halves and needs {int(need):,} scored "
+            f"{unit}s in a half (about {2 * int(need):,} in all); the larger half has "
+            f"{int(has.group(1)):,}.")
+
+
 def _cells(t: dict, unit: str, level: float = 0.95) -> tuple[str, str, str]:
-    """(validated on held-out decisions, threshold, on all labelled decisions) for one
-    target, escaped: the validated share first (#185)."""
+    """(held-out check, threshold, on all labelled decisions) for one target, escaped: the
+    held-out column first, a share in it only when validated (#185)."""
     if t.get("threshold") is None:
         return f"none: {_md(t.get('reason') or 'no threshold passes')}", "—", "—"
-    o = t.get("out_of_sample") or {}
-    if not _checkable(t):
-        held = f"not checkable: {_md(o.get('reason') or 'no held-out check recorded')}"
+    o, status = t.get("out_of_sample") or {}, _status(t)
+    if status == "unrecorded":
+        held = "not recorded: this result predates the held-out check"
+    elif status == "too_few":
+        held = _md(o.get("reason") or "too few decisions to check on held-out data")
+    elif status == "not_met":
+        ru = o.get("risk_upper")
+        why = f"{level:.0%} upper bound {_up(ru)}" if ru is not None else (
+            "no held-out decision automated")
+        held = (f"not met at the {_pct(float(t['target_risk']))} target ({why}): "
+                f"{float(o.get('coverage') or 0):.1%} held out "
+                f"({_held_out(o, unit, level, False)})")
     else:
         held = f"{float(o.get('coverage') or 0):.1%} ({_held_out(o, unit, level)})"
     bound = (f", {_bound(t['risk_upper'], level)}" if t.get("risk_upper") is not None else "")
@@ -140,14 +185,22 @@ def _certificate(result: dict) -> list[str]:
             held, thr, rows = _cells(p, unit, level)
             head = (f"Validated on held-out {unit}s, at a {_pct(float(p['target_risk']))} "
                     "error target")
-            o = p.get("out_of_sample") or {}
-            if p.get("threshold") is None:
+            o, status = p.get("out_of_sample") or {}, _status(p)
+            deploy = (f"to deploy, confidence ≥ {thr}; on all labelled {unit}s it automates "
+                      f"{rows}.")
+            if status == "none":
                 lines += [f"**{head}: {held}**", ""]
-            elif not _checkable(p):
-                lines += [f"**{head}: not checkable** — "
-                          f"{_md(o.get('reason') or 'no held-out check recorded')}. To deploy: "
-                          f"confidence ≥ {thr}; on all labelled {unit}s it automates {rows}.",
-                          ""]
+            elif status == "not_met":
+                lines += [f"**{head}: not met** ({_not_met(p, level)}). Held out: "
+                          f"{float(o.get('coverage') or 0):.1%} of the labelled {unit}s "
+                          f"({_held_out(o, unit, level, False)}), with the threshold chosen "
+                          f"on one half and applied to the other. Not validated: {deploy}", ""]
+            elif status == "too_few":
+                lines += [f"**{head}: too few {unit}s to check** with {int(p['n']):,} "
+                          f"{unit}s. {_too_few(p, unit)} Not validated: {deploy}", ""]
+            elif status == "unrecorded":
+                lines += [f"**{head}: not recorded** (this result predates the held-out "
+                          f"check). Not validated: {deploy}", ""]
             else:
                 lines += [f"**{head}: {float(o.get('coverage') or 0):.1%}** of the labelled "
                           f"{unit}s ({_held_out(o, unit, level)}), with the threshold chosen "

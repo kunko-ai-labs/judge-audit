@@ -273,7 +273,7 @@
                 0.0,
                 0.0
               ],
-              "reason": "the larger half holds 64 decisions with a confidence; the target needs 628"
+              "reason": "too few decisions to check on held-out data (each half needs 628, the larger has 64)"
             },
             "segments": [],
             "worst_segment": null,
@@ -319,7 +319,7 @@
                 0.0,
                 0.0
               ],
-              "reason": "the larger half holds 64 decisions with a confidence; the target needs 313"
+              "reason": "too few decisions to check on held-out data (each half needs 313, the larger has 64)"
             },
             "segments": [],
             "worst_segment": null,
@@ -365,7 +365,7 @@
                 0.0,
                 0.0
               ],
-              "reason": "the larger half holds 64 decisions with a confidence; the target needs 124"
+              "reason": "too few decisions to check on held-out data (each half needs 124, the larger has 64)"
             },
             "segments": [],
             "worst_segment": null,
@@ -393,7 +393,7 @@
             "errors": 0,
             "risk_upper": null,
             "min_units": 61,
-            "reason": "no threshold passes: the first cut tested holds 96 decisions with 26 errors (bound 35.5% > 10%)",
+            "reason": "no threshold passes: the first cut tested holds 96 decisions with 26 errors (95% upper bound on the error rate 35.6%, above the 10% target)",
             "first_cut": {
               "units": 96,
               "errors": 26,
@@ -428,7 +428,7 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "no threshold passes: the first cut tested holds 61 texts with 18 errors (bound 40.6% > 10%)",
+              "reason": "no threshold passes: the first cut tested holds 61 texts with 18 errors (95% upper bound on the error rate 40.6%, above the 10% target)",
               "first_cut": {
                 "units": 61,
                 "errors": 18,
@@ -441,7 +441,7 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-14T12:54:29+00:00",
+    "utc": "2026-10-14T13:25:02+00:00",
     "judge_audit_version": "0.6.0rc2",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/jury/router-bare/gemini-3-flash.r2.ckpt.jsonl",

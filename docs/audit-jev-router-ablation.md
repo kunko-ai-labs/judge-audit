@@ -47,4 +47,4 @@ Example, the same hard task in both runs — *"Write `edit_distance(a, b)` compu
 - 61 distinct task texts behind 120 rows (14 easy + 14 hard templates, repeated). Treat n as ~templates.
 - Overpay was $0 in both runs (no easy task went to the strong model); the assumed price model is not exercised. Under-routing is a quality risk this cost model does not price.
 - One prompt variant each. Whether other descriptions, option names or question wordings move the number is unmeasured — that is exactly why prompts to judges should be audited, not assumed.
-- Retrospective on these datasets — not a production guarantee.
+- Retrospective on these datasets: what these rows show, not a forecast.

@@ -369,7 +369,7 @@
                 0.0,
                 0.0
               ],
-              "reason": "the larger half holds 64 decisions with a confidence; the target needs 628"
+              "reason": "too few decisions to check on held-out data (each half needs 628, the larger has 64)"
             },
             "segments": [],
             "worst_segment": null,
@@ -415,7 +415,7 @@
                 0.0,
                 0.0
               ],
-              "reason": "the larger half holds 64 decisions with a confidence; the target needs 313"
+              "reason": "too few decisions to check on held-out data (each half needs 313, the larger has 64)"
             },
             "segments": [],
             "worst_segment": null,
@@ -461,7 +461,7 @@
                 0.0,
                 0.0
               ],
-              "reason": "the larger half holds 64 decisions with a confidence; the target needs 124"
+              "reason": "too few decisions to check on held-out data (each half needs 124, the larger has 64)"
             },
             "segments": [],
             "worst_segment": null,
@@ -489,7 +489,7 @@
             "errors": 0,
             "risk_upper": null,
             "min_units": 61,
-            "reason": "no threshold passes: the first cut tested holds 62 decisions with 38 errors (bound 71.7% > 10%)",
+            "reason": "no threshold passes: the first cut tested holds 62 decisions with 38 errors (95% upper bound on the error rate 71.7%, above the 10% target)",
             "first_cut": {
               "units": 62,
               "errors": 38,
@@ -524,7 +524,7 @@
               "coverage": 0.0,
               "threshold": null,
               "risk_upper": null,
-              "reason": "no threshold passes: the first cut tested holds 61 texts with 40 errors (bound 75.6% > 10%)",
+              "reason": "no threshold passes: the first cut tested holds 61 texts with 40 errors (95% upper bound on the error rate 75.7%, above the 10% target)",
               "first_cut": {
                 "units": 61,
                 "errors": 40,
@@ -537,7 +537,7 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-14T12:54:29+00:00",
+    "utc": "2026-10-14T13:25:02+00:00",
     "judge_audit_version": "0.6.0rc2",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/deberta-nli/router-described.ckpt.jsonl",
