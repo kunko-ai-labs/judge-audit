@@ -17,7 +17,10 @@ report generated from it, docs/v06/README.md:
   high-confidence error rate, cost and latency, each on its own (no composite score);
 - all of it again without the items a majority of localisation judges said do not match
   their intent, and again without the items whose text is also in MASSIVE train or dev
-  (the item removed in all three locales).
+  (the item removed in all three locales);
+- exploratory and outside every test (amendment A4), on all items: for a judge that
+  refused requests, the secondary metrics without the refused rows, and its refusals by
+  scenario and by intent.
 
 The prediction of each transfer test is read at run time, never written here: from the
 table of docs/v06-plan.md once that file's sha256 equals the one committed in
@@ -122,6 +125,10 @@ OUTCOMES = ("resolved", "not resolved")
 NATIVE_FIELD = {"decision2": "entropy_confidence"}
 DUPLICATE_WRITES = "written by two processes at once; listed, never read"
 CKPT_NAME = re.compile(r"^(?P<slug>.+)-(?P<locale>en-US|es-ES|ca-ES)\.ckpt\.jsonl$")
+A4_LABEL = "exploratory, not pre-registered (amendment A4)"
+# The secondary metrics a refusal view recomputes, beside the plan's for the same run.
+VIEW_KEYS = ("n", "scored", "no_answer", "no_confidence", "right", "accuracy",
+             "accuracy_wilson", "auroc", "ece", "mce", "brier", "validated_coverage")
 SENSITIVITY = {
     "without_majority_no": "Without the items a majority of localisation judges said do not "
                            "match their intent (any locale)",
@@ -201,6 +208,7 @@ def load_labels(locale: str, root: Path = ROOT) -> dict:
         "sha256": sha256_of(str(path)), "sha256_rows": sha256_rows_of(str(path)),
         "ids": [str(m.get("id")) for m in metas],
         "intents": [row["labels"][row["questions"][0]["name"]] for row in rows],
+        "scenarios": [str(m.get("scenario")) for m in metas],
         "majority_no": [sum(1 for x in m.get("intent_judgments") or [] if x == 0) * 2
                         > len(m.get("intent_judgments") or []) for m in metas],
         "overlap": [bool(m.get("text_in_train_or_dev")) for m in metas],
@@ -360,7 +368,8 @@ def _number(x: object) -> float | None:
 
 
 def read_rows(run: dict) -> list[dict]:
-    """One {status, confidence, correct, native, served} per labels row. Only a scored row
+    """One {status, confidence, correct, native, served, refused} per labels row
+    (`refused`: the reply recorded `raw.refusal`, a refusal to answer). Only a scored row
     (an answer with a confidence) has a confidence; every other row counts wrong in
     accuracy and is never above a threshold (v0.5 §3)."""
     field = NATIVE_FIELD.get(run["adapter"], "native_confidence")
@@ -369,13 +378,13 @@ def read_rows(run: dict) -> list[dict]:
         st = status_of(rec)
         if rec is None:
             out.append({"status": st, "confidence": None, "correct": False, "native": None,
-                        "served": None})
+                        "served": None, "refused": False})
             continue
         raw = rec["raw"] if isinstance(rec["raw"], dict) else {}
         out.append({"status": st, "confidence": rec["confidence"] if st == "scored" else None,
                     "correct": bool(rec["correct"]) and st == "scored",
                     "native": _number(raw.get(field)) if st == "scored" else None,
-                    "served": _served(raw)})
+                    "served": _served(raw), "refused": bool(raw.get("refusal"))})
     return out
 
 
@@ -738,6 +747,43 @@ def analyse(labels: dict, read: dict, runs: dict, keep: list[int], tests: dict,
     return out
 
 
+def _shares(keys: list[str], refused: list[bool]) -> dict:
+    """Refused rows per key, out of that key's judged rows; keys with a refusal only."""
+    rows = Counter(keys)
+    ref = Counter(k for k, r in zip(keys, refused, strict=True) if r)
+    return {k: {"refused": ref[k], "rows": rows[k], "share": _r(ref[k] / rows[k])}
+            for k in sorted(ref)}
+
+
+def refusal_views(labels: dict, read: dict, runs: dict, plan_metrics: dict) -> dict:
+    """Exploratory, outside every test (amendment A4): for each judge whose checkpoints
+    record a refusal, in every locale, the secondary metrics recomputed on the judged rows
+    it did not refuse, beside the plan's figures for the same run, and its refusals by
+    MASSIVE scenario (`_meta.scenario`) and by gold intent, each out of that scenario's or
+    intent's judged rows. Rows a partial checkpoint never judged are in neither."""
+    ids = labels[SOURCE]["ids"]
+    refusing = {s for (s, _), rs in read.items() if any(r["refused"] for r in rs)}
+    views = {}
+    for s, loc in sorted(read, key=lambda k: (_order(k[0]), LOCALES.index(k[1]))):
+        if s not in refusing:
+            continue
+        rs, lab = read[(s, loc)], labels[loc]
+        done = [i for i, r in enumerate(rs) if r["status"] != "missing"]
+        kept = [i for i in done if not rs[i]["refused"]]
+        refused = [rs[i]["refused"] for i in done]
+        plan = plan_metrics[f"{s}/{loc}"]
+        mine = metrics_of([rs[i] for i in kept], [ids[i] for i in kept], None)
+        views[f"{s}/{loc}"] = {
+            "role": "primary" if s in PRIMARY else "exploratory",
+            "partial": runs[(s, loc)]["partial"], "judged": len(done), "refused": sum(refused),
+            "plan": {k: plan[k] for k in VIEW_KEYS},
+            "without_refusals": {k: mine[k] for k in VIEW_KEYS},
+            "by_scenario": _shares([lab["scenarios"][i] for i in done], refused),
+            "by_intent": _shares([lab["intents"][i] for i in done], refused),
+        }
+    return views
+
+
 def compute(runs_dir: Path = RUNS_DIR, root: Path = ROOT, predictions: Path | None = None,
             n_boot: int = N_BOOT, jobs: int | None = None) -> dict:
     labels = load_all_labels(root)
@@ -821,6 +867,8 @@ def compute(runs_dir: Path = RUNS_DIR, root: Path = ROOT, predictions: Path | No
         },
         "analyses": analyses,
         "cost": cost,
+        "exploratory_refusals": {"label": A4_LABEL, "views": refusal_views(
+            labels, read, runs, analyses["primary"]["metrics"])},
     }
 
 
@@ -1180,7 +1228,55 @@ def markdown(r: dict) -> str:
                         for e in C["excluded"])
             + f". Total recorded cost of the study: **${C['total_usd']:.4f}**.")
         add("")
+    _refusal_section(add, r["exploratory_refusals"], par["targets"])
     return "\n".join(L)
+
+
+def _refusal_section(add, R: dict, targets: list[float]) -> None:
+    add("## 11. Refusals (exploratory, amendment A4)")
+    add("")
+    add(f"**{R['label'][0].upper() + R['label'][1:]}.** None of this enters a test, a Holm family or a "
+        "prediction. For each judge whose checkpoints record a refusal (`raw.refusal`), in "
+        "every locale: the secondary metrics on the judged rows it did not refuse, beside "
+        "the plan's figures for the same run (where a refused row counts wrong and is left "
+        "out of the confidence metrics); then its refusals by MASSIVE scenario "
+        "(`_meta.scenario`) and by gold intent, each out of that scenario's or intent's "
+        "judged rows. Only scenarios and intents with a refusal are listed. Validated "
+        "coverage as in §5 (its † note applies). A refused row carries no confidence, so "
+        "the two rows of a pair can differ only in n and accuracy (and in validated "
+        "coverage, whose denominator is n); the confidence metrics are the same rows.")
+    add("")
+    V = R["views"]
+    if not V:
+        add("No checkpoint records a refusal.")
+        add("")
+        return
+
+    def who(k: str, v: dict) -> str:
+        return f"{_who(k, v['role'], v['partial'])} — {R['label']}"
+
+    add("| judge | locale | rows used | refused / judged | accuracy | AUROC | ECE | MCE | "
+        "Brier | " + " | ".join(f"validated {_pct(t, 0)}" for t in targets) + " |")
+    add("|---|---|---|---:|---|---:|---:|---:|---:|" + "---|" * len(targets))
+    for k, v in V.items():
+        for name, m in (("plan's figures (all judged rows)", v["plan"]),
+                        ("without refused rows", v["without_refusals"])):
+            cov = " | ".join(_cov(m["validated_coverage"][f"{t:g}"]) for t in targets)
+            add(f"| {who(k, v)} | `{k.split('/')[1]}` | {name} ({m['n']}) | "
+                f"{v['refused']} / {v['judged']} | {_f(m['accuracy'])} "
+                f"{_iv(m['accuracy_wilson'])} | {_f(m['auroc'])} | {_f(m['ece'])} | "
+                f"{_f(m['mce'])} | {_f(m['brier'])} | {cov} |")
+    add("")
+    for title, key in (("scenario", "by_scenario"), ("gold intent", "by_intent")):
+        add(f"Refusals by {title}:")
+        add("")
+        add(f"| judge | locale | {title} | refused / rows | share |")
+        add("|---|---|---|---:|---:|")
+        for k, v in V.items():
+            for name, c in v[key].items():
+                add(f"| {who(k, v)} | `{k.split('/')[1]}` | `{name}` | {c['refused']} / "
+                    f"{c['rows']} | {_pct(c['share'])} |")
+        add("")
 
 
 def main(argv: list[str] | None = None) -> int:
