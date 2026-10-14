@@ -32,8 +32,8 @@
 | `deepseek-r1` | exploratory | `es-ES` | 2,974 | 2026-10-13T13:24:51+00:00 | $7.7147 | 26.588039 | `9faa8afe5ba0a848ba84ad7ac8a8603199edb671fbdb6062573817b4c88aa8b8` |
 | `deepseek-r1` | exploratory | `ca-ES` | 2,974 | 2026-10-13T16:29:19+00:00 | $7.6644 | 18.873337 | `813bb62345cd39e9ee9165e1e03752c4e15189a4c5c2d4f00a02d2d5107b5dd9` |
 | `clef-flash` | exploratory | `en-US` | 2,974 | 2026-10-13T07:37:36+00:00 | $0.2659 | 1.0 | `fe575b5eaf39deb31c788474cec41aa24ac43211d0feac102bd9c74db164d90e` |
-| `clef-flash` | exploratory | `es-ES` | in progress, not committed yet | | | | |
-| `clef-flash` | exploratory | `ca-ES` | in progress, not committed yet | | | | |
+| `clef-flash` | exploratory | `es-ES` | 2,974 | 2026-10-13T08:07:49+00:00 | $0.2663 | 0.734119 | `66661095998c3cec8686bed48edb8e38334200cfd2a7a2317c6ab5135b3b7e20` |
+| `clef-flash` | exploratory | `ca-ES` | 2,974 | 2026-10-14T08:32:35+00:00 | $0.2669 | 0.467798 | `6c760c6361ded3b466bf67a36341a2144697fc5a70099d46d48d36246cc184e0` |
 | `decider-2b` | exploratory | `en-US` | 2,974 | 2026-10-12T22:07:04+00:00 | $0.0000 | — | `27c12e58c567b6eade061eb4a1a67cad7ae502dfd5e4b9a705a6cfaac2cb8702` |
 | `decider-2b` | exploratory | `es-ES` | 2,974 | 2026-10-12T22:38:17+00:00 | $0.0000 | — | `32a23e144142b862cbcb7c078fbbe5756e3f181d9a092ae16efbd2caf51da28b` |
 | `decider-2b` | exploratory | `ca-ES` | 2,974 | 2026-10-12T23:09:33+00:00 | $0.0000 | — | `fc856702d04d02f6faea332e358d5357c936f31529982cd20c604c1ca12dd94f` |
@@ -51,7 +51,7 @@
 
 - `jev-en-US.ckpt.duplicate-writes.jsonl`: 3,516 row lines, 2,974 distinct rows, recorded cost $0.1163, sha256 `541587e3f0b1660c21196b2145dec34e42a315c070c4860ae9e5f3c19f43428c` (amendment A1).
 
-**Recorded cost of the study:** $56.0312, every checkpoint above included, against the $115 budget. Recorded cost can be below a provider's bill (pricing multipliers, reasoning tokens).
+**Recorded cost of the study:** $56.5644, every checkpoint above included, against the $115 budget. Recorded cost can be below a provider's bill (pricing multipliers, reasoning tokens).
 
 ## Run notes
 
@@ -62,7 +62,7 @@ Times are UTC, from 2026-10-12. No run below read a result before the study ende
 - **Amendment A3 (gemini-3.6-flash ceiling; parallel judges).** gemini-3.6-flash's ceiling was set again by the plan's rule on its measured `en-US` rate: $9 instead of the estimated $5 (ceilings $85 of $115). From 2026-10-13 two copies of the run script ran different judges at once, one lock per judge.
 - **Laya multilingual.** Two starts failed while loading the model, before any request: the first with the model hub offline, the second with the default model id instead of `convaiinnovations/laya-multilingual`. Neither wrote a checkpoint. The third start ran with the pilot's settings.
 - **unsloth-decision-4b.** The first hosted-notebook session lost its runtime after the parity check and before any study call (no checkpoint). The study ran in a new session on the same GPU type (recorded in each header), at the freeze commit, with parity within tolerance and the adapter's answers equal to direct `predict` calls on the rows checked (`unsloth-decision-4b.checks.json`).
-- **Clef-flash.** Its hosted route has a daily free allocation. `es-ES` stopped at row 462 on 2026-10-13 when the allocation ran out (no answer recorded for the failed request); the run resumes from the same checkpoint on the following days (this record is updated when it completes).
+- **Clef-flash.** Its hosted route has a daily free allocation. `es-ES` stopped at row 462 on 2026-10-13 when the allocation ran out (no answer recorded for the failed request). On 2026-10-14 the resumed run's retries at row 462 were refused again (no row recorded), and the run was stopped. Paid usage was then enabled on the same account and key. The run resumed from the same checkpoint at 08:14Z on the same route, model id and settings, with each language's ceiling unchanged. It completed `es-ES` and `ca-ES` (2,974 rows each, no row without an answer). Every row before and after row 462 reports the same served model (`raw.served.model` = `clef-flash`). The recorded cost for the three languages is $0.80, under the judge's $1 ceiling.
 - **No served model id.** The routes used for claude-sonnet-4.5 (primary) and deepseek-r1 report no served model id (`raw.served.model` is null on every row), so a change of served model cannot be detected for these two judges.
 - **gpt-6-luna refusals.** The Decisions API refused 34 `en-US`, 20 `es-ES` and 20 `ca-ES` requests (`raw.refusal`); each is a row without a usable answer (`no_answer`: no decision, no confidence), counted against the judge (plan, rows without a usable answer). One fell among the first 40 `en-US` rows, under the 5 % stop rule.
 - **Order of runs (deviation in timing only).** The plan runs local models first, then hosted ones. The local runs (first header 18:54:23Z on 2026-10-12, Kai `en-US`) and the hosted runs (first header 19:09:34Z or later) ran at the same time instead. No setting, row or ceiling changed; no amendment was written for this before the calls, so it is recorded here as a deviation.
