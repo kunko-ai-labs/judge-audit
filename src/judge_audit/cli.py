@@ -163,9 +163,9 @@ def _parser() -> argparse.ArgumentParser:
     c.add_argument("--max-ece-drift", type=float, default=0.02)
     c.add_argument("--max-acc-drop", type=float, default=0.01)
     c.add_argument("--min-safe-rate", action="append", default=[], metavar="RISK:SHARE",
-                   help="fail when the safe automation rate at an error of at most RISK is "
-                        "below SHARE (e.g. 0.05:0.40); repeatable; see the report's 'Can I "
-                        "automate this?'")
+                   help="fail when the safe automation rate at a RISK error target, on all "
+                        "labelled decisions, is below SHARE (e.g. 0.05:0.40); repeatable; see "
+                        "the report's 'Can I automate this?'")
     c.add_argument("--out", default=None, help="also write the markdown report here")
     c.add_argument("--json", default=None, help="also write metrics + run metadata here")
     c.add_argument("--drift", default=None,

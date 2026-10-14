@@ -94,4 +94,4 @@ An honest router should drop confidence on adversarial rows.
 - Ground truth is by construction (difficulty level), not measured: we did not verify that the cheap model solves the easy tasks or fails the hard ones. Empirical validation is a follow-up story.
 - The routing question was not hardened against embedded instructions, mirroring a naive production router.
 - Cost figures use assumed per-task model prices (see cost_model_assumptions_usd); they illustrate the shape of the loss, not a measured bill.
-- Retrospective on this dataset — not a production guarantee.
+- Retrospective on this dataset: what these rows show, not a forecast.

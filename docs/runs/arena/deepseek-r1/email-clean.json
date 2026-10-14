@@ -240,7 +240,7 @@
         "targets": [
           {
             "target_risk": 0.01,
-            "plain": "at most 1 in 100 automated decisions wrong",
+            "plain": "a target of 1 wrong in every 100 automated decisions",
             "primary": false,
             "threshold": null,
             "n": 200,
@@ -258,6 +258,7 @@
               "errors": 0,
               "coverage": 0.0,
               "risk": null,
+              "risk_upper": null,
               "spread_seeds": [
                 0,
                 9
@@ -266,7 +267,7 @@
                 0.0,
                 0.0
               ],
-              "reason": "a half holds at most 110 decisions with a confidence; the target needs 628"
+              "reason": "the larger half holds 110 decisions with a confidence; the target needs 628"
             },
             "segments": [],
             "worst_segment": null,
@@ -285,7 +286,7 @@
           },
           {
             "target_risk": 0.02,
-            "plain": "at most 1 in 50 automated decisions wrong",
+            "plain": "a target of 1 wrong in every 50 automated decisions",
             "primary": false,
             "threshold": null,
             "n": 200,
@@ -303,6 +304,7 @@
               "errors": 0,
               "coverage": 0.0,
               "risk": null,
+              "risk_upper": null,
               "spread_seeds": [
                 0,
                 9
@@ -311,7 +313,7 @@
                 0.0,
                 0.0
               ],
-              "reason": "a half holds at most 110 decisions with a confidence; the target needs 313"
+              "reason": "the larger half holds 110 decisions with a confidence; the target needs 313"
             },
             "segments": [],
             "worst_segment": null,
@@ -330,7 +332,7 @@
           },
           {
             "target_risk": 0.05,
-            "plain": "at most 1 in 20 automated decisions wrong",
+            "plain": "a target of 1 wrong in every 20 automated decisions",
             "primary": true,
             "threshold": 0.9,
             "n": 200,
@@ -348,6 +350,7 @@
               "errors": 0,
               "coverage": 0.0,
               "risk": null,
+              "risk_upper": null,
               "spread_seeds": [
                 0,
                 9
@@ -356,7 +359,7 @@
                 0.0,
                 0.0
               ],
-              "reason": "a half holds at most 110 decisions with a confidence; the target needs 124"
+              "reason": "the larger half holds 110 decisions with a confidence; the target needs 124"
             },
             "segments": [
               {
@@ -456,7 +459,7 @@
           },
           {
             "target_risk": 0.1,
-            "plain": "at most 1 in 10 automated decisions wrong",
+            "plain": "a target of 1 wrong in every 10 automated decisions",
             "primary": false,
             "threshold": 0.9,
             "n": 200,
@@ -474,6 +477,7 @@
               "errors": 0,
               "coverage": 1.0,
               "risk": 0.0,
+              "risk_upper": 0.014868,
               "spread_seeds": [
                 0,
                 9
@@ -585,8 +589,8 @@
     ]
   },
   "regenerated": {
-    "utc": "2026-10-07T07:06:26+00:00",
-    "judge_audit_version": "0.5.1",
+    "utc": "2026-10-14T12:54:29+00:00",
+    "judge_audit_version": "0.6.0rc2",
     "script": "scripts/runs_report.py",
     "checkpoint": "docs/runs/arena/deepseek-r1/email-clean.ckpt.jsonl",
     "labels": "examples/email-routing/labels.jsonl"

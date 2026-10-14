@@ -6,7 +6,7 @@
 _judge `llm:claude-sonnet-4.5` · model `claude-sonnet-4.5` · run 2026-09-26T07:44:41+00:00 · judge-audit 0.4.0_
 _served as reported by the provider: no version reported · 200 decisions without a version_
 _dataset `examples/email-routing-adversarial/labels.jsonl` · 200 rows · sha256 `8b7dbc8ded1b…`_
-_regenerated 2026-10-07T07:06:26+00:00 from `docs/runs/repeats/claude-sonnet-4.5/email-adversarial.r1.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.5.1_
+_regenerated 2026-10-14T12:54:29+00:00 from `docs/runs/repeats/claude-sonnet-4.5/email-adversarial.r1.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.6.0rc2_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic and seeded: 60 clean controls plus 140 attacked rows built from the same templates; the label is the category of the underlying clean email by design; _meta.target is what the attacker wanted; measures resistance to attacks on synthetic mail, not accuracy on real mail**
 
@@ -14,25 +14,22 @@ _Brackets are 95% percentile-bootstrap intervals over the dataset's distinct tex
 
 ## Can I automate this?
 
-**Safe automation rate at ≤ 5% error: 92.0%** of the labelled decisions (184 of 200; 4 wrong, error bound 4.9%), deploying at confidence ≥ 0.95. Checked out of sample, with the threshold chosen on half the data: not checkable: a half holds at most 100 decisions with a confidence; the target needs 124.
+**Validated on held-out decisions, at a 5% error target: not checkable** — the larger half holds 100 decisions with a confidence; the target needs 124. To deploy: confidence ≥ 0.95; on all labelled decisions it automates 92.0% (184 of 200 decisions; 4 wrong, 95% upper bound on the error rate: 4.9%).
 
 This labelled set repeats texts (200 decisions, 189 distinct texts). The bound above treats the decisions as a random sample of your traffic, repeats included as they occur there. If the repeats were copied in instead, count each text once (at its highest confidence, wrong if any copy is: not always the more cautious reading when the copies of a text carry different confidences): at this target, none (no threshold passes: the first cut tested holds 173 texts with 4 errors (bound 5.2% > 5%)).
 
-Worst segment above that threshold (true label): `spam`, 0 of 31 automated decisions wrong (0.0%; its own error bound 9.2%). The overall bound does not cover a segment. 9 segments with fewer than 30 automated decisions are not ranked. 4 of the 4 errors above the threshold sit in segments too small to rank.
+Worst segment above that threshold (true label): `spam`, 0 of 31 automated decisions wrong (0.0%; its own 95% upper bound on the error rate: 9.2%). The overall bound does not cover a segment. 9 segments with fewer than 30 automated decisions are not ranked. 4 of the 4 errors above the threshold sit in segments too small to rank.
 
-| at most this error | in plain words | safe automation rate | deploy at confidence ≥ | checked out of sample |
+| error target | in plain words | validated on held-out decisions | deploy at confidence ≥ | on all labelled decisions |
 |---|---|---|---|---|
-| 1% | at most 1 in 100 automated decisions wrong | none: needs 628 decisions with a confidence to bound the error at 1%; has 200 | — | — |
-| 2% | at most 1 in 50 automated decisions wrong | none: needs 313 decisions with a confidence to bound the error at 2%; has 200 | — | — |
-| 5% (primary) | at most 1 in 20 automated decisions wrong | 92.0% (184 of 200 decisions; 4 wrong, error bound 4.9%) | 0.95 | not checkable: a half holds at most 100 decisions with a confidence; the target needs 124 |
-| 10% | at most 1 in 10 automated decisions wrong | 100.0% (200 of 200 decisions; 7 wrong, error bound 6.5%) | 0.5 | 99.5% automated, 3.0% wrong (seeds 0–9: 99.5%–99.5%) |
+| 1% | a target of 1 wrong in every 100 automated decisions | none: needs 628 decisions with a confidence to bound the error at 1%; has 200 | — | — |
+| 2% | a target of 1 wrong in every 50 automated decisions | none: needs 313 decisions with a confidence to bound the error at 2%; has 200 | — | — |
+| 5% (primary) | a target of 1 wrong in every 20 automated decisions | not checkable: the larger half holds 100 decisions with a confidence; the target needs 124 | 0.95 | 92.0% (184 of 200 decisions; 4 wrong, 95% upper bound on the error rate: 4.9%) |
+| 10% | a target of 1 wrong in every 10 automated decisions | 99.5% (199 of 200 decisions; 6 wrong: 3.0%; 95% upper bound on the error rate: 5.9%; seeds 0–9: 99.5%–99.5%) | 0.5 | 100.0% (200 of 200 decisions; 7 wrong, 95% upper bound on the error rate: 6.5%) |
 
 _Valid only for: judge `llm:claude-sonnet-4.5` · model `claude-sonnet-4.5` · prompt `fe16e59a…` · data `examples/email-routing-adversarial/labels.jsonl` · sha256 `74741868f533…` · measured 2026-09-26T07:44:41+00:00. Review by 2026-12-25, and measure again as soon as any of these changes._
 
-_With 95% confidence, the error rate among decisions at or above the threshold is at most the target — on traffic drawn like these labelled decisions (a random sample of it, each decision an independent draw), judged by the judge and prompt above, with the labels taken as right. Label errors cut both ways: a wrong label the judge disagrees with counts as a judge error, one it agrees with hides an error. The primary target is the one passed with `--target` (here 5%), to be chosen before the run (this report was regenerated from an archived checkpoint with the default target: the target was not fixed in advance); every row is its own 95% statement; the 4 rows hold together with probability at least 80%; keeping the best-looking row after reading them is neither. The rate is the share of the labelled decisions the threshold covers; the out-of-sample check chooses the threshold on half of them (split by distinct text, seed 0, spread over other seeds in brackets) and applies it to the other half, a conservative check rather than a forecast. A decision without a confidence is never automated. Exact one-sided binomial bound, fixed-sequence walk from the most confident down, starting at the cut that bounds the error with 2 errors (docs/judges.md § The safe automation rate). Statistical evidence on the labelled decisions, not a conformity assessment or a certification by a notified body._
-
-Zero observed errors through the most confident **0.0%** [0.0, 33.5] (none: the most confident group of decisions already holds an error).
-Retrospective on this dataset — not a production guarantee.
+_The threshold is the lowest cut whose exact one-sided 95% upper bound on the error rate stays within the target. The bound speaks only for traffic drawn like these labelled decisions (a random sample of it, each decision an independent draw), judged by the judge and prompt above, with the labels taken as right. Label errors cut both ways: a wrong label the judge disagrees with counts as a judge error, one it agrees with hides an error. The primary target is the one passed with `--target` (here 5%), to be chosen before the run (this report was regenerated from an archived checkpoint with the default target: the target was not fixed in advance); every row is its own 95% statement; the 4 rows hold together with probability at least 80%; keeping the best-looking row after reading them is neither. The validated share chooses the threshold on half of the labelled decisions (split by distinct text, seed 0, range over other seeds) and applies it to the other half, both ways, with an exact bound on the held-out errors: a conservative check rather than a forecast. The share on all labelled decisions is what the threshold to deploy covers. A decision without a confidence is never automated. Exact one-sided binomial bound, fixed-sequence walk from the most confident down, starting at the cut that bounds the error with 2 errors (docs/judges.md § The safe automation rate). Statistical evidence on the labelled decisions, not a conformity assessment or a certification by a notified body._
 
 ## When it says ≥ 90 / 95 / 99 %, how often is it wrong?
 
@@ -46,7 +43,12 @@ _0 decisions without a known confidence are left out of every row and counted he
 
 _A reading of the accuracy-vs-coverage curve at three fixed confidences, not a new score and not combined with any other number: the decisions declaring at least that confidence, how many were wrong, and an exact one-sided upper bound on their error rate (Clopper–Pearson, 95%). Rows are taken as independent: on a dataset that repeats texts, each copy counts, which can make the bound too tight. The cut is fixed in advance, not chosen on these rows, unlike the threshold an automation decision searches for._
 
-## Accuracy vs coverage
+## Observed on all rows, no bound — not a basis for deployment
+
+Zero observed errors through the most confident **0.0%** [0.0, 33.5] (none: the most confident group of decisions already holds an error).
+Retrospective on this dataset: what these rows show, not a forecast.
+
+### Accuracy vs coverage
 
 | coverage | accuracy | min confidence | n |
 |---|---|---|---|

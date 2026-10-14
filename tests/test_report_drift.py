@@ -91,7 +91,7 @@ def test_html_publishes_every_point_of_the_curve():
     from judge_audit.report import render_html
     r = result(curve=JEV_CURVE, zero_error={"coverage": 1.0, "n": 200, "threshold": 0.89})
     page = render_html(r)
-    table = page.split("<h2>Accuracy vs coverage</h2>")[1].split("</table>")[0]
+    table = page.split("<h3>Accuracy vs coverage</h3>")[1].split("</table>")[0]
     assert table.count("<tr><td>") == 3
     for cov, conf, n in (("93.5%", "1.00", 187), ("95.5%", "0.98", 191),
                          ("100.0%", "0.89", 200)):

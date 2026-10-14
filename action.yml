@@ -30,7 +30,7 @@ inputs:
     required: false
     default: "0.01"
   target:
-    description: "The error rate the safe automation rate is headlined at, chosen before the run (e.g. '0.05' = at most 1 in 20 automated decisions wrong). 1, 2, 5 and 10 % are always shown as context"
+    description: "The error rate the safe automation rate is headlined at, chosen before the run (e.g. '0.05' = a target of 1 wrong in every 20 automated decisions). 1, 2, 5 and 10 % are always shown as context"
     required: false
     default: "0.05"
   segment-by:
@@ -38,7 +38,7 @@ inputs:
     required: false
     default: "label"
   min-safe-rate:
-    description: "Check mode: space-separated RISK:SHARE minimums, e.g. '0.05:0.40' fails when the safe automation rate at an error of at most 5 % is below 40 %. Empty = no minimum"
+    description: "Check mode: space-separated RISK:SHARE minimums, e.g. '0.05:0.40' fails when the safe automation rate at a 5 % error target, on all labelled decisions, is below 40 %. Empty = no minimum"
     required: false
     default: ""
   allow-incompatible:
@@ -80,10 +80,10 @@ outputs:
     description: "Number of judged decisions"
     value: ${{ steps.read.outputs.n }}
   safe-automation-rate:
-    description: "Safe automation rate of the first question at the target error (a share in [0, 1]); '' when the result carries none"
+    description: "Safe automation rate of the first question at the error target, on all labelled decisions (a share in [0, 1]; the report leads with the share validated on held-out decisions); '' when the result carries none"
     value: ${{ steps.read.outputs.safe_automation_rate }}
   safe-automation-rates:
-    description: "The same at every target error, e.g. '1%=0.0 2%=0.0 5%=0.41 10%=0.7226'"
+    description: "The same at every error target, e.g. '1%=0.0 2%=0.0 5%=0.41 10%=0.7226'"
     value: ${{ steps.read.outputs.safe_automation_rates }}
   drift:
     description: "'true' when check mode detected drift vs the baseline, 'false' otherwise ('' in run mode)"

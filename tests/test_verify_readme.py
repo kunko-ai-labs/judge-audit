@@ -274,8 +274,12 @@ def test_rewording_the_robustness_sentence_fails_instead_of_skipping():
         ("label noise was not measured", "label noise was measured"),
         ("the held-out slice was not run", "the held-out slice was run"),
         # the quickstart's simulated line and its figure in the prose
-        ("safe_automation@10%=65.5% …", "safe_automation@10%=66.5% …"),
-        ("its 65.5 % says nothing", "its 64.5 % says nothing"),
+        ("all_rows=65.5% …", "all_rows=66.5% …"),
+        ("bound=16.5% all_rows", "bound=16.6% all_rows"),
+        ("error target (75.0 %)", "error target (74.0 %)"),
+        ("(0.0–75.0 %) and", "(0.0–76.0 %) and"),
+        ("error rate (16.5 %,", "error rate (15.5 %,"),
+        ("`all_rows` (65.5 %)", "`all_rows` (64.5 %)"),
         ("safe_automation@5%=none", "safe_automation@5%=12.0%"),
     ],
 )
@@ -499,7 +503,7 @@ def test_the_at_a_glance_table_is_checked_cell_by_cell(old, new):
 
 
 def test_a_dropped_row_of_the_at_a_glance_table_is_caught():
-    row = "| gemini-3.6-flash, verbalized | **14.3 %** | 7.6–30.0 % | 45.5 % |\n"
+    row = "| gemini-3.6-flash, verbalized | **14.3 %** | 2.7 % | 7.6–30.0 % | 45.5 % |\n"
     assert row in README
     assert any("gemini-3.6-flash, verbalized" in f and "0 times" in f
                for f in check(README.replace(row, "")).failures)
@@ -508,10 +512,13 @@ def test_a_dropped_row_of_the_at_a_glance_table_is_caught():
 @pytest.mark.parametrize(
     "old,new",
     [
-        ("| Range over split seeds | At ≤ 10 % error |",
-         "| Range over split seeds | At ≤ 20 % error |"),
-        ("decided alone at an error of at most 5 %.**",
-         "decided alone at an error of at most 10 %.**"),
+        ("| Range over split seeds | At a 10 % error target |",
+         "| Range over split seeds | At a 20 % error target |"),
+        ("decides alone at a 5 % error target, validated",
+         "decides alone at a 10 % error target, validated"),
+        ("| Jev, native probability | **41.0 %** | 3.9 % |",
+         "| Jev, native probability | **41.0 %** | 3.8 % |"),
+        ("| **none** | — |", "| **none** | 0.0 % |"),
     ],
 )
 def test_the_at_a_glance_header_and_caption_are_checked(old, new):

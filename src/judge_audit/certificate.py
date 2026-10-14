@@ -11,14 +11,16 @@ For each question and each target risk r:
   where a text that recurs in the traffic recurs in the sample as often, and no copy was
   added by hand.
 - **deploy threshold** (`metrics.selective.certify_threshold`): the fixed-sequence exact
-  binomial walk on every unit. With probability at least 1 − δ, the error rate among
-  decisions at or above it is at most r — on traffic drawn like the labelled decisions,
-  judged by the same judge and prompt (`scope`), with the labels taken as right.
+  binomial walk on every unit: the lowest cut whose exact one-sided 1 − δ upper bound on
+  the error rate stays within the target r. The bound speaks for traffic drawn like the
+  labelled decisions, judged by the same judge and prompt (`scope`), with the labels taken
+  as right.
 - **out-of-sample check**: the same walk on half the decisions and its threshold applied
   to the other half, both ways, pooled; the halves are split by distinct text
   (`split_by_group`: every copy of a text on one side, independent of row order), at seed
-  0 and over seeds 0–9 for its spread. A threshold chosen on half the data usually
-  automates less than the deployed one: a conservative check, not a forecast.
+  0 and over seeds 0–9 for its spread, with the exact one-sided bound on its held-out
+  errors. It is the validated share every report leads with. A threshold chosen on half the
+  data usually automates less than the deployed one: a conservative check, not a forecast.
 - **per-text check**, only when the labelled set repeats texts: each distinct text once,
   automated when any copy is at or above the threshold and wrong when any copy is wrong
   (so its error count can be smaller than the per-decision one), bounded the same way.
@@ -67,12 +69,12 @@ def _up(x: float | None) -> float | None:
 
 
 def plain_reading(target_risk: float) -> str:
-    """"at most 1 in 20 automated decisions wrong" for 5 %; a percentage when 1/r is not
-    a whole number."""
+    """"a target of 1 wrong in every 20 automated decisions" for 5 %; a percentage when
+    1/r is not a whole number. A target, never a promise about future traffic (#185)."""
     inverse = 1 / target_risk
     if abs(inverse - round(inverse)) < 1e-9:
-        return f"at most 1 in {round(inverse)} automated decisions wrong"
-    return f"at most {target_risk * 100:g} % of automated decisions wrong"
+        return f"a target of 1 wrong in every {round(inverse)} automated decisions"
+    return f"a target of {target_risk * 100:g} % of automated decisions wrong"
 
 
 def scope_of(run: dict | None) -> dict:
@@ -237,11 +239,13 @@ def automation_certificate(records: list[dict], groups: Sequence[Hashable] | Non
                     "n": n, "seed": seed, "automated": covered, "errors": wrong,
                     "coverage": round(covered / n, 4) if n else 0.0,
                     "risk": round(wrong / covered, 4) if covered else None,
+                    "risk_upper": (_up(risk_upper_bound(wrong, covered, delta))
+                                   if covered else None),
                     "spread_seeds": [SPREAD_SEEDS[0], SPREAD_SEEDS[-1]],
                     "spread_coverage": ([round(min(c for c, _ in spread) / n, 4),
                                          round(max(c for c, _ in spread) / n, 4)]
                                         if n else [0.0, 0.0]),
-                    "reason": (f"a half holds at most {half} decisions with a confidence; "
+                    "reason": (f"the larger half holds {half} decisions with a confidence; "
                                f"the target needs {cert['min_covered']}"
                                if half < cert["min_covered"] else None)},
                 **_segments(segs, conf_all, ok_all, cert["threshold"], delta),

@@ -33,9 +33,11 @@ def test_simulated_banner_and_marker_present_once():
 
 def test_numbers_are_formatted_for_humans():
     md = pr_comment.build(RESULT)
-    row = ("| 200 | 200/200 | 85.5% | GT-0 unknown | 0.0359 | "
-           "19.0% (n=38, conf ≥ 0.9594) | $0.0160 | 0.407 s | 0.556 s | — |")
+    row = "| 200 | 200/200 | 85.5% | GT-0 unknown | 0.0359 | $0.0160 | 0.407 s | 0.556 s | — |"
     assert row in md
+    # a share without a bound sits outside the table, under its own label (#185)
+    assert ("**Observed on all rows, no bound — not a basis for deployment:** zero-error "
+            "coverage 19.0% (n=38, conf ≥ 0.9594)") in md
     assert "`examples/email-routing/labels.jsonl` (200 rows, sha256 `c5b4c111290a…`)" in md
 
 
@@ -159,7 +161,8 @@ def test_no_known_confidence_reads_unknown_never_none():
     md = pr_comment.build({**RESULT, "ece": None, "confidence": {"known": 0, "total": 200},
                            "zero_error_coverage": {"coverage": None, "n": 0, "threshold": None}})
     assert "| 200 | 0/200 | 85.5% |" in md
-    assert "None" not in md and "| unknown | unknown |" in md
+    assert "None" not in md and "| 0/200 | 85.5% | GT-0 unknown | unknown |" in md
+    assert "zero-error coverage unknown," in md
 
 
 def test_the_slowest_call_is_shown_next_to_the_p99():

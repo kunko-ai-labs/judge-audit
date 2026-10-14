@@ -168,7 +168,7 @@ def test_the_certificate_has_every_default_target_with_its_plain_reading():
     assert q["question"] == "intent" and q["n"] == 200 and q["scored"] == 200
     assert [t["target_risk"] for t in q["targets"]] == list(DEFAULT_TARGETS)
     by = {t["target_risk"]: t for t in q["targets"]}
-    assert by[0.05]["plain"] == "at most 1 in 20 automated decisions wrong"
+    assert by[0.05]["plain"] == "a target of 1 wrong in every 20 automated decisions"
     assert by[0.05]["coverage"] == 1.0 and by[0.01]["coverage"] == 0.0
     assert "628" in by[0.01]["reason"]
     json.dumps(cert)                                  # the result JSON can carry it
@@ -287,10 +287,10 @@ def test_no_records_no_certificate():
 
 
 @pytest.mark.parametrize("r, text", [
-    (0.01, "at most 1 in 100 automated decisions wrong"),
-    (0.10, "at most 1 in 10 automated decisions wrong"),
-    (0.03, "at most 3 % of automated decisions wrong"),
-    (0.025, "at most 1 in 40 automated decisions wrong"),
+    (0.01, "a target of 1 wrong in every 100 automated decisions"),
+    (0.10, "a target of 1 wrong in every 10 automated decisions"),
+    (0.03, "a target of 3 % of automated decisions wrong"),
+    (0.025, "a target of 1 wrong in every 40 automated decisions"),
 ])
 def test_plain_reading(r, text):
     assert plain_reading(r) == text
@@ -404,20 +404,24 @@ def _result(n=200, wrong_from=180, question="intent", run=None):
 
 def test_the_report_opens_with_the_rate_its_scope_and_its_conditions():
     md = render_markdown(_result())
-    section = md[md.index("## Can I automate this?"):md.index("## Accuracy vs coverage")]
-    assert section.index("**Safe automation rate at ≤ 5% error: 92.0%**") < section.index(
-        "| at most this error |")
-    assert "deploying at confidence ≥ 0.5425" in section
-    assert ("| 5% (primary) | at most 1 in 20 automated decisions wrong | 92.0% (184 of 200 "
-            "decisions") in section
+    section = md[md.index("## Can I automate this?"):md.index("## Observed on all rows")]
+    # 100 decisions a half cannot clear the 5 % start (124): the validated share says so
+    # first, then the threshold to deploy and its share on all labelled decisions
+    assert section.index("**Validated on held-out decisions, at a 5% error target: not "
+                         "checkable**") < section.index("| error target |")
+    assert ("To deploy: confidence ≥ 0.5425; on all labelled decisions it automates 92.0% "
+            "(184 of 200 decisions") in section
+    assert ("| 5% (primary) | a target of 1 wrong in every 20 automated decisions | not "
+            "checkable: the larger half holds 100 decisions") in section
+    assert "| 0.5425 | 92.0% (184 of 200 decisions" in section
     assert "Worst segment above that threshold (true label): `" in section
     assert "none: needs 628 decisions with a confidence" in section  # never an unexplained 0
     assert "Valid only for: judge `demo` · model `demo-1` · prompt `abababab…`" in section
     assert "Review by 2026-12-30" in section
     assert "not a conformity assessment" in section
-    assert "not checkable: a half holds at most 100 decisions" in section
     assert "Label errors cut both ways" in section and "at least 80%" in section
-    assert section.index("| 1% |") < section.index("Zero observed errors")
+    assert md.index("| 1% |") < md.index("## Observed on all rows") < md.index(
+        "Zero observed errors")
 
 
 def test_the_html_report_carries_the_same_section_escaped():
@@ -425,7 +429,7 @@ def test_the_html_report_carries_the_same_section_escaped():
     r.certificate["questions"].append(dict(r.certificate["questions"][0]))
     page = render_html(r)
     assert "safe automation rate" in page and "<script>x" not in page
-    assert "&lt;script&gt;x&lt;/script&gt;" in page and "<b>Safe automation rate" in page
+    assert "&lt;script&gt;x&lt;/script&gt;" in page and "<b>Validated on held-out" in page
 
 
 def test_a_result_written_before_the_certificate_still_renders():
@@ -447,7 +451,8 @@ def test_the_gate_names_the_question_the_rate_and_the_reason():
     assert parse_min_safe_rate("0.10:0.96") == (0.10, 0.96)
     assert check_safe_rate(cert, [(0.10, 0.96)]) == []
     (msg,) = check_safe_rate(cert, [(0.10, 0.97)])
-    assert "≤ 10% error: 96.0% of `intent`" in msg and "minimum 97.0%" in msg
+    assert "at a 10% error target, on all labelled decisions: 96.0% of `intent`" in msg
+    assert "minimum 97.0%" in msg
     (msg,) = check_safe_rate(cert, [(0.01, 0.10)])
     assert "needs 628 decisions" in msg
     with pytest.raises(ValueError):
@@ -471,7 +476,9 @@ def test_the_cli_line_and_the_check_gate(labels_path, tmp_path):
     assert drift["min_safe_rate"] == [{"risk": 0.10, "share": 0.0}]
     assert drift["certificate"]["questions"] and drift["baseline_rate_stale"] == []
     bad = _cli(*base, "--min-safe-rate", "0.10:0.5", cwd=tmp_path)
-    assert bad.returncode == 1 and "Safe automation rate at ≤ 10% error: 0.0%" in bad.stderr
+    assert bad.returncode == 1
+    assert ("Safe automation rate at a 10% error target, on all labelled decisions: 0.0%"
+            in bad.stderr)
     extra = _cli(*base, "--min-safe-rate", "0.2:0", "--target", "0.3", "--segment-by",
                  "none", "--json", "r.json", cwd=tmp_path)
     assert extra.returncode == 0, extra.stderr
@@ -510,16 +517,20 @@ def test_the_pr_comment_opens_with_the_safe_automation_rate():
     res = _result().to_dict()
     md = _pr_comment().build(res)
     assert md.index("### Can I automate this?") < md.index("Judge `")
-    assert "**Safe automation rate at ≤ 5% error: 92.0%** of the labelled decisions" in md
-    assert ("| 10% | at most 1 in 10 automated decisions wrong | 96.0% (192 of 200 "
-            "decisions") in md
+    assert ("**Validated on held-out decisions, at a 5% error target: not checkable** — the "
+            "larger half holds 100 decisions") in md
+    assert "on all labelled decisions it automates 92.0% (184 of 200 decisions" in md
+    assert ("| 10% | a target of 1 wrong in every 10 automated decisions | 94.0% (188 of 200 "
+            "decisions; 8 wrong: 4.3%; 95% upper bound on the error rate: 7.5%; seeds 0–9: "
+            "93.5%–95.0%) | 0.5225 | 96.0% (192 of 200 decisions") in md
     assert "none: needs 628 decisions" in md
     assert "review by 2026-12-30" in md and "not a conformity assessment" in md
     ok = _pr_comment().build(res, {"ok": True, "failures": [], "baseline": "b.json",
                                    "max_ece_drift": 0.02, "max_acc_drop": 0.01,
                                    "min_safe_rate": [{"risk": 0.05, "share": 0.4}],
                                    "baseline_rate_stale": ["prompt changed"]})
-    assert "safe automation rate at ≤ 5% error ≥ 40.0%" in ok and "⚠️ prompt changed" in ok
+    assert "safe automation rate at a 5% error target on all labelled decisions ≥ 40.0%" in ok
+    assert "⚠️ prompt changed" in ok
 
 
 def test_the_pr_comment_escapes_what_the_certificate_quotes():
@@ -556,7 +567,9 @@ def test_the_summary_line_says_none_when_no_threshold_passes():
     from judge_audit.report import certificate_summary
     none = _cert_with(threshold=None, automated=0, coverage=0.0, reason="needs 59")
     assert certificate_summary({"certificate": none}) == "safe_automation@5%=none"
-    assert certificate_summary({"certificate": _cert_with()}) == "safe_automation@5%=40.0%"
+    # a result written before the held-out check: the validated share cannot be shown
+    assert certificate_summary({"certificate": _cert_with()}) == (
+        "safe_automation@5%=not_checkable all_rows=40.0%")
 
 
 def test_the_reason_says_what_is_missing_without_the_word_certify():

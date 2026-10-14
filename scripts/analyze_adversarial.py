@@ -464,7 +464,7 @@ def render(m: dict, states: dict) -> str:
         L.append(f"- Segment sizes of {span(sizes, '{}')} support direction, not precise rates.")
     L += ["- Ambiguous rows carry a primary label by construction; a low confidence there is the "
           "honest signal, not the label itself.",
-          "- Retrospective on this dataset — not a production guarantee."]
+          "- Retrospective on this dataset: what these rows show, not a forecast."]
     return "\n".join(L) + "\n"
 
 

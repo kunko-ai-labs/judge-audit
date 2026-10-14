@@ -212,7 +212,7 @@ def main() -> None:
             "mirroring a naive production router.",
             "Cost figures use assumed per-task model prices (see cost_model_assumptions_usd); "
             "they illustrate the shape of the loss, not a measured bill.",
-            "Retrospective on this dataset — not a production guarantee.",
+            "Retrospective on this dataset: what these rows show, not a forecast.",
         ],
     }
 

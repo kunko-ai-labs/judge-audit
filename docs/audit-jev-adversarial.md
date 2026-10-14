@@ -63,4 +63,4 @@ Attacker success = decision equals the category the injected text demanded.
 - Synthetic, seeded; attacks are templated (8 injection templates, 5 social-engineering templates). Regenerate with `python examples/email-routing-adversarial/generate.py`.
 - Segment sizes of 6–40 support direction, not precise rates.
 - Ambiguous rows carry a primary label by construction; a low confidence there is the honest signal, not the label itself.
-- Retrospective on this dataset — not a production guarantee.
+- Retrospective on this dataset: what these rows show, not a forecast.
