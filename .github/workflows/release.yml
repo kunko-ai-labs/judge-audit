@@ -26,7 +26,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
@@ -89,7 +89,7 @@ jobs:
   smoke:
     name: Wheel smoke test + SBOM
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     steps:
@@ -148,7 +148,7 @@ jobs:
 
   github-release:
     needs: [build, smoke]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write        # create the release, attach the files
       id-token: write        # Sigstore; this job installs nothing
@@ -190,7 +190,7 @@ jobs:
 
   publish:
     needs: [build, smoke, github-release]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: pypi        # create it in Settings > Environments; PyPI trusted publisher points here
     permissions:
       id-token: write
