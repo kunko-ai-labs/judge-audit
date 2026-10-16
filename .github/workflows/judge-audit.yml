@@ -16,7 +16,7 @@ permissions:
 jobs:
   run-simulated:
     name: run — simulated judge on the email dataset (must PASS, SIMULATED tag in the summary)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: audit
@@ -36,7 +36,7 @@ jobs:
 
   run-with-extras-and-evidence:
     name: run — extras and upload-evidence inputs (must PASS)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: audit
@@ -55,7 +55,7 @@ jobs:
 
   check-passes:
     name: check — against the committed baseline (must PASS)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: gate
@@ -71,7 +71,7 @@ jobs:
 
   check-detects-drift:
     name: check — against an unreachable baseline (must DETECT drift)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: fail-on-drift=false only reports
@@ -107,7 +107,7 @@ jobs:
   pr-comment:
     name: pull request — sticky comment with the audit table
     if: github.event_name == 'pull_request' && !github.event.pull_request.head.repo.fork
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       pull-requests: write
