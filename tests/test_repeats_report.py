@@ -1,16 +1,19 @@
 """The repeat-runs report scores the pre-registered predictions mechanically."""
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "scripts"))
 
-from repeats_report import RUNS, rng, score, spread  # noqa: E402
+from repeats_report import RUNS, render, rng, score, spread  # noqa: E402
 
 
 def run(acc, zec, ci, inf):
     return {"accuracy": acc, "zero_error_coverage": zec, "zero_error_coverage_ci": ci,
+            "zec_upper": (ci or [None, None])[1],
             "nll_infinite": inf, "mean_conf_correct": 0.9, "mean_conf_wrong": 0.8}
 
 
@@ -45,3 +48,15 @@ def test_spread_is_min_max_and_sd_over_the_runs():
 
 def test_predictions_carry_their_pre_registered_ids():
     assert [p["id"] for p in score(judges())] == ["P1", "P2", "P3", "P4", "P5", "P6"]
+
+
+def test_printed_upper_bounds_round_up_never_to_nearest():
+    sp = spread([run(0.97, 0.0, [0.0, 0.0183], 5), run(0.96, 0.685, [0.6224, 0.9554], 0)])
+    assert rng(sp["zec_upper"], True, bound=True).startswith("1.9–95.6 %")
+    data = json.loads((ROOT / "docs" / "repeats-2026-09.json").read_text())
+    data["sonnet_vs_jev"]["r1"]["sonnet_upper"] = 0.3352
+    assert "33.6 % (r1)" in render(data)
+    md = (ROOT / "docs" / "repeats-2026-09.md").read_text()
+    assert "| 1.9–1.9 % (SD 0.00) |" in md
+    assert "| 94.4–95.6 % (SD 0.59) |" in md
+

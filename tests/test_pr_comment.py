@@ -168,3 +168,40 @@ def test_no_known_confidence_reads_unknown_never_none():
 def test_the_slowest_call_is_shown_next_to_the_p99():
     md = pr_comment.build({**RESULT, "max_latency_s": 74.806})
     assert "| 0.407 s | 0.556 s | 74.806 s |" in md
+
+
+def test_empty_zero_error_coverage_explains_why_instead_of_printing_none():
+    md = pr_comment.build({**RESULT,
+                           "zero_error_coverage": {"coverage": 0.0, "n": 0, "threshold": None}})
+    assert "None" not in md
+    assert ("zero-error coverage 0.0% "
+            "(none: the most confident group of decisions already holds an error)") in md
+
+
+def test_long_thresholds_and_per_text_share_carry_upward_rounding_and_bound():
+    from judge_audit.certificate import automation_certificate
+    from judge_audit.report import bound_text, threshold_text
+
+    recs = [{"idx": 0, "question": "intent", "confidence": 0.99, "correct": True},
+            {"idx": 1, "question": "intent", "confidence": 0.98, "correct": False}] + [
+                {"idx": i + 2, "question": "intent", "confidence": 1.0 - (i + 1) / 397,
+                 "correct": True}
+                for i in range(198)]
+    groups = ["t0", "t0"] + [f"t{i + 1}" for i in range(198)]
+    cert = automation_certificate(recs, groups)
+    p = next(t for t in cert["questions"][0]["targets"] if t["primary"])
+    pt = p["per_text"]
+    assert len(repr(p["threshold"])) > 8 and len(repr(pt["threshold"])) > 8
+
+    md = pr_comment.build({**RESULT, "certificate": cert})
+    thr = threshold_text(p["threshold"])
+    pt_thr = threshold_text(pt["threshold"])
+    assert thr.endswith("↑") and pt_thr.endswith("↑")
+    assert f"confidence ≥ {thr};" in md
+    assert f"| {thr} |" in md
+    assert repr(p["threshold"]) not in md
+    assert (f"The labelled set repeats texts (200 decisions, 199 texts); counting each text "
+            f"once: {pt['coverage']:.1%} of the texts ({pt['automated']:,} of {pt['n']:,}; "
+            f"{pt['errors']} counted wrong, {bound_text(pt['risk_upper'])}), at confidence "
+            f"≥ {pt_thr}.") in md
+

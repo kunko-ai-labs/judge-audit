@@ -8,7 +8,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from distinct_report import first_of_each_text, headline, mix, segments, shifts  # noqa: E402
+from distinct_report import (  # noqa: E402
+    first_of_each_text,
+    headline,
+    mix,
+    render,
+    segments,
+    shifts,
+)
 
 
 def test_the_first_row_of_each_text_is_kept_in_file_order():
@@ -38,8 +45,12 @@ def test_the_committed_report_says_the_headline_holds_on_distinct_texts():
     data = json.loads((ROOT / "docs" / "robustness-distinct-2026-09.json").read_text())
     assert data["email-adversarial"]["distinct_texts"] == 189
     assert data["headline"]["separated"] is True
+    assert data["headline"]["gemini_upper"] == 0.0193
     md = (ROOT / "docs" / "robustness-distinct-2026-09.md").read_text()
     assert "The README headline holds on distinct texts" in md
+    # 0.0193 (1.93 %) is an upper bound: printed rounded up to 2.0 %, never down to 1.9 %
+    assert "(95 % upper bound 2.0 %)" in render(data)
+    assert "(95 % upper bound 2.0 %)" in md
 
 
 def test_the_mix_of_every_dataset_is_reported_and_its_largest_shifts_named():

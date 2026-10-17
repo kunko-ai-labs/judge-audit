@@ -9,6 +9,7 @@ docs/repeat-runs-plan.md before the first call. Writes docs/repeats-2026-09.md a
 from __future__ import annotations
 
 import json
+import math
 import statistics
 import sys
 from pathlib import Path
@@ -118,14 +119,22 @@ def score(j: dict) -> list[dict]:
     return p
 
 
-def rng(r: dict | None, pct: bool | None) -> str:
-    """`min–max (SD sd)` of one metric across runs; pct None prints counts."""
+def up(x: float) -> float:
+    """An upper bound in percent, rounded **up** to 0.1 %, never below the exact value."""
+    return math.ceil(x * 1000 - 1e-9) / 10
+
+
+def rng(r: dict | None, pct: bool | None, bound: bool = False) -> str:
+    """`min–max (SD sd)` of one metric across runs; pct None prints counts; `bound` rounds
+    ends up to 0.1 % so a printed upper bound is never below the exact value."""
     if r is None:
         return "—"
     if pct is None:
         return f"{r['min']:g}–{r['max']:g}"
     if pct:
-        return f"{r['min'] * 100:.1f}–{r['max'] * 100:.1f} % (SD {r['sd'] * 100:.2f})"
+        lo = up(r["min"]) if bound else r["min"] * 100
+        hi = up(r["max"]) if bound else r["max"] * 100
+        return f"{lo:.1f}–{hi:.1f} % (SD {r['sd'] * 100:.2f})"
     return f"{r['min']:.3f}–{r['max']:.3f} (SD {r['sd']:.3f})"
 
 
@@ -196,7 +205,8 @@ def render(d: dict) -> str:
                      f"({interval_of(a, 'accuracy_ci', pct=True).strip() or '—'}) | "
                      f"{rng(sp['zero_error_coverage'], True)} "
                      f"({interval_of(a, 'zero_error_coverage_ci', pct=True).strip() or '—'}) | "
-                     f"{rng(sp['zec_upper'], True)} | {rng(sp['mean_conf_correct'], False)} | "
+                     f"{rng(sp['zec_upper'], True, bound=True)} | "
+                     f"{rng(sp['mean_conf_correct'], False)} | "
                      f"{rng(sp['mean_conf_wrong'], False)} | {rng(sp['nll_infinite'], None)} |")
     sv = d["sonnet_vs_jev"]
     apart = [k for k, x in sv.items() if x["separated"]]
@@ -207,7 +217,7 @@ def render(d: dict) -> str:
               f"{d['judges']['claude-sonnet-4.5']['rows_with_changed_decision']} of its 200 "
               "decisions between runs and its accuracy not at all, yet the upper bound of its "
               "zero-error interval is "
-              + ", ".join(f"{x['sonnet_upper'] * 100:.1f} % ({k})" for k, x in sv.items())
+              + ", ".join(f"{up(x['sonnet_upper']):.1f} % ({k})" for k, x in sv.items())
               + ". Its coverage is 0 % because a few of its most confident answers are wrong, "
               "and which bootstrap resamples keep them depends on small confidence changes "
               "between runs. So Sonnet's *interval* moves with the run; its point estimate "

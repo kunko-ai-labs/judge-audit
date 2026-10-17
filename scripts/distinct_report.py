@@ -12,6 +12,7 @@ lean on the repeats. It writes docs/robustness-distinct-2026-09.md and .json.
 from __future__ import annotations
 
 import json
+import math
 import sys
 from pathlib import Path
 
@@ -132,6 +133,11 @@ def cell(s: dict, key: str) -> str:
     return f"{fmt(s[key], True)}{interval_of(s, key + '_ci', pct=True)}"
 
 
+def up(x: float) -> float:
+    """An upper bound in percent, rounded **up** to 0.1 %, never below the exact value."""
+    return math.ceil(x * 1000 - 1e-9) / 10
+
+
 def render(data: dict) -> str:
     h = data["headline"]
     verdict = ("holds" if h["separated"] else "does **not** hold")
@@ -152,7 +158,7 @@ def render(data: dict) -> str:
         f"**The README headline {verdict} on distinct texts.** Under attack, on "
         f"{data['email-adversarial']['distinct_texts']} distinct texts, Gemini 3 Flash's "
         f"zero-error coverage is {fmt(h['gemini_zero_error_coverage'], True)} "
-        f"(95 % upper bound {h['gemini_upper'] * 100:.1f} %) and Jev's is "
+        f"(95 % upper bound {up(h['gemini_upper']):.1f} %) and Jev's is "
         f"{fmt(h['jev_zero_error_coverage'], True)} [{h['jev_ci'][0] * 100:.1f}, "
         f"{h['jev_ci'][1] * 100:.1f}]; the intervals "
         f"{'do not overlap' if h['separated'] else 'overlap'}.",

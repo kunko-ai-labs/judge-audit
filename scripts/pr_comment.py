@@ -13,6 +13,7 @@ import json
 import math
 import re
 import sys
+from decimal import ROUND_CEILING, Decimal
 from pathlib import Path
 
 MARKER = "<!-- judge-audit -->"
@@ -90,6 +91,19 @@ def _bound(x: object, level: float) -> str:
     return f"{level:.0%} upper bound on the error rate: {_up(x)}"
 
 
+def _threshold(t: object) -> str:
+    """A deployment threshold as printed (mirrors `report.threshold_text`): exact when short;
+    when a float has many digits, rounded **up** to 6 significant digits and marked `↑` so a
+    caller using the printed number is never less selective than the tested cut."""
+    exact = repr(float(t))  # type: ignore[arg-type]
+    if len(exact) <= 8:
+        return _md(exact)
+    d = Decimal(exact)
+    q = Decimal(1).scaleb(d.adjusted() - 5)
+    up = d.quantize(q, rounding=ROUND_CEILING)
+    return _md(f"{up.normalize():f}↑")
+
+
 def _status(t: dict) -> str:
     """`none`, `unrecorded`, `too_few`, `not_met` or `met` (mirrors
     `report.held_out_status`): only `met` is called validated."""
@@ -161,7 +175,7 @@ def _cells(t: dict, unit: str, level: float = 0.95) -> tuple[str, str, str]:
     bound = (f", {_bound(t['risk_upper'], level)}" if t.get("risk_upper") is not None else "")
     rows = (f"{float(t['coverage']):.1%} ({int(t['automated']):,} of {int(t['n']):,} {unit}s; "
             f"{int(t['errors'])} wrong{bound})")
-    return held, _md(t["threshold"]), rows
+    return held, _threshold(t["threshold"]), rows
 
 
 def _certificate(result: dict) -> list[str]:
@@ -208,11 +222,17 @@ def _certificate(result: dict) -> list[str]:
                           f"{thr}; on all labelled {unit}s it automates {rows}.", ""]
             pt = p.get("per_text")
             if pt:
-                lines += [f"The labelled set repeats texts ({int(q.get('n', 0)):,} decisions, "
-                          f"{int(q.get('texts', 0)):,} texts); counting each text once: "
-                          + (f"{float(pt['coverage']):.1%} of the texts."
-                             if pt.get("threshold") is not None else
-                             f"none ({_md(pt.get('reason') or 'no threshold passes')})."), ""]
+                head_pt = (f"The labelled set repeats texts ({int(q.get('n', 0)):,} decisions, "
+                           f"{int(q.get('texts', 0)):,} texts); counting each text once")
+                if pt.get("threshold") is None:
+                    lines += [f"{head_pt}: none "
+                              f"({_md(pt.get('reason') or 'no threshold passes')}).", ""]
+                else:
+                    lines += [f"{head_pt}: {float(pt['coverage']):.1%} of the texts "
+                              f"({int(pt['automated']):,} of {int(pt['n']):,}; "
+                              f"{int(pt['errors'])} counted wrong, "
+                              f"{_bound(pt['risk_upper'], level)}), at confidence ≥ "
+                              f"{_threshold(pt['threshold'])}.", ""]
             w = p.get("worst_segment")
             if w:
                 lines += [f"Worst segment above that threshold: `{_md(w.get('segment'))}`, "
@@ -268,9 +288,14 @@ def build(result: dict, drift: dict | None = None, artifact_url: str = "",
     gt_cell, gt_line = _ground_truth(run)
     confidence = result.get("confidence") or {"known": result.get("n", 0),
                                                "total": result.get("n", 0)}
-    zec_text = ("unknown" if zec.get("coverage") is None else
-                f"{_metric(zec.get('coverage'), '.1%')} "
-                f"(n={_md(zec.get('n', 0))}, conf ≥ {_md(zec.get('threshold'))})")
+    if zec.get("coverage") is None:
+        zec_text = "unknown"
+    elif not zec.get("n") or zec.get("threshold") is None:
+        zec_text = (f"{_metric(zec.get('coverage'), '.1%')} "
+                    "(none: the most confident group of decisions already holds an error)")
+    else:
+        zec_text = (f"{_metric(zec.get('coverage'), '.1%')} "
+                    f"(n={_md(zec.get('n', 0))}, conf ≥ {_md(zec.get('threshold'))})")
     lines += [*_certificate(result)]
     lines += [f"Judge {_judge_line(run)}", "",
               "| n | confidence known | accuracy | ground truth | ECE | cost | p50 | p99 | slowest |",
