@@ -102,6 +102,17 @@ def test_exit_status_and_json(monkeypatch, capsys, tmp_path):
     assert _run(monkeypatch, capsys, tmp_path, resp=WITHOUT)[0] == 1
 
 
+def test_the_finding_records_the_checked_url_not_the_flag(monkeypatch, capsys, tmp_path):
+    """The URL the request went to, rebuilt from its checked parts: lower-case host, no
+    query, no fragment (#169)."""
+    monkeypatch.setenv("LLM_API_KEY", KEY)
+    monkeypatch.setattr(smoke, "post", lambda *a, **k: WITH)
+    out = tmp_path / "finding.json"
+    assert smoke.main(["--model", "m", "--json", str(out), "--base-url",
+                       "https://Gateway.TEST/api/v1/?session=abc123def456#frag"]) == 0
+    assert json.loads(out.read_text())["base_url"] == "https://gateway.test/api/v1"
+
+
 def test_an_error_body_that_echoes_the_key_is_redacted(monkeypatch, capsys, tmp_path):
     body = io.BytesIO(f"Unauthorized. Received headers: Authorization: Bearer {KEY}".encode())
     err = urllib.error.HTTPError("https://gateway.test", 401, "Unauthorized", {}, body)

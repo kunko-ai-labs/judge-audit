@@ -1,11 +1,56 @@
 from __future__ import annotations
 
 import json
+import os
+import sys
+import tempfile
 from pathlib import Path
 
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
+OFFLINE = Path(__file__).resolve().parent / "offline"
+sys.path.insert(0, str(OFFLINE))
+
+import offline_guard  # noqa: E402
+
+# --- the suite runs offline (#169) -------------------------------------------------------------
+# Installed when this file is imported, before any test or fixture runs, and inherited by every
+# Python process a test starts (PYTHONPATH reaches `tests/offline/sitecustomize.py`). A test
+# fails when the log gained a line while it ran, even if the code under test caught the error.
+
+_LOG = os.path.join(tempfile.mkdtemp(prefix="judge-audit-offline-"), "attempts.log")
+open(_LOG, "w").close()
+os.environ[offline_guard.LOG_VAR] = _LOG
+os.environ["PYTHONPATH"] = os.pathsep.join(
+    p for p in (str(OFFLINE), os.environ.get("PYTHONPATH", "")) if p)
+offline_guard.install(_LOG)
+_seen = 0
+
+
+def _new_attempts() -> list[str]:
+    global _seen
+    with open(_LOG, encoding="utf-8") as f:
+        lines = f.read().splitlines()
+    new, _seen = lines[_seen:], len(lines)
+    return new
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_call(item):
+    before = _new_attempts()          # this test's fixtures, or the previous test's teardown
+    result = yield
+    if attempts := before + _new_attempts():
+        pytest.fail("tests run offline, and this one reached for the network: "
+                    + "; ".join(attempts[:5]), pytrace=False)
+    return result
+
+
+def pytest_sessionfinish(session):
+    if attempts := _new_attempts():                   # from a fixture's setup or teardown
+        print("\ntests run offline, and a fixture reached for the network: "
+              + "; ".join(attempts[:5]), file=sys.stderr)
+        session.exitstatus = pytest.ExitCode.TESTS_FAILED
 
 
 @pytest.fixture(scope="session")

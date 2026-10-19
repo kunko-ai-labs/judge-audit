@@ -67,10 +67,14 @@ build-backend = "hatchling.build"
 packages = ["src/judge_audit"]
 
 [tool.hatch.build.targets.sdist]
-# The third-party datasets keep their own CC BY licences; the Apache-2.0 sdist leaves them
-# out, and their tests skip without them.
-exclude = ["src/judge_audit/judges/bridge/node_modules", "examples/banking77",
-           "examples/clinc150", "examples/massive"]
+# The sdist is the package's source and nothing else (#169). The tests, scripts, datasets and
+# published evidence (docs/: reports and their raw checkpoints) stay in the repository at the
+# release tag: many tests recompute that evidence, and a published number belongs next to its
+# checkpoint, not in a package. `scripts/check_dist.py` builds both archives and
+# fails on any other path, or on an archive over its size limit.
+only-include = ["src/judge_audit", "README.md", "LICENSE", "CHANGELOG.md", "SECURITY.md",
+                "pyproject.toml"]
+exclude = ["src/judge_audit/judges/bridge/node_modules"]
 
 [tool.ruff]
 line-length = 100

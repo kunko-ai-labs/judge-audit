@@ -60,6 +60,15 @@ def test_only_the_release_job_uploads_to_the_github_release(jobs):
         assert wants_write == (name == "github-release"), name
 
 
+def test_the_built_archives_are_checked_before_they_leave_the_build_job(jobs):
+    steps = jobs["build"]["steps"]
+    builds = next(k for k, s in enumerate(steps) if "python -m build" in s.get("run", ""))
+    check = next(k for k, s in enumerate(steps)
+                 if "scripts/check_dist.py dist/*" in s.get("run", ""))
+    upload = next(k for k, s in enumerate(steps) if "upload-artifact" in s.get("uses", ""))
+    assert builds < check < upload
+
+
 def test_smoke_installs_the_built_wheel_not_the_source_tree(jobs):
     steps = jobs["smoke"]["steps"]
     install = next(s for s in steps if "Install" in s.get("name", ""))
