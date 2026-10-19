@@ -1,10 +1,15 @@
-"""Every way the code reaches the network is known and reviewed (#169).
+"""Every way the code reaches the network, as written in the source, is listed and reviewed
+(#169).
 
 Two guards. Statically, every module under src/, scripts/ and examples/ is parsed and each
 network primitive it uses (an HTTP client, a socket, a model download, a child process) must
 be in `REVIEWED` for that file, with the reason it is there; a primitive that is not, or an
-entry that no longer matches the code, fails. A request that carries a key is sent only by
-`OPENER` (no redirects), from a module that builds its URL with `checked_endpoint`.
+entry that no longer matches the code, fails. The scan finds network use written explicitly in
+the source. It does not find code that hides the call: `eval`, `exec` or `compile`, `ctypes`,
+`runpy`, a lookup in `vars()`, `__dict__` or `sys.modules`, or a function that returns the
+opener. Review catches those; the runtime guard below still refuses what they would send.
+A request that carries a key is sent only by `OPENER` (no redirects), from a module that
+builds its URL with `checked_endpoint`.
 
 At run time, `tests/conftest.py` installs `tests/offline/offline_guard.py` for the whole suite
 and every Python process a test starts with its environment: a connection, datagram or lookup
@@ -38,6 +43,7 @@ NETWORK_MODULES = {
     "socket", "http.client", "urllib.request", "requests", "httpx", "aiohttp", "urllib3",
     "ftplib", "smtplib", "imaplib", "poplib", "telnetlib", "xmlrpc", "asyncio",
     "multiprocessing.connection", "websocket", "websockets", "webbrowser", "anthropic",
+    "_socket", "posix", "nt",
     "openai", "huggingface_hub", "transformers", "mlx_lm", "subprocess", "pty",
 }
 # Names that open a connection, download or start a process, whatever module they come from.
@@ -61,8 +67,10 @@ REQUEST = "builds the urllib Request that OPENER sends"
 
 # file -> {primitive: why it is there}. A primitive is `import <module>`, a name from
 # NETWORK_CALLS, `os.<name>` for a call that runs a program, `getattr <module>` for a name
-# looked up at run time on a network module, `OPENER.open` (on any expression ending in
-# OPENER) or `OPENER binding` (OPENER assigned, or bound to another name).
+# looked up at run time on a network module, `import * from <module>` for a star import of
+# a network module or `os`, `OPENER.open` (`.open` on a name or attribute called OPENER) or
+# `OPENER binding` (OPENER assigned, imported or looked up under another name, or held in a
+# value such as a tuple).
 # Out of reach by design: the `custom` provider of the `llm` judge loads a user's own module
 # (LLM_PROVIDER_MODULE, llm.py) that this scan cannot read; the runtime guard still applies.
 REVIEWED: dict[str, dict[str, str]] = {
@@ -138,6 +146,13 @@ def _ends_in_opener(node: ast.AST) -> bool:
             or (isinstance(node, ast.Attribute) and node.attr == "OPENER"))
 
 
+def _holds_opener(value: ast.AST) -> bool:
+    """Whether `value` holds OPENER itself (`OPENER`, `(OPENER, 1)`, `[x.OPENER]`), not only
+    something read from it (`OPENER.open(req)`)."""
+    read_from = {id(n.value) for n in ast.walk(value) if isinstance(n, ast.Attribute)}
+    return any(_ends_in_opener(n) and id(n) not in read_from for n in ast.walk(value))
+
+
 def primitives(source: str) -> dict[str, list[int]]:
     """The network primitives `source` uses -> the lines they are on."""
     tree = ast.parse(source)
@@ -169,9 +184,18 @@ def primitives(source: str) -> dict[str, list[int]]:
             for alias in node.names:
                 if m := _network_module(alias.name):
                     add(f"import {m}", node)
-        elif isinstance(node, ast.ImportFrom) and node.module and node.level == 0:
+        elif isinstance(node, ast.ImportFrom):
+            # OPENER under another name, whatever the import's level: the judges import it
+            # relatively (`from .secrets import OPENER`).
+            if any(a.name == "OPENER" and a.asname not in (None, "OPENER") for a in node.names):
+                add("OPENER binding", node)
+            if not node.module or node.level != 0:
+                continue
             if m := _network_module(node.module):
                 add(f"import {m}", node)
+            if any(a.name == "*" for a in node.names) and (
+                    node.module == "os" or _network_module(node.module)):
+                add(f"import * from {node.module}", node)
             for alias in node.names:
                 if m := _network_module(f"{node.module}.{alias.name}"):
                     add(f"import {m}", node)
@@ -180,8 +204,6 @@ def primitives(source: str) -> dict[str, list[int]]:
                 if node.module == "os" and (alias.name in OS_CALLS
                                             or alias.name.startswith(OS_PREFIXES)):
                     add(f"os.{alias.name}", node)
-                if alias.name == "OPENER" and alias.asname not in (None, "OPENER"):
-                    add("OPENER binding", node)
         elif isinstance(node, ast.Attribute):
             if node.attr in NETWORK_CALLS:
                 add(node.attr, node)
@@ -194,6 +216,9 @@ def primitives(source: str) -> dict[str, list[int]]:
             add(node.id, node)
         elif isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and (
                 node.func.id == "getattr" and node.args):
+            name = node.args[1] if len(node.args) > 1 else None
+            if isinstance(name, ast.Constant) and name.value == "OPENER":
+                add("OPENER binding", node)
             target = dotted(node.args[0]) or ""
             if m := _network_module(target) or next(
                     (n for n in (*NETWORK_MODULES, "os") if n == target
@@ -202,7 +227,7 @@ def primitives(source: str) -> dict[str, list[int]]:
         elif isinstance(node, (ast.Assign, ast.AnnAssign, ast.AugAssign, ast.NamedExpr)):
             targets = node.targets if isinstance(node, ast.Assign) else [node.target]
             if any(_ends_in_opener(x) for x in targets) or (
-                    node.value is not None and _ends_in_opener(node.value)):
+                    node.value is not None and _holds_opener(node.value)):
                 add("OPENER binding", node)
     return found
 
@@ -284,6 +309,17 @@ PLANTED = [
      "OPENER binding"),
     ("from judge_audit.judges.secrets import OPENER as O\nO.open(req)", "OPENER binding"),
     ("from judge_audit.judges import secrets\nsecrets.OPENER = None", "OPENER binding"),
+    ("from .secrets import OPENER as O\nO.open(req)", "OPENER binding"),
+    ("from ..judges.secrets import OPENER as O\nO.open(req)", "OPENER binding"),
+    ("from judge_audit.judges import secrets\ngetattr(secrets, 'OPENER').open(req)",
+     "OPENER binding"),
+    ("from .secrets import OPENER\na, b = OPENER, 1", "OPENER binding"),
+    ("from os import *\nsystem('curl ' + u)", "import * from os"),
+    ("from urllib.request import *\nurlopen(u)", "import * from urllib.request"),
+    ("from socket import *", "import * from socket"),
+    ("import _socket", "import _socket"),
+    ("import posix\nposix.system('curl')", "import posix"),
+    ("import nt", "import nt"),
 ]
 
 
@@ -295,8 +331,11 @@ def test_each_way_out_is_found_when_planted(source, primitive):
 
 def test_ordinary_code_is_not_a_way_out():
     clean = ("import os\nimport platform\nos.path.join('a', 'b')\nplatform.system()\n"
-             "getattr(obj, 'system')\nmodel.system_one(x)\nopen('f').read()\n")
+             "getattr(obj, 'system')\nmodel.system_one(x)\nopen('f').read()\n"
+             "from .base import Judge\nfrom pathlib import *\n")
     assert primitives(clean) == {}
+    sent = "from .secrets import OPENER\nresp = OPENER.open(req)\n"      # a send, not a binding
+    assert set(primitives(sent)) == {"OPENER.open"}
 
 
 # --- the runtime guard ----------------------------------------------------------------------
