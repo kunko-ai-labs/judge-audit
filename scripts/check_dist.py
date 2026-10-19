@@ -4,7 +4,8 @@ The sdist and the wheel are what PyPI keeps for good: a file in them cannot be t
 check reads both and fails when either holds a path outside its allow-list (the package, its
 licence, README, CHANGELOG, SECURITY and build metadata), a path that must never ship (raw
 checkpoints, logs, an `.env`, `docs/`, editor or agent configuration, node_modules, bytecode),
-a file or archive over its size limit, or the current user's home directory in any file. The
+a link or special file, a file or archive over its size limit, or the current user's home
+directory in any file. The
 evidence (docs/: reports and their raw checkpoints) stays in the repository at the release tag.
 
   python scripts/check_dist.py                  # build both into a temporary directory, check
@@ -15,6 +16,7 @@ Building needs the `build` package (`pip install build`). Exit 1 lists every fin
 from __future__ import annotations
 
 import re
+import stat
 import subprocess
 import sys
 import tarfile
@@ -65,6 +67,19 @@ def members(path: Path) -> Iterator[tuple[str, int, bytes]]:
                 yield m.name.split("/", 1)[1], m.size, f.read() if f else b""
 
 
+def specials(path: Path) -> list[str]:
+    """Members that are neither a regular file nor a directory (a symlink, a hard link, a
+    device): `members` does not read them, so they would pass every other check."""
+    if path.suffix == ".whl":
+        with zipfile.ZipFile(path) as z:
+            return [i.filename for i in z.infolist()
+                    if not i.is_dir() and stat.S_IFMT(i.external_attr >> 16) not in (
+                        0, stat.S_IFREG)]
+    with tarfile.open(path) as t:
+        return [m.name.split("/", 1)[-1] for m in t.getmembers()
+                if not (m.isfile() or m.isdir())]
+
+
 def allowed(name: str, wheel: bool) -> bool:
     if wheel:
         return name.startswith(WHEEL_DIRS) or bool(WHEEL_DIST_INFO.match(name))
@@ -78,6 +93,7 @@ def findings(path: Path, home: str | None = None) -> list[str]:
     out = []
     if path.stat().st_size > MAX_ARCHIVE:
         out.append(f"{path.name}: {path.stat().st_size:,} bytes, over the {MAX_ARCHIVE:,} limit")
+    out += [f"{path.name}: {name} is a link or a special file" for name in specials(path)]
     for name, size, data in members(path):
         for pattern, what in FORBIDDEN:
             if pattern.search(name):

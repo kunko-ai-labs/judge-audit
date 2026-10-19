@@ -51,41 +51,70 @@ def test_the_package_alone_has_no_finding(tmp_path):
 
 
 @pytest.mark.parametrize("name, what", [
-    ("docs/runs/v06/x-en-US.ckpt.jsonl", "checkpoint"),
-    ("tests/fixtures/run.ckpt.jsonl", "checkpoint"),
-    ("docs/audit-jev-real.json", "evidence"),
-    ("run.log", "log"),
-    (".env", "environment"),
-    (".env.example", "environment"),
-    ("CLAUDE.md", "agent"),
-    (".claude/settings.json", "agent"),
-    ("notes.local.md", "local review"),
-    ("src/judge_audit/judges/bridge/node_modules/ai/index.js", "npm"),
+    ("docs/runs/v06/x-en-US.ckpt.jsonl", "a raw checkpoint"),
+    ("tests/fixtures/run.ckpt.jsonl", "a raw checkpoint"),
+    ("docs/audit-jev-real.json", "the published evidence (docs/)"),
+    ("run.log", "a log"),
+    (".env", "an environment file"),
+    (".env.example", "an environment file"),
+    ("CLAUDE.md", "editor or agent configuration"),
+    (".claude/settings.json", "editor or agent configuration"),
+    ("notes.local.md", "local review notes"),
+    ("src/judge_audit/judges/bridge/node_modules/ai/index.js", "installed npm packages"),
     ("src/judge_audit/__pycache__/cli.cpython-312.pyc", "bytecode"),
-    ("tests/test_cli.py", "allow-list"),
-    ("scripts/v06_study.py", "allow-list"),
-    ("examples/email-routing/labels.jsonl", "allow-list"),
+    ("tests/test_cli.py", "outside the allow-list"),
+    ("scripts/v06_study.py", "outside the allow-list"),
+    ("examples/email-routing/labels.jsonl", "outside the allow-list"),
 ])
 def test_a_path_that_must_not_ship_is_named(tmp_path, name, what):
     out = check_dist.findings(sdist(tmp_path, {**SDIST_OK, name: b"x"}), home="/nowhere/u")
-    assert len(out) == 1 and name in out[0] and what in out[0], out
+    assert out == [f"{TOP}.tar.gz: {name} is {what}"]
 
 
-@pytest.mark.parametrize("name", ["docs/index.md", "judge_audit/x.log", "tests/test_cli.py",
-                                  "judge_audit/__pycache__/x.pyc"])
-def test_the_wheel_is_held_to_the_same_rules(tmp_path, name):
+@pytest.mark.parametrize("name, what", [
+    ("docs/index.md", "the published evidence (docs/)"), ("judge_audit/x.log", "a log"),
+    ("tests/test_cli.py", "outside the allow-list"),
+    ("judge_audit/__pycache__/x.pyc", "bytecode")])
+def test_the_wheel_is_held_to_the_same_rules(tmp_path, name, what):
     out = check_dist.findings(wheel(tmp_path, {**WHEEL_OK, name: b"x"}), home="/nowhere/u")
-    assert len(out) == 1 and name in out[0], out
+    assert out == [f"{TOP}-py3-none-any.whl: {name} is {what}"]
 
 
 def test_a_file_or_an_archive_over_its_limit_is_named(tmp_path, monkeypatch):
     big = {**SDIST_OK, "CHANGELOG.md": b"x" * 2048}
     monkeypatch.setattr(check_dist, "MAX_FILE", 1024)
     out = check_dist.findings(sdist(tmp_path, big), home="/nowhere/u")
-    assert len(out) == 1 and "CHANGELOG.md" in out[0] and "limit" in out[0]
+    assert out == [f"{TOP}.tar.gz: CHANGELOG.md is 2,048 bytes, over the 1,024 limit"]
     monkeypatch.setattr(check_dist, "MAX_ARCHIVE", 10)
-    assert any("over the 10 limit" in f for f in
-               check_dist.findings(wheel(tmp_path, WHEEL_OK), home="/nowhere/u"))
+    path = wheel(tmp_path, WHEEL_OK)
+    assert check_dist.findings(path, home="/nowhere/u") == [
+        f"{path.name}: {path.stat().st_size:,} bytes, over the 10 limit"]
+
+
+@pytest.mark.parametrize("kind", [tarfile.SYMTYPE, tarfile.LNKTYPE])
+def test_a_link_in_the_sdist_is_named(tmp_path, kind):
+    """A link is not read as a file, so it would pass the allow-list unseen."""
+    path = sdist(tmp_path, SDIST_OK)
+    with tarfile.open(path, "r:gz") as t:
+        members = [(m, t.extractfile(m).read()) for m in t.getmembers()]
+    with tarfile.open(path, "w:gz") as t:
+        for m, data in members:
+            t.addfile(m, io.BytesIO(data))
+        link = tarfile.TarInfo(f"{TOP}/src/judge_audit/data")
+        link.type, link.linkname = kind, "../../../.."
+        t.addfile(link)
+    assert check_dist.findings(path, home="/nowhere/u") == [
+        f"{TOP}.tar.gz: src/judge_audit/data is a link or a special file"]
+
+
+def test_a_symlink_in_the_wheel_is_named(tmp_path):
+    path = wheel(tmp_path, WHEEL_OK)
+    with zipfile.ZipFile(path, "a") as z:
+        info = zipfile.ZipInfo("judge_audit/data")
+        info.external_attr = (0o120777 << 16)
+        z.writestr(info, "../..")
+    assert check_dist.findings(path, home="/nowhere/u") == [
+        f"{path.name}: judge_audit/data is a link or a special file"]
 
 
 def test_the_current_home_directory_in_a_file_is_named(tmp_path):
