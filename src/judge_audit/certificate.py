@@ -39,7 +39,8 @@ For each question and each target risk r:
 - **primary target**: the one target passed with `--target` (default 5 %), to be chosen
   before the run. A report regenerated from an archived checkpoint uses the default and says
   it was not fixed in advance. `--target` can be given up to MAX_DECLARED times (#201):
-  every declared row is flagged `primary`, the first one is `primary_target` and headlines.
+  every declared row is flagged `primary`, the first one is `primary_target` and headlines,
+  and `declared_targets` lists them in the order given (only when there are several).
   Each target is its own 1 − δ statement; the four default ones hold together with
   probability at least 1 − 4δ (80 %), k declared ones with at least 1 − kδ (approximately,
   for the held-out check). δ is not split, so no row changes when more are declared.
@@ -296,6 +297,8 @@ def automation_certificate(records: list[dict], groups: Sequence[Hashable] | Non
                           "texts": n_texts, "targets": rows})
     return {"name": NAME, "unit": "decision", "delta": delta, "start_errors": start_errors,
             "seed": seed, "targets": list(targets), "primary_target": primary,
+            # in the order given; only when several, so a one-target result keeps its bytes
+            **({"declared_targets": list(declared)} if len(declared) > 1 else {}),
             "segment_by": segment_by if any(r.get("segment") is not None for r in records)
             else None,
             "min_segment": MIN_SEGMENT, "scope": scope_of(run), "disclaimer": DISCLAIMER,

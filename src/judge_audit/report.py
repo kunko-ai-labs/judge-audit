@@ -300,8 +300,22 @@ def _primary(q: dict, c: dict) -> dict:
                 flagged[0] if flagged else q["targets"][0])
 
 
+def _mark(t: dict, c: dict) -> str:
+    """A row's mark in the table: ` (primary)` on the headlining target; with several
+    declared, ` (declared)` on the others (#201); none on a context row."""
+    if not t.get("primary"):
+        return ""
+    first = c.get("primary_target")
+    if (len(c.get("declared_targets") or []) > 1 and first is not None
+            and not math.isclose(t["target_risk"], first)):
+        return " (declared)"
+    return " (primary)"
+
+
 def _declared(c: dict) -> list[float]:
-    """The targets declared before the run, the headlining one first (#201)."""
+    """The targets declared before the run, in the order given (#201)."""
+    if c.get("declared_targets"):
+        return list(c["declared_targets"])
     q = c["questions"][0]
     first = c.get("primary_target")
     rest = [t["target_risk"] for t in q["targets"] if t.get("primary")
@@ -329,7 +343,7 @@ def certificate_lines(d: dict) -> list[str]:
         lines += [TABLE_HEADER, TABLE_RULE]
         for t in q["targets"]:
             held_out, thr, rows = certificate_cells(t, c["unit"], level)
-            mark = " (primary)" if t.get("primary") else ""
+            mark = _mark(t, c)
             lines.append(f"| {_pct_of(t['target_risk'])}{mark} | {t['plain']} | {held_out} | "
                          f"{thr} | {rows} |")
         lines.append("")
@@ -364,7 +378,7 @@ def certificate_html(d: dict) -> str:
                 out.append(f"<p>{text(extra)}</p>")
         rows = "".join(
             "<tr>" + "".join(f"<td>{html.escape(x)}</td>" for x in (
-                _pct_of(t["target_risk"]) + (" (primary)" if t.get("primary") else ""),
+                _pct_of(t["target_risk"]) + _mark(t, c),
                 t["plain"], *certificate_cells(t, c["unit"], level))) + "</tr>"
             for t in q["targets"])
         out.append("<table><tr><th scope='col'>Error target</th>"

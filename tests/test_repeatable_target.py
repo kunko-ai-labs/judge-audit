@@ -16,7 +16,7 @@ import pytest
 from judge_audit import __version__, cli
 from judge_audit.certificate import MAX_DECLARED, automation_certificate
 from judge_audit.judges.base import Judge, Judgment
-from judge_audit.report import certificate_note
+from judge_audit.report import certificate_html, certificate_note
 
 ROOT = Path(__file__).resolve().parent.parent
 SMALL = ROOT / "examples" / "task-routing" / "labels.jsonl"
@@ -49,6 +49,7 @@ def test_each_declared_target_is_flagged_and_its_row_is_unchanged():
     one = automation_certificate(recs, primary=0.05)
     three = automation_certificate(recs, primary=0.10, declared=(0.10, 0.02, 0.05))
     assert three["primary_target"] == 0.10
+    assert three["declared_targets"] == [0.10, 0.02, 0.05]   # in the order given
     assert three["targets"] == one["targets"] == [0.01, 0.02, 0.05, 0.10]
     flags = {t["target_risk"]: t["primary"] for t in three["questions"][0]["targets"]}
     assert flags == {0.01: False, 0.02: True, 0.05: True, 0.10: True}
@@ -61,8 +62,9 @@ def test_each_declared_target_is_flagged_and_its_row_is_unchanged():
 
 def test_one_declared_target_is_the_certificate_it_always_was():
     recs = _records()
-    assert (automation_certificate(recs, primary=0.10, declared=(0.10,))
-            == automation_certificate(recs, primary=0.10))
+    one = automation_certificate(recs, primary=0.10, declared=(0.10,))
+    assert one == automation_certificate(recs, primary=0.10)
+    assert "declared_targets" not in one   # the single-target bytes do not move
 
 
 @pytest.mark.parametrize("primary, declared, why", [
@@ -112,18 +114,23 @@ def test_the_note_with_one_declared_target_is_the_one_it_always_was():
 
 def test_three_targets_are_declared_and_the_first_headlines(tmp_path):
     r = _cli("run", str(SMALL), "--judge", "simulated", "--no-ci", "--judgments", "",
-             "--target", "0.2", "--target", "0.03", "--target", "0.15",
+             "--target", "0.2", "--target", "0.15", "--target", "0.03",
              "--json", "r.json", "--out", "r.md", cwd=tmp_path)
     assert r.returncode == 0, r.stderr
     c = json.loads((tmp_path / "r.json").read_text())["certificate"]
     assert c["primary_target"] == 0.2
+    assert c["declared_targets"] == [0.2, 0.15, 0.03]
     assert c["targets"] == [0.01, 0.02, 0.03, 0.05, 0.1, 0.15, 0.2]
     rows = c["questions"][0]["targets"]
     assert [t["target_risk"] for t in rows if t["primary"]] == [0.03, 0.15, 0.2]
     assert "safe_automation@20%=" in r.stdout and "@3%" not in r.stdout
     md = (tmp_path / "r.md").read_text()
     assert "at a 20% error target" in md and "at a 3% error target" not in md
-    assert md.count(" (primary) |") == 3
+    # the headlining row is the primary one; the others were declared with it
+    assert md.count(" (primary) |") == 1 and "| 20% (primary) |" in md
+    assert md.count(" (declared) |") == 2
+    assert "| 15% (declared) |" in md and "| 3% (declared) |" in md
+    assert "(here 20%, 15% and 3%; 20% headlines this section)" in md
     assert "the 3 together with probability at least 85%" in md
 
 
@@ -139,6 +146,8 @@ def test_a_fourth_target_is_refused_with_exit_2(labels_path, tmp_path):
 
 @pytest.mark.parametrize("args, says", [
     (("--target", "0.05", "--target", "0.05"), "--target 0.05 is given twice"),
+    # the same target to the certificate, which compares with math.isclose
+    (("--target", "0.05", "--target", "0.05000000001"), "--target 0.05 is given twice"),
     (("--target", "0.05", "--target", "1.5"), "--target must be between 0 and 1, got 1.5"),
 ])
 def test_a_repeated_or_invalid_target_is_refused_with_exit_2(labels_path, tmp_path, args,
@@ -158,6 +167,18 @@ def test_the_pr_comment_headlines_the_first_declared_target(tmp_path):
     lines = mod._certificate({"certificate": cert})
     assert any("at a 10% error target" in x for x in lines)
     assert not any("at a 5% error target" in x for x in lines)
+    assert any(x.startswith("| 10% (primary) |") for x in lines)
+    assert any(x.startswith("| 5% (declared) |") for x in lines)
+    assert not any(x.startswith("| 5% (primary) |") for x in lines)
+
+
+def test_the_html_table_marks_the_primary_and_the_declared_rows():
+    recs = _records()
+    cert = automation_certificate(recs, primary=0.10, declared=(0.10, 0.05))
+    page = certificate_html({"certificate": cert})
+    assert "<td>10% (primary)</td>" in page and "<td>5% (declared)</td>" in page
+    one = certificate_html({"certificate": automation_certificate(recs, primary=0.10)})
+    assert "<td>10% (primary)</td>" in one and "(declared)" not in one
 
 
 # --- one --target: byte for byte what it was before #201 ----------------------------------
@@ -201,10 +222,13 @@ def _normalized(text: str) -> str:
     it sets, the package and Python versions, and the PNG charts (bytes depend on the
     matplotlib build). Everything else must not move."""
     text = re.sub(r"data:image/png;base64,[A-Za-z0-9+/=]+", "data:image/png;base64,PNG", text)
-    text = re.sub(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(\+00:00|Z)?", "TIME", text)
-    text = re.sub(r"\b\d{4}-\d{2}-\d{2}\b", "DATE", text)
+    time = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00"
+    text = re.sub(rf'(\brun |measured |"timestamp_utc": "|"measured_utc": "){time}',
+                  r"\1TIME", text)
+    text = re.sub(r'([Rr]eview by |"review_by": ")\d{4}-\d{2}-\d{2}', r"\1DATE", text)
     text = re.sub(r'"python": "[^"]*"', '"python": "PY"', text)
-    return text.replace(__version__, "VERSION")
+    return re.sub(rf'(judge-audit |"judge_audit_version": "){re.escape(__version__)}',
+                  r"\1VERSION", text)
 
 
 def _digests(case: str, tmp_path: Path, monkeypatch, capsys) -> dict[str, str]:

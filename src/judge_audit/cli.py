@@ -8,6 +8,7 @@ import argparse
 import contextlib
 import datetime
 import json
+import math
 import os
 import re
 import sys
@@ -262,7 +263,7 @@ def main(argv: list[str] | None = None) -> None:
     for i, t in enumerate(declared):
         if not 0 < t < 1:
             _die(f"--target must be between 0 and 1, got {t}")
-        if t in declared[:i]:
+        if any(math.isclose(t, d) for d in declared[:i]):   # as the certificate compares
             _die(f"--target {t:g} is given twice")
     segment_by = None if args.segment_by == "none" else args.segment_by
     if segment_by not in (None, "label") and not re.fullmatch(r"meta\.[A-Za-z0-9_]+",

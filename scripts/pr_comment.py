@@ -250,7 +250,10 @@ def _certificate(result: dict) -> list[str]:
         lines += [TABLE_HEADER, TABLE_RULE]
         for t in targets:
             held, thr, rows = _cells(t, unit, level)
-            mark = " (primary)" if t.get("primary") else ""
+            # the headlining row is primary; with several declared, the others are declared
+            several = len(c.get("declared_targets") or []) > 1
+            mark = ("" if not t.get("primary")
+                    else " (declared)" if several and t is not p else " (primary)")
             plain = _md(str(t.get("plain", "")))
             lines.append(f"| {_pct(float(t['target_risk']))}{mark} | {plain} | {held} | "
                          f"{thr} | {rows} |")
