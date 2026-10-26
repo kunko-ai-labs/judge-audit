@@ -255,13 +255,15 @@ def _digests(case: str, tmp_path: Path, monkeypatch, capsys) -> dict[str, str]:
 
 @pytest.mark.parametrize("case", sorted(CASES))
 def test_one_target_is_byte_identical_to_before(case, tmp_path, monkeypatch, capsys):
-    """The digests in the fixture were computed by this same test on the code before #201
-    (judge-audit f889b87), on macOS and on Linux (python:3.12-slim), with the same result:
-    the judgments the committed checkpoints recorded, replayed through the CLI (`Replay`),
-    with no `--target` and with `--target 0.08` as HTML (deberta-nli on email-routing: the
-    held-out check not met), and `--target 0.08` (claude-sonnet-4.5 on
-    email-routing-adversarial: met). A deliberate change of wording elsewhere updates them;
-    #201 must not."""
+    """The judgments the committed checkpoints recorded, replayed through the CLI (`Replay`):
+    no `--target` and `--target 0.08` as HTML (deberta-nli on email-routing: the held-out
+    check not met), and `--target 0.08` (claude-sonnet-4.5 on email-routing-adversarial:
+    met). #201 was checked against digests taken on the code before it (f889b87), on macOS
+    and Linux (#205). The #199 wording then changed these outputs on purpose, so the fixture
+    now holds the digests of #199's code on top of e3f7089; its PR (#207) shows that its
+    raw outputs differ from e3f7089's in that wording only. A later change of wording
+    updates them the same way, with the same proof; a change that should not alter the
+    output must leave them as they are."""
     golden = json.loads(GOLDEN.read_text())["cases"][case]
     assert _digests(case, tmp_path, monkeypatch, capsys) == golden
 

@@ -910,9 +910,10 @@ def check_quickstart(ck: Checker, md: str) -> None:
     line = simulated_line("0.10")
     if not shown or not line.startswith(shown.group(1)):
         ck.failures.append(f"quickstart: the printed line is not the start of a fresh run: {line!r}")
-    held = re.search(r"safe_automation@10%=not_met\(([\d.]+)% bound=([\d.]+)%\) "
-                     r"all_rows=([\d.]+)%", line)
-    want = ([f"so the {held.group(1)} % held out", f"held-out error rate ({held.group(2)} %)",
+    held = re.search(r"safe_automation@10%=not_met\(([\d.]+)% bound_95_heldout_approx="
+                     r"([\d.]+)%\) all_rows=([\d.]+)%", line)
+    want = ([f"so the {held.group(1)} % held out",
+             f"held-out error rate ({held.group(2)} %, approximate",
              f"`all_rows` ({held.group(3)} %)"] if held else ["?"])
     for figure in want:
         if figure not in md:

@@ -5,7 +5,7 @@
 
 _judge `llm:llama-3.3-70b` · model `llama-3.3-70b` · run 2026-09-20T19:02:12+00:00 · judge-audit 0.3.1_
 _dataset `examples/email-routing/labels.jsonl` · 200 rows · sha256 `c5b4c111290a…`_
-_regenerated 2026-10-14T13:25:02+00:00 from `docs/runs/arena/llama-3.3-70b/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.6.0rc2_
+_regenerated 2026-10-26T12:28:23+00:00 from `docs/runs/arena/llama-3.3-70b/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.6.0rc2_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic: seeded templates with item and number fills, not real mail; the label is the template's category by design; no human checked it; 100 % here is the floor a judge must clear, not evidence of production routing accuracy**
 
@@ -25,7 +25,7 @@ Segments (true label): none has 30 automated decisions, so none is ranked. 10 se
 | 1% | a target of 1 wrong in every 100 automated decisions | none: needs 628 decisions with a confidence to bound the error at 1%; has 200 | — | — |
 | 2% | a target of 1 wrong in every 50 automated decisions | none: needs 313 decisions with a confidence to bound the error at 2%; has 200 | — | — |
 | 5% (primary) | a target of 1 wrong in every 20 automated decisions | too few decisions to check on held-out data (each half needs 124, the larger has 110) | 0.8 | 100.0% (200 of 200 decisions; 0 wrong, 95% upper bound on the error rate: 1.5%) |
-| 10% | a target of 1 wrong in every 10 automated decisions | 100.0% (200 of 200 decisions; 0 wrong: 0.0%; 95% upper bound on the error rate: 1.5%; seeds 0–9: 98.0%–100.0%) | 0.8 | 100.0% (200 of 200 decisions; 0 wrong, 95% upper bound on the error rate: 1.5%) |
+| 10% | a target of 1 wrong in every 10 automated decisions | 100.0% (200 of 200 decisions; 0 wrong: 0.0%; one-sided 95% upper bound on the error rate, held-out halves, approximate: 1.5%; range across splits, seeds 0–9: 98.0%–100.0%) | 0.8 | 100.0% (200 of 200 decisions; 0 wrong, 95% upper bound on the error rate: 1.5%) |
 
 _Valid only for: judge `llm:llama-3.3-70b` · model `llama-3.3-70b` · data `examples/email-routing/labels.jsonl` · sha256 `c5b4c111290a…` · measured 2026-09-20T19:02:12+00:00. Review by 2026-12-19, and measure again as soon as any of these changes._
 
