@@ -38,9 +38,12 @@ For each question and each target risk r:
   enough automated decisions is named so an average cannot hide it.
 - **primary target**: the one target passed with `--target` (default 5 %), to be chosen
   before the run. A report regenerated from an archived checkpoint uses the default and says
-  it was not fixed in advance.
+  it was not fixed in advance. `--target` can be given up to MAX_DECLARED times (#201):
+  every declared row is flagged `primary`, the first one is `primary_target` and headlines.
   Each target is its own 1 − δ statement; the four default ones hold together with
-  probability at least 1 − 4δ (80 %). Reading several and keeping the best is neither.
+  probability at least 1 − 4δ (80 %), k declared ones with at least 1 − kδ (approximately,
+  for the held-out check). δ is not split, so no row changes when more are declared.
+  Reading several and keeping the best is neither.
 
 Statistical evidence, not a conformity assessment or a certification by a notified body.
 Deterministic, stdlib only.
@@ -57,6 +60,7 @@ from .metrics.selective import certify_threshold, risk_upper_bound, split_by_gro
 NAME = "safe automation rate"
 DEFAULT_TARGETS = (0.01, 0.02, 0.05, 0.10)
 PRIMARY_TARGET = 0.05
+MAX_DECLARED = 3      # targets a run may declare before it starts (#201)
 DELTA = 0.05
 START_ERRORS = 2      # the v0.5 plan's D3: start at the cut that bounds with 2 errors
 SEED = 0              # the out-of-sample split shown; recorded in every certificate
@@ -210,17 +214,29 @@ def automation_certificate(records: list[dict], groups: Sequence[Hashable] | Non
                            targets: Sequence[float] = DEFAULT_TARGETS, delta: float = DELTA,
                            start_errors: int = START_ERRORS, seed: int = SEED,
                            primary: float = PRIMARY_TARGET, run: dict | None = None,
-                           segment_by: str | None = None) -> dict:
+                           segment_by: str | None = None,
+                           declared: Sequence[float] | None = None) -> dict:
     """The safe automation rate of one run: per question, per target, the deploy threshold
     and the share of decisions it automates, with the out-of-sample check, the per-text
     check when texts repeat, and the segments. `records` are the runner's ({question,
     confidence, correct, segment?}); `groups` one text key per record (without it every
-    row is its own text); `primary` must be one of `targets`; `segment_by` names what the
-    records' `segment` holds. See the module docstring."""
+    row is its own text); `primary` must be one of `targets`; `declared` the targets fixed
+    before the run, `primary` first, at most MAX_DECLARED, each flagged `primary` (default:
+    `primary` alone); `segment_by` names what the records' `segment` holds. See the module
+    docstring."""
     if groups is not None and len(groups) != len(records):
         raise ValueError(f"{len(groups)} group keys for {len(records)} records")
-    if not any(math.isclose(primary, t) for t in targets):
-        raise ValueError(f"the primary target {primary:g} is not among the targets")
+    declared = (primary,) if declared is None else tuple(declared)
+    if len(declared) > MAX_DECLARED:
+        raise ValueError(f"at most {MAX_DECLARED} targets can be declared, got "
+                         f"{len(declared)}")
+    if not declared or not math.isclose(declared[0], primary):
+        raise ValueError(f"the primary target {primary:g} must be the first declared one")
+    for i, d in enumerate(declared):
+        if any(math.isclose(d, e) for e in declared[:i]):
+            raise ValueError(f"the target {d:g} is declared twice")
+        if not any(math.isclose(d, t) for t in targets):
+            raise ValueError(f"the declared target {d:g} is not among the targets")
     by_q: dict[str, list[int]] = {}
     for i, rec in enumerate(records):
         by_q.setdefault(str(rec["question"]), []).append(i)
@@ -251,7 +267,7 @@ def automation_certificate(records: list[dict], groups: Sequence[Hashable] | Non
             half = max(len(part) for part in split_by_group(keys, seed)) if keys else 0
             row = {
                 "target_risk": r, "plain": plain_reading(r),
-                "primary": math.isclose(r, primary),
+                "primary": any(math.isclose(r, d) for d in declared),
                 "threshold": cert["threshold"], "n": n, "automated": cert["covered"],
                 "coverage": round(cert["covered"] / n, 4) if n else 0.0,
                 "errors": cert["errors"], "risk_upper": _up(cert["risk_upper"]),

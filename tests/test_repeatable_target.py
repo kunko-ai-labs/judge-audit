@@ -1,0 +1,222 @@
+"""Repeatable `--target` (#201): up to three error targets declared before a run, each row
+flagged `primary`, the first one headlining (`primary_target`). δ is not split: every row
+is the same statement it was with one target. One `--target` leaves every output unchanged."""
+from __future__ import annotations
+
+import hashlib
+import importlib.util
+import json
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+from judge_audit import __version__, cli
+from judge_audit.certificate import MAX_DECLARED, automation_certificate
+from judge_audit.report import certificate_note
+
+ROOT = Path(__file__).resolve().parent.parent
+EXAMPLE = ROOT / "examples" / "email-routing-v2" / "labels.jsonl"
+SMALL = ROOT / "examples" / "task-routing" / "labels.jsonl"
+GOLDEN = Path(__file__).parent / "fixtures" / "single_target_golden.json"
+
+
+def desc(n: int) -> list[float]:
+    """n distinct confidences, highest first."""
+    return [1.0 - i / (2 * n) for i in range(n)]
+
+
+def _records(n: int = 200, wrong: int = 50) -> list[dict]:
+    """n decisions, highest confidence first, the `wrong` least confident wrong."""
+    return [{"question": "q", "confidence": c, "correct": i < n - wrong}
+            for i, c in enumerate(desc(n))]
+
+
+def _cli(*args, cwd):
+    return subprocess.run([sys.executable, "-m", "judge_audit.cli", *args],
+                          cwd=cwd, capture_output=True, text=True)
+
+
+# --- the certificate: declared rows flagged, nothing else moves ---------------------------
+
+
+def test_each_declared_target_is_flagged_and_its_row_is_unchanged():
+    """200 decisions, the 50 least confident wrong. At 10 % the walk stops at 159 decisions
+    with 9 errors (9.67 %; 10 in 160 is 10.37 %), declared or not: δ is not split."""
+    recs = _records()
+    one = automation_certificate(recs, primary=0.05)
+    three = automation_certificate(recs, primary=0.10, declared=(0.10, 0.02, 0.05))
+    assert three["primary_target"] == 0.10
+    assert three["targets"] == one["targets"] == [0.01, 0.02, 0.05, 0.10]
+    flags = {t["target_risk"]: t["primary"] for t in three["questions"][0]["targets"]}
+    assert flags == {0.01: False, 0.02: True, 0.05: True, 0.10: True}
+    for a, b in zip(one["questions"][0]["targets"], three["questions"][0]["targets"],
+                    strict=True):
+        assert {**a, "primary": None} == {**b, "primary": None}
+    ten = three["questions"][0]["targets"][-1]
+    assert (ten["automated"], ten["errors"]) == (159, 9)
+
+
+def test_one_declared_target_is_the_certificate_it_always_was():
+    recs = _records()
+    assert (automation_certificate(recs, primary=0.10, declared=(0.10,))
+            == automation_certificate(recs, primary=0.10))
+
+
+@pytest.mark.parametrize("primary, declared, why", [
+    (0.01, (0.01, 0.02, 0.05, 0.10), "at most 3"),
+    (0.05, (0.05, 0.05), "twice"),
+    (0.05, (0.02, 0.05), "first declared"),
+    (0.05, (0.05, 0.03), "not among the targets"),
+    (0.05, (), "first declared"),
+])
+def test_a_declaration_the_statement_cannot_carry_is_refused(primary, declared, why):
+    with pytest.raises(ValueError, match=why):
+        automation_certificate(_records(), primary=primary, declared=declared)
+
+
+def test_the_limit_is_three():
+    assert MAX_DECLARED == 3
+
+
+# --- the note: each on its own, together at 1 − k·δ --------------------------------------
+
+
+def _note(declared: tuple[float, ...]) -> str:
+    targets = sorted({0.01, 0.02, 0.05, 0.10, *declared})
+    return certificate_note(automation_certificate(_records(), targets=targets,
+                                                   primary=declared[0], declared=declared))
+
+
+def test_the_note_says_what_several_declared_targets_hold_together():
+    note = _note((0.08, 0.03, 0.05))
+    assert ("The declared targets are the ones passed with `--target` before the run (here "
+            "8%, 3% and 5%; 8% headlines this section): each holds at 95% on its own, and "
+            "the 3 together with probability at least 85% (approximately, for the held-out "
+            "check).") in note
+    assert "the 6 rows hold together with probability at least 70%" in note
+    assert "The primary target is the one passed" not in note
+
+
+def test_the_note_with_one_declared_target_is_the_one_it_always_was():
+    note = _note((0.05,))
+    assert ("The primary target is the one passed with `--target` (here 5%), to be chosen "
+            "before the run; every row is its own 95% statement") in note
+    assert "declared targets" not in note
+
+
+# --- the CLI ------------------------------------------------------------------------------
+
+
+def test_three_targets_are_declared_and_the_first_headlines(tmp_path):
+    r = _cli("run", str(SMALL), "--judge", "simulated", "--no-ci", "--judgments", "",
+             "--target", "0.2", "--target", "0.03", "--target", "0.15",
+             "--json", "r.json", "--out", "r.md", cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    c = json.loads((tmp_path / "r.json").read_text())["certificate"]
+    assert c["primary_target"] == 0.2
+    assert c["targets"] == [0.01, 0.02, 0.03, 0.05, 0.1, 0.15, 0.2]
+    rows = c["questions"][0]["targets"]
+    assert [t["target_risk"] for t in rows if t["primary"]] == [0.03, 0.15, 0.2]
+    assert "safe_automation@20%=" in r.stdout and "@3%" not in r.stdout
+    md = (tmp_path / "r.md").read_text()
+    assert "at a 20% error target" in md and "at a 3% error target" not in md
+    assert md.count(" (primary) |") == 3
+    assert "the 3 together with probability at least 85%" in md
+
+
+def test_a_fourth_target_is_refused_with_exit_2(labels_path, tmp_path):
+    four = [a for t in ("0.01", "0.02", "0.03", "0.04") for a in ("--target", t)]
+    for cmd in (["run", str(labels_path)],
+                ["check", str(labels_path), "--baseline", "none.json"]):
+        r = _cli(*cmd, "--judge", "simulated", *four, cwd=tmp_path)
+        assert r.returncode == 2, r.stderr
+        assert "--target is given at most 3 times, got 4" in r.stderr
+    assert not (tmp_path / "audit-result.json").exists()
+
+
+@pytest.mark.parametrize("args, says", [
+    (("--target", "0.05", "--target", "0.05"), "--target 0.05 is given twice"),
+    (("--target", "0.05", "--target", "1.5"), "--target must be between 0 and 1, got 1.5"),
+])
+def test_a_repeated_or_invalid_target_is_refused_with_exit_2(labels_path, tmp_path, args,
+                                                               says):
+    r = _cli("run", str(labels_path), "--judge", "simulated", *args, cwd=tmp_path)
+    assert r.returncode == 2 and says in r.stderr
+
+
+def test_the_pr_comment_headlines_the_first_declared_target(tmp_path):
+    recs = _records()
+    cert = automation_certificate(recs, primary=0.10, declared=(0.10, 0.05))
+    spec = importlib.util.spec_from_file_location("pr_comment_201",
+                                                  ROOT / "scripts" / "pr_comment.py")
+    mod = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(mod)
+    lines = mod._certificate({"certificate": cert})
+    assert any("at a 10% error target" in x for x in lines)
+    assert not any("at a 5% error target" in x for x in lines)
+
+
+# --- one --target: byte for byte what it was before #201 ----------------------------------
+
+CASES = {
+    "default": ("run", "--json", "r.json", "--out", "r.md"),
+    "met": ("run", "--target", "0.2", "--json", "r.json", "--out", "r.md"),
+    "html": ("run", "--target", "0.15", "--format", "html", "--json", "r.json",
+             "--out", "r.html"),
+}
+
+
+def _normalized(text: str) -> str:
+    """What may differ between two runs of the same code: the run's time and the review date
+    it sets, the package and Python versions, and the PNG charts (bytes depend on the
+    matplotlib build). Everything else must not move."""
+    text = re.sub(r"data:image/png;base64,[A-Za-z0-9+/=]+", "data:image/png;base64,PNG", text)
+    text = re.sub(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(\+00:00|Z)?", "TIME", text)
+    text = re.sub(r"\b\d{4}-\d{2}-\d{2}\b", "DATE", text)
+    text = re.sub(r'"python": "[^"]*"', '"python": "PY"', text)
+    return text.replace(__version__, "VERSION")
+
+
+def _digests(case: str, tmp_path: Path, monkeypatch, capsys) -> dict[str, str]:
+    """sha256 of every normalized output of `case`: the CLI line, the report, the result
+    JSON and the PR comment built from it."""
+    cmd, *rest = CASES[case]
+    work = tmp_path / case
+    work.mkdir()
+    monkeypatch.chdir(work)
+    cli.main([cmd, str(EXAMPLE), "--judge", "simulated", "--no-ci", "--judgments", "",
+              *rest])
+    out = {"line": capsys.readouterr().out}
+    for name in ("r.json", "r.md", "r.html"):
+        if (work / name).exists():
+            out[name] = (work / name).read_text(encoding="utf-8")
+    spec = importlib.util.spec_from_file_location("pr_comment_golden",
+                                                  ROOT / "scripts" / "pr_comment.py")
+    mod = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(mod)
+    out["pr_comment"] = mod.build(json.loads(out["r.json"]))
+    return {k: hashlib.sha256(_normalized(v).encode()).hexdigest() for k, v in out.items()}
+
+
+@pytest.mark.parametrize("case", sorted(CASES))
+def test_one_target_is_byte_identical_to_before(case, tmp_path, monkeypatch, capsys):
+    """The digests in the fixture were computed by this same test on the code before #201
+    (judge-audit f889b87): the simulated judge on examples/email-routing-v2, with no
+    `--target`, `--target 0.2` (the held-out check met) and `--target 0.15` as HTML (not
+    met). A deliberate change of wording elsewhere updates them; #201 must not."""
+    golden = json.loads(GOLDEN.read_text())["cases"][case]
+    assert _digests(case, tmp_path, monkeypatch, capsys) == golden
+
+
+def test_the_unchanged_outputs_are_the_ones_a_reader_sees():
+    """The fixture covers every surface: the CLI line, the report, the JSON, the PR
+    comment."""
+    cases = json.loads(GOLDEN.read_text())["cases"]
+    assert set(cases) == set(CASES)
+    assert set(cases["default"]) == {"line", "r.json", "r.md", "pr_comment"}
+    assert set(cases["html"]) == {"line", "r.json", "r.html", "pr_comment"}

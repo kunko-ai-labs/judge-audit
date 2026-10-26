@@ -1,0 +1,23 @@
+{
+  "about": "sha256 of the normalized outputs of tests/test_repeatable_target.py CASES, computed on the code before #201 (f889b87); see test_one_target_is_byte_identical_to_before",
+  "cases": {
+    "default": {
+      "line": "80ab03c70602df90d113c7a2b6ad155fb475f2e8d447259d02cdfbc853bf1404",
+      "pr_comment": "4b68f26f450176e236a97a115fca22aa90c3e37c4907cfd7b3b67f0b179538e3",
+      "r.json": "c83b8c929d20784900c74f18bbedcf3d8ac131bde6f5ef856737799c15773110",
+      "r.md": "d8d3e77597275d7f81c1893ee77769a846605544ec18a3a5b6ecb48514237429"
+    },
+    "html": {
+      "line": "829ce0de691b2c6ae6163d1b01f5dc5bd5888553f7416ea50d3a4b8a5cf622a2",
+      "pr_comment": "2ea67f95588127c8da4676024660158d9a64e841bc2c99195001c38d7f47c8f9",
+      "r.html": "b19a11cb621ed9f0327cfc3cd9c1ec167dc77f37c5062d541aa9775406d11c96",
+      "r.json": "0236b826ee42b649b3198fbb704e2d1cddfb7bde2e8e1d35f48be329546523ab"
+    },
+    "met": {
+      "line": "59f81aa41db51260eb929f28a7769d2647e187bdd205d991f7d117d7260d77e3",
+      "pr_comment": "01f03bfdc71911824e4acd86966ee27d3a222786d2512062d5f670cd720f874c",
+      "r.json": "2b210d0591e16a09f61b7b0b7f025b3870c7c5f195a09447364e88d9ff2dd3ef",
+      "r.md": "6ff99f5db25a0023b0b76de5ac09499e701608259bf4929de16e929377e701e0"
+    }
+  }
+}
