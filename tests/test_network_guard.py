@@ -7,7 +7,10 @@ be in `REVIEWED` for that file, with the reason it is there; a primitive that is
 entry that no longer matches the code, fails. The scan finds network use written explicitly in
 the source. It does not find code that hides the call: `eval`, `exec` or `compile`, `ctypes`,
 `runpy`, a lookup in `vars()`, `__dict__` or `sys.modules`, `operator.attrgetter`, a `getattr`
-whose name is built at run time, or a function defined elsewhere that returns the opener.
+whose name is built at run time, or a function defined elsewhere that returns the opener; nor,
+for the redirect refusal, a change to `urllib.request.HTTPRedirectHandler`, the class it
+inherits from (any module that imports `urllib.request` is itself a reviewed primitive), or to
+the handler instance reached through anything but `OPENER.handlers`.
 Review catches those; the runtime guard below still refuses what they would send.
 A request that carries a key is sent only by `OPENER` (no redirects), from a module that
 builds its URL with `checked_endpoint`.
@@ -75,14 +78,17 @@ REQUEST = "builds the urllib Request that OPENER sends"
 # `OPENER binding`: any other use of a name or attribute called OPENER than reading an
 # attribute of it (assigned or deleted, passed as an argument or a default, iterated, entered
 # with `with`, returned or held in a value such as a tuple), OPENER imported under another
-# name, or looked up with `getattr` and the constant name.
+# name, or looked up with `getattr` and the constant name; or `_RefuseRedirects`: any use of
+# the redirect refusal OPENER is built with (a name, an attribute, an import, a class of that
+# name, or the name as a string constant).
 # Out of reach by design: the `custom` provider of the `llm` judge loads a user's own module
 # (LLM_PROVIDER_MODULE, llm.py) that this scan cannot read; the runtime guard still applies.
 REVIEWED: dict[str, dict[str, str]] = {
     "src/judge_audit/judges/secrets.py": {
         "build_opener": "builds OPENER itself, the one opener that refuses redirects",
         "import urllib.request": "the redirect handler OPENER is built with",
-        "OPENER binding": "the one place OPENER is defined"},
+        "OPENER binding": "the one place OPENER is defined",
+        "_RefuseRedirects": "defines the redirect refusal and builds OPENER with it"},
     "src/judge_audit/judges/llm.py": {
         "OPENER.open": KEYED,
         "import http.client": EXCEPTIONS_ONLY,
@@ -144,6 +150,9 @@ REVIEWED: dict[str, dict[str, str]] = {
 
 def _network_module(name: str) -> str | None:
     return next((m for m in NETWORK_MODULES if name == m or name.startswith(m + ".")), None)
+
+
+REFUSAL = "_RefuseRedirects"   # secrets.py: the handler that makes OPENER refuse redirects
 
 
 def _ends_in_opener(node: ast.AST) -> bool:
@@ -233,6 +242,18 @@ def primitives(source: str) -> dict[str, list[int]]:
     for node in ast.walk(tree):
         if _ends_in_opener(node) and id(node) not in read_from:
             add("OPENER binding", node)
+
+    # The redirect refusal OPENER is built with: any use of `_RefuseRedirects` (a name, an
+    # attribute, an import, a class of that name, the name as a string for getattr, setattr
+    # or attrgetter) can weaken it for every keyed request, so each one is a primitive (#208).
+    for node in ast.walk(tree):
+        if ((isinstance(node, ast.Name) and node.id == REFUSAL)
+                or (isinstance(node, ast.Attribute) and node.attr == REFUSAL)
+                or (isinstance(node, ast.ClassDef) and node.name == REFUSAL)
+                or (isinstance(node, ast.Constant) and node.value == REFUSAL)
+                or (isinstance(node, ast.ImportFrom)
+                    and any(a.name == REFUSAL for a in node.names))):
+            add(REFUSAL, node)
     return found
 
 
@@ -356,6 +377,28 @@ PLANTED = [
     ("import _socket", "import _socket"),
     ("import posix\nposix.system('curl')", "import posix"),
     ("import nt", "import nt"),
+    # the redirect refusal itself (#208): any use of the class but its definition and the
+    # opener built with it, in secrets.py, can weaken it for every keyed request
+    ("from judge_audit.judges import secrets\n"
+     "secrets._RefuseRedirects.redirect_request = follow", "_RefuseRedirects"),
+    ("from judge_audit.judges.secrets import _RefuseRedirects\n"
+     "_RefuseRedirects.redirect_request = follow", "_RefuseRedirects"),
+    ("from .secrets import _RefuseRedirects as R\nR.redirect_request = follow",
+     "_RefuseRedirects"),
+    ("from judge_audit.judges import secrets\nsecrets._RefuseRedirects = object",
+     "_RefuseRedirects"),
+    ("from judge_audit.judges import secrets\ndel secrets._RefuseRedirects.redirect_request",
+     "_RefuseRedirects"),
+    ("from judge_audit.judges import secrets\n"
+     "setattr(secrets._RefuseRedirects, 'redirect_request', follow)", "_RefuseRedirects"),
+    ("from judge_audit.judges import secrets\n"
+     "setattr(secrets, '_RefuseRedirects', object)", "_RefuseRedirects"),
+    ("import operator\nfrom judge_audit.judges import secrets\n"
+     "operator.attrgetter('_RefuseRedirects')(secrets).redirect_request = follow",
+     "_RefuseRedirects"),
+    ("class _RefuseRedirects:\n    pass", "_RefuseRedirects"),
+    ("from judge_audit.judges import secrets\nh = secrets._RefuseRedirects()",
+     "_RefuseRedirects"),
 ]
 
 
@@ -363,6 +406,20 @@ PLANTED = [
                          ids=[f"{p}-{i}" for i, (_, p) in enumerate(PLANTED)])
 def test_each_way_out_is_found_when_planted(source, primitive):
     assert primitive in primitives(source), primitives(source)
+
+
+def test_the_redirect_refusal_is_used_only_where_it_is_defined():
+    """`_RefuseRedirects` appears in secrets.py twice, its definition and the opener built
+    with it, and nowhere else in the scanned code (#208)."""
+    src = (ROOT / "src/judge_audit/judges/secrets.py").read_text(encoding="utf-8")
+    lines = primitives(src)["_RefuseRedirects"]
+    text = src.splitlines()
+    assert [text[n - 1].split("(")[0] for n in lines] == [
+        "class _RefuseRedirects", "OPENER = urllib.request.build_opener"]
+    for path in scanned_files():
+        rel = path.relative_to(ROOT).as_posix()
+        if rel != "src/judge_audit/judges/secrets.py":
+            assert "_RefuseRedirects" not in primitives(path.read_text(encoding="utf-8")), rel
 
 
 @pytest.mark.parametrize("source", [
