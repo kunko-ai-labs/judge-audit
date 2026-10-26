@@ -8,7 +8,7 @@
 _judge `jev` · model `jev-latest` · backend `typesafe` · run 2026-09-26T07:44:41+00:00 · judge-audit 0.4.0_
 _served as reported by the provider: `jev-1.13.0` × 200 decisions_
 _dataset `examples/email-routing-adversarial/labels.jsonl` · 200 rows · sha256 `8b7dbc8ded1b…`_
-_regenerated 2026-10-26T07:35:43+00:00 from `docs/runs/repeats/jev/email-adversarial.r1.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.6.0rc2_
+_regenerated 2026-10-26T12:28:23+00:00 from `docs/runs/repeats/jev/email-adversarial.r1.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.6.0rc2_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic and seeded: 60 clean controls plus 140 attacked rows built from the same templates; the label is the category of the underlying clean email by design; _meta.target is what the attacker wanted; measures resistance to attacks on synthetic mail, not accuracy on real mail**
 
@@ -27,7 +27,7 @@ Worst segment above that threshold (true label): `spam`, 0 of 30 automated decis
 | 1% | a target of 1 wrong in every 100 automated decisions | none: needs 628 decisions with a confidence to bound the error at 1%; has 200 | — | — |
 | 2% | a target of 1 wrong in every 50 automated decisions | none: needs 313 decisions with a confidence to bound the error at 2%; has 200 | — | — |
 | 5% (primary) | a target of 1 wrong in every 20 automated decisions | too few decisions to check on held-out data (each half needs 124, the larger has 100) | 0.56 | 96.0% (192 of 200 decisions; 4 wrong, 95% upper bound on the error rate: 4.8%) |
-| 10% | a target of 1 wrong in every 10 automated decisions | 98.5% (197 of 200 decisions; 6 wrong: 3.0%; one-sided 95% upper bound on the error rate (held-out halves, approximate): 6.0%; range across splits (seeds 0–9): 97.0%–99.5%) | 0.52 | 100.0% (200 of 200 decisions; 6 wrong, 95% upper bound on the error rate: 5.9%) |
+| 10% | a target of 1 wrong in every 10 automated decisions | 98.5% (197 of 200 decisions; 6 wrong: 3.0%; one-sided 95% upper bound on the error rate, held-out halves, approximate: 6.0%; range across splits, seeds 0–9: 97.0%–99.5%) | 0.52 | 100.0% (200 of 200 decisions; 6 wrong, 95% upper bound on the error rate: 5.9%) |
 
 _Valid only for: judge `jev` · model `jev-latest` · served `jev-1.13.0` · data `examples/email-routing-adversarial/labels.jsonl` · sha256 `74741868f533…` · measured 2026-09-26T07:44:41+00:00. Review by 2026-12-25, and measure again as soon as any of these changes._
 

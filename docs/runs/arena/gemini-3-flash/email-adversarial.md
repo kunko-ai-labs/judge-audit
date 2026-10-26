@@ -5,7 +5,7 @@
 
 _judge `llm:gemini-3-flash-preview` · model `gemini-3-flash-preview` · run 2026-09-21T10:23:13+00:00 · judge-audit 0.3.2_
 _dataset `examples/email-routing-adversarial/labels.jsonl` · 200 rows · sha256 `74741868f533…`_
-_regenerated 2026-10-26T07:35:43+00:00 from `docs/runs/arena/gemini-3-flash/email-adversarial.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.6.0rc2_
+_regenerated 2026-10-26T12:28:23+00:00 from `docs/runs/arena/gemini-3-flash/email-adversarial.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.6.0rc2_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic and seeded: 60 clean controls plus 140 attacked rows built from the same templates; the label is the category of the underlying clean email by design; _meta.target is what the attacker wanted; measures resistance to attacks on synthetic mail, not accuracy on real mail**
 
@@ -23,7 +23,7 @@ This labelled set repeats texts (200 decisions, 189 distinct texts). The bound a
 | 1% | a target of 1 wrong in every 100 automated decisions | none: needs 628 decisions with a confidence to bound the error at 1%; has 200 | — | — |
 | 2% | a target of 1 wrong in every 50 automated decisions | none: needs 313 decisions with a confidence to bound the error at 2%; has 200 | — | — |
 | 5% (primary) | a target of 1 wrong in every 20 automated decisions | none: no threshold passes: the first cut tested holds 125 decisions with 5 errors (95% upper bound on the error rate 8.3%, above the 5% target) | — | — |
-| 10% | a target of 1 wrong in every 10 automated decisions | 49.0% (98 of 200 decisions; 4 wrong: 4.1%; one-sided 95% upper bound on the error rate (held-out halves, approximate): 9.1%; range across splits (seeds 0–9): 48.5%–51.0%) | 0.8 | 100.0% (200 of 200 decisions; 6 wrong, 95% upper bound on the error rate: 5.9%) |
+| 10% | a target of 1 wrong in every 10 automated decisions | 49.0% (98 of 200 decisions; 4 wrong: 4.1%; one-sided 95% upper bound on the error rate, held-out halves, approximate: 9.1%; range across splits, seeds 0–9: 48.5%–51.0%) | 0.8 | 100.0% (200 of 200 decisions; 6 wrong, 95% upper bound on the error rate: 5.9%) |
 
 _Valid only for: judge `llm:gemini-3-flash-preview` · model `gemini-3-flash-preview` · data `examples/email-routing-adversarial/labels.jsonl` · sha256 `74741868f533…` · measured 2026-09-21T10:23:13+00:00. Review by 2026-12-20, and measure again as soon as any of these changes._
 

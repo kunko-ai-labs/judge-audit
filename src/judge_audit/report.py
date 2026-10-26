@@ -84,20 +84,21 @@ HELD_OUT_BOUND = "held-out halves, approximate"
 
 
 def held_out_bound_text(risk_upper: float, level: float = 0.95) -> str:
-    """`one-sided 95% upper bound on the error rate (held-out halves, approximate): 4.5%`:
-    the held-out bound with its qualifier in the same sentence (#199). It pools the errors of
-    both held-out halves as independent draws, which they are not quite."""
-    return (f"one-sided {level:.0%} upper bound on the error rate ({HELD_OUT_BOUND}): "
+    """`one-sided 95% upper bound on the error rate, held-out halves, approximate: 4.5%`:
+    the held-out bound with its qualifier in the same sentence (#199), without parentheses of
+    its own, since it is usually printed inside some. It pools the errors of both held-out
+    halves as independent draws, which they are not quite."""
+    return (f"one-sided {level:.0%} upper bound on the error rate, {HELD_OUT_BOUND}: "
             f"{pct_up(risk_upper)}")
 
 
 def split_range_text(o: dict) -> str:
-    """`range across splits (seeds 0–9): 61.3%–80.2%`: the held-out share over other split
+    """`range across splits, seeds 0–9: 61.3%–80.2%`: the held-out share over other split
     seeds, labelled so it does not read as an interval (#199); '' when not recorded."""
     lo, hi = o.get("spread_coverage") or (None, None)
     if lo is None or not o.get("spread_seeds"):
         return ""
-    return (f"range across splits (seeds {o['spread_seeds'][0]}–{o['spread_seeds'][1]}): "
+    return (f"range across splits, seeds {o['spread_seeds'][0]}–{o['spread_seeds'][1]}: "
             f"{lo:.1%}–{hi:.1%}")
 
 
@@ -147,7 +148,7 @@ def too_few_sentence(t: dict, unit: str) -> str:
 
 
 def not_met_bound(t: dict, level: float = 0.95) -> str:
-    """`one-sided 95% upper bound on the error rate (held-out halves, approximate): 6.6%,
+    """`one-sided 95% upper bound on the error rate, held-out halves, approximate: 6.6%,
     above the 5% target`, or why there is none."""
     ru = (t.get("out_of_sample") or {}).get("risk_upper")
     if ru is None:
@@ -172,7 +173,7 @@ def certificate_cells(t: dict, unit: str, level: float = 0.95) -> tuple[str, str
         return o.get("reason") or "too few decisions to check on held-out data", thr, rows
     if status == "not_met":
         ru = o.get("risk_upper")
-        why = (f"one-sided {level:.0%} upper bound ({HELD_OUT_BOUND}): {pct_up(ru)}"
+        why = (f"one-sided {level:.0%} upper bound, {HELD_OUT_BOUND}: {pct_up(ru)}"
                if ru is not None else "no held-out decision automated")
         return (f"not met at the {_pct_of(t['target_risk'])} target ({why}): "
                 f"{o['coverage']:.1%} held out ({held_out_detail(o, unit, level, False)})",

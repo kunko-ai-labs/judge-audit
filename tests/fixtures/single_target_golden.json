@@ -1,23 +1,23 @@
 {
-  "about": "sha256 of the normalized outputs of tests/test_repeatable_target.py CASES (committed checkpoints replayed through the CLI), computed on the code before #201 (f889b87) on macOS and Linux; see test_one_target_is_byte_identical_to_before",
+  "about": "sha256 of the normalized outputs of tests/test_repeatable_target.py CASES (committed checkpoints replayed through the CLI). Computed on the #199 code on top of e3f7089: #199 rewords the held-out bound and the split range, so the digests #205 took before #201 (f889b87) no longer apply; #207 shows that the raw outputs differ from e3f7089 in that wording only. See test_one_target_is_byte_identical_to_before.",
   "cases": {
     "default": {
       "line": "aca8a1f93e910b4da8b7ff2836783d5111c35d681232eb497528a9e9a1da8b73",
-      "pr_comment": "46058c791842ed16180baab6578e180df477df32288084e2c91bea59ec5a4353",
+      "pr_comment": "944c9a32b4a725d652d1c6bf756bb8a803d256ad007bb8c22cec5f8012f52ab3",
       "r.json": "1429db21b26240f68d21397970fcd2b7e70a75a7b516c0fc306e79dbd392b2eb",
-      "r.md": "b769dd3179a2a3be64759f0405f9c7e29df344e4b36dd05563b741e68e4c47be"
+      "r.md": "ac4d6f393b6a100af944b607540836dc70f629beda1e7771691b0d5ccb50a552"
     },
     "html": {
-      "line": "6b1e5802e160d32a494a5234e49eba82ca9a98af20c4c33ed8e94c3eb9077f0b",
-      "pr_comment": "ea21626f4079bf59a9e254cd005a1fd2c645fab235df61df23f454b2933adfca",
-      "r.html": "be77169a2b93900218c124eb402eee67bd08e1c2b0eb2da32cc971711e1e7cd1",
+      "line": "f2f6d1e80a214f7f9cc245fc2a937ddf5551f926affca371cfdae3839d2496e0",
+      "pr_comment": "d601e0a2d02e19b180b472633522e97d6e2c673faf913efda7f2e5a50820abe2",
+      "r.html": "a614502c0b649042bceaf45191637ce6a7e504c3e0c7fff6a5f7abaf3bf894be",
       "r.json": "e9c672f082d0d454d6fd4c3442318ae9e8288a45c5fb05f6ddbb7074a9b9abed"
     },
     "met": {
-      "line": "5c0feac4cb902cc405c071535bd26deb17f7a60760014d7ee42ec6629ac3f826",
-      "pr_comment": "e6c93a76362327d50e89c2d80684f89525f525b21c881e41d129212f52a1e319",
+      "line": "933e78136f538ee9da8e467f41f6f0d6221af03b6ca6292cf6a937767bacf679",
+      "pr_comment": "82d86a084aca6e085a766c874c065d6c41049a0fcb45b0e6b4c2e70777f6f574",
       "r.json": "8ef15597ff2f7611876b88fa672880ed1137d72ef4078048ef1c5a0235cb0937",
-      "r.md": "a5d539de0e46d39612e71e36ecddd7e7d1acbd4d1b5d0bbbfdac9def8c27fdb2"
+      "r.md": "123723ac51f8387de023c00446ba286e526d68c450ab4bdff6def78b1d08eb85"
     }
   }
 }

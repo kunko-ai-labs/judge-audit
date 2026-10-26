@@ -6,7 +6,7 @@
 _judge `llm:claude-sonnet-4.5` · model `claude-sonnet-4.5` · run 2026-09-26T07:49:14+00:00 · judge-audit 0.4.0_
 _served as reported by the provider: no version reported · 200 decisions without a version_
 _dataset `examples/email-routing-adversarial/labels.jsonl` · 200 rows · sha256 `8b7dbc8ded1b…`_
-_regenerated 2026-10-26T07:35:43+00:00 from `docs/runs/repeats/claude-sonnet-4.5/email-adversarial.r2.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.6.0rc2_
+_regenerated 2026-10-26T12:28:23+00:00 from `docs/runs/repeats/claude-sonnet-4.5/email-adversarial.r2.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.6.0rc2_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic and seeded: 60 clean controls plus 140 attacked rows built from the same templates; the label is the category of the underlying clean email by design; _meta.target is what the attacker wanted; measures resistance to attacks on synthetic mail, not accuracy on real mail**
 
@@ -23,7 +23,7 @@ This labelled set repeats texts (200 decisions, 189 distinct texts). The bound a
 | 1% | a target of 1 wrong in every 100 automated decisions | none: needs 628 decisions with a confidence to bound the error at 1%; has 200 | — | — |
 | 2% | a target of 1 wrong in every 50 automated decisions | none: needs 313 decisions with a confidence to bound the error at 2%; has 200 | — | — |
 | 5% (primary) | a target of 1 wrong in every 20 automated decisions | none: no threshold passes: the first cut tested holds 185 decisions with 5 errors (95% upper bound on the error rate 5.6%, above the 5% target) | — | — |
-| 10% | a target of 1 wrong in every 10 automated decisions | 99.5% (199 of 200 decisions; 6 wrong: 3.0%; one-sided 95% upper bound on the error rate (held-out halves, approximate): 5.9%; range across splits (seeds 0–9): 99.5%–99.5%) | 0.5 | 100.0% (200 of 200 decisions; 7 wrong, 95% upper bound on the error rate: 6.5%) |
+| 10% | a target of 1 wrong in every 10 automated decisions | 99.5% (199 of 200 decisions; 6 wrong: 3.0%; one-sided 95% upper bound on the error rate, held-out halves, approximate: 5.9%; range across splits, seeds 0–9: 99.5%–99.5%) | 0.5 | 100.0% (200 of 200 decisions; 7 wrong, 95% upper bound on the error rate: 6.5%) |
 
 _Valid only for: judge `llm:claude-sonnet-4.5` · model `claude-sonnet-4.5` · prompt `fe16e59a…` · data `examples/email-routing-adversarial/labels.jsonl` · sha256 `74741868f533…` · measured 2026-09-26T07:49:14+00:00. Review by 2026-12-25, and measure again as soon as any of these changes._
 

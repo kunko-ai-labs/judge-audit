@@ -524,8 +524,8 @@ def test_the_pr_comment_opens_with_the_safe_automation_rate():
             "100.") in md
     assert "on all labelled decisions it automates 92.0% (184 of 200 decisions" in md
     assert ("| 10% | a target of 1 wrong in every 10 automated decisions | 94.0% (188 of 200 "
-            "decisions; 8 wrong: 4.3%; one-sided 95% upper bound on the error rate (held-out "
-            "halves, approximate): 7.6%; range across splits (seeds 0–9): 93.5%–95.0%) | "
+            "decisions; 8 wrong: 4.3%; one-sided 95% upper bound on the error rate, held-out "
+            "halves, approximate: 7.6%; range across splits, seeds 0–9: 93.5%–95.0%) | "
             "0.5225 | 96.0% (192 of 200 decisions") in md
     assert "none: needs 628 decisions" in md
     assert "review by 2026-12-30" in md and "not a conformity assessment" in md

@@ -94,8 +94,8 @@ def _bound(x: object, level: float) -> str:
 def _held_out_bound(ru: object, level: float) -> str:
     """The held-out bound with its qualifier beside it (mirrors
     `report.held_out_bound_text`, #199)."""
-    return (f"one-sided {level:.0%} upper bound on the error rate (held-out halves, "
-            f"approximate): {_up(ru)}")
+    return (f"one-sided {level:.0%} upper bound on the error rate, held-out halves, "
+            f"approximate: {_up(ru)}")
 
 
 def _threshold(t: object) -> str:
@@ -136,10 +136,9 @@ def _held_out(o: dict, unit: str, level: float, bound: bool = True) -> str:
         parts.append(_held_out_bound(o["risk_upper"], level))
     spread, seeds = o.get("spread_coverage") or [], o.get("spread_seeds") or []
     if len(spread) == 2 and len(seeds) == 2:
-        parts.append(f"range across splits (seeds {_md(seeds[0])}–{_md(seeds[1])}): "
+        parts.append(f"range across splits, seeds {_md(seeds[0])}–{_md(seeds[1])}: "
                      f"{float(spread[0]):.1%}–{float(spread[1]):.1%}")
     return "; ".join(parts)
-
 
 
 def _not_met(t: dict, level: float) -> str:
@@ -172,7 +171,7 @@ def _cells(t: dict, unit: str, level: float = 0.95) -> tuple[str, str, str]:
         held = _md(o.get("reason") or "too few decisions to check on held-out data")
     elif status == "not_met":
         ru = o.get("risk_upper")
-        why = (f"one-sided {level:.0%} upper bound (held-out halves, approximate): {_up(ru)}"
+        why = (f"one-sided {level:.0%} upper bound, held-out halves, approximate: {_up(ru)}"
                if ru is not None else "no held-out decision automated")
         held = (f"not met at the {_pct(float(t['target_risk']))} target ({why}): "
                 f"{float(o.get('coverage') or 0):.1%} held out "
