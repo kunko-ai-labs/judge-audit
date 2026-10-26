@@ -194,7 +194,12 @@ def _certificate(result: dict) -> list[str]:
         if len(questions) > 1:
             lines += [f"**`{_md(q.get('question', '?'))}`**", ""]
         targets = q.get("targets", [])
-        p = next((t for t in targets if t.get("primary")), targets[0] if targets else None)
+        # every declared target is flagged primary (#201); the first declared one headlines
+        flagged = [t for t in targets if t.get("primary")]
+        first = c.get("primary_target")
+        p = next((t for t in flagged if first is not None
+                  and abs(float(t["target_risk"]) - float(first)) < 1e-12),
+                 flagged[0] if flagged else targets[0] if targets else None)
         if p is not None:
             held, thr, rows = _cells(p, unit, level)
             head = (f"Validated on held-out {unit}s, at a {_pct(float(p['target_risk']))} "
@@ -245,7 +250,10 @@ def _certificate(result: dict) -> list[str]:
         lines += [TABLE_HEADER, TABLE_RULE]
         for t in targets:
             held, thr, rows = _cells(t, unit, level)
-            mark = " (primary)" if t.get("primary") else ""
+            # the headlining row is primary; with several declared, the others are declared
+            several = len(c.get("declared_targets") or []) > 1
+            mark = ("" if not t.get("primary")
+                    else " (declared)" if several and t is not p else " (primary)")
             plain = _md(str(t.get("plain", "")))
             lines.append(f"| {_pct(float(t['target_risk']))}{mark} | {plain} | {held} | "
                          f"{thr} | {rows} |")

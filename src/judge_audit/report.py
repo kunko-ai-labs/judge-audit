@@ -255,15 +255,26 @@ def certificate_note(c: dict, regenerated: bool = False) -> str:
     regen = (" (this report was regenerated from an archived checkpoint with the "
              "default target: the target was not fixed in advance)"
              if regenerated or (c.get("scope") or {}).get("regenerated") else "")
+    declared = _declared(c) if c.get("questions") else []
+    if len(declared) > 1:
+        named = [_pct_of(t) for t in declared]
+        which = (f"The declared targets are the ones passed with `--target` before the run "
+                 f"(here {', '.join(named[:-1])} and {named[-1]}; {named[0]} headlines this "
+                 f"section): each holds at {level:.0%} on its own, and the {len(declared)} "
+                 "together with probability at least "
+                 f"{max(0.0, 1 - len(declared) * c['delta']):.0%} (approximately, for the "
+                 f"held-out check){regen}. Every row")
+    else:
+        which = ("The primary target is the one passed with "
+                 f"`--target` (here {_pct_of(c['primary_target'])}), to be chosen before the "
+                 f"run{regen}; every row")
     return ("The threshold is the lowest cut whose exact one-sided "
             f"{level:.0%} upper bound on the error rate stays within the target. The bound "
             "speaks only for traffic drawn like these labelled "
             "decisions (a random sample of it, each decision an independent draw), judged by "
             "the judge and prompt above, with the labels taken as right. Label errors cut "
             "both ways: a wrong label the judge disagrees with counts as a judge error, one "
-            "it agrees with hides an error. The primary target is the one passed with "
-            f"`--target` (here {_pct_of(c['primary_target'])}), to be chosen before the run"
-            f"{regen}; every row is its own "
+            f"it agrees with hides an error. {which} is its own "
             f"{level:.0%} statement{joint}; keeping the best-looking row after reading them is "
             "neither. The held-out check chooses the threshold on half of the labelled "
             f"decisions (split by distinct text, seed {c['seed']}, range over other seeds) and "
@@ -279,8 +290,37 @@ def certificate_note(c: dict, regenerated: bool = False) -> str:
             f"{c.get('disclaimer', '')}").rstrip()
 
 
-def _primary(q: dict) -> dict:
-    return next((t for t in q["targets"] if t.get("primary")), q["targets"][0])
+def _primary(q: dict, c: dict) -> dict:
+    """The row that headlines: the first declared target (`primary_target`). Every declared
+    row is flagged `primary` (#201), so the flag alone does not say which one leads."""
+    first = c.get("primary_target")
+    flagged = [t for t in q["targets"] if t.get("primary")]
+    return next((t for t in flagged
+                 if first is not None and math.isclose(t["target_risk"], first)),
+                flagged[0] if flagged else q["targets"][0])
+
+
+def _mark(t: dict, c: dict) -> str:
+    """A row's mark in the table: ` (primary)` on the headlining target; with several
+    declared, ` (declared)` on the others (#201); none on a context row."""
+    if not t.get("primary"):
+        return ""
+    first = c.get("primary_target")
+    if (len(c.get("declared_targets") or []) > 1 and first is not None
+            and not math.isclose(t["target_risk"], first)):
+        return " (declared)"
+    return " (primary)"
+
+
+def _declared(c: dict) -> list[float]:
+    """The targets declared before the run, in the order given (#201)."""
+    if c.get("declared_targets"):
+        return list(c["declared_targets"])
+    q = c["questions"][0]
+    first = c.get("primary_target")
+    rest = [t["target_risk"] for t in q["targets"] if t.get("primary")
+            and not (first is not None and math.isclose(t["target_risk"], first))]
+    return ([first] if first is not None else []) + rest
 
 
 def certificate_lines(d: dict) -> list[str]:
@@ -295,7 +335,7 @@ def certificate_lines(d: dict) -> list[str]:
     for q in c["questions"]:
         if several:
             lines += [f"### `{inline(q['question'])}`", ""]
-        p = _primary(q)
+        p = _primary(q, c)
         lines += [certificate_headline(p, c["unit"], level), ""]
         for extra in (per_text_line(p, q, level), worst_segment_line(p, c, level)):
             if extra:
@@ -303,7 +343,7 @@ def certificate_lines(d: dict) -> list[str]:
         lines += [TABLE_HEADER, TABLE_RULE]
         for t in q["targets"]:
             held_out, thr, rows = certificate_cells(t, c["unit"], level)
-            mark = " (primary)" if t.get("primary") else ""
+            mark = _mark(t, c)
             lines.append(f"| {_pct_of(t['target_risk'])}{mark} | {t['plain']} | {held_out} | "
                          f"{thr} | {rows} |")
         lines.append("")
@@ -331,14 +371,14 @@ def certificate_html(d: dict) -> str:
     for q in c["questions"]:
         if len(c["questions"]) > 1:
             out.append(f"<h3><code>{html.escape(str(q['question']))}</code></h3>")
-        p = _primary(q)
+        p = _primary(q, c)
         out.append(f"<p>{text(certificate_headline(p, c['unit'], level))}</p>")
         for extra in (per_text_line(p, q, level), worst_segment_line(p, c, level)):
             if extra:
                 out.append(f"<p>{text(extra)}</p>")
         rows = "".join(
             "<tr>" + "".join(f"<td>{html.escape(x)}</td>" for x in (
-                _pct_of(t["target_risk"]) + (" (primary)" if t.get("primary") else ""),
+                _pct_of(t["target_risk"]) + _mark(t, c),
                 t["plain"], *certificate_cells(t, c["unit"], level))) + "</tr>"
             for t in q["targets"])
         out.append("<table><tr><th scope='col'>Error target</th>"
@@ -363,7 +403,7 @@ def certificate_summary(d: dict) -> str:
         return ""
     parts = []
     for q in c["questions"]:
-        p = _primary(q)
+        p = _primary(q, c)
         name = f"[{q['question']}]" if len(c["questions"]) > 1 else ""
         key = f"safe_automation{name}@{_pct_of(p['target_risk'])}="
         if p["threshold"] is None:
@@ -734,7 +774,7 @@ def _key_figures(d: dict, acc_ci: str, ece_ci: str) -> str:
     c = d.get("certificate") or {}
     if c.get("questions"):
         q = c["questions"][0]
-        t = _primary(q)
+        t = _primary(q, c)
         level = 1 - c.get("delta", 0.05)
         label = (f"Validated on held-out {html.escape(str(c['unit']))}s · "
                  f"{html.escape(_pct_of(t['target_risk']))} error target")
