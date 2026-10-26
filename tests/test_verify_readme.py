@@ -275,9 +275,9 @@ def test_rewording_the_robustness_sentence_fails_instead_of_skipping():
         ("the held-out slice was not run", "the held-out slice was run"),
         # the quickstart's simulated line and its figure in the prose
         ("all_rows=65.5% …", "all_rows=66.5% …"),
-        ("bound=16.6%) all_rows", "bound=16.5%) all_rows"),
+        ("approx=16.6%) all_rows", "approx=16.5%) all_rows"),
         ("so the 75.0 % held out", "so the 74.0 % held out"),
-        ("error rate (16.6 %)", "error rate (15.5 %)"),
+        ("error rate (16.6 %, approximate", "error rate (15.5 %, approximate"),
         ("`all_rows` (65.5 %)", "`all_rows` (64.5 %)"),
         ("72.3 % (bound 9.2 %)", "72.3 % (bound 9.1 %)"),
         ("safe_automation@5%=none", "safe_automation@5%=12.0%"),

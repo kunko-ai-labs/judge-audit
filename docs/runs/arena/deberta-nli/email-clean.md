@@ -5,7 +5,7 @@
 
 _judge `nli:deberta-v3-base-zeroshot-v2.0` · model `deberta-v3-base-zeroshot-v2.0` · run 2026-09-20T18:50:38+00:00 · judge-audit 0.3.1_
 _dataset `examples/email-routing/labels.jsonl` · 200 rows · sha256 `c5b4c111290a…`_
-_regenerated 2026-10-14T13:25:02+00:00 from `docs/runs/arena/deberta-nli/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.6.0rc2_
+_regenerated 2026-10-26T07:35:43+00:00 from `docs/runs/arena/deberta-nli/email-clean.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.6.0rc2_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; email categories are synthetic: seeded templates with item and number fills, not real mail; the label is the template's category by design; no human checked it; 100 % here is the floor a judge must clear, not evidence of production routing accuracy**
 
@@ -22,7 +22,7 @@ This labelled set repeats texts (200 decisions, 161 distinct texts). The bound a
 | 1% | a target of 1 wrong in every 100 automated decisions | none: needs 628 decisions with a confidence to bound the error at 1%; has 200 | — | — |
 | 2% | a target of 1 wrong in every 50 automated decisions | none: needs 313 decisions with a confidence to bound the error at 2%; has 200 | — | — |
 | 5% (primary) | a target of 1 wrong in every 20 automated decisions | none: no threshold passes: the first cut tested holds 125 decisions with 5 errors (95% upper bound on the error rate 8.3%, above the 5% target) | — | — |
-| 10% | a target of 1 wrong in every 10 automated decisions | not met at the 10% target (95% upper bound 17.6%): 39.5% held out (79 of 200 decisions; 8 wrong: 10.1%; seeds 0–9: 20.5%–66.0%) | 0.612689↑ | 69.5% (139 of 200 decisions; 7 wrong, 95% upper bound on the error rate: 9.3%) |
+| 10% | a target of 1 wrong in every 10 automated decisions | not met at the 10% target (one-sided 95% upper bound (held-out halves, approximate): 17.6%): 39.5% held out (79 of 200 decisions; 8 wrong: 10.1%; range across splits (seeds 0–9): 20.5%–66.0%) | 0.612689↑ | 69.5% (139 of 200 decisions; 7 wrong, 95% upper bound on the error rate: 9.3%) |
 
 _Valid only for: judge `nli:deberta-v3-base-zeroshot-v2.0` · model `MoritzLaurer/deberta-v3-base-zeroshot-v2.0` · data `examples/email-routing/labels.jsonl` · sha256 `c5b4c111290a…` · measured 2026-09-20T18:50:38+00:00. Review by 2026-12-19, and measure again as soon as any of these changes._
 

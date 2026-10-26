@@ -7,7 +7,7 @@
 
 _judge `jev` · model `jev-latest` · backend `typesafe` · run 2026-09-21T19:06:02+00:00 · judge-audit 0.3.2_
 _dataset `docs/runs/jury/router-described/jev.r2.input.jsonl` · 120 rows · sha256 `c00355b6ede7…`_
-_regenerated 2026-10-14T13:25:02+00:00 from `docs/runs/jury/router-described/jev.r2.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.6.0rc2_
+_regenerated 2026-10-26T07:35:43+00:00 from `docs/runs/jury/router-described/jev.r2.ckpt.jsonl` by `scripts/runs_report.py` · judge-audit 0.6.0rc2_
 
 **Ground truth: GT-1 constructed — labels are true by construction of a seeded generator; suitable for calibration stress testing, not evidence of real-world accuracy; the route label is the generator's difficulty class by design (easy -> route_easy, hard -> route_strong), not an observed outcome; downstream task quality is not measured: whether the cheap model solves the easy tasks and fails the hard ones is unverified; 40 adversarial rows keep the honest label route_easy; _meta.target is what the attacker wanted**
 
@@ -25,7 +25,7 @@ This labelled set repeats texts (120 decisions, 61 distinct texts). The bound ab
 | 1% | a target of 1 wrong in every 100 automated decisions | none: needs 628 decisions with a confidence to bound the error at 1%; has 120 | — | — |
 | 2% | a target of 1 wrong in every 50 automated decisions | none: needs 313 decisions with a confidence to bound the error at 2%; has 120 | — | — |
 | 5% (primary) | a target of 1 wrong in every 20 automated decisions | none: needs 124 decisions with a confidence to bound the error at 5%; has 120 | — | — |
-| 10% | a target of 1 wrong in every 10 automated decisions | 46.7% (56 of 120 decisions; 0 wrong: 0.0%; 95% upper bound on the error rate: 5.3%; seeds 0–9: 0.0%–49.2%) | 0.63 | 100.0% (120 of 120 decisions; 0 wrong, 95% upper bound on the error rate: 2.5%) |
+| 10% | a target of 1 wrong in every 10 automated decisions | 46.7% (56 of 120 decisions; 0 wrong: 0.0%; one-sided 95% upper bound on the error rate (held-out halves, approximate): 5.3%; range across splits (seeds 0–9): 0.0%–49.2%) | 0.63 | 100.0% (120 of 120 decisions; 0 wrong, 95% upper bound on the error rate: 2.5%) |
 
 _Valid only for: judge `jev` · model `jev-latest` · data `docs/runs/jury/router-described/jev.r2.input.jsonl` · sha256 `399ce7c0220a…` · measured 2026-09-21T19:06:02+00:00. Review by 2026-12-20, and measure again as soon as any of these changes._
 

@@ -75,8 +75,30 @@ def pct_up(x: float) -> str:
 
 
 def bound_text(risk_upper: float, level: float = 0.95) -> str:
-    """`95% upper bound on the error rate: 4.5%`: the one wording for every bound (#185)."""
+    """`95% upper bound on the error rate: 4.5%`: the one wording for every bound on the
+    decisions it was computed on (#185)."""
     return f"{level:.0%} upper bound on the error rate: {pct_up(risk_upper)}"
+
+
+HELD_OUT_BOUND = "held-out halves, approximate"
+
+
+def held_out_bound_text(risk_upper: float, level: float = 0.95) -> str:
+    """`one-sided 95% upper bound on the error rate (held-out halves, approximate): 4.5%`:
+    the held-out bound with its qualifier in the same sentence (#199). It pools the errors of
+    both held-out halves as independent draws, which they are not quite."""
+    return (f"one-sided {level:.0%} upper bound on the error rate ({HELD_OUT_BOUND}): "
+            f"{pct_up(risk_upper)}")
+
+
+def split_range_text(o: dict) -> str:
+    """`range across splits (seeds 0–9): 61.3%–80.2%`: the held-out share over other split
+    seeds, labelled so it does not read as an interval (#199); '' when not recorded."""
+    lo, hi = o.get("spread_coverage") or (None, None)
+    if lo is None or not o.get("spread_seeds"):
+        return ""
+    return (f"range across splits (seeds {o['spread_seeds'][0]}–{o['spread_seeds'][1]}): "
+            f"{lo:.1%}–{hi:.1%}")
 
 
 def held_out_detail(o: dict, unit: str, level: float = 0.95, bound: bool = True) -> str:
@@ -87,10 +109,9 @@ def held_out_detail(o: dict, unit: str, level: float = 0.95, bound: bool = True)
              else f"{o['errors']} wrong")
     parts = [f"{o['automated']:,} of {o['n']:,} {unit}s; {wrong}"]
     if bound and o.get("risk_upper") is not None:
-        parts.append(bound_text(o["risk_upper"], level))
-    lo, hi = o.get("spread_coverage") or (None, None)
-    if lo is not None and o.get("spread_seeds"):
-        parts.append(f"seeds {o['spread_seeds'][0]}–{o['spread_seeds'][1]}: {lo:.1%}–{hi:.1%}")
+        parts.append(held_out_bound_text(o["risk_upper"], level))
+    if spread := split_range_text(o):
+        parts.append(spread)
     return "; ".join(parts)
 
 
@@ -126,12 +147,12 @@ def too_few_sentence(t: dict, unit: str) -> str:
 
 
 def not_met_bound(t: dict, level: float = 0.95) -> str:
-    """`95% upper bound on the error rate 6.6%, above the 5% target`, or why there is none."""
+    """`one-sided 95% upper bound on the error rate (held-out halves, approximate): 6.6%,
+    above the 5% target`, or why there is none."""
     ru = (t.get("out_of_sample") or {}).get("risk_upper")
     if ru is None:
         return "no held-out decision reached the threshold chosen on the other half"
-    return (f"{level:.0%} upper bound on the error rate {pct_up(ru)}, above the "
-            f"{_pct_of(t['target_risk'])} target")
+    return f"{held_out_bound_text(ru, level)}, above the {_pct_of(t['target_risk'])} target"
 
 
 def certificate_cells(t: dict, unit: str, level: float = 0.95) -> tuple[str, str, str]:
@@ -151,8 +172,8 @@ def certificate_cells(t: dict, unit: str, level: float = 0.95) -> tuple[str, str
         return o.get("reason") or "too few decisions to check on held-out data", thr, rows
     if status == "not_met":
         ru = o.get("risk_upper")
-        why = (f"{level:.0%} upper bound {pct_up(ru)}" if ru is not None
-               else "no held-out decision automated")
+        why = (f"one-sided {level:.0%} upper bound ({HELD_OUT_BOUND}): {pct_up(ru)}"
+               if ru is not None else "no held-out decision automated")
         return (f"not met at the {_pct_of(t['target_risk'])} target ({why}): "
                 f"{o['coverage']:.1%} held out ({held_out_detail(o, unit, level, False)})",
                 thr, rows)
@@ -392,10 +413,12 @@ def certificate_html(d: dict) -> str:
 
 
 def certificate_summary(d: dict) -> str:
-    """`safe_automation@5%=71.8% [61.3%–80.2%] bound=3.1% all_rows=100.0%` for the CLI
-    line: the primary target, per question when several. The validated (held-out) share
-    leads, with its range over split seeds and its bound; when the held-out bound is above
-    the target it reads `not_met(29.5% bound=6.6%)`, and `too_few`, `none` or `unrecorded`
+    """`safe_automation@5%=71.8% split_range=61.3%–80.2% bound_95_heldout_approx=3.1%
+    all_rows=100.0%` for the CLI line: the primary target, per question when several. The
+    validated (held-out) share leads, with its range across split seeds (named, so it does
+    not read as an interval) and its one-sided 95 % bound, whose key says it pools the
+    held-out halves and is approximate (#199); when that bound is above the target it reads
+    `not_met(29.5% bound_95_heldout_approx=6.6%)`, and `too_few`, `none` or `unrecorded`
     when there is no held-out share to show; `all_rows` is what the threshold to deploy
     covers on every labelled decision (#185)."""
     c = d.get("certificate")
@@ -410,15 +433,16 @@ def certificate_summary(d: dict) -> str:
             parts.append(f"{key}none")
             continue
         o, status = p.get("out_of_sample") or {}, held_out_status(p)
+        bound = f"bound_{round(100 * (1 - c.get('delta', 0.05)))}_heldout_approx="
         if status == "met":
             lo, hi = o.get("spread_coverage") or (None, None)
             rate = (f"{o['coverage']:.1%}"
-                    + (f" [{lo:.1%}–{hi:.1%}]" if lo is not None else "")
-                    + f" bound={pct_up(o['risk_upper'])}")
+                    + (f" split_range={lo:.1%}–{hi:.1%}" if lo is not None else "")
+                    + f" {bound}{pct_up(o['risk_upper'])}")
         elif status == "not_met":
             ru = o.get("risk_upper")
             rate = (f"not_met({o['coverage']:.1%} "
-                    f"bound={pct_up(ru) if ru is not None else 'none'})")
+                    f"{bound}{pct_up(ru) if ru is not None else 'none'})")
         else:
             rate = status
         parts.append(f"{key}{rate} all_rows={p['coverage']:.1%}")
