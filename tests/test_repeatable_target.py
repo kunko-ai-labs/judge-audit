@@ -15,10 +15,10 @@ import pytest
 
 from judge_audit import __version__, cli
 from judge_audit.certificate import MAX_DECLARED, automation_certificate
+from judge_audit.judges.base import Judge, Judgment
 from judge_audit.report import certificate_note
 
 ROOT = Path(__file__).resolve().parent.parent
-EXAMPLE = ROOT / "examples" / "email-routing-v2" / "labels.jsonl"
 SMALL = ROOT / "examples" / "task-routing" / "labels.jsonl"
 GOLDEN = Path(__file__).parent / "fixtures" / "single_target_golden.json"
 
@@ -162,11 +162,37 @@ def test_the_pr_comment_headlines_the_first_declared_target(tmp_path):
 
 # --- one --target: byte for byte what it was before #201 ----------------------------------
 
+class Replay(Judge):
+    """The judgments a committed checkpoint recorded, answered in row order: the same
+    decisions and confidences on every platform. The simulated judge draws its confidences
+    through libm (`random.gauss`, `betavariate`), whose last bits differ between platforms."""
+
+    name = "replay"
+
+    def __init__(self, checkpoint: Path):
+        rows = [json.loads(line) for line in checkpoint.read_text(encoding="utf-8").splitlines()]
+        self.answers = iter([r["judgments"] for r in sorted(
+            (r for r in rows if r["idx"] >= 0), key=lambda r: r["idx"])])
+
+    def decide(self, state, questions):
+        return [Judgment(question=j["question"], decision=j.get("decision", ""),
+                         confidence=j.get("confidence"), latency_s=j.get("latency_s", 0.0),
+                         cost_usd=j.get("cost_usd", 0.0),
+                         parse_status=j.get("parse_status", "parsed"))
+                for j in next(self.answers)]
+
+
+ARENA = ROOT / "docs" / "runs" / "arena"
+NLI = (ARENA / "deberta-nli" / "email-clean.ckpt.jsonl",
+       ROOT / "examples" / "email-routing" / "labels.jsonl")
+SONNET = (ARENA / "claude-sonnet-4.5" / "email-adversarial.ckpt.jsonl",
+          ROOT / "examples" / "email-routing-adversarial" / "labels.jsonl")
+# case -> (checkpoint, labels, CLI arguments)
 CASES = {
-    "default": ("run", "--json", "r.json", "--out", "r.md"),
-    "met": ("run", "--target", "0.2", "--json", "r.json", "--out", "r.md"),
-    "html": ("run", "--target", "0.15", "--format", "html", "--json", "r.json",
-             "--out", "r.html"),
+    "default": (*NLI, ("run", "--json", "r.json", "--out", "r.md")),
+    "met": (*SONNET, ("run", "--target", "0.08", "--json", "r.json", "--out", "r.md")),
+    "html": (*NLI, ("run", "--target", "0.08", "--format", "html", "--json", "r.json",
+                    "--out", "r.html")),
 }
 
 
@@ -184,12 +210,12 @@ def _normalized(text: str) -> str:
 def _digests(case: str, tmp_path: Path, monkeypatch, capsys) -> dict[str, str]:
     """sha256 of every normalized output of `case`: the CLI line, the report, the result
     JSON and the PR comment built from it."""
-    cmd, *rest = CASES[case]
+    checkpoint, labels, (cmd, *rest) = CASES[case]
     work = tmp_path / case
     work.mkdir()
     monkeypatch.chdir(work)
-    cli.main([cmd, str(EXAMPLE), "--judge", "simulated", "--no-ci", "--judgments", "",
-              *rest])
+    monkeypatch.setattr(cli, "_judge", lambda name, rows=None: (Replay(checkpoint), ""))
+    cli.main([cmd, str(labels), "--judge", "simulated", "--no-ci", "--judgments", "", *rest])
     out = {"line": capsys.readouterr().out}
     for name in ("r.json", "r.md", "r.html"):
         if (work / name).exists():
@@ -206,9 +232,12 @@ def _digests(case: str, tmp_path: Path, monkeypatch, capsys) -> dict[str, str]:
 @pytest.mark.parametrize("case", sorted(CASES))
 def test_one_target_is_byte_identical_to_before(case, tmp_path, monkeypatch, capsys):
     """The digests in the fixture were computed by this same test on the code before #201
-    (judge-audit f889b87): the simulated judge on examples/email-routing-v2, with no
-    `--target`, `--target 0.2` (the held-out check met) and `--target 0.15` as HTML (not
-    met). A deliberate change of wording elsewhere updates them; #201 must not."""
+    (judge-audit f889b87), on macOS and on Linux (python:3.12-slim), with the same result:
+    the judgments the committed checkpoints recorded, replayed through the CLI (`Replay`),
+    with no `--target` and with `--target 0.08` as HTML (deberta-nli on email-routing: the
+    held-out check not met), and `--target 0.08` (claude-sonnet-4.5 on
+    email-routing-adversarial: met). A deliberate change of wording elsewhere updates them;
+    #201 must not."""
     golden = json.loads(GOLDEN.read_text())["cases"][case]
     assert _digests(case, tmp_path, monkeypatch, capsys) == golden
 

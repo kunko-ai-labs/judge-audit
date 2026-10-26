@@ -1,23 +1,23 @@
 {
-  "about": "sha256 of the normalized outputs of tests/test_repeatable_target.py CASES, computed on the code before #201 (f889b87); see test_one_target_is_byte_identical_to_before",
+  "about": "sha256 of the normalized outputs of tests/test_repeatable_target.py CASES (committed checkpoints replayed through the CLI), computed on the code before #201 (f889b87) on macOS and Linux; see test_one_target_is_byte_identical_to_before",
   "cases": {
     "default": {
-      "line": "80ab03c70602df90d113c7a2b6ad155fb475f2e8d447259d02cdfbc853bf1404",
-      "pr_comment": "4b68f26f450176e236a97a115fca22aa90c3e37c4907cfd7b3b67f0b179538e3",
-      "r.json": "c83b8c929d20784900c74f18bbedcf3d8ac131bde6f5ef856737799c15773110",
-      "r.md": "d8d3e77597275d7f81c1893ee77769a846605544ec18a3a5b6ecb48514237429"
+      "line": "aca8a1f93e910b4da8b7ff2836783d5111c35d681232eb497528a9e9a1da8b73",
+      "pr_comment": "46058c791842ed16180baab6578e180df477df32288084e2c91bea59ec5a4353",
+      "r.json": "1429db21b26240f68d21397970fcd2b7e70a75a7b516c0fc306e79dbd392b2eb",
+      "r.md": "b769dd3179a2a3be64759f0405f9c7e29df344e4b36dd05563b741e68e4c47be"
     },
     "html": {
-      "line": "829ce0de691b2c6ae6163d1b01f5dc5bd5888553f7416ea50d3a4b8a5cf622a2",
-      "pr_comment": "2ea67f95588127c8da4676024660158d9a64e841bc2c99195001c38d7f47c8f9",
-      "r.html": "b19a11cb621ed9f0327cfc3cd9c1ec167dc77f37c5062d541aa9775406d11c96",
-      "r.json": "0236b826ee42b649b3198fbb704e2d1cddfb7bde2e8e1d35f48be329546523ab"
+      "line": "6b1e5802e160d32a494a5234e49eba82ca9a98af20c4c33ed8e94c3eb9077f0b",
+      "pr_comment": "ea21626f4079bf59a9e254cd005a1fd2c645fab235df61df23f454b2933adfca",
+      "r.html": "be77169a2b93900218c124eb402eee67bd08e1c2b0eb2da32cc971711e1e7cd1",
+      "r.json": "e9c672f082d0d454d6fd4c3442318ae9e8288a45c5fb05f6ddbb7074a9b9abed"
     },
     "met": {
-      "line": "59f81aa41db51260eb929f28a7769d2647e187bdd205d991f7d117d7260d77e3",
-      "pr_comment": "01f03bfdc71911824e4acd86966ee27d3a222786d2512062d5f670cd720f874c",
-      "r.json": "2b210d0591e16a09f61b7b0b7f025b3870c7c5f195a09447364e88d9ff2dd3ef",
-      "r.md": "6ff99f5db25a0023b0b76de5ac09499e701608259bf4929de16e929377e701e0"
+      "line": "5c0feac4cb902cc405c071535bd26deb17f7a60760014d7ee42ec6629ac3f826",
+      "pr_comment": "e6c93a76362327d50e89c2d80684f89525f525b21c881e41d129212f52a1e319",
+      "r.json": "8ef15597ff2f7611876b88fa672880ed1137d72ef4078048ef1c5a0235cb0937",
+      "r.md": "a5d539de0e46d39612e71e36ecddd7e7d1acbd4d1b5d0bbbfdac9def8c27fdb2"
     }
   }
 }
