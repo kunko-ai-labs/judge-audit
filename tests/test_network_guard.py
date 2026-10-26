@@ -69,7 +69,9 @@ REQUEST = "builds the urllib Request that OPENER sends"
 # file -> {primitive: why it is there}. A primitive is `import <module>`, a name from
 # NETWORK_CALLS, `os.<name>` for a call that runs a program, `getattr <module>` for a name
 # looked up at run time on a network module, `import * from <module>` for a star import of
-# a network module or `os`, `OPENER.open` (`.open` on a name or attribute called OPENER) or
+# a network module or `os`, `OPENER.open` (`.open` on a name or attribute called OPENER),
+# `OPENER.<attr>` for any other attribute of it (`add_handler`, `handlers`, `addheaders`: each
+# can change what every keyed request does, so it is reviewed like a way out) or
 # `OPENER binding`: any other use of a name or attribute called OPENER than reading an
 # attribute of it (assigned or deleted, passed as an argument or a default, iterated, entered
 # with `with`, returned or held in a value such as a tuple), OPENER imported under another
@@ -203,8 +205,10 @@ def primitives(source: str) -> dict[str, list[int]]:
         elif isinstance(node, ast.Attribute):
             if node.attr in NETWORK_CALLS:
                 add(node.attr, node)
-            elif node.attr == "open" and _ends_in_opener(node.value):
-                add("OPENER.open", node)
+            elif _ends_in_opener(node.value):
+                # `.open` sends; any other attribute can change what every keyed request
+                # does (`add_handler`, `handlers`, `addheaders`), so each is its own primitive
+                add(f"OPENER.{node.attr}", node)
             elif (dotted(node.value) == "os"
                   and (node.attr in OS_CALLS or node.attr.startswith(OS_PREFIXES))):
                 add(f"os.{node.attr}", node)
@@ -331,6 +335,21 @@ PLANTED = [
     ("from .secrets import OPENER\nreturn_it = lambda: OPENER", "OPENER binding"),
     ("from .secrets import OPENER\nopeners = {'k': OPENER}", "OPENER binding"),
     ("from .secrets import OPENER\ndel OPENER", "OPENER binding"),
+    # an annotation names it too: harmless, and flagged rather than special-cased
+    ("from .secrets import OPENER\ndef f(o: OPENER = None):\n    pass", "OPENER binding"),
+    # any attribute but `.open` can change what every keyed request does: a handler that
+    # follows redirects again, a header added to each request
+    ("import urllib.request\nfrom .secrets import OPENER\n"
+     "OPENER.add_handler(urllib.request.HTTPRedirectHandler())", "OPENER.add_handler"),
+    ("from .secrets import OPENER\nOPENER.handlers.append(h)", "OPENER.handlers"),
+    ("from .secrets import OPENER\nOPENER.handlers[0] = h", "OPENER.handlers"),
+    ("from .secrets import OPENER\nOPENER.handlers = []", "OPENER.handlers"),
+    ("from .secrets import OPENER\nOPENER.addheaders = [('X-Key', k)]", "OPENER.addheaders"),
+    ("from .secrets import OPENER\nOPENER.addheaders.append(('X-Key', k))",
+     "OPENER.addheaders"),
+    ("from judge_audit.judges import secrets\nsecrets.OPENER.add_handler(h)",
+     "OPENER.add_handler"),
+    ("from .secrets import OPENER\nhandlers = OPENER.handlers", "OPENER.handlers"),
     ("from os import *\nsystem('curl ' + u)", "import * from os"),
     ("from urllib.request import *\nurlopen(u)", "import * from urllib.request"),
     ("from socket import *", "import * from socket"),
@@ -349,13 +368,14 @@ def test_each_way_out_is_found_when_planted(source, primitive):
 @pytest.mark.parametrize("source", [
     "from .secrets import OPENER\nwith OPENER.open(req, timeout=5) as r:\n    r.read()",
     "from judge_audit.judges import secrets\nsecrets.OPENER.open(req)",
-    "from .secrets import OPENER\nhandlers = OPENER.handlers",
     "from .secrets import (\n    OPENER,\n)\n__all__ = ['OPENER']",
 ])
-def test_reading_an_attribute_of_opener_is_not_a_binding(source):
-    """The one use that keeps OPENER itself in place (#200): `OPENER.<attr>`. Importing it
-    under its own name, or naming it in a string, is not a use either."""
-    assert "OPENER binding" not in primitives(source), primitives(source)
+def test_sending_through_opener_is_its_one_unreviewed_use(source):
+    """`OPENER.open` is the one use that leaves OPENER as it is and in place (#200): any
+    other attribute, or OPENER itself passed on, is a primitive of its own. Importing it
+    under its own name, or naming it in a string, is not a use."""
+    found = primitives(source)
+    assert set(found) <= {"OPENER.open"}, found
 
 
 def test_ordinary_code_is_not_a_way_out():
