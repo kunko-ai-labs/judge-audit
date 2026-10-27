@@ -984,8 +984,17 @@ def v06_expected(d: dict) -> dict:
         over.append(f"{_d3(lo)} to {_d3(hi)} for {j}")
     overconf = ("mean confidence minus accuracy is " + ", ".join(over[:-1]) + " and "
                 + over[-1] + " across the three languages")
-    return {"items": d["items"]["n"], "judges": len(judges), "rows": rows,
+    amends = len(d["amendments_sha256"])
+    lead = (f"**v0.6 in short.** {len(judges)} AI judges, the same {d['items']['n']:,} items of "
+            "MASSIVE 1.1 in English, Spanish and Catalan, pre-registered before the first model "
+            "call ([plan](docs/v06-plan.md), sha256 committed at the freeze; amendments "
+            f"A1–A{amends}). {_WORDS[len(T)]} pre-registered transfer tests asked")
+    return {"items": d["items"]["n"], "judges": len(judges), "rows": rows, "lead": lead,
             "transfer": transfer, "overconfidence": overconf}
+
+
+_WORDS = {1: "One", 2: "Two", 3: "Three", 4: "Four", 5: "Five", 6: "Six", 7: "Seven",
+          8: "Eight", 9: "Nine", 10: "Ten"}
 
 
 def _d3(x: float) -> str:
@@ -994,16 +1003,17 @@ def _d3(x: float) -> str:
 
 
 def check_v06(ck: Checker, md: str) -> None:
-    """The "v0.6 findings": the glance caption and every cell of its table, and the
-    transfer-test and overconfidence sentences of its "In short", rebuilt from
+    """The "v0.6 findings": the glance caption and every cell of its table, and the opening
+    (judges, items, amendments, tests), transfer-test and overconfidence sentences of its
+    "In short", rebuilt from
     docs/v06/results.json; each must appear exactly once."""
     e = v06_expected(json.loads((ROOT / "docs" / "v06" / "results.json")
                                 .read_text(encoding="utf-8")))
     cap = (f"**At a glance: v0.6, MASSIVE 1.1, {e['items']:,} items in English, Spanish and "
-           f"Catalan, {e['judges']} judges: the share each judge decides alone at a 5 % error "
-           "target, held out (the threshold chosen on one half of the items, applied to the "
-           "other).**")
-    for name, text in (("caption", cap), ("transfer", e["transfer"]),
+           f"Catalan, {e['judges']} judges: the held-out share automated by thresholds chosen "
+           "at a 5 % error target (the threshold chosen on one half of the items, applied to "
+           "the other); met when its bound is within 5 %.**")
+    for name, text in (("caption", cap), ("lead", e["lead"]), ("transfer", e["transfer"]),
                        ("overconfidence", e["overconfidence"])):
         ck.checked += 1
         if md.count(text) != 1:

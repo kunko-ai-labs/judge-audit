@@ -306,6 +306,11 @@ def test_a_one_digit_edit_of_a_v05_figure_is_caught(old, new):
         ("above 5 % in 5 of 6 tests", "above 5 % in 4 of 6 tests"),
         ("3 of the 6 came out as predicted", "4 of the 6 came out as predicted"),
         ("+0.063 to +0.099 for claude-sonnet-4.5", "+0.063 to +0.098 for claude-sonnet-4.5"),
+        # the opening of "v0.6 in short"
+        ("**v0.6 in short.** 12 AI judges", "**v0.6 in short.** 11 AI judges"),
+        ("the same 2,974 items of MASSIVE", "the same 2,975 items of MASSIVE"),
+        ("amendments A1–A5)", "amendments A1–A4)"),
+        ("Six pre-registered transfer tests", "Five pre-registered transfer tests"),
     ],
 )
 def test_an_edit_of_a_v06_figure_is_caught(old, new):
