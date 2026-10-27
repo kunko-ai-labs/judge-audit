@@ -8,8 +8,10 @@ report generated from it, docs/v06/README.md:
 
 - the transfer tests: a threshold validated on English rows at a 5 % target error, applied
   unchanged to the same items in a target locale, both ways over two halves split by item,
-  the two counts pooled, an exact one-sided bound; Holm across the six tests (3 primary
-  judges x {ca-ES, es-ES}) with m = 6 fixed, a test not run counting as not resolved;
+  the two counts pooled, a one-sided bound that is approximate (the halves are the same
+  items, so the pooled count is not one binomial; amendment A5); Holm across the six tests
+  (3 primary judges x {ca-ES, es-ES}) with m = 6 fixed, a test not run counting as not
+  resolved;
 - overconfidence (mean confidence minus accuracy, usable rows), paired across locales, with
   a two-sided bootstrap clustered by item;
 - the paired AUROC difference between a vendor's own confidence field and P(chosen option);
@@ -108,7 +110,7 @@ LABELS = "examples/massive/labels-test-{locale}.jsonl"
 SEED = 2026
 N_BOOT = 10_000
 ALPHA = 0.05                  # family-wise, Holm
-DELTA = 0.05                  # one-sided level of every exact bound
+DELTA = 0.05                  # one-sided level of every bound
 TRANSFER_TARGET = 0.05        # the error the English threshold is validated at
 START_ERRORS = 2              # the walk starts at the cut that validates with 2 errors
 TARGETS = [0.01, 0.02, 0.05, 0.10]
@@ -550,11 +552,11 @@ def _why_none(conf: list[float], ok: list[bool], start: int) -> str:
 def settle(tests: dict[str, dict]) -> dict[str, dict]:
     """Holm across the family at ALPHA, with m = FAMILY_SIZE fixed: a test not run enters
     with p = 1, so it is not resolved and the others are adjusted as if it had run and
-    failed. Resolved when the Holm-adjusted exact p is below ALPHA. Each test also gets
-    the pooled lower bound at the level of its Holm step (ALPHA / (m − i) for the i-th
-    smallest p), beside the unadjusted one-sided 95 % bound, up to the first step that
-    fails: Holm is step-down and stops there, so a later test is not resolved whatever
-    its own p, and its bound at its level (`holm_stopped`) is not given."""
+    failed. Resolved when the Holm-adjusted p (approximate, amendment A5) is below ALPHA.
+    Each test also gets the pooled lower bound at the level of its Holm step (ALPHA / (m − i)
+    for the i-th smallest p), beside the unadjusted one-sided 95 % bound, up to the first
+    step that fails: Holm is step-down and stops there, so a later test is not resolved
+    whatever its own p, and its bound at its level (`holm_stopped`) is not given."""
     if len(tests) != FAMILY_SIZE:
         raise ValueError(f"the family has {FAMILY_SIZE} tests, got {len(tests)}")
     p = {k: (v["pooled"]["p_exact"] if v["run"] else 1.0) for k, v in tests.items()}
@@ -915,7 +917,7 @@ def _holm_bound(v: dict) -> str:
 def _transfer_table(add, T: dict, full: bool, plabels: dict[str, str]) -> None:
     if full:
         add("| test | judge | target | English threshold: half A / B | target rows above / "
-            "errors | error | 95 % lower | lower at its Holm level | p (exact) | Holm p | "
+            "errors | error | 95 % lower | lower at its Holm level | p (approx.) | Holm p | "
             "outcome | 95 % upper | English control: rows / errors | prediction | "
             "as predicted |")
         add("|---|---|---|---|---:|---:|---:|---:|---:|---:|---|---:|---:|---|---|")
@@ -1000,9 +1002,14 @@ def markdown(r: dict) -> str:
         f"a {_pct(par['transfer_target'], 0)} target error (`coverage_at_risk`, exact one-sided "
         f"95 %, the walk starting at the cut that validates with {par['start_errors']} "
         "errors); on the other half the target-language rows at or above it are counted. "
-        "The halves swap and the counts are pooled. Exact one-sided 95 % lower and upper "
-        "bounds on the pooled error; p is the exact binomial P(errors ≥ observed | "
-        f"{_pct(par['transfer_target'], 0)}), equivalent to the lower bound. **Resolved** when "
+        "The halves swap and the counts are pooled. One-sided 95 % lower and upper bounds "
+        "on the pooled error, and p, the binomial P(errors ≥ observed | "
+        f"{_pct(par['transfer_target'], 0)}) on the pooled count (equivalent to the lower "
+        "bound), are **approximate**: each half's count is binomial given the threshold chosen "
+        "on the other half, but the two halves are the same items in two languages, so they "
+        "depend on each other through the thresholds and the pooled count is not one binomial "
+        "(the cross-fit approximation of docs/judges.md; amendment A5). Holm rests on these p. "
+        "**Resolved** when "
         f"the Holm-adjusted p across the {par['family_size']} tests is below "
         f"{par['alpha']}, with m = {par['family_size']} fixed (a test not run counts as not "
         "resolved). A half on which English validates no threshold admits no row; the test "
