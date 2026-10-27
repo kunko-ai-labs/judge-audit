@@ -917,13 +917,14 @@ def _holm_bound(v: dict) -> str:
 def _transfer_table(add, T: dict, full: bool, plabels: dict[str, str]) -> None:
     if full:
         add("| test | judge | target | English threshold: half A / B | target rows above / "
-            "errors | error | 95 % lower | lower at its Holm level | p (approx.) | Holm p | "
-            "outcome | 95 % upper | English control: rows / errors | prediction | "
-            "as predicted |")
+            "errors | error | 95 % lower (approx.) | lower at its Holm level (approx.) | "
+            "p (approx.) | Holm p (approx.) | outcome | 95 % upper (approx.) | English "
+            "control: rows / errors | prediction | as predicted |")
         add("|---|---|---|---|---:|---:|---:|---:|---:|---:|---|---:|---:|---|---|")
     else:
         add("| test | judge | target | English threshold: half A / B | rows above / errors | "
-            "error | 95 % lower | lower at its Holm level | Holm p | outcome | 95 % upper |")
+            "error | 95 % lower (approx.) | lower at its Holm level (approx.) | "
+            "Holm p (approx.) | outcome | 95 % upper (approx.) |")
         add("|---|---|---|---|---:|---:|---:|---:|---:|---|---:|")
     for tid, v in T.items():
         p, c = v["pooled"], v["control"]
@@ -981,7 +982,8 @@ def markdown(r: dict) -> str:
         + f", with {len(r['amendments_sha256'])} dated amendment(s) whose sha256 are in "
         "`docs/v06-amendments.sha256`. Every result is published whether or not its "
         "prediction held. A test that is not resolved is **not resolved**: it does not show "
-        "that the threshold holds, and its upper bound says how large the error could be.")
+        "that the threshold holds, and its approximate upper bound says how large the error "
+        "could be.")
     add("")
     add(f"**Read with these caveats.** MASSIVE 1.1 test, {r['items']['n']:,} items in three "
         f"locales: {CAVEAT}. Public since 2022, so probably in the pretraining data of the "
