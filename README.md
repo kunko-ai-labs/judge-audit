@@ -9,6 +9,12 @@
 
 **judge-audit replays decisions your people already made and tells you how much of that work an AI judge can take over, at the error you accept, with the bound attached.** Open source, runs in CI, no LLM inside the measurement, and every published number recomputes from committed evidence.
 
+**What we contribute.**
+- **An independent audit, not a model.** judge-audit measures the confidence an AI judge declares against decisions people already made. It judges nothing itself.
+- **Evidence anyone can recompute.** Every published figure regenerates from committed checkpoints, and CI fails when a report or this README drifts from its evidence (`scripts/verify_published.py`, `scripts/verify_readme.py`).
+- **Pre-registered studies, independent reviews.** The v0.5 and v0.6 studies were pre-registered before their first model call (v0.6: the plan's sha256 committed at the freeze; amendments A1–A4 hashed before the calls or the analysis they govern, A5, an erratum on wording, at publication). Every change is reviewed and QA'd before it merges, with the verdicts on its pull request.
+- **Our own security advisories.** We publish the weaknesses we find in our own tools: [GHSA-52xj-j738-jpm3](https://github.com/kunko-ai-labs/judge-audit/security/advisories/GHSA-52xj-j738-jpm3) (judge-audit: an API key in error output, or sent on a redirect) and [GHSA-f7jx-f5h6-pmx7](https://github.com/kunko-ai-labs/agent-assurance/security/advisories/GHSA-f7jx-f5h6-pmx7) (agent-assurance).
+
 ![judge-audit in 25 seconds: the question, the audit run, the share each judge can decide alone on 3,080 real banking queries, the CI gate failing below the minimum](docs/demo.gif)
 
 | | |
@@ -18,8 +24,31 @@
 | 🚦 **CI gate** | `judge-audit check` fails the build when the judge drifts or the rate falls below your minimum. |
 | 🤖 **Where you work** | CLI, GitHub Action with a PR comment, and an MCP server for Claude Code, Cursor or any agent. |
 
-**[Quickstart](#quickstart)** · **[What you get](#what-you-get)** · **[v0.5 findings](#v05-findings)** · **[Judges supported](#judge-interface)** · ▶ [launch video](https://github.com/kunko-ai-labs/judge-audit/releases/latest/download/judge-audit-launch.mp4)
+**[Quickstart](#quickstart)** · **[What you get](#what-you-get)** · **[v0.6 findings](#v06-findings)** · **[v0.5 findings](#v05-findings)** · **[Judges supported](#judge-interface)** · ▶ [launch video](https://github.com/kunko-ai-labs/judge-audit/releases/latest/download/judge-audit-launch.mp4)
 
+
+## v0.6 findings
+
+**v0.6 in short.** 12 AI judges, the same 2,974 items of MASSIVE 1.1 in English, Spanish and Catalan, pre-registered before the first model call ([plan](docs/v06-plan.md), sha256 committed at the freeze; amendments A1–A5). Six pre-registered transfer tests asked whether a threshold validated on English rows at a 5 % error target lets more than 5 % errors through on the same items in Spanish or Catalan: none was resolved at its Holm-corrected level, so no breach was shown; that is not a pass: the approximate one-sided 95 % upper bounds on the pooled target-language error run from 3.30 % (T6) to 8.65 % (T2), above 5 % in 5 of 6 tests, and 3 of the 6 came out as predicted. Demonstrated on this sample, and only on it (MASSIVE is translated public data, probably seen in pretraining): declared confidence does not always match accuracy; mean confidence minus accuracy is +0.080 to +0.085 for jev, −0.052 to −0.067 for gpt-6-luna and +0.063 to +0.099 for claude-sonnet-4.5 across the three languages. The differences between languages are 95 % intervals with no correction for multiplicity, so they are not called demonstrated ([§2](docs/v06/README.md#2-overconfidence-paired-across-locales)). The number to act on is the same audit on your own decisions.
+
+**At a glance: v0.6, MASSIVE 1.1, 2,974 items in English, Spanish and Catalan, 12 judges: the share each judge decides alone at a 5 % error target, held out (the threshold chosen on one half of the items, applied to the other).**
+
+| Judge | en-US | es-ES | ca-ES |
+|---|---|---|---|
+| jev | 29.0 % (bound 5.8 %, not met; splits 30.7–55.6 %) | 25.3 % (bound 7.4 %, not met; splits 0.0–23.6 %) | none (splits 0.0–19.5 %) |
+| gpt-6-luna | 18.2 % (bound 4.6 %, met; splits 21.8–39.4 %) | none (splits 0.0–13.3 %) | 5.3 % (bound 9.8 %, not met; splits 0.0–0.0 %) |
+| claude-sonnet-4.5 | 21.5 % (bound 2.9 %, met; splits 21.5–21.5 %) | 8.5 % (bound 5.7 %, not met; splits 0.0–8.8 %) | none (splits 0.0–6.9 %) |
+| clef-flash (exploratory) | 40.6 % (bound 5.0 %, met; splits 0.0–44.4 %) | 38.5 % (bound 5.7 %, not met; splits 4.0–44.2 %) | 39.0 % (bound 4.2 %, met; splits 18.0–60.0 %) |
+| decider-2b (exploratory) | 31.1 % (bound 7.7 %, not met; splits 0.0–9.7 %) | 10.4 % (bound 7.4 %, not met; splits 0.0–4.5 %) | none (splits 0.0–0.0 %) |
+| decision2-kai-0.6b (exploratory) | 4.1 % (bound 7.3 %, not met; splits 0.0–7.4 %) | none (splits 0.0–0.0 %) | none (splits 0.0–0.0 %) |
+| deepseek-r1 (exploratory) | none (splits 0.0–28.7 %) | none (splits 0.0–0.0 %) | none (splits 0.0–0.0 %) |
+| gemini-3.6-flash (exploratory) | 55.1 % (bound 3.4 %, met; splits 55.1–55.1 %) | 26.6 % (bound 5.3 %, not met; splits 26.0–52.8 %) | 27.1 % (bound 5.1 %, not met; splits 44.6–53.6 %) |
+| laya-multilingual (exploratory) | none (splits 0.0–0.0 %) | none (splits 0.0–0.0 %) | none (splits 0.0–0.0 %) |
+| microsoft-decision-1 (exploratory) | 80.7 % (bound 4.6 %, met; splits 80.2–82.7 %) | 72.3 % (bound 4.6 %, met; splits 40.5–73.7 %) | 30.1 % (bound 4.9 %, met; splits 31.5–60.6 %) |
+| strands-decider-2b (exploratory) | 3.9 % (bound 14.4 %, not met; splits 0.0–0.0 %) | none (splits 0.0–0.0 %) | none (splits 0.0–0.0 %) |
+| unsloth-decision-4b (exploratory) | none (splits 0.0–4.8 %) | none (splits 0.0–0.0 %) | none (splits 0.0–0.0 %) |
+
+*Bound:* the one-sided 95 % upper bound on the held-out errors of both halves pooled, rounded up; approximate, since each half's threshold depends on the other half; computed after the study from its published counts, not pre-registered (#213). *Met:* that bound is within 5 %; only a share that meets it is called validated. *Splits:* the same share over split seeds 2027–2036. The shares describe these 2,974 translated public items, with labels carried over by localisation, not your traffic or future traffic; judges marked exploratory are in no pre-registered test. No ranking: rows follow the study's roster. Every figure, its intervals and the cost of each run: **[v0.6 findings in full](docs/v06/README.md)**.
 
 ## v0.5 findings
 
