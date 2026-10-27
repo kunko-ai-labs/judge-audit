@@ -901,7 +901,7 @@ def _per_locale(c: dict) -> str:
 def _cov(x: dict) -> str:
     p = x["pooled"]
     if x["reason"] and not p["covered"]:
-        return "none validated †"
+        return "none validated (too few)"
     return (f"{_pct(p['coverage'])} ({p['errors']} / {p['covered']}) · "
             f"{_pct(x['spread_coverage'][0])}–{_pct(x['spread_coverage'][1])}")
 
@@ -1100,7 +1100,7 @@ def markdown(r: dict) -> str:
             + " | ".join(cells) + " |")
     add("")
     if short:
-        add("† The walk starts at the cut holding "
+        add("*Too few:* the walk starts at the cut holding "
             + ", ".join(f"{min_rows_to_certify(t, par['delta'], par['start_errors'])} items "
                         f"at {_pct(t, 0)}" for t in sorted(short))
             + "; a half held fewer items with a confidence, so nothing can be validated "
@@ -1249,7 +1249,8 @@ def _refusal_section(add, R: dict, targets: list[float]) -> None:
         "out of the confidence metrics); then its refusals by MASSIVE scenario "
         "(`_meta.scenario`) and by gold intent, each out of that scenario's or intent's "
         "judged rows. Only scenarios and intents with a refusal are listed. Validated "
-        "coverage as in §5 (its † note applies). A refused row carries no confidence, so "
+        "coverage as in §5, where *too few* means a half held fewer items with a confidence "
+        "than the walk starts at. A refused row carries no confidence, so "
         "the two rows of a pair can differ only in n and accuracy (and in validated "
         "coverage, whose denominator is n); the confidence metrics are the same rows.")
     add("")
