@@ -10,7 +10,9 @@ the source. It does not find code that hides the call: `eval`, `exec` or `compil
 whose name is built at run time, or a function defined elsewhere that returns the opener; nor,
 for the redirect refusal, a change to `urllib.request.HTTPRedirectHandler`, the class it
 inherits from (any module that imports `urllib.request` is itself a reviewed primitive), or to
-the handler instance reached through anything but `OPENER.handlers`.
+the handler instance reached through anything but `OPENER.handlers`. Those are covered at run
+time instead: `test_opener_runtime.py` imports every module of the package in a fresh process
+and then checks that OPENER is unchanged and still refuses a redirect (#210).
 Review catches those; the runtime guard below still refuses what they would send.
 A request that carries a key is sent only by `OPENER` (no redirects), from a module that
 builds its URL with `checked_endpoint`.
