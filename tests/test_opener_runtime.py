@@ -7,8 +7,10 @@ The static scan in `test_network_guard.py` flags every named use of `OPENER` and
 happened to run after the module that hides them. Here a fresh Python process first records
 the reference: the redirect methods of `urllib.request.HTTPRedirectHandler`, and the opener
 that `secrets.py` builds when it is loaded on its own, by path, before anything of the
-package is imported. Then it imports every module of the package and the scripts that send a
-keyed request (`scripts/logprob_smoke.py`), and compares the package's opener with that
+package is imported. Then it imports every module of the package and every script under
+`scripts/` and `examples/` that imports it (found by parsing them, so a new one cannot be
+missed: `audit_resumable.py` runs the judges, `logprob_smoke.py` sends through OPENER), and
+compares the package's opener with that
 reference: what it is, what it is built from, and what it does with a redirect from a local
 server. A change made by any module, including the ones `judge_audit/__init__` imports first,
 differs from the reference. The planted changes prove that each hidden form fails the check,
@@ -17,6 +19,7 @@ the package's `__init__` loads).
 """
 from __future__ import annotations
 
+import ast
 import json
 import os
 import shutil
@@ -27,7 +30,21 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-SCRIPTS = [ROOT / "scripts" / "logprob_smoke.py"]   # outside the package, keyed requests
+
+
+def _imports_the_package(path: Path) -> bool:
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    return any((isinstance(n, ast.Import)
+                and any(a.name.split(".")[0] == "judge_audit" for a in n.names))
+               or (isinstance(n, ast.ImportFrom) and n.level == 0
+                   and (n.module or "").split(".")[0] == "judge_audit")
+               for n in ast.walk(tree))
+
+
+# Outside the package, every file that imports it can build a judge or reach OPENER: each
+# one is loaded (as its own module; each runs its work only under `__main__`).
+SCRIPTS = [p for d in ("scripts", "examples") for p in sorted((ROOT / d).rglob("*.py"))
+           if "node_modules" not in p.parts and _imports_the_package(p)]
 
 # Run in a fresh process: `python -c CHECK [planted module ...]`, with the scripts to load in
 # JUDGE_AUDIT_CHECK_SCRIPTS. Prints {"modules", "scripts", "failures"} as JSON and exits 1
@@ -151,7 +168,8 @@ sys.exit(1 if failures else 0)
 '''
 
 
-def _check(tmp_path: Path, *planted: str, package: Path | None = None) -> tuple[int, dict]:
+def _check(tmp_path: Path, *planted: str, package: Path | None = None,
+           scripts: list[Path] = SCRIPTS) -> tuple[int, dict]:
     """Run CHECK in a fresh process, each planted source as a module imported last; with
     `package`, the directory holding a copy of `judge_audit` to import instead."""
     names = []
@@ -162,7 +180,7 @@ def _check(tmp_path: Path, *planted: str, package: Path | None = None) -> tuple[
     env = {**os.environ,
            "PYTHONPATH": os.pathsep.join(
                p for p in (*first, str(tmp_path), os.environ.get("PYTHONPATH", "")) if p),
-           "JUDGE_AUDIT_CHECK_SCRIPTS": os.pathsep.join(str(p) for p in SCRIPTS)}
+           "JUDGE_AUDIT_CHECK_SCRIPTS": os.pathsep.join(str(p) for p in scripts)}
     r = subprocess.run([sys.executable, "-c", CHECK, *names], cwd=tmp_path, env=env,
                        capture_output=True, text=True, timeout=120)
     assert r.stdout.strip(), r.stderr
@@ -181,8 +199,12 @@ def test_every_module_imported_and_the_opener_still_refuses_redirects(tmp_path):
     files = [p for p in src.rglob("*.py") if p.name != "__init__.py"
              and "node_modules" not in p.parts]
     assert len(out["modules"]) == len(files)
-    # and the script outside the package that sends a keyed request
-    assert [Path(p).name for p in out["scripts"]] == ["logprob_smoke.py"]
+    # and every script that imports the package, the ones that send a keyed request included
+    names = {Path(p).name for p in out["scripts"]}
+    assert {"audit_resumable.py", "logprob_smoke.py"} <= names
+    assert len(names) == len(SCRIPTS)
+    for path in (ROOT / "scripts").glob("*.py"):
+        assert (path.name in names) == _imports_the_package(path), path.name
 
 
 # Hidden forms the static scan does not see, each planted in a module imported after the
@@ -262,3 +284,20 @@ def test_a_hidden_change_made_while_the_package_loads_fails_the_check(tmp_path, 
     code, out = _check(tmp_path, package=copy)
     assert Path(out["package"]) == copy / "judge_audit"    # the planted copy was imported
     assert code == 1 and says in out["failures"], out["failures"]
+
+
+def test_a_hidden_change_in_a_script_that_runs_the_judges_fails_the_check(tmp_path):
+    """`audit_resumable.py` builds the hosted judges (`cli._judge`) and sends their keyed
+    requests: a header planted there reaches every one of them (#211 review)."""
+    planted = tmp_path / "scripts" / "audit_resumable.py"
+    planted.parent.mkdir()
+    planted.write_text((ROOT / "scripts" / "audit_resumable.py").read_text(encoding="utf-8")
+                       + "\nimport importlib as _i\n"
+                         "getattr(vars(_i.import_module('judge_audit.judges.' + 'secrets'))"
+                         "['OPE' + 'NER'], 'add' + 'headers').append(('X-Planted', '1'))\n",
+                       encoding="utf-8")
+    scripts = [planted if p.name == "audit_resumable.py" else p for p in SCRIPTS]
+    code, out = _check(tmp_path, scripts=scripts)
+    assert str(planted) in out["scripts"]
+    assert code == 1
+    assert "OPENER's headers differ from what secrets.py builds" in out["failures"]
