@@ -287,6 +287,35 @@ def test_a_one_digit_edit_of_a_v05_figure_is_caught(old, new):
     assert any(f.startswith(("v0.5", "quickstart")) for f in check(edit(old, new)).failures)
 
 
+
+@pytest.mark.parametrize(
+    "old, new",
+    [
+        # the glance table: a share, its bound, met or not, the range over split seeds
+        ("29.0 % (bound 5.8 %, not met", "29.0 % (bound 5.8 %, met"),
+        ("18.2 % (bound 4.6 %, met", "19.2 % (bound 4.6 %, met"),
+        ("80.7 % (bound 4.6 %", "80.7 % (bound 4.5 %"),
+        ("none (splits 0.0–28.7 %)", "none (splits 0.0–27.7 %)"),
+        ("| deepseek-r1 (exploratory) |", "| deepseek-r1 |"),
+        # the caption, the transfer tests and the overconfidence sentence
+        ("2,974 items in English, Spanish and Catalan, 12 judges", "2,974 items in English, "
+         "Spanish and Catalan, 11 judges"),
+        ("none was resolved at its Holm-corrected level", "one was resolved at its "
+         "Holm-corrected level"),
+        ("8.65 % (T2)", "8.60 % (T2)"),
+        ("above 5 % in 5 of 6 tests", "above 5 % in 4 of 6 tests"),
+        ("3 of the 6 came out as predicted", "4 of the 6 came out as predicted"),
+        ("+0.063 to +0.099 for claude-sonnet-4.5", "+0.063 to +0.098 for claude-sonnet-4.5"),
+        # the opening of "v0.6 in short"
+        ("**v0.6 in short.** 12 AI judges", "**v0.6 in short.** 11 AI judges"),
+        ("the same 2,974 items of MASSIVE", "the same 2,975 items of MASSIVE"),
+        ("amendments A1–A5)", "amendments A1–A4)"),
+        ("Six pre-registered transfer tests", "Five pre-registered transfer tests"),
+    ],
+)
+def test_an_edit_of_a_v06_figure_is_caught(old, new):
+    assert any(f.startswith("v0.6") for f in check(edit(old, new)).failures)
+
 def edit_in(opening: str, old: str, new: str) -> str:
     """Edit `old` inside the one paragraph that starts with `opening`."""
     paras = README.split("\n\n")
