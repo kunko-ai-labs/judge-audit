@@ -55,7 +55,7 @@ permissions:
 
 steps:
   - uses: actions/checkout@v4
-  - uses: kunko-ai-labs/judge-audit@v0.4   # or pin the release's commit SHA (see below)
+  - uses: kunko-ai-labs/judge-audit@v0.6   # or pin the release's commit SHA (see below)
     with:
       labels: audits/labels.jsonl              # the decisions your humans already made
       judge: jev                               # simulated | jev | llm
