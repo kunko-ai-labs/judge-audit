@@ -111,7 +111,7 @@ Exit codes: `0` ok · `1` drift detected · `2` usage or configuration error, or
 **In CI:** the [GitHub Action](docs/integrations.md#github-action) runs the audit on every push or pull request and fails the build on drift:
 
 ```yaml
-- uses: kunko-ai-labs/judge-audit@v0.5      # or pin the release's commit SHA
+- uses: kunko-ai-labs/judge-audit@v0.6      # or pin the release's commit SHA
   with: { labels: audits/labels.jsonl, judge: jev, baseline: audits/baseline.json,
           target: "0.05", segment-by: label, min-safe-rate: "0.05:0.40" }
   env: { AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }} }
