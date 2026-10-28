@@ -137,7 +137,14 @@ SENSITIVITY = {
     "without_train_dev_overlap": "Without the items whose text is also in MASSIVE train or "
                                  "dev (any locale)",
 }
-VC_SPLIT = ("validated coverage uses v0.5's own per-judge cross-fit split (by item, over "
+# Next to every held-out share, in each table that shows one (#213): the bound is approximate
+# and was computed after the study, so "validated" is said only of a share that meets it.
+COV_HEAD = "held-out 95 % bound approx., computed after the study"
+COV_CELL = ("share automated on held-out halves (errors / automated; held-out one-sided 95 % "
+            "bound, approximate, computed after the study and not pre-registered; met when "
+            "within the target, and only then called validated) · its range over split seeds "
+            "2027–2036")
+VC_SPLIT = ("held-out coverage uses v0.5's own per-judge cross-fit split (by item, over "
             "the items that judge answered with a confidence); in the sensitivity analyses "
             "that split is redrawn on the remaining items; only the transfer-test halves are "
             "fixed")
@@ -1087,7 +1094,7 @@ def markdown(r: dict) -> str:
                 f"{_s(m['overconfidence'])} | {cost} | {_f(m.get('latency_p50_s'), 2)} s |")
         add("")
 
-    add("## 5. Validated coverage")
+    add("## 5. Held-out coverage")
     add("")
     add(f"`coverage_at_risk_crossfit` per locale: two halves split by item (seed "
         f"{par['seed']}), a threshold validated on one half (exact one-sided 95 %, the walk "
@@ -1102,12 +1109,13 @@ def markdown(r: dict) -> str:
         "since each half's threshold depends on the other half (the cross-fit approximation "
         "of docs/judges.md). The share is *met* when that bound is within the target and "
         "*not met* otherwise. judge-audit calls a share validated only when it is met "
-        "(docs/judges.md § The safe automation rate): in this section's title, \"validated\" "
-        "refers to the threshold, validated on the other half, not to the share. Each met cell "
+        "(docs/judges.md § The safe automation rate). Each met cell "
         "is a separate approximate 95 % statement; read together they do not all hold at "
         "95 %. The range over other seeds need not contain the seed-2026 share.")
     add("")
-    add("| judge | locale | 1 % | 2 % | 5 % | 10 % |")
+    add(f"Each cell: {COV_CELL}.")
+    add("")
+    add("| judge | locale | 1 % target | 2 % target | 5 % target | 10 % target |")
     add("|---|---|---|---|---|---|")
     short: list[float] = []
     for k, m in P["metrics"].items():
@@ -1170,7 +1178,7 @@ def markdown(r: dict) -> str:
             _e1_table(add, S["e1"], plabels)
             add("")
         add("| judge | locale | n | accuracy | AUROC | ECE | MCE | Brier | overconfidence | "
-            "validated coverage at 5 % |")
+            f"held-out share at 5 % ({COV_HEAD}) |")
         add("|---|---|---:|---:|---:|---:|---:|---:|---:|---|")
         for k, m in S["metrics"].items():
             add(f"| {_who(k, m['role'], m['partial'])} | `{k.split('/')[1]}` | {m['n']} | "
@@ -1270,7 +1278,7 @@ def _refusal_section(add, R: dict, targets: list[float]) -> None:
         "the plan's figures for the same run (where a refused row counts wrong and is left "
         "out of the confidence metrics); then its refusals by MASSIVE scenario "
         "(`_meta.scenario`) and by gold intent, each out of that scenario's or intent's "
-        "judged rows. Only scenarios and intents with a refusal are listed. Validated "
+        "judged rows. Only scenarios and intents with a refusal are listed. Held-out "
         "coverage as in §5, where *too few* means a half held fewer items with a confidence "
         "than the walk starts at. A refused row carries no confidence, so "
         "the two rows of a pair can differ only in n and accuracy (and in validated "
@@ -1286,7 +1294,7 @@ def _refusal_section(add, R: dict, targets: list[float]) -> None:
         return f"{_who(k, v['role'], v['partial'])} — {R['label']}"
 
     add("| judge | locale | rows used | refused / judged | accuracy | AUROC | ECE | MCE | "
-        "Brier | " + " | ".join(f"validated {_pct(t, 0)}" for t in targets) + " |")
+        "Brier | " + " | ".join(f"held-out share at {_pct(t, 0)} ({COV_HEAD})" for t in targets) + " |")
     add("|---|---|---|---:|---|---:|---:|---:|---:|" + "---|" * len(targets))
     for k, v in V.items():
         for name, m in (("plan's figures (all judged rows)", v["plan"]),

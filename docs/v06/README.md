@@ -109,13 +109,15 @@ Accuracy counts a row without an answer or a confidence as wrong (Wilson 95 % in
 | strands-decider-2b (exploratory) | 2974 / 2974 | 0 / 0 | 0.558 [0.540, 0.576] | 0.817 [0.802, 0.832] | 0.097 [0.082, 0.111] | 0.138 [0.118, 0.191] (302) | 0.182 | +0.097 | $0.0000 | 0.65 s |
 | unsloth-decision-4b (exploratory) | 2974 / 2974 | 0 / 0 | 0.460 [0.442, 0.478] | 0.741 [0.724, 0.758] | 0.027 [0.020, 0.046] | 0.110 [0.093, 0.158] (191) | 0.206 | -0.020 | $0.0000 | 1.03 s |
 
-## 5. Validated coverage
+## 5. Held-out coverage
 
-`coverage_at_risk_crossfit` per locale: two halves split by item (seed 2026), a threshold validated on one half (exact one-sided 95 %, the walk starting at the cut that validates with 2 errors) and applied to the other, the halves pooled; coverage is the share of items automated, with errors / automated, and the pooled coverage over seeds 2027–2036. Target error: 1, 2, 5 or 10 errors in 100 automated decisions. Note: validated coverage uses v0.5's own per-judge cross-fit split (by item, over the items that judge answered with a confidence); in the sensitivity analyses that split is redrawn on the remaining items; only the transfer-test halves are fixed.
+`coverage_at_risk_crossfit` per locale: two halves split by item (seed 2026), a threshold validated on one half (exact one-sided 95 %, the walk starting at the cut that validates with 2 errors) and applied to the other, the halves pooled; coverage is the share of items automated, with errors / automated, and the pooled coverage over seeds 2027–2036. Target error: 1, 2, 5 or 10 errors in 100 automated decisions. Note: held-out coverage uses v0.5's own per-judge cross-fit split (by item, over the items that judge answered with a confidence); in the sensitivity analyses that split is redrawn on the remaining items; only the transfer-test halves are fixed.
 
-**Bound, met / not met (#213; computed after the study from the counts below, not pre-registered and in no test).** Each held-out share gets the one-sided 95 % upper bound on its held-out errors, both halves pooled and rounded up. It is approximate, since each half's threshold depends on the other half (the cross-fit approximation of docs/judges.md). The share is *met* when that bound is within the target and *not met* otherwise. judge-audit calls a share validated only when it is met (docs/judges.md § The safe automation rate): in this section's title, "validated" refers to the threshold, validated on the other half, not to the share. Each met cell is a separate approximate 95 % statement; read together they do not all hold at 95 %. The range over other seeds need not contain the seed-2026 share.
+**Bound, met / not met (#213; computed after the study from the counts below, not pre-registered and in no test).** Each held-out share gets the one-sided 95 % upper bound on its held-out errors, both halves pooled and rounded up. It is approximate, since each half's threshold depends on the other half (the cross-fit approximation of docs/judges.md). The share is *met* when that bound is within the target and *not met* otherwise. judge-audit calls a share validated only when it is met (docs/judges.md § The safe automation rate). Each met cell is a separate approximate 95 % statement; read together they do not all hold at 95 %. The range over other seeds need not contain the seed-2026 share.
 
-| judge | locale | 1 % | 2 % | 5 % | 10 % |
+Each cell: share automated on held-out halves (errors / automated; held-out one-sided 95 % bound, approximate, computed after the study and not pre-registered; met when within the target, and only then called validated) · its range over split seeds 2027–2036.
+
+| judge | locale | 1 % target | 2 % target | 5 % target | 10 % target |
 |---|---|---|---|---|---|
 | jev | `en-US` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 29.0 % (38 / 863; bound 5.8 %, not met) · 30.7 %–55.6 % | 77.9 % (194 / 2318; bound 9.4 %, met) · 77.4 %–78.6 % |
 | jev | `es-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 25.3 % (43 / 752; bound 7.4 %, not met) · 0.0 %–23.6 % | 68.9 % (177 / 2048; bound 9.8 %, met) · 68.1 %–69.8 % |
@@ -201,7 +203,7 @@ Decisions declaring at least the confidence shown: wrong / rows, the rate and it
 
 ## 7. Sensitivity analyses
 
-Every test and metric recomputed on fewer items, each item removed in all three locales; the transfer tests keep the primary halves minus the removed items (no new split). Note: validated coverage uses v0.5's own per-judge cross-fit split (by item, over the items that judge answered with a confidence); in the sensitivity analyses that split is redrawn on the remaining items; only the transfer-test halves are fixed. Majority-no rows: `es-ES` 0, `ca-ES` 19, 19 items in all; text also in train or dev: `en-US` 26, `es-ES` 156, `ca-ES` 206, 297 items in all.
+Every test and metric recomputed on fewer items, each item removed in all three locales; the transfer tests keep the primary halves minus the removed items (no new split). Note: held-out coverage uses v0.5's own per-judge cross-fit split (by item, over the items that judge answered with a confidence); in the sensitivity analyses that split is redrawn on the remaining items; only the transfer-test halves are fixed. Majority-no rows: `es-ES` 0, `ca-ES` 19, 19 items in all; text also in train or dev: `en-US` 26, `es-ES` 156, `ca-ES` 206, 297 items in all.
 
 ### Without the items a majority of localisation judges said do not match their intent (any locale)
 
@@ -243,7 +245,7 @@ Every test and metric recomputed on fewer items, each item removed in all three 
 | unsloth-decision-4b (exploratory) | `es-ES` | `native_confidence` | 2955 | 0.751 | 0.751 | +0.000 ‡ |
 | unsloth-decision-4b (exploratory) | `ca-ES` | `native_confidence` | 2955 | 0.740 | 0.740 | +0.000 ‡ |
 
-| judge | locale | n | accuracy | AUROC | ECE | MCE | Brier | overconfidence | validated coverage at 5 % |
+| judge | locale | n | accuracy | AUROC | ECE | MCE | Brier | overconfidence | held-out share at 5 % (held-out 95 % bound approx., computed after the study) |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---|
 | jev | `en-US` | 2955 | 0.814 | 0.858 | 0.076 | 0.188 | 0.112 | +0.076 | 53.0 % (58 / 1566; bound 4.6 %, met) · 30.7 %–55.4 % |
 | jev | `es-ES` | 2955 | 0.783 | 0.844 | 0.082 | 0.168 | 0.128 | +0.082 | 18.7 % (21 / 552; bound 5.5 %, not met) · 18.9 %–25.4 % |
@@ -322,7 +324,7 @@ Every test and metric recomputed on fewer items, each item removed in all three 
 | unsloth-decision-4b (exploratory) | `es-ES` | `native_confidence` | 2677 | 0.744 | 0.744 | +0.000 ‡ |
 | unsloth-decision-4b (exploratory) | `ca-ES` | `native_confidence` | 2677 | 0.736 | 0.736 | +0.000 ‡ |
 
-| judge | locale | n | accuracy | AUROC | ECE | MCE | Brier | overconfidence | validated coverage at 5 % |
+| judge | locale | n | accuracy | AUROC | ECE | MCE | Brier | overconfidence | held-out share at 5 % (held-out 95 % bound approx., computed after the study) |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---|
 | jev | `en-US` | 2677 | 0.795 | 0.851 | 0.087 | 0.192 | 0.123 | +0.087 | 23.6 % (23 / 631; bound 5.2 %, not met) · 22.4 %–29.5 % |
 | jev | `es-ES` | 2677 | 0.765 | 0.837 | 0.092 | 0.174 | 0.139 | +0.092 | 0.0 % (0 / 0) · 0.0 %–23.5 % |
@@ -476,9 +478,9 @@ Files that enter no figure, listed with their recorded cost only (every line cou
 
 ## 11. Refusals (exploratory, amendment A4)
 
-**Exploratory, not pre-registered (amendment A4).** None of this enters a test, a Holm family or a prediction. For each judge whose checkpoints record a refusal (`raw.refusal`), in every locale: the secondary metrics on the judged rows it did not refuse, beside the plan's figures for the same run (where a refused row counts wrong and is left out of the confidence metrics); then its refusals by MASSIVE scenario (`_meta.scenario`) and by gold intent, each out of that scenario's or intent's judged rows. Only scenarios and intents with a refusal are listed. Validated coverage as in §5, where *too few* means a half held fewer items with a confidence than the walk starts at. A refused row carries no confidence, so the two rows of a pair can differ only in n and accuracy (and in validated coverage, whose denominator is n); the confidence metrics are the same rows.
+**Exploratory, not pre-registered (amendment A4).** None of this enters a test, a Holm family or a prediction. For each judge whose checkpoints record a refusal (`raw.refusal`), in every locale: the secondary metrics on the judged rows it did not refuse, beside the plan's figures for the same run (where a refused row counts wrong and is left out of the confidence metrics); then its refusals by MASSIVE scenario (`_meta.scenario`) and by gold intent, each out of that scenario's or intent's judged rows. Only scenarios and intents with a refusal are listed. Held-out coverage as in §5, where *too few* means a half held fewer items with a confidence than the walk starts at. A refused row carries no confidence, so the two rows of a pair can differ only in n and accuracy (and in validated coverage, whose denominator is n); the confidence metrics are the same rows.
 
-| judge | locale | rows used | refused / judged | accuracy | AUROC | ECE | MCE | Brier | validated 1 % | validated 2 % | validated 5 % | validated 10 % |
+| judge | locale | rows used | refused / judged | accuracy | AUROC | ECE | MCE | Brier | held-out share at 1 % (held-out 95 % bound approx., computed after the study) | held-out share at 2 % (held-out 95 % bound approx., computed after the study) | held-out share at 5 % (held-out 95 % bound approx., computed after the study) | held-out share at 10 % (held-out 95 % bound approx., computed after the study) |
 |---|---|---|---:|---|---:|---:|---:|---:|---|---|---|---|
 | gpt-6-luna — exploratory, not pre-registered (amendment A4) | `en-US` | plan's figures (all judged rows) (2974) | 34 / 2974 | 0.783 [0.768, 0.797] | 0.852 | 0.056 | 0.145 | 0.120 | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 18.2 % (16 / 535; bound 4.6 %, met) · 21.8 %–39.4 % | 72.2 % (176 / 2124; bound 9.4 %, met) · 72.0 %–74.0 % |
 | gpt-6-luna — exploratory, not pre-registered (amendment A4) | `en-US` | without refused rows (2940) | 34 / 2974 | 0.792 [0.777, 0.806] | 0.852 | 0.056 | 0.145 | 0.120 | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 18.2 % (16 / 535; bound 4.6 %, met) · 21.8 %–39.4 % | 72.2 % (176 / 2124; bound 9.4 %, met) · 72.0 %–74.0 % |
