@@ -898,12 +898,21 @@ def _per_locale(c: dict) -> str:
             + f", {c['items']} items in all")
 
 
-def _cov(x: dict) -> str:
+def _cov(x: dict, target: float) -> str:
+    """A held-out share: coverage, errors / automated, and when it automated anything the
+    one-sided 1 − DELTA bound on its held-out errors (both halves pooled, approximate,
+    rounded up), met when within `target` (#213: computed after the study from these
+    counts, not pre-registered); then its range over the other split seeds."""
     p = x["pooled"]
     if x["reason"] and not p["covered"]:
         return "none validated (too few)"
-    return (f"{_pct(p['coverage'])} ({p['errors']} / {p['covered']}) · "
-            f"{_pct(x['spread_coverage'][0])}–{_pct(x['spread_coverage'][1])}")
+    spread = f"{_pct(x['spread_coverage'][0])}–{_pct(x['spread_coverage'][1])}"
+    if not p["covered"]:
+        return f"{_pct(p['coverage'])} (0 / 0) · {spread}"
+    up = math.ceil(risk_upper_bound(p["errors"], p["covered"], DELTA) * 1000 - 1e-9) / 10
+    met = risk_upper_bound(p["errors"], p["covered"], DELTA) <= target
+    return (f"{_pct(p['coverage'])} ({p['errors']} / {p['covered']}; bound {up:.1f} %, "
+            f"{'met' if met else 'not met'}) · {spread}")
 
 
 def _holm_bound(v: dict) -> str:
@@ -1087,6 +1096,17 @@ def markdown(r: dict) -> str:
         "errors / automated, and the pooled coverage over seeds 2027–2036. Target error: "
         "1, 2, 5 or 10 errors in 100 automated decisions. Note: " + VC_SPLIT + ".")
     add("")
+    add("**Bound, met / not met (#213; computed after the study from the counts below, not "
+        "pre-registered and in no test).** Each held-out share gets the one-sided 95 % upper "
+        "bound on its held-out errors, both halves pooled and rounded up. It is approximate, "
+        "since each half's threshold depends on the other half (the cross-fit approximation "
+        "of docs/judges.md). The share is *met* when that bound is within the target and "
+        "*not met* otherwise. judge-audit calls a share validated only when it is met "
+        "(docs/judges.md § The safe automation rate): in this section's title, \"validated\" "
+        "refers to the threshold, validated on the other half, not to the share. Each met cell "
+        "is a separate approximate 95 % statement; read together they do not all hold at "
+        "95 %. The range over other seeds need not contain the seed-2026 share.")
+    add("")
     add("| judge | locale | 1 % | 2 % | 5 % | 10 % |")
     add("|---|---|---|---|---|---|")
     short: list[float] = []
@@ -1095,7 +1115,7 @@ def markdown(r: dict) -> str:
         cells = []
         for t in par["targets"]:
             x = vc[f"{t:g}"]
-            cells.append(_cov(x))
+            cells.append(_cov(x, t))
             if x["reason"] and not x["pooled"]["covered"] and t not in short:
                 short.append(t)
         add(f"| {_who(k, m['role'], m['partial'])} | `{k.split('/')[1]}` | "
@@ -1156,7 +1176,7 @@ def markdown(r: dict) -> str:
             add(f"| {_who(k, m['role'], m['partial'])} | `{k.split('/')[1]}` | {m['n']} | "
                 f"{_f(m['accuracy'])} | {_f(m['auroc'])} | {_f(m['ece'])} | {_f(m['mce'])} | "
                 f"{_f(m['brier'])} | {_s(m['overconfidence'])} | "
-                f"{_cov(m['validated_coverage']['0.05'])} |")
+                f"{_cov(m['validated_coverage']['0.05'], 0.05)} |")
         add("")
 
     add("## 8. Served model")
@@ -1271,7 +1291,7 @@ def _refusal_section(add, R: dict, targets: list[float]) -> None:
     for k, v in V.items():
         for name, m in (("plan's figures (all judged rows)", v["plan"]),
                         ("without refused rows", v["without_refusals"])):
-            cov = " | ".join(_cov(m["validated_coverage"][f"{t:g}"]) for t in targets)
+            cov = " | ".join(_cov(m["validated_coverage"][f"{t:g}"], t) for t in targets)
             add(f"| {who(k, v)} | `{k.split('/')[1]}` | {name} ({m['n']}) | "
                 f"{v['refused']} / {v['judged']} | {_f(m['accuracy'])} "
                 f"{_iv(m['accuracy_wilson'])} | {_f(m['auroc'])} | {_f(m['ece'])} | "
