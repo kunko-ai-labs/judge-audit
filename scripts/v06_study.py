@@ -137,7 +137,14 @@ SENSITIVITY = {
     "without_train_dev_overlap": "Without the items whose text is also in MASSIVE train or "
                                  "dev (any locale)",
 }
-VC_SPLIT = ("validated coverage uses v0.5's own per-judge cross-fit split (by item, over "
+# Next to every held-out share, in each table that shows one (#213): the bound is approximate
+# and was computed after the study, so "validated" is said only of a share that meets it.
+COV_HEAD = "held-out 95 % bound approx., computed after the study"
+COV_CELL = ("share automated on held-out halves (errors / automated; held-out one-sided 95 % "
+            "bound, approximate, computed after the study and not pre-registered; met when "
+            "within the target, and only then called validated) · its range over split seeds "
+            "2027–2036")
+VC_SPLIT = ("held-out coverage uses v0.5's own per-judge cross-fit split (by item, over "
             "the items that judge answered with a confidence); in the sensitivity analyses "
             "that split is redrawn on the remaining items; only the transfer-test halves are "
             "fixed")
@@ -898,12 +905,21 @@ def _per_locale(c: dict) -> str:
             + f", {c['items']} items in all")
 
 
-def _cov(x: dict) -> str:
+def _cov(x: dict, target: float) -> str:
+    """A held-out share: coverage, errors / automated, and when it automated anything the
+    one-sided 1 − DELTA bound on its held-out errors (both halves pooled, approximate,
+    rounded up), met when within `target` (#213: computed after the study from these
+    counts, not pre-registered); then its range over the other split seeds."""
     p = x["pooled"]
     if x["reason"] and not p["covered"]:
         return "none validated (too few)"
-    return (f"{_pct(p['coverage'])} ({p['errors']} / {p['covered']}) · "
-            f"{_pct(x['spread_coverage'][0])}–{_pct(x['spread_coverage'][1])}")
+    spread = f"{_pct(x['spread_coverage'][0])}–{_pct(x['spread_coverage'][1])}"
+    if not p["covered"]:
+        return f"{_pct(p['coverage'])} (0 / 0) · {spread}"
+    up = math.ceil(risk_upper_bound(p["errors"], p["covered"], DELTA) * 1000 - 1e-9) / 10
+    met = risk_upper_bound(p["errors"], p["covered"], DELTA) <= target
+    return (f"{_pct(p['coverage'])} ({p['errors']} / {p['covered']}; bound {up:.1f} %, "
+            f"{'met' if met else 'not met'}) · {spread}")
 
 
 def _holm_bound(v: dict) -> str:
@@ -1078,7 +1094,7 @@ def markdown(r: dict) -> str:
                 f"{_s(m['overconfidence'])} | {cost} | {_f(m.get('latency_p50_s'), 2)} s |")
         add("")
 
-    add("## 5. Validated coverage")
+    add("## 5. Held-out coverage")
     add("")
     add(f"`coverage_at_risk_crossfit` per locale: two halves split by item (seed "
         f"{par['seed']}), a threshold validated on one half (exact one-sided 95 %, the walk "
@@ -1087,7 +1103,19 @@ def markdown(r: dict) -> str:
         "errors / automated, and the pooled coverage over seeds 2027–2036. Target error: "
         "1, 2, 5 or 10 errors in 100 automated decisions. Note: " + VC_SPLIT + ".")
     add("")
-    add("| judge | locale | 1 % | 2 % | 5 % | 10 % |")
+    add("**Bound, met / not met (#213; computed after the study from the counts below, not "
+        "pre-registered and in no test).** Each held-out share gets the one-sided 95 % upper "
+        "bound on its held-out errors, both halves pooled and rounded up. It is approximate, "
+        "since each half's threshold depends on the other half (the cross-fit approximation "
+        "of docs/judges.md). The share is *met* when that bound is within the target and "
+        "*not met* otherwise. judge-audit calls a share validated only when it is met "
+        "(docs/judges.md § The safe automation rate). Each met cell "
+        "is a separate approximate 95 % statement; read together they do not all hold at "
+        "95 %. The range over other seeds need not contain the seed-2026 share.")
+    add("")
+    add(f"Each cell: {COV_CELL}.")
+    add("")
+    add("| judge | locale | 1 % target | 2 % target | 5 % target | 10 % target |")
     add("|---|---|---|---|---|---|")
     short: list[float] = []
     for k, m in P["metrics"].items():
@@ -1095,7 +1123,7 @@ def markdown(r: dict) -> str:
         cells = []
         for t in par["targets"]:
             x = vc[f"{t:g}"]
-            cells.append(_cov(x))
+            cells.append(_cov(x, t))
             if x["reason"] and not x["pooled"]["covered"] and t not in short:
                 short.append(t)
         add(f"| {_who(k, m['role'], m['partial'])} | `{k.split('/')[1]}` | "
@@ -1150,13 +1178,13 @@ def markdown(r: dict) -> str:
             _e1_table(add, S["e1"], plabels)
             add("")
         add("| judge | locale | n | accuracy | AUROC | ECE | MCE | Brier | overconfidence | "
-            "validated coverage at 5 % |")
+            f"held-out share at 5 % ({COV_HEAD}) |")
         add("|---|---|---:|---:|---:|---:|---:|---:|---:|---|")
         for k, m in S["metrics"].items():
             add(f"| {_who(k, m['role'], m['partial'])} | `{k.split('/')[1]}` | {m['n']} | "
                 f"{_f(m['accuracy'])} | {_f(m['auroc'])} | {_f(m['ece'])} | {_f(m['mce'])} | "
                 f"{_f(m['brier'])} | {_s(m['overconfidence'])} | "
-                f"{_cov(m['validated_coverage']['0.05'])} |")
+                f"{_cov(m['validated_coverage']['0.05'], 0.05)} |")
         add("")
 
     add("## 8. Served model")
@@ -1250,7 +1278,7 @@ def _refusal_section(add, R: dict, targets: list[float]) -> None:
         "the plan's figures for the same run (where a refused row counts wrong and is left "
         "out of the confidence metrics); then its refusals by MASSIVE scenario "
         "(`_meta.scenario`) and by gold intent, each out of that scenario's or intent's "
-        "judged rows. Only scenarios and intents with a refusal are listed. Validated "
+        "judged rows. Only scenarios and intents with a refusal are listed. Held-out "
         "coverage as in §5, where *too few* means a half held fewer items with a confidence "
         "than the walk starts at. A refused row carries no confidence, so "
         "the two rows of a pair can differ only in n and accuracy (and in validated "
@@ -1266,12 +1294,12 @@ def _refusal_section(add, R: dict, targets: list[float]) -> None:
         return f"{_who(k, v['role'], v['partial'])} — {R['label']}"
 
     add("| judge | locale | rows used | refused / judged | accuracy | AUROC | ECE | MCE | "
-        "Brier | " + " | ".join(f"validated {_pct(t, 0)}" for t in targets) + " |")
+        "Brier | " + " | ".join(f"held-out share at {_pct(t, 0)} ({COV_HEAD})" for t in targets) + " |")
     add("|---|---|---|---:|---|---:|---:|---:|---:|" + "---|" * len(targets))
     for k, v in V.items():
         for name, m in (("plan's figures (all judged rows)", v["plan"]),
                         ("without refused rows", v["without_refusals"])):
-            cov = " | ".join(_cov(m["validated_coverage"][f"{t:g}"]) for t in targets)
+            cov = " | ".join(_cov(m["validated_coverage"][f"{t:g}"], t) for t in targets)
             add(f"| {who(k, v)} | `{k.split('/')[1]}` | {name} ({m['n']}) | "
                 f"{v['refused']} / {v['judged']} | {_f(m['accuracy'])} "
                 f"{_iv(m['accuracy_wilson'])} | {_f(m['auroc'])} | {_f(m['ece'])} | "

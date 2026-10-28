@@ -109,46 +109,50 @@ Accuracy counts a row without an answer or a confidence as wrong (Wilson 95 % in
 | strands-decider-2b (exploratory) | 2974 / 2974 | 0 / 0 | 0.558 [0.540, 0.576] | 0.817 [0.802, 0.832] | 0.097 [0.082, 0.111] | 0.138 [0.118, 0.191] (302) | 0.182 | +0.097 | $0.0000 | 0.65 s |
 | unsloth-decision-4b (exploratory) | 2974 / 2974 | 0 / 0 | 0.460 [0.442, 0.478] | 0.741 [0.724, 0.758] | 0.027 [0.020, 0.046] | 0.110 [0.093, 0.158] (191) | 0.206 | -0.020 | $0.0000 | 1.03 s |
 
-## 5. Validated coverage
+## 5. Held-out coverage
 
-`coverage_at_risk_crossfit` per locale: two halves split by item (seed 2026), a threshold validated on one half (exact one-sided 95 %, the walk starting at the cut that validates with 2 errors) and applied to the other, the halves pooled; coverage is the share of items automated, with errors / automated, and the pooled coverage over seeds 2027–2036. Target error: 1, 2, 5 or 10 errors in 100 automated decisions. Note: validated coverage uses v0.5's own per-judge cross-fit split (by item, over the items that judge answered with a confidence); in the sensitivity analyses that split is redrawn on the remaining items; only the transfer-test halves are fixed.
+`coverage_at_risk_crossfit` per locale: two halves split by item (seed 2026), a threshold validated on one half (exact one-sided 95 %, the walk starting at the cut that validates with 2 errors) and applied to the other, the halves pooled; coverage is the share of items automated, with errors / automated, and the pooled coverage over seeds 2027–2036. Target error: 1, 2, 5 or 10 errors in 100 automated decisions. Note: held-out coverage uses v0.5's own per-judge cross-fit split (by item, over the items that judge answered with a confidence); in the sensitivity analyses that split is redrawn on the remaining items; only the transfer-test halves are fixed.
 
-| judge | locale | 1 % | 2 % | 5 % | 10 % |
+**Bound, met / not met (#213; computed after the study from the counts below, not pre-registered and in no test).** Each held-out share gets the one-sided 95 % upper bound on its held-out errors, both halves pooled and rounded up. It is approximate, since each half's threshold depends on the other half (the cross-fit approximation of docs/judges.md). The share is *met* when that bound is within the target and *not met* otherwise. judge-audit calls a share validated only when it is met (docs/judges.md § The safe automation rate). Each met cell is a separate approximate 95 % statement; read together they do not all hold at 95 %. The range over other seeds need not contain the seed-2026 share.
+
+Each cell: share automated on held-out halves (errors / automated; held-out one-sided 95 % bound, approximate, computed after the study and not pre-registered; met when within the target, and only then called validated) · its range over split seeds 2027–2036.
+
+| judge | locale | 1 % target | 2 % target | 5 % target | 10 % target |
 |---|---|---|---|---|---|
-| jev | `en-US` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 29.0 % (38 / 863) · 30.7 %–55.6 % | 77.9 % (194 / 2318) · 77.4 %–78.6 % |
-| jev | `es-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 25.3 % (43 / 752) · 0.0 %–23.6 % | 68.9 % (177 / 2048) · 68.1 %–69.8 % |
-| jev | `ca-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–19.5 % | 59.5 % (144 / 1770) · 58.4 %–59.6 % |
-| gpt-6-luna | `en-US` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 18.2 % (16 / 535) · 21.8 %–39.4 % | 72.2 % (176 / 2124) · 72.0 %–74.0 % |
-| gpt-6-luna | `es-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–13.3 % | 63.3 % (151 / 1871) · 62.0 %–64.7 % |
-| gpt-6-luna | `ca-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 5.3 % (9 / 157) · 0.0 %–0.0 % | 27.1 % (64 / 800) · 25.9 %–53.4 % |
-| claude-sonnet-4.5 | `en-US` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–10.5 % | 21.5 % (11 / 639) · 21.5 %–21.5 % | 76.5 % (153 / 2276) · 76.5 %–76.5 % |
-| claude-sonnet-4.5 | `es-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 8.5 % (8 / 252) · 0.0 %–8.8 % | 46.4 % (101 / 1379) · 45.8 %–75.6 % |
-| claude-sonnet-4.5 | `ca-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–6.9 % | 45.3 % (106 / 1348) · 44.6 %–73.1 % |
-| clef-flash (exploratory) | `en-US` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–19.9 % | 40.6 % (47 / 1206) · 0.0 %–44.4 % | 48.9 % (131 / 1454) · 48.5 %–97.9 % |
-| clef-flash (exploratory) | `es-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 38.5 % (52 / 1145) · 4.0 %–44.2 % | 92.3 % (236 / 2745) · 92.1 %–92.9 % |
-| clef-flash (exploratory) | `ca-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 39.0 % (37 / 1161) · 18.0 %–60.0 % | 84.3 % (214 / 2506) · 83.6 %–85.4 % |
-| decider-2b (exploratory) | `en-US` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 31.1 % (57 / 924) · 0.0 %–9.7 % | 39.7 % (122 / 1180) · 36.3 %–76.9 % |
-| decider-2b (exploratory) | `es-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 10.4 % (15 / 310) · 0.0 %–4.5 % | 27.5 % (72 / 819) · 0.0 %–30.5 % |
+| jev | `en-US` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 29.0 % (38 / 863; bound 5.8 %, not met) · 30.7 %–55.6 % | 77.9 % (194 / 2318; bound 9.4 %, met) · 77.4 %–78.6 % |
+| jev | `es-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 25.3 % (43 / 752; bound 7.4 %, not met) · 0.0 %–23.6 % | 68.9 % (177 / 2048; bound 9.8 %, met) · 68.1 %–69.8 % |
+| jev | `ca-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–19.5 % | 59.5 % (144 / 1770; bound 9.3 %, met) · 58.4 %–59.6 % |
+| gpt-6-luna | `en-US` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 18.2 % (16 / 535; bound 4.6 %, met) · 21.8 %–39.4 % | 72.2 % (176 / 2124; bound 9.4 %, met) · 72.0 %–74.0 % |
+| gpt-6-luna | `es-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–13.3 % | 63.3 % (151 / 1871; bound 9.2 %, met) · 62.0 %–64.7 % |
+| gpt-6-luna | `ca-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 5.3 % (9 / 157; bound 9.8 %, not met) · 0.0 %–0.0 % | 27.1 % (64 / 800; bound 9.8 %, met) · 25.9 %–53.4 % |
+| claude-sonnet-4.5 | `en-US` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–10.5 % | 21.5 % (11 / 639; bound 2.9 %, met) · 21.5 %–21.5 % | 76.5 % (153 / 2276; bound 7.7 %, met) · 76.5 %–76.5 % |
+| claude-sonnet-4.5 | `es-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 8.5 % (8 / 252; bound 5.7 %, not met) · 0.0 %–8.8 % | 46.4 % (101 / 1379; bound 8.6 %, met) · 45.8 %–75.6 % |
+| claude-sonnet-4.5 | `ca-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–6.9 % | 45.3 % (106 / 1348; bound 9.2 %, met) · 44.6 %–73.1 % |
+| clef-flash (exploratory) | `en-US` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–19.9 % | 40.6 % (47 / 1206; bound 5.0 %, met) · 0.0 %–44.4 % | 48.9 % (131 / 1454; bound 10.4 %, not met) · 48.5 %–97.9 % |
+| clef-flash (exploratory) | `es-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 38.5 % (52 / 1145; bound 5.7 %, not met) · 4.0 %–44.2 % | 92.3 % (236 / 2745; bound 9.6 %, met) · 92.1 %–92.9 % |
+| clef-flash (exploratory) | `ca-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 39.0 % (37 / 1161; bound 4.2 %, met) · 18.0 %–60.0 % | 84.3 % (214 / 2506; bound 9.6 %, met) · 83.6 %–85.4 % |
+| decider-2b (exploratory) | `en-US` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 31.1 % (57 / 924; bound 7.7 %, not met) · 0.0 %–9.7 % | 39.7 % (122 / 1180; bound 12.0 %, not met) · 36.3 %–76.9 % |
+| decider-2b (exploratory) | `es-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 10.4 % (15 / 310; bound 7.4 %, not met) · 0.0 %–4.5 % | 27.5 % (72 / 819; bound 10.6 %, not met) · 0.0 %–30.5 % |
 | decider-2b (exploratory) | `ca-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–19.0 % |
-| decision2-kai-0.6b (exploratory) | `en-US` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 4.1 % (4 / 123) · 0.0 %–7.4 % | 16.8 % (31 / 498) · 14.0 %–30.1 % |
-| decision2-kai-0.6b (exploratory) | `es-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 3.5 % (3 / 105) · 4.0 %–8.2 % |
-| decision2-kai-0.6b (exploratory) | `ca-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 2.7 % (6 / 81) · 0.0 %–4.9 % |
-| deepseek-r1 (exploratory) | `en-US` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–28.7 % | 68.3 % (141 / 2031) · 67.3 %–77.5 % |
-| deepseek-r1 (exploratory) | `es-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 53.9 % (91 / 1602) · 53.9 %–65.3 % |
-| deepseek-r1 (exploratory) | `ca-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 50.2 % (85 / 1492) · 50.2 %–62.7 % |
-| gemini-3.6-flash (exploratory) | `en-US` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 15.4 % (12 / 457) · 0.0 %–0.0 % | 55.1 % (42 / 1638) · 55.1 %–55.1 % | 88.5 % (210 / 2631) · 85.9 %–88.5 % |
-| gemini-3.6-flash (exploratory) | `es-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 26.6 % (31 / 791) · 26.0 %–52.8 % | 68.2 % (123 / 2027) · 68.1 %–69.3 % |
-| gemini-3.6-flash (exploratory) | `ca-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 27.1 % (30 / 805) · 44.6 %–53.6 % | 53.6 % (54 / 1595) · 53.6 %–70.2 % |
+| decision2-kai-0.6b (exploratory) | `en-US` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 4.1 % (4 / 123; bound 7.3 %, not met) · 0.0 %–7.4 % | 16.8 % (31 / 498; bound 8.4 %, met) · 14.0 %–30.1 % |
+| decision2-kai-0.6b (exploratory) | `es-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 3.5 % (3 / 105; bound 7.3 %, met) · 4.0 %–8.2 % |
+| decision2-kai-0.6b (exploratory) | `ca-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 2.7 % (6 / 81; bound 14.1 %, not met) · 0.0 %–4.9 % |
+| deepseek-r1 (exploratory) | `en-US` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–28.7 % | 68.3 % (141 / 2031; bound 8.0 %, met) · 67.3 %–77.5 % |
+| deepseek-r1 (exploratory) | `es-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 53.9 % (91 / 1602; bound 6.8 %, met) · 53.9 %–65.3 % |
+| deepseek-r1 (exploratory) | `ca-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 50.2 % (85 / 1492; bound 6.8 %, met) · 50.2 %–62.7 % |
+| gemini-3.6-flash (exploratory) | `en-US` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 15.4 % (12 / 457; bound 4.3 %, not met) · 0.0 %–0.0 % | 55.1 % (42 / 1638; bound 3.4 %, met) · 55.1 %–55.1 % | 88.5 % (210 / 2631; bound 9.0 %, met) · 85.9 %–88.5 % |
+| gemini-3.6-flash (exploratory) | `es-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 26.6 % (31 / 791; bound 5.3 %, not met) · 26.0 %–52.8 % | 68.2 % (123 / 2027; bound 7.1 %, met) · 68.1 %–69.3 % |
+| gemini-3.6-flash (exploratory) | `ca-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 27.1 % (30 / 805; bound 5.1 %, not met) · 44.6 %–53.6 % | 53.6 % (54 / 1595; bound 4.3 %, met) · 53.6 %–70.2 % |
 | laya-multilingual (exploratory) | `en-US` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % |
 | laya-multilingual (exploratory) | `es-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % |
 | laya-multilingual (exploratory) | `ca-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % |
-| microsoft-decision-1 (exploratory) | `en-US` | 0.0 % (0 / 0) · 0.0 %–24.9 % | 33.0 % (30 / 982) · 11.1 %–30.5 % | 80.7 % (92 / 2400) · 80.2 %–82.7 % | 96.1 % (247 / 2858) · 95.7 %–96.5 % |
-| microsoft-decision-1 (exploratory) | `es-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 24.4 % (18 / 725) · 0.0 %–23.6 % | 72.3 % (82 / 2149) · 40.5 %–73.7 % | 91.5 % (232 / 2722) · 91.3 %–91.8 % |
-| microsoft-decision-1 (exploratory) | `ca-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–11.6 % | 30.1 % (33 / 895) · 31.5 %–60.6 % | 86.6 % (218 / 2575) · 86.5 %–87.3 % |
-| strands-decider-2b (exploratory) | `en-US` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 3.9 % (10 / 115) · 0.0 %–0.0 % | 20.2 % (54 / 601) · 0.0 %–22.1 % |
-| strands-decider-2b (exploratory) | `es-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 3.8 % (12 / 113) · 0.0 %–2.2 % |
+| microsoft-decision-1 (exploratory) | `en-US` | 0.0 % (0 / 0) · 0.0 %–24.9 % | 33.0 % (30 / 982; bound 4.2 %, not met) · 11.1 %–30.5 % | 80.7 % (92 / 2400; bound 4.6 %, met) · 80.2 %–82.7 % | 96.1 % (247 / 2858; bound 9.6 %, met) · 95.7 %–96.5 % |
+| microsoft-decision-1 (exploratory) | `es-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 24.4 % (18 / 725; bound 3.7 %, not met) · 0.0 %–23.6 % | 72.3 % (82 / 2149; bound 4.6 %, met) · 40.5 %–73.7 % | 91.5 % (232 / 2722; bound 9.5 %, met) · 91.3 %–91.8 % |
+| microsoft-decision-1 (exploratory) | `ca-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–11.6 % | 30.1 % (33 / 895; bound 4.9 %, met) · 31.5 %–60.6 % | 86.6 % (218 / 2575; bound 9.5 %, met) · 86.5 %–87.3 % |
+| strands-decider-2b (exploratory) | `en-US` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 3.9 % (10 / 115; bound 14.4 %, not met) · 0.0 %–0.0 % | 20.2 % (54 / 601; bound 11.2 %, not met) · 0.0 %–22.1 % |
+| strands-decider-2b (exploratory) | `es-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 3.8 % (12 / 113; bound 16.7 %, not met) · 0.0 %–2.2 % |
 | strands-decider-2b (exploratory) | `ca-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–2.8 % |
-| unsloth-decision-4b (exploratory) | `en-US` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–4.8 % | 9.3 % (16 / 277) · 8.8 %–11.1 % |
+| unsloth-decision-4b (exploratory) | `en-US` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–4.8 % | 9.3 % (16 / 277; bound 8.7 %, met) · 8.8 %–11.1 % |
 | unsloth-decision-4b (exploratory) | `es-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–3.6 % |
 | unsloth-decision-4b (exploratory) | `ca-ES` | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % |
 
@@ -199,7 +203,7 @@ Decisions declaring at least the confidence shown: wrong / rows, the rate and it
 
 ## 7. Sensitivity analyses
 
-Every test and metric recomputed on fewer items, each item removed in all three locales; the transfer tests keep the primary halves minus the removed items (no new split). Note: validated coverage uses v0.5's own per-judge cross-fit split (by item, over the items that judge answered with a confidence); in the sensitivity analyses that split is redrawn on the remaining items; only the transfer-test halves are fixed. Majority-no rows: `es-ES` 0, `ca-ES` 19, 19 items in all; text also in train or dev: `en-US` 26, `es-ES` 156, `ca-ES` 206, 297 items in all.
+Every test and metric recomputed on fewer items, each item removed in all three locales; the transfer tests keep the primary halves minus the removed items (no new split). Note: held-out coverage uses v0.5's own per-judge cross-fit split (by item, over the items that judge answered with a confidence); in the sensitivity analyses that split is redrawn on the remaining items; only the transfer-test halves are fixed. Majority-no rows: `es-ES` 0, `ca-ES` 19, 19 items in all; text also in train or dev: `en-US` 26, `es-ES` 156, `ca-ES` 206, 297 items in all.
 
 ### Without the items a majority of localisation judges said do not match their intent (any locale)
 
@@ -241,38 +245,38 @@ Every test and metric recomputed on fewer items, each item removed in all three 
 | unsloth-decision-4b (exploratory) | `es-ES` | `native_confidence` | 2955 | 0.751 | 0.751 | +0.000 ‡ |
 | unsloth-decision-4b (exploratory) | `ca-ES` | `native_confidence` | 2955 | 0.740 | 0.740 | +0.000 ‡ |
 
-| judge | locale | n | accuracy | AUROC | ECE | MCE | Brier | overconfidence | validated coverage at 5 % |
+| judge | locale | n | accuracy | AUROC | ECE | MCE | Brier | overconfidence | held-out share at 5 % (held-out 95 % bound approx., computed after the study) |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---|
-| jev | `en-US` | 2955 | 0.814 | 0.858 | 0.076 | 0.188 | 0.112 | +0.076 | 53.0 % (58 / 1566) · 30.7 %–55.4 % |
-| jev | `es-ES` | 2955 | 0.783 | 0.844 | 0.082 | 0.168 | 0.128 | +0.082 | 18.7 % (21 / 552) · 18.9 %–25.4 % |
+| jev | `en-US` | 2955 | 0.814 | 0.858 | 0.076 | 0.188 | 0.112 | +0.076 | 53.0 % (58 / 1566; bound 4.6 %, met) · 30.7 %–55.4 % |
+| jev | `es-ES` | 2955 | 0.783 | 0.844 | 0.082 | 0.168 | 0.128 | +0.082 | 18.7 % (21 / 552; bound 5.5 %, not met) · 18.9 %–25.4 % |
 | jev | `ca-ES` | 2955 | 0.748 | 0.841 | 0.082 | 0.156 | 0.140 | +0.082 | 0.0 % (0 / 0) · 0.0 %–23.8 % |
-| gpt-6-luna | `en-US` | 2955 | 0.787 | 0.850 | 0.057 | 0.145 | 0.120 | -0.054 | 40.3 % (44 / 1177) · 21.8 %–41.8 % |
-| gpt-6-luna | `es-ES` | 2955 | 0.767 | 0.832 | 0.063 | 0.165 | 0.133 | -0.057 | 13.4 % (17 / 392) · 0.0 %–14.9 % |
+| gpt-6-luna | `en-US` | 2955 | 0.787 | 0.850 | 0.057 | 0.145 | 0.120 | -0.054 | 40.3 % (44 / 1177; bound 4.8 %, met) · 21.8 %–41.8 % |
+| gpt-6-luna | `es-ES` | 2955 | 0.767 | 0.832 | 0.063 | 0.165 | 0.133 | -0.057 | 13.4 % (17 / 392; bound 6.5 %, not met) · 0.0 %–14.9 % |
 | gpt-6-luna | `ca-ES` | 2955 | 0.745 | 0.829 | 0.074 | 0.187 | 0.142 | -0.069 | 0.0 % (0 / 0) · 0.0 %–5.8 % |
-| claude-sonnet-4.5 | `en-US` | 2955 | 0.859 | 0.783 | 0.061 | 0.221 | 0.105 | +0.060 | 21.6 % (10 / 638) · 21.6 %–21.6 % |
+| claude-sonnet-4.5 | `en-US` | 2955 | 0.859 | 0.783 | 0.061 | 0.221 | 0.105 | +0.060 | 21.6 % (10 / 638; bound 2.7 %, met) · 21.6 %–21.6 % |
 | claude-sonnet-4.5 | `es-ES` | 2955 | 0.832 | 0.775 | 0.083 | 0.500 | 0.123 | +0.082 | 0.0 % (0 / 0) · 0.0 %–9.2 % |
 | claude-sonnet-4.5 | `ca-ES` | 2955 | 0.814 | 0.788 | 0.095 | 0.550 | 0.133 | +0.095 | 0.0 % (0 / 0) · 0.0 %–8.0 % |
-| clef-flash (exploratory) | `en-US` | 2955 | 0.905 | 0.852 | 0.040 | 0.252 | 0.068 | -0.034 | 41.9 % (51 / 1239) · 4.7 %–43.5 % |
-| clef-flash (exploratory) | `es-ES` | 2955 | 0.881 | 0.849 | 0.033 | 0.907 | 0.081 | -0.017 | 43.1 % (50 / 1274) · 4.9 %–43.4 % |
-| clef-flash (exploratory) | `ca-ES` | 2955 | 0.848 | 0.851 | 0.032 | 0.296 | 0.095 | -0.007 | 40.2 % (46 / 1187) · 37.1 %–62.0 % |
-| decider-2b (exploratory) | `en-US` | 2955 | 0.820 | 0.841 | 0.029 | 0.093 | 0.109 | -0.028 | 17.5 % (15 / 517) · 4.6 %–29.1 % |
+| clef-flash (exploratory) | `en-US` | 2955 | 0.905 | 0.852 | 0.040 | 0.252 | 0.068 | -0.034 | 41.9 % (51 / 1239; bound 5.2 %, not met) · 4.7 %–43.5 % |
+| clef-flash (exploratory) | `es-ES` | 2955 | 0.881 | 0.849 | 0.033 | 0.907 | 0.081 | -0.017 | 43.1 % (50 / 1274; bound 5.0 %, met) · 4.9 %–43.4 % |
+| clef-flash (exploratory) | `ca-ES` | 2955 | 0.848 | 0.851 | 0.032 | 0.296 | 0.095 | -0.007 | 40.2 % (46 / 1187; bound 5.0 %, met) · 37.1 %–62.0 % |
+| decider-2b (exploratory) | `en-US` | 2955 | 0.820 | 0.841 | 0.029 | 0.093 | 0.109 | -0.028 | 17.5 % (15 / 517; bound 4.5 %, met) · 4.6 %–29.1 % |
 | decider-2b (exploratory) | `es-ES` | 2955 | 0.746 | 0.832 | 0.017 | 0.100 | 0.135 | -0.008 | 0.0 % (0 / 0) · 0.0 %–9.0 % |
 | decider-2b (exploratory) | `ca-ES` | 2955 | 0.665 | 0.820 | 0.017 | 0.088 | 0.159 | -0.006 | 0.0 % (0 / 0) · 0.0 %–6.3 % |
-| decision2-kai-0.6b (exploratory) | `en-US` | 2955 | 0.678 | 0.813 | 0.106 | 0.162 | 0.173 | -0.104 | 6.4 % (6 / 189) · 0.0 %–7.3 % |
+| decision2-kai-0.6b (exploratory) | `en-US` | 2955 | 0.678 | 0.813 | 0.106 | 0.162 | 0.173 | -0.104 | 6.4 % (6 / 189; bound 6.2 %, not met) · 0.0 %–7.3 % |
 | decision2-kai-0.6b (exploratory) | `es-ES` | 2955 | 0.586 | 0.798 | 0.102 | 0.173 | 0.191 | -0.096 | 0.0 % (0 / 0) · 0.0 %–4.5 % |
 | decision2-kai-0.6b (exploratory) | `ca-ES` | 2955 | 0.499 | 0.789 | 0.079 | 0.120 | 0.194 | -0.075 | 0.0 % (0 / 0) · 0.0 %–0.0 % |
-| deepseek-r1 (exploratory) | `en-US` | 2955 | 0.842 | 0.802 | 0.039 | 1.000 | 0.111 | +0.034 | 28.3 % (39 / 836) · 0.0 %–29.0 % |
+| deepseek-r1 (exploratory) | `en-US` | 2955 | 0.842 | 0.802 | 0.039 | 1.000 | 0.111 | +0.034 | 28.3 % (39 / 836; bound 6.1 %, not met) · 0.0 %–29.0 % |
 | deepseek-r1 (exploratory) | `es-ES` | 2955 | 0.826 | 0.784 | 0.054 | 0.275 | 0.122 | +0.048 | 0.0 % (0 / 0) · 0.0 %–0.0 % |
 | deepseek-r1 (exploratory) | `ca-ES` | 2955 | 0.818 | 0.794 | 0.050 | 0.305 | 0.123 | +0.048 | 0.0 % (0 / 0) · 0.0 %–0.0 % |
-| gemini-3.6-flash (exploratory) | `en-US` | 2955 | 0.877 | 0.824 | 0.072 | 0.354 | 0.096 | +0.072 | 55.4 % (41 / 1637) · 55.4 %–55.4 % |
-| gemini-3.6-flash (exploratory) | `es-ES` | 2955 | 0.852 | 0.822 | 0.100 | 0.379 | 0.118 | +0.099 | 53.1 % (42 / 1568) · 26.3 %–53.1 % |
-| gemini-3.6-flash (exploratory) | `ca-ES` | 2955 | 0.852 | 0.813 | 0.104 | 0.403 | 0.120 | +0.104 | 53.9 % (53 / 1594) · 45.3 %–53.9 % |
+| gemini-3.6-flash (exploratory) | `en-US` | 2955 | 0.877 | 0.824 | 0.072 | 0.354 | 0.096 | +0.072 | 55.4 % (41 / 1637; bound 3.3 %, met) · 55.4 %–55.4 % |
+| gemini-3.6-flash (exploratory) | `es-ES` | 2955 | 0.852 | 0.822 | 0.100 | 0.379 | 0.118 | +0.099 | 53.1 % (42 / 1568; bound 3.5 %, met) · 26.3 %–53.1 % |
+| gemini-3.6-flash (exploratory) | `ca-ES` | 2955 | 0.852 | 0.813 | 0.104 | 0.403 | 0.120 | +0.104 | 53.9 % (53 / 1594; bound 4.2 %, met) · 45.3 %–53.9 % |
 | laya-multilingual (exploratory) | `en-US` | 2955 | 0.497 | 0.755 | 0.189 | 0.335 | 0.242 | +0.168 | 0.0 % (0 / 0) · 0.0 %–0.0 % |
 | laya-multilingual (exploratory) | `es-ES` | 2955 | 0.413 | 0.739 | 0.219 | 0.419 | 0.266 | +0.210 | 0.0 % (0 / 0) · 0.0 %–0.0 % |
 | laya-multilingual (exploratory) | `ca-ES` | 2955 | 0.288 | 0.734 | 0.236 | 0.523 | 0.262 | +0.232 | 0.0 % (0 / 0) · 0.0 %–0.0 % |
-| microsoft-decision-1 (exploratory) | `en-US` | 2955 | 0.897 | 0.876 | 0.014 | 0.109 | 0.069 | -0.005 | 82.9 % (98 / 2449) · 80.4 %–83.5 % |
-| microsoft-decision-1 (exploratory) | `es-ES` | 2955 | 0.873 | 0.871 | 0.015 | 0.048 | 0.079 | +0.005 | 74.8 % (86 / 2210) · 71.5 %–76.0 % |
-| microsoft-decision-1 (exploratory) | `ca-ES` | 2955 | 0.849 | 0.862 | 0.025 | 0.125 | 0.091 | -0.004 | 30.2 % (37 / 892) · 30.0 %–61.8 % |
+| microsoft-decision-1 (exploratory) | `en-US` | 2955 | 0.897 | 0.876 | 0.014 | 0.109 | 0.069 | -0.005 | 82.9 % (98 / 2449; bound 4.8 %, met) · 80.4 %–83.5 % |
+| microsoft-decision-1 (exploratory) | `es-ES` | 2955 | 0.873 | 0.871 | 0.015 | 0.048 | 0.079 | +0.005 | 74.8 % (86 / 2210; bound 4.7 %, met) · 71.5 %–76.0 % |
+| microsoft-decision-1 (exploratory) | `ca-ES` | 2955 | 0.849 | 0.862 | 0.025 | 0.125 | 0.091 | -0.004 | 30.2 % (37 / 892; bound 5.5 %, not met) · 30.0 %–61.8 % |
 | strands-decider-2b (exploratory) | `en-US` | 2955 | 0.697 | 0.817 | 0.075 | 0.148 | 0.159 | +0.075 | 0.0 % (0 / 0) · 0.0 %–0.0 % |
 | strands-decider-2b (exploratory) | `es-ES` | 2955 | 0.637 | 0.817 | 0.084 | 0.146 | 0.171 | +0.084 | 0.0 % (0 / 0) · 0.0 %–0.0 % |
 | strands-decider-2b (exploratory) | `ca-ES` | 2955 | 0.561 | 0.817 | 0.095 | 0.139 | 0.182 | +0.095 | 0.0 % (0 / 0) · 0.0 %–0.0 % |
@@ -320,38 +324,38 @@ Every test and metric recomputed on fewer items, each item removed in all three 
 | unsloth-decision-4b (exploratory) | `es-ES` | `native_confidence` | 2677 | 0.744 | 0.744 | +0.000 ‡ |
 | unsloth-decision-4b (exploratory) | `ca-ES` | `native_confidence` | 2677 | 0.736 | 0.736 | +0.000 ‡ |
 
-| judge | locale | n | accuracy | AUROC | ECE | MCE | Brier | overconfidence | validated coverage at 5 % |
+| judge | locale | n | accuracy | AUROC | ECE | MCE | Brier | overconfidence | held-out share at 5 % (held-out 95 % bound approx., computed after the study) |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---|
-| jev | `en-US` | 2677 | 0.795 | 0.851 | 0.087 | 0.192 | 0.123 | +0.087 | 23.6 % (23 / 631) · 22.4 %–29.5 % |
+| jev | `en-US` | 2677 | 0.795 | 0.851 | 0.087 | 0.192 | 0.123 | +0.087 | 23.6 % (23 / 631; bound 5.2 %, not met) · 22.4 %–29.5 % |
 | jev | `es-ES` | 2677 | 0.765 | 0.837 | 0.092 | 0.174 | 0.139 | +0.092 | 0.0 % (0 / 0) · 0.0 %–23.5 % |
 | jev | `ca-ES` | 2677 | 0.734 | 0.833 | 0.089 | 0.152 | 0.148 | +0.089 | 0.0 % (0 / 0) · 0.0 %–16.0 % |
-| gpt-6-luna | `en-US` | 2677 | 0.770 | 0.844 | 0.055 | 0.136 | 0.127 | -0.048 | 16.5 % (13 / 436) · 16.6 %–33.5 % |
+| gpt-6-luna | `en-US` | 2677 | 0.770 | 0.844 | 0.055 | 0.136 | 0.127 | -0.048 | 16.5 % (13 / 436; bound 4.7 %, met) · 16.6 %–33.5 % |
 | gpt-6-luna | `es-ES` | 2677 | 0.752 | 0.827 | 0.063 | 0.154 | 0.138 | -0.053 | 0.0 % (0 / 0) · 0.0 %–0.0 % |
 | gpt-6-luna | `ca-ES` | 2677 | 0.730 | 0.825 | 0.072 | 0.165 | 0.146 | -0.063 | 0.0 % (0 / 0) · 0.0 %–0.0 % |
-| claude-sonnet-4.5 | `en-US` | 2677 | 0.844 | 0.776 | 0.072 | 0.227 | 0.115 | +0.070 | 9.3 % (6 / 250) · 9.3 %–19.6 % |
-| claude-sonnet-4.5 | `es-ES` | 2677 | 0.818 | 0.770 | 0.093 | 0.500 | 0.133 | +0.092 | 15.3 % (8 / 409) · 0.0 %–8.0 % |
+| claude-sonnet-4.5 | `en-US` | 2677 | 0.844 | 0.776 | 0.072 | 0.227 | 0.115 | +0.070 | 9.3 % (6 / 250; bound 4.7 %, met) · 9.3 %–19.6 % |
+| claude-sonnet-4.5 | `es-ES` | 2677 | 0.818 | 0.770 | 0.093 | 0.500 | 0.133 | +0.092 | 15.3 % (8 / 409; bound 3.6 %, met) · 0.0 %–8.0 % |
 | claude-sonnet-4.5 | `ca-ES` | 2677 | 0.799 | 0.782 | 0.107 | 0.550 | 0.144 | +0.107 | 0.0 % (0 / 0) · 0.0 %–7.4 % |
 | clef-flash (exploratory) | `en-US` | 2677 | 0.892 | 0.848 | 0.038 | 0.250 | 0.075 | -0.027 | 0.0 % (0 / 0) · 0.0 %–40.8 % |
 | clef-flash (exploratory) | `es-ES` | 2677 | 0.869 | 0.845 | 0.031 | 0.907 | 0.087 | -0.012 | 0.0 % (0 / 0) · 0.0 %–36.4 % |
-| clef-flash (exploratory) | `ca-ES` | 2677 | 0.840 | 0.846 | 0.031 | 0.350 | 0.099 | -0.003 | 12.9 % (7 / 345) · 12.8 %–38.7 % |
+| clef-flash (exploratory) | `ca-ES` | 2677 | 0.840 | 0.846 | 0.031 | 0.350 | 0.099 | -0.003 | 12.9 % (7 / 345; bound 3.8 %, met) · 12.8 %–38.7 % |
 | decider-2b (exploratory) | `en-US` | 2677 | 0.804 | 0.834 | 0.026 | 0.098 | 0.116 | -0.023 | 0.0 % (0 / 0) · 0.0 %–29.2 % |
 | decider-2b (exploratory) | `es-ES` | 2677 | 0.732 | 0.823 | 0.019 | 0.094 | 0.143 | -0.005 | 0.0 % (0 / 0) · 0.0 %–7.1 % |
-| decider-2b (exploratory) | `ca-ES` | 2677 | 0.653 | 0.807 | 0.022 | 0.086 | 0.167 | -0.002 | 5.5 % (11 / 147) · 0.0 %–5.3 % |
+| decider-2b (exploratory) | `ca-ES` | 2677 | 0.653 | 0.807 | 0.022 | 0.086 | 0.167 | -0.002 | 5.5 % (11 / 147; bound 12.1 %, not met) · 0.0 %–5.3 % |
 | decision2-kai-0.6b (exploratory) | `en-US` | 2677 | 0.656 | 0.804 | 0.096 | 0.145 | 0.178 | -0.093 | 0.0 % (0 / 0) · 0.0 %–5.4 % |
 | decision2-kai-0.6b (exploratory) | `es-ES` | 2677 | 0.569 | 0.790 | 0.091 | 0.152 | 0.194 | -0.086 | 0.0 % (0 / 0) · 0.0 %–0.0 % |
 | decision2-kai-0.6b (exploratory) | `ca-ES` | 2677 | 0.486 | 0.785 | 0.071 | 0.118 | 0.195 | -0.067 | 0.0 % (0 / 0) · 0.0 %–0.0 % |
 | deepseek-r1 (exploratory) | `en-US` | 2677 | 0.826 | 0.797 | 0.048 | 1.000 | 0.120 | +0.044 | 0.0 % (0 / 0) · 0.0 %–0.0 % |
 | deepseek-r1 (exploratory) | `es-ES` | 2677 | 0.809 | 0.782 | 0.063 | 0.190 | 0.131 | +0.059 | 0.0 % (0 / 0) · 0.0 %–0.0 % |
 | deepseek-r1 (exploratory) | `ca-ES` | 2677 | 0.804 | 0.786 | 0.059 | 0.283 | 0.132 | +0.058 | 0.0 % (0 / 0) · 0.0 %–0.0 % |
-| gemini-3.6-flash (exploratory) | `en-US` | 2677 | 0.862 | 0.818 | 0.084 | 0.366 | 0.107 | +0.084 | 53.1 % (41 / 1421) · 40.8 %–53.1 % |
-| gemini-3.6-flash (exploratory) | `es-ES` | 2677 | 0.839 | 0.819 | 0.109 | 0.379 | 0.128 | +0.109 | 50.1 % (38 / 1340) · 24.8 %–50.1 % |
-| gemini-3.6-flash (exploratory) | `ca-ES` | 2677 | 0.838 | 0.807 | 0.115 | 0.417 | 0.131 | +0.115 | 34.3 % (25 / 918) · 24.4 %–42.6 % |
+| gemini-3.6-flash (exploratory) | `en-US` | 2677 | 0.862 | 0.818 | 0.084 | 0.366 | 0.107 | +0.084 | 53.1 % (41 / 1421; bound 3.8 %, met) · 40.8 %–53.1 % |
+| gemini-3.6-flash (exploratory) | `es-ES` | 2677 | 0.839 | 0.819 | 0.109 | 0.379 | 0.128 | +0.109 | 50.1 % (38 / 1340; bound 3.8 %, met) · 24.8 %–50.1 % |
+| gemini-3.6-flash (exploratory) | `ca-ES` | 2677 | 0.838 | 0.807 | 0.115 | 0.417 | 0.131 | +0.115 | 34.3 % (25 / 918; bound 3.8 %, met) · 24.4 %–42.6 % |
 | laya-multilingual (exploratory) | `en-US` | 2677 | 0.487 | 0.748 | 0.191 | 0.350 | 0.247 | +0.169 | 0.0 % (0 / 0) · 0.0 %–0.0 % |
 | laya-multilingual (exploratory) | `es-ES` | 2677 | 0.407 | 0.734 | 0.223 | 0.415 | 0.270 | +0.214 | 0.0 % (0 / 0) · 0.0 %–0.0 % |
 | laya-multilingual (exploratory) | `ca-ES` | 2677 | 0.285 | 0.726 | 0.243 | 0.524 | 0.269 | +0.238 | 0.0 % (0 / 0) · 0.0 %–0.0 % |
-| microsoft-decision-1 (exploratory) | `en-US` | 2677 | 0.884 | 0.871 | 0.014 | 0.102 | 0.075 | +0.000 | 77.1 % (82 / 2063) · 75.3 %–77.4 % |
-| microsoft-decision-1 (exploratory) | `es-ES` | 2677 | 0.861 | 0.866 | 0.018 | 0.048 | 0.085 | +0.009 | 66.7 % (68 / 1785) · 64.5 %–68.1 % |
-| microsoft-decision-1 (exploratory) | `ca-ES` | 2677 | 0.840 | 0.855 | 0.027 | 0.099 | 0.096 | -0.001 | 6.5 % (3 / 173) · 10.4 %–35.0 % |
+| microsoft-decision-1 (exploratory) | `en-US` | 2677 | 0.884 | 0.871 | 0.014 | 0.102 | 0.075 | +0.000 | 77.1 % (82 / 2063; bound 4.8 %, met) · 75.3 %–77.4 % |
+| microsoft-decision-1 (exploratory) | `es-ES` | 2677 | 0.861 | 0.866 | 0.018 | 0.048 | 0.085 | +0.009 | 66.7 % (68 / 1785; bound 4.7 %, met) · 64.5 %–68.1 % |
+| microsoft-decision-1 (exploratory) | `ca-ES` | 2677 | 0.840 | 0.855 | 0.027 | 0.099 | 0.096 | -0.001 | 6.5 % (3 / 173; bound 4.5 %, met) · 10.4 %–35.0 % |
 | strands-decider-2b (exploratory) | `en-US` | 2677 | 0.674 | 0.810 | 0.088 | 0.166 | 0.168 | +0.088 | 0.0 % (0 / 0) · 0.0 %–0.0 % |
 | strands-decider-2b (exploratory) | `es-ES` | 2677 | 0.616 | 0.809 | 0.096 | 0.147 | 0.180 | +0.096 | 0.0 % (0 / 0) · 0.0 %–0.0 % |
 | strands-decider-2b (exploratory) | `ca-ES` | 2677 | 0.543 | 0.807 | 0.105 | 0.146 | 0.189 | +0.105 | 0.0 % (0 / 0) · 0.0 %–0.0 % |
@@ -474,16 +478,16 @@ Files that enter no figure, listed with their recorded cost only (every line cou
 
 ## 11. Refusals (exploratory, amendment A4)
 
-**Exploratory, not pre-registered (amendment A4).** None of this enters a test, a Holm family or a prediction. For each judge whose checkpoints record a refusal (`raw.refusal`), in every locale: the secondary metrics on the judged rows it did not refuse, beside the plan's figures for the same run (where a refused row counts wrong and is left out of the confidence metrics); then its refusals by MASSIVE scenario (`_meta.scenario`) and by gold intent, each out of that scenario's or intent's judged rows. Only scenarios and intents with a refusal are listed. Validated coverage as in §5, where *too few* means a half held fewer items with a confidence than the walk starts at. A refused row carries no confidence, so the two rows of a pair can differ only in n and accuracy (and in validated coverage, whose denominator is n); the confidence metrics are the same rows.
+**Exploratory, not pre-registered (amendment A4).** None of this enters a test, a Holm family or a prediction. For each judge whose checkpoints record a refusal (`raw.refusal`), in every locale: the secondary metrics on the judged rows it did not refuse, beside the plan's figures for the same run (where a refused row counts wrong and is left out of the confidence metrics); then its refusals by MASSIVE scenario (`_meta.scenario`) and by gold intent, each out of that scenario's or intent's judged rows. Only scenarios and intents with a refusal are listed. Held-out coverage as in §5, where *too few* means a half held fewer items with a confidence than the walk starts at. A refused row carries no confidence, so the two rows of a pair can differ only in n and accuracy (and in validated coverage, whose denominator is n); the confidence metrics are the same rows.
 
-| judge | locale | rows used | refused / judged | accuracy | AUROC | ECE | MCE | Brier | validated 1 % | validated 2 % | validated 5 % | validated 10 % |
+| judge | locale | rows used | refused / judged | accuracy | AUROC | ECE | MCE | Brier | held-out share at 1 % (held-out 95 % bound approx., computed after the study) | held-out share at 2 % (held-out 95 % bound approx., computed after the study) | held-out share at 5 % (held-out 95 % bound approx., computed after the study) | held-out share at 10 % (held-out 95 % bound approx., computed after the study) |
 |---|---|---|---:|---|---:|---:|---:|---:|---|---|---|---|
-| gpt-6-luna — exploratory, not pre-registered (amendment A4) | `en-US` | plan's figures (all judged rows) (2974) | 34 / 2974 | 0.783 [0.768, 0.797] | 0.852 | 0.056 | 0.145 | 0.120 | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 18.2 % (16 / 535) · 21.8 %–39.4 % | 72.2 % (176 / 2124) · 72.0 %–74.0 % |
-| gpt-6-luna — exploratory, not pre-registered (amendment A4) | `en-US` | without refused rows (2940) | 34 / 2974 | 0.792 [0.777, 0.806] | 0.852 | 0.056 | 0.145 | 0.120 | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 18.2 % (16 / 535) · 21.8 %–39.4 % | 72.2 % (176 / 2124) · 72.0 %–74.0 % |
-| gpt-6-luna — exploratory, not pre-registered (amendment A4) | `es-ES` | plan's figures (all judged rows) (2974) | 20 / 2974 | 0.763 [0.747, 0.778] | 0.834 | 0.062 | 0.162 | 0.133 | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–13.3 % | 63.3 % (151 / 1871) · 62.0 %–64.7 % |
-| gpt-6-luna — exploratory, not pre-registered (amendment A4) | `es-ES` | without refused rows (2954) | 20 / 2974 | 0.768 [0.753, 0.783] | 0.834 | 0.062 | 0.162 | 0.133 | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–13.3 % | 63.3 % (151 / 1871) · 62.0 %–64.7 % |
-| gpt-6-luna — exploratory, not pre-registered (amendment A4) | `ca-ES` | plan's figures (all judged rows) (2974) | 20 / 2974 | 0.740 [0.724, 0.755] | 0.831 | 0.072 | 0.175 | 0.142 | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 5.3 % (9 / 157) · 0.0 %–0.0 % | 27.1 % (64 / 800) · 25.9 %–53.4 % |
-| gpt-6-luna — exploratory, not pre-registered (amendment A4) | `ca-ES` | without refused rows (2954) | 20 / 2974 | 0.745 [0.729, 0.760] | 0.831 | 0.072 | 0.175 | 0.142 | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 5.3 % (9 / 157) · 0.0 %–0.0 % | 27.1 % (64 / 800) · 25.9 %–53.4 % |
+| gpt-6-luna — exploratory, not pre-registered (amendment A4) | `en-US` | plan's figures (all judged rows) (2974) | 34 / 2974 | 0.783 [0.768, 0.797] | 0.852 | 0.056 | 0.145 | 0.120 | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 18.2 % (16 / 535; bound 4.6 %, met) · 21.8 %–39.4 % | 72.2 % (176 / 2124; bound 9.4 %, met) · 72.0 %–74.0 % |
+| gpt-6-luna — exploratory, not pre-registered (amendment A4) | `en-US` | without refused rows (2940) | 34 / 2974 | 0.792 [0.777, 0.806] | 0.852 | 0.056 | 0.145 | 0.120 | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 18.2 % (16 / 535; bound 4.6 %, met) · 21.8 %–39.4 % | 72.2 % (176 / 2124; bound 9.4 %, met) · 72.0 %–74.0 % |
+| gpt-6-luna — exploratory, not pre-registered (amendment A4) | `es-ES` | plan's figures (all judged rows) (2974) | 20 / 2974 | 0.763 [0.747, 0.778] | 0.834 | 0.062 | 0.162 | 0.133 | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–13.3 % | 63.3 % (151 / 1871; bound 9.2 %, met) · 62.0 %–64.7 % |
+| gpt-6-luna — exploratory, not pre-registered (amendment A4) | `es-ES` | without refused rows (2954) | 20 / 2974 | 0.768 [0.753, 0.783] | 0.834 | 0.062 | 0.162 | 0.133 | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–13.3 % | 63.3 % (151 / 1871; bound 9.2 %, met) · 62.0 %–64.7 % |
+| gpt-6-luna — exploratory, not pre-registered (amendment A4) | `ca-ES` | plan's figures (all judged rows) (2974) | 20 / 2974 | 0.740 [0.724, 0.755] | 0.831 | 0.072 | 0.175 | 0.142 | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 5.3 % (9 / 157; bound 9.8 %, not met) · 0.0 %–0.0 % | 27.1 % (64 / 800; bound 9.8 %, met) · 25.9 %–53.4 % |
+| gpt-6-luna — exploratory, not pre-registered (amendment A4) | `ca-ES` | without refused rows (2954) | 20 / 2974 | 0.745 [0.729, 0.760] | 0.831 | 0.072 | 0.175 | 0.142 | 0.0 % (0 / 0) · 0.0 %–0.0 % | 0.0 % (0 / 0) · 0.0 %–0.0 % | 5.3 % (9 / 157; bound 9.8 %, not met) · 0.0 %–0.0 % | 27.1 % (64 / 800; bound 9.8 %, met) · 25.9 %–53.4 % |
 
 Refusals by scenario:
 
