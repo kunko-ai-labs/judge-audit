@@ -5,9 +5,9 @@
 
 [![CI](https://github.com/kunko-ai-labs/judge-audit/actions/workflows/ci.yml/badge.svg)](https://github.com/kunko-ai-labs/judge-audit/actions/workflows/ci.yml) [![Release](https://github.com/kunko-ai-labs/judge-audit/actions/workflows/release.yml/badge.svg)](https://github.com/kunko-ai-labs/judge-audit/actions/workflows/release.yml) [![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://github.com/kunko-ai-labs/judge-audit/blob/v0.6.2/LICENSE) [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://github.com/kunko-ai-labs/judge-audit/blob/v0.6.2/pyproject.toml)
 
-## Can your AI judge decide alone?
+## Turn AI confidence into a defensible decision boundary
 
-**judge-audit replays decisions your people already made and tells you how much of that work an AI judge can take over, at the error you accept, with the bound attached.** Open source, runs in CI, no LLM inside the measurement, and every published number recomputes from committed evidence.
+**Before an AI judge acts alone, show with evidence where autonomy is earned.** judge-audit replays decisions your people already made and tells you which share an AI judge can take over at the error you accept, with the confidence threshold to deploy, a held-out check and the bound attached (approximate). Open source, runs in CI, no LLM inside the measurement, and every published number recomputes from committed evidence.
 
 **What we contribute.**
 - **An independent audit, not a model.** judge-audit measures the confidence an AI judge declares against decisions people already made. It judges nothing itself.
@@ -19,12 +19,12 @@
 
 | | |
 |---|---|
-| 🎯 **Safe automation rate** | The share of decisions a judge can take alone at the error you accept (1, 2, 5, 10 %), the confidence threshold to deploy, and an out-of-sample check. |
+| 🎯 **Safe automation rate** | The share of decisions a judge can take alone at the error you accept (1, 2, 5, 10 %), with the confidence threshold to deploy and an out-of-sample check. |
 | 🌡️ **Calibration** | When it says 90 %, is it right 90 % of the time? ECE, Brier score, reliability diagram, with intervals. |
 | 🚦 **CI gate** | `judge-audit check` fails the build when the judge drifts or the rate falls below your minimum. |
 | 🤖 **Where you work** | CLI, GitHub Action with a PR comment, and an MCP server for Claude Code, Cursor or any agent. |
 
-**[Quickstart](#quickstart)** · **[What you get](#what-you-get)** · **[v0.6 findings](#v06-findings)** · **[v0.5 findings](#v05-findings)** · **[Judges supported](#judge-interface)** · ▶ [launch video](https://github.com/kunko-ai-labs/judge-audit/releases/download/v0.5.1/judge-audit-launch.mp4)
+**[Run the quickstart](#quickstart)** · **[Audit your own decisions](https://github.com/kunko-ai-labs/judge-audit/blob/v0.6.2/docs/real-audits.md)** · **[What you get](#what-you-get)** · **[v0.5 findings](#v05-findings)** · ▶ [launch video](https://github.com/kunko-ai-labs/judge-audit/releases/download/v0.5.1/judge-audit-launch.mp4)
 
 
 ## v0.6 findings
