@@ -827,3 +827,29 @@ def test_every_refusal_row_of_the_report_carries_the_label(result):
     rows = [ln for ln in sec.splitlines() if ln.startswith("| gpt-6-luna")]
     assert rows and all(label in ln for ln in rows)
     assert "without refused rows" in sec and "plan's figures" in sec
+
+
+# --- the held-out bound in §5 (#213) ------------------------------------------------------
+
+
+@pytest.mark.parametrize("errors, covered, target, says", [
+    (0, 59, 0.05, "bound 5.0 %, met"),         # 1 − 0.05^(1/59) = 4.95 %, within 5 %
+    (0, 58, 0.05, "bound 5.1 %, not met"),     # 1 − 0.05^(1/58) = 5.03 %, above
+    (38, 863, 0.05, "bound 5.8 %, not met"),
+    (11, 639, 0.05, "bound 2.9 %, met"),
+])
+def test_a_held_out_share_carries_its_bound_and_whether_it_is_met(errors, covered, target,
+                                                                   says):
+    x = {"pooled": {"n": 2974, "covered": covered, "errors": errors,
+                    "coverage": round(covered / 2974, 4)},
+         "reason": None, "spread_coverage": [0.1, 0.2]}
+    cell = study._cov(x, target)
+    assert f"({errors} / {covered}; {says}) · 10.0 %–20.0 %" in cell
+
+
+def test_a_share_that_automated_nothing_has_no_bound():
+    x = {"pooled": {"n": 2974, "covered": 0, "errors": 0, "coverage": 0.0},
+         "reason": None, "spread_coverage": [0.0, 0.1]}
+    assert study._cov(x, 0.05) == "0.0 % (0 / 0) · 0.0 %–10.0 %"
+    x["reason"] = "too few"
+    assert study._cov(x, 0.05) == "none validated (too few)"
