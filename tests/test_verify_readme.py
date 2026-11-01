@@ -298,8 +298,18 @@ def test_a_one_digit_edit_of_a_v05_figure_is_caught(old, new):
         ("none (splits 0.0–28.7 %)", "none (splits 0.0–27.7 %)"),
         ("| deepseek-r1 (exploratory) |", "| deepseek-r1 |"),
         # the caption, the transfer tests and the overconfidence sentence
-        ("2,974 items in English, Spanish and Catalan, 12 judges", "2,974 items in English, "
-         "Spanish and Catalan, 11 judges"),
+        ("Catalan (not your traffic), 12 judges", "Catalan (not your traffic), 11 judges"),
+        # the caption carries its conditions: approximate, translated public items, the split
+        ("2,974 translated public items in English", "2,974 items in English"),
+        ("Catalan (not your traffic), 12", "Catalan, 12"),
+        ("with its approximate bound;", "with its bound;"),
+        ("at the study's split (seed 2026).**", "at the study's split.**"),
+        # met is per split
+        ("gpt-6-luna en-US is met at the study's split", "gpt-6-luna en-US is not met at the "
+         "study's split"),
+        ("split seeds 2027–2036 (21.8–39.4 %)", "split seeds 2027–2036 (21.8–39.5 %)"),
+        ("on another split a met cell can miss the target", "on another split a met cell "
+         "stays met"),
         ("none was resolved at its Holm-corrected level", "one was resolved at its "
          "Holm-corrected level"),
         ("8.65 % (T2)", "8.60 % (T2)"),
@@ -554,6 +564,29 @@ def test_a_dropped_row_of_the_at_a_glance_table_is_caught():
 )
 def test_the_at_a_glance_header_and_caption_are_checked(old, new):
     assert any(f.startswith("v0.5 at a glance") for f in check(edit(old, new)).failures)
+
+
+@pytest.mark.parametrize(
+    "old,new",
+    [
+        # every validated share carries "approximate" next to it
+        ("validated on held-out texts (approximate), Jev", "validated on held-out texts, Jev"),
+        ("Validated share at a 5 % error target (approximate) |",
+         "Validated share at a 5 % error target |"),
+        ("held-out texts (approximate) at split seed 2026;", "held-out texts at split seed 2026;"),
+        ("at split seed 2026; another split can change the result.**",
+         "at split seed 2027; another split can change the result.**"),
+        # met or not met is per split, next to Jev's 41.0 %
+        ("Jev's 41.0 % has a bound of 3.9 %, within 5 %", "Jev's 41.0 % has a bound of 3.8 %, "
+         "within 5 %"),
+        ("has a bound of 3.9 %, within 5 %", "has a bound of 3.9 %, above 5 %"),
+        ("automates fewer texts with a bound above 5 %", "automates more texts with a bound "
+         "above 5 %"),
+        ("the range over split seeds shows how far the share moves", "the share is stable"),
+    ],
+)
+def test_the_v05_share_is_approximate_and_per_split(old, new):
+    assert any(f.startswith("v0.5") for f in check(edit(old, new)).failures)
 
 
 def test_the_demo_figures_follow_the_json(monkeypatch, tmp_path):
