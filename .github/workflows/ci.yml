@@ -46,6 +46,10 @@ jobs:
           expect 1 judge-audit check examples/email-routing/labels.jsonl --judge simulated --baseline strict.json
           echo '{}' > empty.json
           expect 2 judge-audit check examples/email-routing/labels.jsonl --judge simulated --baseline empty.json
+      - name: The sdist and wheel carry the package and nothing else
+        run: |
+          pip install build
+          python scripts/check_dist.py
       - name: Published audits recompute from their raw checkpoints
         run: |
           python scripts/verify_published.py

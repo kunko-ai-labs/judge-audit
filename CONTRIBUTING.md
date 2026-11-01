@@ -32,7 +32,10 @@ python3 -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
 ruff check src tests scripts examples && mypy && pytest -q
 python scripts/verify_published.py && python scripts/verify_readme.py
+pip install build && python scripts/check_dist.py      # what the sdist and wheel would ship
 ```
+
+Tests run offline: a test that reaches a host other than this computer fails. A new way to the network (an HTTP client, an SDK, a model download) goes in `REVIEWED` in `tests/test_network_guard.py` with its reason; a request that carries a key goes through `OPENER` to a `checked_endpoint` URL.
 
 Python 3.10–3.12. Tests come first: a new metric is tested on inputs whose answer you can compute by hand.
 

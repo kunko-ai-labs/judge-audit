@@ -8,6 +8,7 @@ import argparse
 import contextlib
 import datetime
 import json
+import math
 import os
 import re
 import sys
@@ -15,7 +16,7 @@ import tempfile
 from typing import NoReturn
 
 from . import __version__
-from .certificate import DEFAULT_TARGETS, PRIMARY_TARGET, scope_changes
+from .certificate import DEFAULT_TARGETS, MAX_DECLARED, PRIMARY_TARGET, scope_changes
 from .ground_truth import ground_truth_of
 from .judges.clef import ClefJudge
 from .judges.decider import DeciderJudge
@@ -180,10 +181,11 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def _rate_options(p: argparse.ArgumentParser) -> None:
-    p.add_argument("--target", type=float, default=PRIMARY_TARGET, metavar="RISK",
+    p.add_argument("--target", type=float, action="append", default=None, metavar="RISK",
                    help="the error rate the safe automation rate is headlined at, chosen "
-                        f"before the run (default {PRIMARY_TARGET}); 1, 2, 5 and 10 %% are "
-                        "always shown as context")
+                        f"before the run (default {PRIMARY_TARGET}); repeatable up to "
+                        f"{MAX_DECLARED} times, the first headlines and each is flagged "
+                        "primary; 1, 2, 5 and 10 %% are always shown as context")
     p.add_argument("--segment-by", default="label", metavar="label|meta.FIELD|none",
                    help="segments the deployed threshold is checked on, to name the worst: "
                         "the true label (default), a field of the rows' _meta, or none")
@@ -255,22 +257,28 @@ def main(argv: list[str] | None = None) -> None:
             minimums.append(parse_min_safe_rate(spec))
         except ValueError as e:
             _die(str(e))
-    if not 0 < args.target < 1:
-        _die(f"--target must be between 0 and 1, got {args.target}")
+    declared = args.target or [PRIMARY_TARGET]
+    if len(declared) > MAX_DECLARED:
+        _die(f"--target is given at most {MAX_DECLARED} times, got {len(declared)}")
+    for i, t in enumerate(declared):
+        if not 0 < t < 1:
+            _die(f"--target must be between 0 and 1, got {t}")
+        if any(math.isclose(t, d) for d in declared[:i]):   # as the certificate compares
+            _die(f"--target {t:g} is given twice")
     segment_by = None if args.segment_by == "none" else args.segment_by
     if segment_by not in (None, "label") and not re.fullmatch(r"meta\.[A-Za-z0-9_]+",
                                                               segment_by):
         _die(f"--segment-by expects label, meta.FIELD or none, got {args.segment_by!r}")
     result = _audit(judge, rows, args, dataset_meta)
     done = result.completeness
-    wanted = [args.target, *(r for r, _ in minimums)]
+    wanted = [*declared, *(r for r, _ in minimums)]
     extra = [r for r in wanted if not any(abs(r - t) < 1e-12 for t in DEFAULT_TARGETS)]
-    if extra or args.target != PRIMARY_TARGET or segment_by != "label":
+    if extra or declared != [PRIMARY_TARGET] or segment_by != "label":
         # a target, a gate or segments the default certificate does not carry
         result.certificate = certificate_of(
             result.records, groups_of(result.records, rows),
             targets=sorted({*DEFAULT_TARGETS, *extra}), run=result.run,
-            primary=args.target, segment_by=segment_by)
+            primary=declared[0], segment_by=segment_by, declared=declared)
 
     if args.cmd == "run":
         fmt = args.format

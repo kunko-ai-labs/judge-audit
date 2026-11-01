@@ -69,6 +69,10 @@ jobs:
           print(f"CHANGELOG.md [{v}] dated {date.group(1)}: final")
           PY
       - run: pip install build && python -m build
+      - name: The archives carry the package and nothing else
+        # No raw checkpoint, log, docs/, editor or agent file, or file over its size limit,
+        # in what PyPI keeps for good (#169).
+        run: python scripts/check_dist.py dist/*
       - name: Tag must match the package version
         # A development release is never published, even when the version matches: the tag
         # ends in a PEP 440 dev segment in any of its spellings (.devN, devN, -devN, _devN,
