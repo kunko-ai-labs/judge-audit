@@ -16,7 +16,7 @@ def test_the_server_announces_the_package_version_on_initialize():
     """A client reads `serverInfo.version` from the handshake; it was empty."""
     from mcp import Client
 
-    import judge_audit
+    from judge_audit import __version__
 
     async def handshake():
         async with Client(mcp_server.server) as client:
@@ -24,7 +24,7 @@ def test_the_server_announces_the_package_version_on_initialize():
 
     info = asyncio.run(handshake())
     assert info.name == "judge-audit"
-    assert info.version == judge_audit.__version__ != ""
+    assert info.version == __version__ != ""
 
 
 def test_run_audit_simulated_is_tagged_and_carries_provenance(labels_path, tmp_path):
