@@ -38,9 +38,9 @@ The spread is min–max (SD) over runs of the same configuration. Read it next t
 
 | judge | over | accuracy (Arena 95 % interval) | zero-error coverage (Arena 95 % interval) | its 95 % upper bound | conf when right | conf when wrong | certain and wrong |
 |---|---|---|---|---|---|---|---|
-| Gemini 3 Flash | Arena run + r1–r3 | 97.0–97.0 % (SD 0.00) ([94.5, 99.0]) | 0.0–0.0 % (SD 0.00) ([0.0, 1.8]†) | 1.8–1.8 % (SD 0.00) | 0.980–0.983 (SD 0.001) | 0.983–0.983 (SD 0.000) | 5–5 |
+| Gemini 3 Flash | Arena run + r1–r3 | 97.0–97.0 % (SD 0.00) ([94.5, 99.0]) | 0.0–0.0 % (SD 0.00) ([0.0, 1.8]†) | 1.9–1.9 % (SD 0.00) | 0.980–0.983 (SD 0.001) | 0.983–0.983 (SD 0.000) | 5–5 |
 | Claude Sonnet 4.5 | Arena run + r1–r3 | 96.5–96.5 % (SD 0.00) ([93.9, 99.0]) | 0.0–0.0 % (SD 0.00) ([0.0, 90.9]) | 33.5–90.9 % (SD 33.12) | 0.957–0.958 (SD 0.001) | 0.877–0.886 (SD 0.004) | 2–2 |
-| Jev | r1–r3 | 96.0–97.0 % (SD 0.58) ([92.5, 98.0]) | 68.5–71.0 % (SD 1.32) ([67.0, 94.0]) | 94.4–95.5 % (SD 0.59) | 0.925–0.931 (SD 0.003) | 0.599–0.647 (SD 0.026) | 0–0 |
+| Jev | r1–r3 | 96.0–97.0 % (SD 0.58) ([92.5, 98.0]) | 68.5–71.0 % (SD 1.32) ([67.0, 94.0]) | 94.4–95.6 % (SD 0.59) | 0.925–0.931 (SD 0.003) | 0.599–0.647 (SD 0.026) | 0–0 |
 
 **Not every interval is stable between runs.** The README caption says Jev is not separated from Claude Sonnet 4.5. That holds in Arena, r3 but not in r1, r2: Sonnet changes 0 of its 200 decisions between runs and its accuracy not at all, yet the upper bound of its zero-error interval is 90.9 % (Arena), 33.5 % (r1), 33.5 % (r2), 90.9 % (r3). Its coverage is 0 % because a few of its most confident answers are wrong, and which bootstrap resamples keep them depends on small confidence changes between runs. So Sonnet's *interval* moves with the run; its point estimate and its decisions do not.
 

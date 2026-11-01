@@ -179,7 +179,7 @@ def main(argv: list[str] | None = None) -> int:
         emit(f"request failed: {e}", sys.stderr)
         return FAILED
     status, finding = summarize(resp, args.top_logprobs)
-    finding = {"model_requested": args.model, "base_url": args.base_url.rstrip("/"),
+    finding = {"model_requested": args.model, "base_url": base_url.rstrip("/"),     # checked
                "extra_body": extra, **finding, "exit_status": status}
     text = redact(json.dumps(finding, indent=1, ensure_ascii=False), key)
     print(text)
