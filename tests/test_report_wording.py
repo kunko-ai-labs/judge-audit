@@ -125,8 +125,11 @@ def test_the_report_headline_is_the_validated_share_with_bound_and_range():
     head = section.split("\n\n")[1]
     assert head.startswith(f"**Validated on held-out decisions, at a 5% error target: "
                            f"{o['coverage']:.1%}**")
-    assert f"95% upper bound on the error rate: {up(o['risk_upper'])}" in head
-    assert f"seeds 0–9: {lo:.1%}–{hi:.1%}" in head
+    # the held-out bound carries its qualifier in the same sentence; the range is named (#199)
+    assert ("one-sided 95% upper bound on the error rate, held-out halves, approximate: "
+            f"{up(o['risk_upper'])}") in head
+    assert f"range across splits, seeds 0–9: {lo:.1%}–{hi:.1%}" in head
+    assert f"[{lo:.1%}" not in head
     # the deployed share on all rows comes after, with its own bound
     assert head.index(f"{o['coverage']:.1%}") < head.index(f"{p['coverage']:.1%}")
     assert f"95% upper bound on the error rate: {up(p['risk_upper'])}" in head
@@ -143,26 +146,27 @@ def test_a_held_out_bound_above_the_target_is_not_met_on_every_surface():
     md = render_markdown(res)
     head = md[md.index("## Can I automate this?"):].split("\n\n")[1]
     assert head.startswith("**Validated on held-out decisions, at a 5% error target: not met** "
-                           f"(95% upper bound on the error rate {up(o['risk_upper'])}, above "
-                           "the 5% target).")
+                           "(one-sided 95% upper bound on the error rate, held-out halves, "
+                           f"approximate: {up(o['risk_upper'])}, above the 5% target).")
     assert f"Held out: {o['coverage']:.1%} of the labelled decisions" in head
     assert "Not validated: to deploy, confidence ≥" in head
     cell = (f"| 5% (primary) | a target of 1 wrong in every 20 automated decisions | not met at "
-            f"the 5% target (95% upper bound {up(o['risk_upper'])}): {o['coverage']:.1%} held "
-            "out (")
+            "the 5% target (one-sided 95% upper bound, held-out halves, approximate: "
+            f"{up(o['risk_upper'])}): {o['coverage']:.1%} held out (")
     assert cell in md
     shown = f"target: {o['coverage']:.1%}"
     cards = _key_figures(d, "", "")
     lead = cards[cards.index('class="kpi lead"'):cards.index('<div class="kpi">')]
     assert '<div class="kpi-value">not met</div>' in lead
     comment = _pr_comment().build(d)
-    assert ("**Validated on held-out decisions, at a 5% error target: not met** (95% upper "
-            f"bound on the error rate {up(o['risk_upper'])}, above the 5% target)") in comment
+    assert ("**Validated on held-out decisions, at a 5% error target: not met** (one-sided "
+            "95% upper bound on the error rate, held-out halves, approximate: "
+            f"{up(o['risk_upper'])}, above the 5% target)") in comment
     assert cell in comment
     for text in (md, certificate_html(d), lead, comment):
         assert shown not in text
     assert certificate_summary(d) == (f"safe_automation@5%=not_met({o['coverage']:.1%} "
-                                      f"bound={up(o['risk_upper'])}) "
+                                      f"bound_95_heldout_approx={up(o['risk_upper'])}) "
                                       f"all_rows={p['coverage']:.1%}")
 
 
@@ -212,13 +216,15 @@ def test_no_threshold_passing_reads_with_the_one_bound_wording():
 ])
 def test_published_rows_whose_held_out_bound_fails_read_not_met(path, target):
     text = (ROOT / path).read_text(encoding="utf-8")
-    assert f"not met at the {target} target (95% upper bound" in text
+    assert (f"not met at the {target} target (one-sided 95% upper bound, held-out halves, "
+            "approximate:") in text
 
 
 def test_the_readme_quickstart_line_reads_not_met():
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     # the exact held-out bound is 16.5x %: printed rounded up
-    assert "safe_automation@10%=not_met(75.0% bound=16.6%) all_rows=65.5%" in readme
+    assert ("safe_automation@10%=not_met(75.0% bound_95_heldout_approx=16.6%) "
+            "all_rows=65.5%") in readme
 
 
 def test_a_share_without_a_bound_appears_only_in_the_observed_section():
@@ -249,7 +255,9 @@ def test_the_html_lead_card_is_the_validated_share():
     lead = cards[cards.index('class="kpi lead"'):cards.index('<div class="kpi">')]
     assert "Validated on held-out decisions" in lead and "5% error target" in lead
     assert f'<div class="kpi-value">{o["coverage"]:.1%}</div>' in lead
-    assert f"95% upper bound on the error rate: {up(o['risk_upper'])}" in lead
+    assert ("one-sided 95% upper bound on the error rate, held-out halves, approximate: "
+            f"{up(o['risk_upper'])}") in lead
+    assert "range across splits, seeds 0–9: " in lead
 
 
 def test_the_pr_comment_leads_with_the_validated_share_and_moves_zero_error_coverage():
@@ -270,8 +278,11 @@ def test_the_cli_summary_leads_with_the_validated_share():
     o = p["out_of_sample"]
     lo, hi = o["spread_coverage"]
     line = certificate_summary({"certificate": res.certificate})
-    assert line == (f"safe_automation@5%={o['coverage']:.1%} [{lo:.1%}–{hi:.1%}] "
-                    f"bound={up(o['risk_upper'])} all_rows={p['coverage']:.1%}")
+    # the range is named, not bracketed like an interval; the bound's key qualifies it (#199)
+    assert line == (f"safe_automation@5%={o['coverage']:.1%} split_range={lo:.1%}–{hi:.1%} "
+                    f"bound_95_heldout_approx={up(o['risk_upper'])} "
+                    f"all_rows={p['coverage']:.1%}")
+    assert "[" not in line
 
 
 # --- the docs and the Action ---------------------------------------------------------------
