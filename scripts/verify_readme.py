@@ -1093,8 +1093,20 @@ def check(md: str) -> Checker:
 SOURCES = ("README.md", "docs/results/v0.5.md", "docs/results/v0.4.md")
 
 
+# The README is the PyPI page, where a relative link or image is dead: every link in it points at
+# this release's tag. The checks below read the same text with that prefix removed, so they keep
+# parsing links as paths in the repository.
+TAG_PREFIX = re.compile(r"https://(?:github\.com/kunko-ai-labs/judge-audit/blob|"
+                        r"raw\.githubusercontent\.com/kunko-ai-labs/judge-audit)/v\d+\.\d+\.\d+/")
+
+
+def relativize(md: str) -> str:
+    """The README with its tag-pinned absolute links turned back into repository paths."""
+    return TAG_PREFIX.sub("", md)
+
+
 def corpus() -> str:
-    return "\n\n".join((ROOT / f).read_text(encoding="utf-8") for f in SOURCES)
+    return "\n\n".join(relativize((ROOT / f).read_text(encoding="utf-8")) for f in SOURCES)
 
 
 def main() -> None:

@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import os
 
+from . import __version__
 from .cli import JUDGES, _judge
 from .ground_truth import ground_truth_of
 from .judges import llm, logprob
@@ -37,6 +38,7 @@ except ImportError as exc:  # pragma: no cover - import guard
 
 server = MCPServer(
     name="judge-audit",
+    version=__version__,
     instructions=(
         "Independent calibration audits for AI judges. Call run_audit with a labeled "
         "JSONL file to learn whether a judge's confidence is honest (ECE), what share "

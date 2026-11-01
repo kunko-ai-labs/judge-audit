@@ -3,6 +3,20 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
+## [0.6.2] — 2026-11-01
+
+A documentation patch and one small fix, so that the PyPI page and the quickstart work for someone who only ran `pip install`. No result or checkpoint changes; the published numbers are the 0.6.0 ones.
+
+### Documentation
+- **Quickstart.** `examples/` ships in neither the wheel nor the sdist, so the first command failed after a plain `pip install`. The quickstart now clones the repository first and says that the example data lives there.
+- **PyPI page.** Every image and link in the README is absolute and pinned to this release's tag (images on `raw.githubusercontent.com`, links on `github.com/.../blob`), so none is dead on pypi.org. `scripts/verify_readme.py` reads the README with that prefix removed, and `tests/test_readme_links.py` fails on a relative link, a link not pinned to the version being published, or a pinned target that is not in the repository.
+- **Launch video.** The link pointed at `releases/latest/download/…`, which returns 404; it now points at the v0.5.1 release asset.
+- **Action snippet.** The `env:` value is quoted, so the snippet parses as YAML; a test parses every YAML block of the README.
+- **README wording.** "Approximate" sits next to "validated on English rows" in the v0.6 summary.
+
+### Fixed
+- **The MCP server announced an empty version** (`serverInfo.version` was `""` in the handshake). It now reports the package version.
+
 ## [0.6.1] — 2026-11-01
 
 A documentation patch: the README, which is also the PyPI page, now carries each validated share's conditions next to the figure, as the website does. No code, result or checkpoint changes; the published numbers are the 0.6.0 ones. The security fix for [GHSA-52xj-j738-jpm3](https://github.com/kunko-ai-labs/judge-audit/security/advisories/GHSA-52xj-j738-jpm3) (an API key in error output, or sent on a redirect; versions up to 0.6.0rc1) shipped in 0.6.0rc2 and is in 0.6.0 and 0.6.1.

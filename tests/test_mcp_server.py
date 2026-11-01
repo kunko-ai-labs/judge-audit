@@ -1,6 +1,7 @@
 """The MCP server exposes the same engine; simulated results are always tagged."""
 from __future__ import annotations
 
+import asyncio
 import json
 
 import pytest
@@ -9,6 +10,21 @@ pytest.importorskip("mcp")
 
 from judge_audit import mcp_server  # noqa: E402
 from judge_audit.judges.simulated import SIMULATED_TAG  # noqa: E402
+
+
+def test_the_server_announces_the_package_version_on_initialize():
+    """A client reads `serverInfo.version` from the handshake; it was empty."""
+    from mcp import Client
+
+    from judge_audit import __version__
+
+    async def handshake():
+        async with Client(mcp_server.server) as client:
+            return client.server_info
+
+    info = asyncio.run(handshake())
+    assert info.name == "judge-audit"
+    assert info.version == __version__ != ""
 
 
 def test_run_audit_simulated_is_tagged_and_carries_provenance(labels_path, tmp_path):
