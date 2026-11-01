@@ -81,7 +81,7 @@ The study's design, the eight confirmatory tests and every caveat: **[v0.5 findi
 
 ```bash
 pip install kunko-judge-audit           # every release ships Sigstore-signed build provenance
-git clone https://github.com/kunko-ai-labs/judge-audit && cd judge-audit   # the example data lives in the repo, not in the pip package
+git clone --branch v0.6.2 https://github.com/kunko-ai-labs/judge-audit && cd judge-audit   # the example data lives in the repo, not in the pip package
 judge-audit run examples/email-routing/labels.jsonl --judge simulated --target 0.10   # no API key needed
 judge-audit check examples/email-routing/labels.jsonl --judge simulated --baseline audit-result.json --target 0.10 --min-safe-rate 0.10:0.60
 ```
