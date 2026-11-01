@@ -3,6 +3,19 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
+## [0.6.1] — 2026-11-01
+
+A documentation patch: the README, which is also the PyPI page, now carries each validated share's conditions next to the figure, as the website does. No code, result or checkpoint changes; the published numbers are the 0.6.0 ones. The security fix for [GHSA-52xj-j738-jpm3](https://github.com/kunko-ai-labs/judge-audit/security/advisories/GHSA-52xj-j738-jpm3) (an API key in error output, or sent on a redirect; versions up to 0.6.0rc1) shipped in 0.6.0rc2 and is in 0.6.0 and 0.6.1.
+
+### Documentation
+- **README wording.**
+  - The v0.5 "In short" sentence, the v0.5 "At a glance" caption and its "Validated share at a 5 % error target" header now say "approximate" next to the figure.
+  - Next to BANKING77 Jev's 41.0 % (bound 3.9 %): whether the bound is within the target depends on how the labelled texts are split into the two halves. At split seed 2026 it is; on split seeds 2033 and 2036 of the same checkpoints the same judge at the same 5 % target automates fewer texts with a bound above 5 %, not met (27.0 %, 47 errors / 831, bound 7.2 %; 29.2 %, 58 / 900, bound 8.0 %; `coverage_at_risk_crossfit` on `docs/runs/v05/`). The range over split seeds, already in the table, shows the movement.
+  - The v0.6 "At a glance" caption now says, above the cells, that the bound is approximate, that the items are translated public items and not your traffic, and that met is at the study's split (seed 2026); those conditions left the footnote.
+  - A line under that caption says that met is per split: gpt-6-luna en-US is met at the study's split, its share moves over split seeds 2027–2036 (21.8–39.4 %), and on another split a met cell can miss the target.
+  - "What you get" and "GitHub Action" say "approximate" next to the validated share they describe.
+- **`scripts/verify_readme.py` checks the new wording**: the "approximate" qualifiers, the v0.5 per-split sentence (its share, bound and direction rebuilt from `docs/v05-results.json`) and the v0.6 caption and per-split line (from `docs/v06/results.json`); an edit to any of them fails CI.
+
 ## [0.6.0] — 2026-10-28
 
 The final 0.6.0. It holds everything in 0.6.0rc1 and 0.6.0rc2 (below) and what is listed here, and it publishes the results of the pre-registered v0.6 study. **Breaking for a script that parses the CLI line:** the held-out bound's key is now `bound_95_heldout_approx=` (was `bound=`) and the range over split seeds is `split_range=` (was a bracketed `[a–b]`) (#199). A key is sent only to an https endpoint, or plain http to this computer (since rc2).
