@@ -24,7 +24,7 @@
 | 🚦 **CI gate** | `judge-audit check` fails the build when the judge drifts or the rate falls below your minimum. |
 | 🤖 **Where you work** | CLI, GitHub Action with a PR comment, and an MCP server for Claude Code, Cursor or any agent. |
 
-**[Run the quickstart](#quickstart)** · **[Audit your own decisions](https://github.com/kunko-ai-labs/judge-audit/blob/v0.6.2/docs/real-audits.md)** · **[What you get](#what-you-get)** · **[v0.5 findings](#v05-findings)** · ▶ [launch video](https://github.com/kunko-ai-labs/judge-audit/releases/download/v0.5.1/judge-audit-launch.mp4)
+**[Run the quickstart](#quickstart)** · **[Audit your own decisions](https://github.com/kunko-ai-labs/judge-audit/blob/v0.6.2/docs/real-audits.md)** · **[What you get](#what-you-get)** · **[v0.6 findings](#v06-findings)** · **[v0.5 findings](#v05-findings)** · ▶ [launch video](https://github.com/kunko-ai-labs/judge-audit/releases/download/v0.5.1/judge-audit-launch.mp4)
 
 
 ## v0.6 findings
