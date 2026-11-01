@@ -612,6 +612,22 @@ def v05_expected(d: dict) -> dict[str, list[str]]:
         lo, hi = m[f"banking77/{run}"]["strict"]["certification"]["0.05"]["spread_coverage"]
         return lo, hi
 
+    # met or not met is per split: Jev's share at the study's split, its bound, and a split of
+    # the same checkpoints that automates fewer texts (the low end of the range over seeds).
+    # Split seeds 2033 and 2036 miss the target: coverage_at_risk_crossfit on the checkpoints in
+    # docs/runs/v05/ (27.0 %, 47 / 831, bound 7.2 %; 29.2 %, 58 / 900, bound 8.0 %); the JSON
+    # keeps only the range, so the sentence's direction is what is rebuilt here.
+    jp = m["banking77/jev"]["strict"]["certification"]["0.05"]["pooled"]
+    j_ok = risk_upper_bound(jp["errors"], jp["covered"]) <= 0.05
+    per_split = (
+        f"Whether the bound is within the target depends on the split: at split seed "
+        f"{d['seed']} Jev's {_pc(jp['coverage'])} has a bound of "
+        f"{_bound_up(jp['errors'], jp['covered']):.1f} %, {'within' if j_ok else 'above'} 5 %; "
+        "on another split of the same checkpoints (split seeds 2033 and 2036) the same judge at "
+        f"the same 5 % target automates {'fewer' if s5[0] < jp['coverage'] else 'more'} texts "
+        "with a bound above 5 %, not met; the range over split seeds shows how far the share "
+        "moves.")
+
 
     noise = "label noise was not measured"
     return {
@@ -620,11 +636,13 @@ def v05_expected(d: dict) -> dict[str, list[str]]:
             f"in {worse} of {len(sc)} tests under the pre-registered rule ({worse_rr} of {len(sc)} "
             "under the re-reading)",
             f"{flip_text} with how an answer that copies an option's description is scored",
-            f"On BANKING77 at a 5 % error target, validated on held-out texts, Jev native "
+            f"On BANKING77 at a 5 % error target, validated on held-out texts (approximate), "
+            f"Jev native "
             f"probability can decide {rate('jev')} over "
             f"split seeds {seeds[0]}–{seeds[1]}) of the texts alone, gemini-3.6-flash verbalized "
             f"{rate('llm-gemini-3.6-flash')}), Qwen3-8B token log-probability "
             f"{rate('logprob-qwen3-8b')})",
+            per_split,
             "probably seen in pretraining",
             f"one run each, except {repeated} on BANKING77 ({len(d['repeats'][0]['runs'])} runs)",
             "label noise not measured",
@@ -689,8 +707,8 @@ def v05_expected(d: dict) -> dict[str, list[str]]:
 GLANCE_ROWS = {"Jev, native probability": "jev",
                "gemini-3.6-flash, verbalized": "llm-gemini-3.6-flash",
                "Qwen3-8B, token log-probability": "logprob-qwen3-8b"}
-GLANCE_HEAD = ("| Judge and confidence | Validated share at a 5 % error target | "
-               "95 % upper bound on the error rate | Range over split seeds | "
+GLANCE_HEAD = ("| Judge and confidence | Validated share at a 5 % error target "
+               "(approximate) | 95 % upper bound on the error rate | Range over split seeds | "
                "At a 10 % error target |")
 
 
@@ -703,9 +721,11 @@ def check_v05_glance(ck: Checker, md: str) -> None:
     m = d["metrics"]
     cap = re.search(r"\*\*At a glance: BANKING77, ([\d,]+) human-labelled banking queries: the "
                     r"share each judge decides alone at a (\d+) % error target, validated on "
-                    r"held-out texts\.\*\*", md)
+                    r"held-out texts \(approximate\) at split seed (\d+); another split can "
+                    r"change the result\.\*\*", md)
     ck.eq("v0.5 at a glance / rows", cap and cap.group(1), f"{m['banking77/jev']['strict']['n']:,}")
     ck.eq("v0.5 at a glance / caption target", cap and cap.group(2), "5")
+    ck.eq("v0.5 at a glance / caption seed", cap and cap.group(3), str(d["seed"]))
     if GLANCE_HEAD not in md:
         ck.failures.append("v0.5 at a glance: the table is missing")
         return
@@ -984,13 +1004,23 @@ def v06_expected(d: dict) -> dict:
         over.append(f"{_d3(lo)} to {_d3(hi)} for {j}")
     overconf = ("mean confidence minus accuracy is " + ", ".join(over[:-1]) + " and "
                 + over[-1] + " across the three languages")
+    # met is per split: one met cell of the study's split, with its range over other seeds
+    ex = M["gpt-6-luna/en-US"]["validated_coverage"]["0.05"]
+    ex_p, (ex_lo, ex_hi), ex_seeds = ex["pooled"], ex["spread_coverage"], ex["spread_seeds"]
+    ex_met = ex_p["covered"] and risk_upper_bound(ex_p["errors"], ex_p["covered"]) <= 0.05
+    per_split = (f"*Met is per split.* gpt-6-luna en-US is {'met' if ex_met else 'not met'} at "
+                 f"the study's split (seed {d['parameters']['seed']}), and its share moves over "
+                 f"split seeds {ex_seeds[0]}–{ex_seeds[1]} ({ex_lo * 100:.1f}–{ex_hi * 100:.1f} "
+                 "%); on another split a met cell can miss the target. The bounds of the other "
+                 "splits are not computed here.")
     amends = len(d["amendments_sha256"])
     lead = (f"**v0.6 in short.** {len(judges)} AI judges, the same {d['items']['n']:,} items of "
             "MASSIVE 1.1 in English, Spanish and Catalan, pre-registered before the first model "
             "call ([plan](docs/v06-plan.md), sha256 committed at the freeze; amendments "
             f"A1–A{amends}). {_WORDS[len(T)]} pre-registered transfer tests asked")
     return {"items": d["items"]["n"], "judges": len(judges), "rows": rows, "lead": lead,
-            "transfer": transfer, "overconfidence": overconf}
+            "transfer": transfer, "overconfidence": overconf, "per_split": per_split,
+            "seed": d["parameters"]["seed"]}
 
 
 _WORDS = {1: "One", 2: "Two", 3: "Three", 4: "Four", 5: "Five", 6: "Six", 7: "Seven",
@@ -1009,12 +1039,14 @@ def check_v06(ck: Checker, md: str) -> None:
     docs/v06/results.json; each must appear exactly once."""
     e = v06_expected(json.loads((ROOT / "docs" / "v06" / "results.json")
                                 .read_text(encoding="utf-8")))
-    cap = (f"**At a glance: v0.6, MASSIVE 1.1, {e['items']:,} items in English, Spanish and "
-           f"Catalan, {e['judges']} judges: the held-out share automated by thresholds chosen "
-           "at a 5 % error target (the threshold chosen on one half of the items, applied to "
-           "the other); met when its bound is within 5 %.**")
+    # the caption carries the conditions: approximate, translated public items, the split
+    cap = (f"**At a glance: v0.6, MASSIVE 1.1, {e['items']:,} translated public items in "
+           f"English, Spanish and Catalan (not your traffic), {e['judges']} judges: the held-out "
+           "share automated by thresholds chosen at a 5 % error target (the threshold chosen on "
+           "one half of the items, applied to the other), with its approximate bound; met when "
+           f"that bound is within 5 %, at the study's split (seed {e['seed']}).**")
     for name, text in (("caption", cap), ("lead", e["lead"]), ("transfer", e["transfer"]),
-                       ("overconfidence", e["overconfidence"])):
+                       ("overconfidence", e["overconfidence"]), ("per split", e["per_split"])):
         ck.checked += 1
         if md.count(text) != 1:
             ck.failures.append(f"v0.6 findings / {name}: expected once, found "
