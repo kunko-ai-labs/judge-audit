@@ -432,11 +432,13 @@ def bootstrap_enabled() -> bool:
 def certificate_of(records: list[dict], groups: list[str] | None = None,
                    targets: tuple[float, ...] | list[float] = DEFAULT_TARGETS,
                    run: dict | None = None, primary: float = PRIMARY_TARGET,
-                   segment_by: str | None = "label") -> dict:
+                   segment_by: str | None = "label",
+                   declared: tuple[float, ...] | list[float] | None = None) -> dict:
     """`certificate.automation_certificate` (the safe automation rate) on the runner's
     records, each confidence read as every other metric reads it (`clamp_confidence`: an
     invalid one is unknown). Segments: the true label (`"label"`, the default), a field of
-    the row's `_meta` (`"meta.<field>"`; a row without it is `(none)`), or None."""
+    the row's `_meta` (`"meta.<field>"`; a row without it is `(none)`), or None.
+    `declared`: the targets fixed before the run, `primary` first (default `primary`)."""
     def segment(r: dict) -> str | None:
         if segment_by is None:
             return None
@@ -448,7 +450,8 @@ def certificate_of(records: list[dict], groups: list[str] | None = None,
     return automation_certificate(
         [{"question": r.get("question", ""), "confidence": clamp_confidence(r.get("confidence")),
           "correct": r["correct"], "segment": segment(r)} for r in records],
-        groups, targets=targets, primary=primary, run=run, segment_by=segment_by)
+        groups, targets=targets, primary=primary, run=run, segment_by=segment_by,
+        declared=declared)
 
 
 def summarize(judge_name: str, records: list[dict], run: dict | None = None,

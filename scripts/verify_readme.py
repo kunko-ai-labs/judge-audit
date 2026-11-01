@@ -12,7 +12,10 @@ except the "v0.5 findings" section: each of its sentences that carries a figure 
 rebuilt from docs/v05-results.json and must appear word for word, exactly once, in its paragraph
 next to that paragraph's caveats. Those sentences carry their direction words (beat / lost to,
 worse / better, rebuilt from the signs), the Holm threshold (from the JSON's alpha), the
-dataset years and the single-run caveat, so an edit to any of them fails. The quickstart's
+dataset years and the single-run caveat, so an edit to any of them fails. The "v0.6
+findings" glance table, its caption and the transfer-test and overconfidence sentences of its
+summary are rebuilt from docs/v06/results.json, each held-out share with its approximate
+bound and whether it meets the target. The quickstart's
 simulated figures and its `check --min-safe-rate` gate (the share, its "below N %", and the
 exit codes claimed) are checked against a fresh simulated run and check (seeded, no API key,
 a few seconds).
@@ -609,6 +612,22 @@ def v05_expected(d: dict) -> dict[str, list[str]]:
         lo, hi = m[f"banking77/{run}"]["strict"]["certification"]["0.05"]["spread_coverage"]
         return lo, hi
 
+    # met or not met is per split: Jev's share at the study's split, its bound, and a split of
+    # the same checkpoints that automates fewer texts (the low end of the range over seeds).
+    # Split seeds 2033 and 2036 miss the target: coverage_at_risk_crossfit on the checkpoints in
+    # docs/runs/v05/ (27.0 %, 47 / 831, bound 7.2 %; 29.2 %, 58 / 900, bound 8.0 %); the JSON
+    # keeps only the range, so the sentence's direction is what is rebuilt here.
+    jp = m["banking77/jev"]["strict"]["certification"]["0.05"]["pooled"]
+    j_ok = risk_upper_bound(jp["errors"], jp["covered"]) <= 0.05
+    per_split = (
+        f"Whether the bound is within the target depends on the split: at split seed "
+        f"{d['seed']} Jev's {_pc(jp['coverage'])} has a bound of "
+        f"{_bound_up(jp['errors'], jp['covered']):.1f} %, {'within' if j_ok else 'above'} 5 %; "
+        "on another split of the same checkpoints (split seeds 2033 and 2036) the same judge at "
+        f"the same 5 % target automates {'fewer' if s5[0] < jp['coverage'] else 'more'} texts "
+        "with a bound above 5 %, not met; the range over split seeds shows how far the share "
+        "moves.")
+
 
     noise = "label noise was not measured"
     return {
@@ -617,11 +636,13 @@ def v05_expected(d: dict) -> dict[str, list[str]]:
             f"in {worse} of {len(sc)} tests under the pre-registered rule ({worse_rr} of {len(sc)} "
             "under the re-reading)",
             f"{flip_text} with how an answer that copies an option's description is scored",
-            f"On BANKING77 at a 5 % error target, validated on held-out texts, Jev native "
+            f"On BANKING77 at a 5 % error target, validated on held-out texts (approximate), "
+            f"Jev native "
             f"probability can decide {rate('jev')} over "
             f"split seeds {seeds[0]}–{seeds[1]}) of the texts alone, gemini-3.6-flash verbalized "
             f"{rate('llm-gemini-3.6-flash')}), Qwen3-8B token log-probability "
             f"{rate('logprob-qwen3-8b')})",
+            per_split,
             "probably seen in pretraining",
             f"one run each, except {repeated} on BANKING77 ({len(d['repeats'][0]['runs'])} runs)",
             "label noise not measured",
@@ -686,8 +707,8 @@ def v05_expected(d: dict) -> dict[str, list[str]]:
 GLANCE_ROWS = {"Jev, native probability": "jev",
                "gemini-3.6-flash, verbalized": "llm-gemini-3.6-flash",
                "Qwen3-8B, token log-probability": "logprob-qwen3-8b"}
-GLANCE_HEAD = ("| Judge and confidence | Validated share at a 5 % error target | "
-               "95 % upper bound on the error rate | Range over split seeds | "
+GLANCE_HEAD = ("| Judge and confidence | Validated share at a 5 % error target "
+               "(approximate) | 95 % upper bound on the error rate | Range over split seeds | "
                "At a 10 % error target |")
 
 
@@ -700,9 +721,11 @@ def check_v05_glance(ck: Checker, md: str) -> None:
     m = d["metrics"]
     cap = re.search(r"\*\*At a glance: BANKING77, ([\d,]+) human-labelled banking queries: the "
                     r"share each judge decides alone at a (\d+) % error target, validated on "
-                    r"held-out texts\.\*\*", md)
+                    r"held-out texts \(approximate\) at split seed (\d+); another split can "
+                    r"change the result\.\*\*", md)
     ck.eq("v0.5 at a glance / rows", cap and cap.group(1), f"{m['banking77/jev']['strict']['n']:,}")
     ck.eq("v0.5 at a glance / caption target", cap and cap.group(2), "5")
+    ck.eq("v0.5 at a glance / caption seed", cap and cap.group(3), str(d["seed"]))
     if GLANCE_HEAD not in md:
         ck.failures.append("v0.5 at a glance: the table is missing")
         return
@@ -910,9 +933,10 @@ def check_quickstart(ck: Checker, md: str) -> None:
     line = simulated_line("0.10")
     if not shown or not line.startswith(shown.group(1)):
         ck.failures.append(f"quickstart: the printed line is not the start of a fresh run: {line!r}")
-    held = re.search(r"safe_automation@10%=not_met\(([\d.]+)% bound=([\d.]+)%\) "
-                     r"all_rows=([\d.]+)%", line)
-    want = ([f"so the {held.group(1)} % held out", f"held-out error rate ({held.group(2)} %)",
+    held = re.search(r"safe_automation@10%=not_met\(([\d.]+)% bound_95_heldout_approx="
+                     r"([\d.]+)%\) all_rows=([\d.]+)%", line)
+    want = ([f"so the {held.group(1)} % held out",
+             f"held-out error rate ({held.group(2)} %, approximate",
              f"`all_rows` ({held.group(3)} %)"] if held else ["?"])
     for figure in want:
         if figure not in md:
@@ -924,6 +948,132 @@ def check_quickstart(ck: Checker, md: str) -> None:
                            f"({default and default.group(0)})")
 
 
+# --- v0.6 findings --------------------------------------------------------------------------
+
+V06_HEAD = "| Judge | en-US | es-ES | ca-ES |"
+V06_LOCALES = ("en-US", "es-ES", "ca-ES")
+
+
+def _bound_up(errors: int, n: int) -> float:
+    """The one-sided 95 % upper bound on `errors` in `n`, in %, rounded **up** to 0.1."""
+    return math.ceil(risk_upper_bound(errors, n) * 1000 - 1e-9) / 10
+
+
+def v06_cell(vc: dict) -> str:
+    """One locale of the v0.6 glance table: the held-out share at 5 % with the approximate
+    one-sided 95 % bound on its held-out errors (both halves pooled), met when that bound is
+    within the target, and the share's range over split seeds."""
+    p, (lo, hi) = vc["pooled"], vc["spread_coverage"]
+    splits = f"splits {lo * 100:.1f}–{hi * 100:.1f} %"
+    if not p["covered"]:
+        return f"none ({splits})"
+    met = risk_upper_bound(p["errors"], p["covered"]) <= 0.05     # the exact bound decides
+    return (f"{_pc(p['coverage'])} (bound {_bound_up(p['errors'], p['covered']):.1f} %, "
+            f"{'met' if met else 'not met'}; {splits})")
+
+
+def v06_expected(d: dict) -> dict:
+    """What the README's v0.6 findings must say, rebuilt from docs/v06/results.json: the
+    glance caption and rows, the transfer-test sentence and the overconfidence sentence."""
+    P = d["analyses"]["primary"]
+    M, T = P["metrics"], P["transfer"]
+    judges = list(dict.fromkeys(k.split("/")[0] for k in M))
+    rows = {}
+    for j in judges:
+        label = j if M[f"{j}/en-US"]["role"] == "primary" else f"{j} (exploratory)"
+        rows[label] = [v06_cell(M[f"{j}/{loc}"]["validated_coverage"]["0.05"])
+                       for loc in V06_LOCALES]
+    ups = {t: v["pooled"]["upper_95"] for t, v in T.items() if v["run"]}
+    lo_t, hi_t = min(ups, key=ups.get), max(ups, key=ups.get)
+    above = sum(1 for u in ups.values() if u > d["parameters"]["transfer_target"])
+    resolved = sum(1 for v in T.values() if v["resolved"])
+    predicted = sum(1 for v in T.values() if v["as_predicted"])
+    transfer = ("none was resolved at its Holm-corrected level, so no breach was shown; that "
+                "is not a pass" if resolved == 0 else
+                f"{resolved} of {len(T)} were resolved at their Holm-corrected level, a breach "
+                "shown approximately for those")
+    transfer += (
+        f": the approximate one-sided 95 % upper "
+        f"bounds on the pooled target-language error run from {ups[lo_t] * 100:.2f} % "
+        f"({lo_t}) to {ups[hi_t] * 100:.2f} % ({hi_t}), above 5 % in {above} of {len(ups)} "
+        f"tests, and {predicted} of the {len(T)} came out as predicted.")
+    over = []
+    for j in d["parameters"]["primary"]:
+        vals = [M[f"{j}/{loc}"]["overconfidence"] for loc in V06_LOCALES]
+        lo, hi = sorted((min(vals), max(vals)), key=abs)
+        over.append(f"{_d3(lo)} to {_d3(hi)} for {j}")
+    overconf = ("mean confidence minus accuracy is " + ", ".join(over[:-1]) + " and "
+                + over[-1] + " across the three languages")
+    # met is per split: one met cell of the study's split, with its range over other seeds
+    ex = M["gpt-6-luna/en-US"]["validated_coverage"]["0.05"]
+    ex_p, (ex_lo, ex_hi), ex_seeds = ex["pooled"], ex["spread_coverage"], ex["spread_seeds"]
+    ex_met = ex_p["covered"] and risk_upper_bound(ex_p["errors"], ex_p["covered"]) <= 0.05
+    per_split = (f"*Met is per split.* gpt-6-luna en-US is {'met' if ex_met else 'not met'} at "
+                 f"the study's split (seed {d['parameters']['seed']}), and its share moves over "
+                 f"split seeds {ex_seeds[0]}–{ex_seeds[1]} ({ex_lo * 100:.1f}–{ex_hi * 100:.1f} "
+                 "%); on another split a met cell can miss the target. The bounds of the other "
+                 "splits are not computed here.")
+    amends = len(d["amendments_sha256"])
+    lead = (f"**v0.6 in short.** {len(judges)} AI judges, the same {d['items']['n']:,} items of "
+            "MASSIVE 1.1 in English, Spanish and Catalan, pre-registered before the first model "
+            "call ([plan](docs/v06-plan.md), sha256 committed at the freeze; amendments "
+            f"A1–A{amends}). {_WORDS[len(T)]} pre-registered transfer tests asked")
+    return {"items": d["items"]["n"], "judges": len(judges), "rows": rows, "lead": lead,
+            "transfer": transfer, "overconfidence": overconf, "per_split": per_split,
+            "seed": d["parameters"]["seed"]}
+
+
+_WORDS = {1: "One", 2: "Two", 3: "Three", 4: "Four", 5: "Five", 6: "Six", 7: "Seven",
+          8: "Eight", 9: "Nine", 10: "Ten"}
+
+
+def _d3(x: float) -> str:
+    """A signed difference to 3 decimals, with a true minus sign."""
+    return f"{x:+.3f}".replace("-", "−")
+
+
+def check_v06(ck: Checker, md: str) -> None:
+    """The "v0.6 findings": the glance caption and every cell of its table, and the opening
+    (judges, items, amendments, tests), transfer-test and overconfidence sentences of its
+    "In short", rebuilt from
+    docs/v06/results.json; each must appear exactly once."""
+    e = v06_expected(json.loads((ROOT / "docs" / "v06" / "results.json")
+                                .read_text(encoding="utf-8")))
+    # the caption carries the conditions: approximate, translated public items, the split
+    cap = (f"**At a glance: v0.6, MASSIVE 1.1, {e['items']:,} translated public items in "
+           f"English, Spanish and Catalan (not your traffic), {e['judges']} judges: the held-out "
+           "share automated by thresholds chosen at a 5 % error target (the threshold chosen on "
+           "one half of the items, applied to the other), with its approximate bound; met when "
+           f"that bound is within 5 %, at the study's split (seed {e['seed']}).**")
+    for name, text in (("caption", cap), ("lead", e["lead"]), ("transfer", e["transfer"]),
+                       ("overconfidence", e["overconfidence"]), ("per split", e["per_split"])):
+        ck.checked += 1
+        if md.count(text) != 1:
+            ck.failures.append(f"v0.6 findings / {name}: expected once, found "
+                               f"{md.count(text)} times: {text!r}")
+    if V06_HEAD not in md:
+        ck.failures.append("v0.6 at a glance: the table is missing")
+        return
+    table = md.split(V06_HEAD, 1)[1].split("\n\n", 1)[0]
+    rows = [cells(line) for line in table.splitlines() if line.startswith("| ")
+            and "---" not in line]
+    seen = [r[0] for r in rows]
+    for label, want in e["rows"].items():
+        ck.checked += 1
+        if seen.count(label) != 1:
+            ck.failures.append(f"v0.6 at a glance: row {label!r} appears {seen.count(label)} "
+                               "times")
+            continue
+        r = rows[seen.index(label)]
+        if len(r) != 1 + len(V06_LOCALES):
+            ck.failures.append(f"v0.6 at a glance: row {label!r} has {len(r)} cells")
+            continue
+        for loc, got, exp in zip(V06_LOCALES, r[1:], want, strict=True):
+            ck.eq(f"v0.6 at a glance / {label} / {loc}", got, exp)
+    for extra in set(seen) - set(e["rows"]):
+        ck.failures.append(f"v0.6 at a glance: unknown row {extra!r}")
+
+
 def check(md: str) -> Checker:
     ck, all_tables = Checker(), tables(md)
     check_hero(ck, md)
@@ -932,6 +1082,7 @@ def check(md: str) -> Checker:
     check_arena(ck, all_tables)
     check_consensus(ck, all_tables)
     check_v05(ck, md)
+    check_v06(ck, md)
     check_quickstart(ck, md)
     check_gate(ck, md)
     check_demo_figures(ck)

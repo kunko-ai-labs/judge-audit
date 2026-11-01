@@ -9,6 +9,12 @@
 
 **judge-audit replays decisions your people already made and tells you how much of that work an AI judge can take over, at the error you accept, with the bound attached.** Open source, runs in CI, no LLM inside the measurement, and every published number recomputes from committed evidence.
 
+**What we contribute.**
+- **An independent audit, not a model.** judge-audit measures the confidence an AI judge declares against decisions people already made. It judges nothing itself.
+- **Evidence anyone can recompute.** Every published figure regenerates from committed checkpoints, and CI fails when a report or this README drifts from its evidence (`scripts/verify_published.py`, `scripts/verify_readme.py`).
+- **Pre-registered studies, separate reviews.** The v0.5 and v0.6 studies were pre-registered before their first model call (v0.6: the plan's sha256 committed at the freeze; amendments A1–A4 hashed before the calls or the analysis they govern, A5, an erratum on wording, at publication). Each pull request goes through a separate review and QA pass before it merges, by AI review agents that did not write the change, with the verdicts posted on each pull request. No external human reviewer has read the study plans.
+- **Our own security advisories.** We publish the weaknesses we find in our own tools: [GHSA-52xj-j738-jpm3](https://github.com/kunko-ai-labs/judge-audit/security/advisories/GHSA-52xj-j738-jpm3) (judge-audit: an API key in error output, or sent on a redirect) and [GHSA-f7jx-f5h6-pmx7](https://github.com/kunko-ai-labs/agent-assurance/security/advisories/GHSA-f7jx-f5h6-pmx7) (agent-assurance).
+
 ![judge-audit in 25 seconds: the question, the audit run, the share each judge can decide alone on 3,080 real banking queries, the CI gate failing below the minimum](docs/demo.gif)
 
 | | |
@@ -18,16 +24,41 @@
 | 🚦 **CI gate** | `judge-audit check` fails the build when the judge drifts or the rate falls below your minimum. |
 | 🤖 **Where you work** | CLI, GitHub Action with a PR comment, and an MCP server for Claude Code, Cursor or any agent. |
 
-**[Quickstart](#quickstart)** · **[What you get](#what-you-get)** · **[v0.5 findings](#v05-findings)** · **[Judges supported](#judge-interface)** · ▶ [launch video](https://github.com/kunko-ai-labs/judge-audit/releases/latest/download/judge-audit-launch.mp4)
+**[Quickstart](#quickstart)** · **[What you get](#what-you-get)** · **[v0.6 findings](#v06-findings)** · **[v0.5 findings](#v05-findings)** · **[Judges supported](#judge-interface)** · ▶ [launch video](https://github.com/kunko-ai-labs/judge-audit/releases/latest/download/judge-audit-launch.mp4)
 
+
+## v0.6 findings
+
+**v0.6 in short.** 12 AI judges, the same 2,974 items of MASSIVE 1.1 in English, Spanish and Catalan, pre-registered before the first model call ([plan](docs/v06-plan.md), sha256 committed at the freeze; amendments A1–A5). Six pre-registered transfer tests asked whether a threshold validated on English rows at a 5 % error target lets more than 5 % errors through on the same items in Spanish or Catalan: none was resolved at its Holm-corrected level, so no breach was shown; that is not a pass: the approximate one-sided 95 % upper bounds on the pooled target-language error run from 3.30 % (T6) to 8.65 % (T2), above 5 % in 5 of 6 tests, and 3 of the 6 came out as predicted. Demonstrated on this sample, and only on it (MASSIVE is translated public data, probably seen in pretraining): declared confidence does not always match accuracy; mean confidence minus accuracy is +0.080 to +0.085 for jev, −0.052 to −0.067 for gpt-6-luna and +0.063 to +0.099 for claude-sonnet-4.5 across the three languages. The differences between languages are 95 % intervals with no correction for multiplicity, so they are not called demonstrated ([§2](docs/v06/README.md#2-overconfidence-paired-across-locales)). The number to act on is the same audit on your own decisions.
+
+**At a glance: v0.6, MASSIVE 1.1, 2,974 translated public items in English, Spanish and Catalan (not your traffic), 12 judges: the held-out share automated by thresholds chosen at a 5 % error target (the threshold chosen on one half of the items, applied to the other), with its approximate bound; met when that bound is within 5 %, at the study's split (seed 2026).**
+
+*Met is per split.* gpt-6-luna en-US is met at the study's split (seed 2026), and its share moves over split seeds 2027–2036 (21.8–39.4 %); on another split a met cell can miss the target. The bounds of the other splits are not computed here.
+
+| Judge | en-US | es-ES | ca-ES |
+|---|---|---|---|
+| jev | 29.0 % (bound 5.8 %, not met; splits 30.7–55.6 %) | 25.3 % (bound 7.4 %, not met; splits 0.0–23.6 %) | none (splits 0.0–19.5 %) |
+| gpt-6-luna | 18.2 % (bound 4.6 %, met; splits 21.8–39.4 %) | none (splits 0.0–13.3 %) | 5.3 % (bound 9.8 %, not met; splits 0.0–0.0 %) |
+| claude-sonnet-4.5 | 21.5 % (bound 2.9 %, met; splits 21.5–21.5 %) | 8.5 % (bound 5.7 %, not met; splits 0.0–8.8 %) | none (splits 0.0–6.9 %) |
+| clef-flash (exploratory) | 40.6 % (bound 5.0 %, met; splits 0.0–44.4 %) | 38.5 % (bound 5.7 %, not met; splits 4.0–44.2 %) | 39.0 % (bound 4.2 %, met; splits 18.0–60.0 %) |
+| decider-2b (exploratory) | 31.1 % (bound 7.7 %, not met; splits 0.0–9.7 %) | 10.4 % (bound 7.4 %, not met; splits 0.0–4.5 %) | none (splits 0.0–0.0 %) |
+| decision2-kai-0.6b (exploratory) | 4.1 % (bound 7.3 %, not met; splits 0.0–7.4 %) | none (splits 0.0–0.0 %) | none (splits 0.0–0.0 %) |
+| deepseek-r1 (exploratory) | none (splits 0.0–28.7 %) | none (splits 0.0–0.0 %) | none (splits 0.0–0.0 %) |
+| gemini-3.6-flash (exploratory) | 55.1 % (bound 3.4 %, met; splits 55.1–55.1 %) | 26.6 % (bound 5.3 %, not met; splits 26.0–52.8 %) | 27.1 % (bound 5.1 %, not met; splits 44.6–53.6 %) |
+| laya-multilingual (exploratory) | none (splits 0.0–0.0 %) | none (splits 0.0–0.0 %) | none (splits 0.0–0.0 %) |
+| microsoft-decision-1 (exploratory) | 80.7 % (bound 4.6 %, met; splits 80.2–82.7 %) | 72.3 % (bound 4.6 %, met; splits 40.5–73.7 %) | 30.1 % (bound 4.9 %, met; splits 31.5–60.6 %) |
+| strands-decider-2b (exploratory) | 3.9 % (bound 14.4 %, not met; splits 0.0–0.0 %) | none (splits 0.0–0.0 %) | none (splits 0.0–0.0 %) |
+| unsloth-decision-4b (exploratory) | none (splits 0.0–4.8 %) | none (splits 0.0–0.0 %) | none (splits 0.0–0.0 %) |
+
+*Bound:* the one-sided 95 % upper bound on the held-out errors of both halves pooled, rounded up; approximate, since each half's threshold depends on the other half; computed after the study from its published counts, not pre-registered (#213). *Met:* that bound is within 5 %; only a share that meets it is called validated. Each met cell is a separate statement, each at 95 %, approximate; read together they do not all hold at 95 %, so no claim is made about all of them at once, and none should be picked as the best. *None:* no threshold was validated on either half at seed 2026. *Splits:* the same share over split seeds 2027–2036; that range need not contain the seed-2026 share, and a share far outside it rests on one split. Labels are carried over by localisation, and no share says anything about future traffic; judges marked exploratory are in no pre-registered test. No ranking: rows follow the study's roster. The shares, their ranges, every other figure with its intervals and the cost of each run are in the **[v0.6 findings in full](docs/v06/README.md)**; the bounds are computed here from their counts.
 
 ## v0.5 findings
 
-**In short.** Asking Qwen3-8B and gemini-3.6-flash several times and counting the votes ranked their errors worse than their own verbalized number in 3 of 4 tests under the pre-registered rule (4 of 4 under the re-reading), and one verdict (H2 for gemini-3.6-flash) changes with how an answer that copies an option's description is scored. On BANKING77 at a 5 % error target, validated on held-out texts, Jev native probability can decide 41.0 % (27.0 %–45.1 % over split seeds 2027–2036) of the texts alone, gemini-3.6-flash verbalized 14.3 % (7.6 %–30.0 %), Qwen3-8B token log-probability none (0.0 %–4.4 %). *Caveats:* public datasets, probably seen in pretraining; one run each, except Jev and Qwen3-8B verbalized on BANKING77 (3 runs); label noise not measured; the held-out slice not run (#106). The number to act on is the same audit on your own decisions.
+**In short.** Asking Qwen3-8B and gemini-3.6-flash several times and counting the votes ranked their errors worse than their own verbalized number in 3 of 4 tests under the pre-registered rule (4 of 4 under the re-reading), and one verdict (H2 for gemini-3.6-flash) changes with how an answer that copies an option's description is scored. On BANKING77 at a 5 % error target, validated on held-out texts (approximate), Jev native probability can decide 41.0 % (27.0 %–45.1 % over split seeds 2027–2036) of the texts alone, gemini-3.6-flash verbalized 14.3 % (7.6 %–30.0 %), Qwen3-8B token log-probability none (0.0 %–4.4 %). Whether the bound is within the target depends on the split: at split seed 2026 Jev's 41.0 % has a bound of 3.9 %, within 5 %; on another split of the same checkpoints (split seeds 2033 and 2036) the same judge at the same 5 % target automates fewer texts with a bound above 5 %, not met; the range over split seeds shows how far the share moves. *Caveats:* public datasets, probably seen in pretraining; one run each, except Jev and Qwen3-8B verbalized on BANKING77 (3 runs); label noise not measured; the held-out slice not run (#106). The number to act on is the same audit on your own decisions.
 
-**At a glance: BANKING77, 3,080 human-labelled banking queries: the share each judge decides alone at a 5 % error target, validated on held-out texts.**
+**At a glance: BANKING77, 3,080 human-labelled banking queries: the share each judge decides alone at a 5 % error target, validated on held-out texts (approximate) at split seed 2026; another split can change the result.**
 
-| Judge and confidence | Validated share at a 5 % error target | 95 % upper bound on the error rate | Range over split seeds | At a 10 % error target |
+| Judge and confidence | Validated share at a 5 % error target (approximate) | 95 % upper bound on the error rate | Range over split seeds | At a 10 % error target |
 |---|---|---|---|---|
 | Jev, native probability | **41.0 %** | 3.9 % | 27.0–45.1 % | 72.3 % (bound 9.2 %) |
 | gemini-3.6-flash, verbalized | **14.3 %** | 2.7 % | 7.6–30.0 % | 45.5 % (bound 5.3 %) |
@@ -57,10 +88,10 @@ judge-audit check examples/email-routing/labels.jsonl --judge simulated --baseli
 The start of the `run` line, **SIMULATED**:
 
 ```text
-SIMULATED — not a real vendor audit · judge=simulated n=200 accuracy=85.5% [75.1, 93.7] safe_automation@10%=not_met(75.0% bound=16.6%) all_rows=65.5% …
+SIMULATED — not a real vendor audit · judge=simulated n=200 accuracy=85.5% [75.1, 93.7] safe_automation@10%=not_met(75.0% bound_95_heldout_approx=16.6%) all_rows=65.5% …
 ```
 
-`simulated` is a seeded simulator so you can see the whole pipeline in ten seconds; every report it touches is stamped **SIMULATED**, and its figures say nothing about any real judge. `safe_automation@10%` leads with the held-out check at a 10 % error target: `not_met`, because the 95 % upper bound on the held-out error rate (16.6 %) is above the target, so the 75.0 % held out is not validated. A share is shown as validated only when that bound is within the target. `all_rows` (65.5 %) is the share the threshold to deploy covers on every labelled decision, the share `check --min-safe-rate` gates. At the default target, 5 %, the simulator reaches no threshold and the line reads `safe_automation@5%=none`. `check --min-safe-rate 0.10:0.60` exits 0 here and exits 1 if that share falls below 60 %. To audit a real vendor, see [docs/real-audits.md](docs/real-audits.md).
+`simulated` is a seeded simulator so you can see the whole pipeline in ten seconds; every report it touches is stamped **SIMULATED**, and its figures say nothing about any real judge. `safe_automation@10%` leads with the held-out check at a 10 % error target: `not_met`, because the one-sided 95 % upper bound on the held-out error rate (16.6 %, approximate: it pools the two held-out halves) is above the target, so the 75.0 % held out is not validated. A share is shown as validated only when that bound is within the target. `all_rows` (65.5 %) is the share the threshold to deploy covers on every labelled decision, the share `check --min-safe-rate` gates. At the default target, 5 %, the simulator reaches no threshold and the line reads `safe_automation@5%=none`. `check --min-safe-rate 0.10:0.60` exits 0 here and exits 1 if that share falls below 60 %. To audit a real vendor, see [docs/real-audits.md](docs/real-audits.md).
 
 In the [GitHub Action](docs/integrations.md#github-action) the same controls are inputs: `target` (the error rate the safe automation rate is headlined at, default `0.05`), `segment-by` (where to look for the worst segment: `label`, `meta.FIELD` or `none`) and `min-safe-rate` (`RISK:SHARE` minimums that fail the job). It returns `safe-automation-rate` (at the target) and `safe-automation-rates` (every target) as outputs.
 
@@ -68,7 +99,7 @@ In the [GitHub Action](docs/integrations.md#github-action) the same controls are
 
 <img src="docs/assets/report-preview.png" alt="The HTML report: key figures (safe automation rate, accuracy, calibration error, cost and latency), data and ground truth, then the answer to Can I automate this?" width="640">
 
-One self-contained report per run (Markdown or HTML, prints to A4): the answer first: the share validated on held-out decisions, with its bound and its range over split seeds, then the threshold to deploy; calibration with intervals; accuracy against coverage; cost and latency; the provenance of every number. Shown here on the seeded simulator, stamped **SIMULATED**. `audit-result.json` carries the same numbers for your pipeline.
+One self-contained report per run (Markdown or HTML, prints to A4): the answer first: the share validated on held-out decisions, with its approximate bound and its range over split seeds, then the threshold to deploy; calibration with intervals; accuracy against coverage; cost and latency; the provenance of every number. Shown here on the seeded simulator, stamped **SIMULATED**. `audit-result.json` carries the same numbers for your pipeline.
 
 ## How it works
 
@@ -82,13 +113,13 @@ Exit codes: `0` ok · `1` drift detected · `2` usage or configuration error, or
 **In CI:** the [GitHub Action](docs/integrations.md#github-action) runs the audit on every push or pull request and fails the build on drift:
 
 ```yaml
-- uses: kunko-ai-labs/judge-audit@v0.5      # or pin the release's commit SHA
+- uses: kunko-ai-labs/judge-audit@v0.6      # or pin the release's commit SHA
   with: { labels: audits/labels.jsonl, judge: jev, baseline: audits/baseline.json,
           target: "0.05", segment-by: label, min-safe-rate: "0.05:0.40" }
   env: { AI_GATEWAY_API_KEY: ${{ secrets.AI_GATEWAY_API_KEY }} }
 ```
 
-One sticky PR comment that opens with the safe automation rate validated on held-out decisions, then the audit table (n, accuracy, ECE, cost, p99, verdict vs baseline) and, labelled as observed on all rows without a bound, the zero-error coverage; the report in the job summary, the report and result JSON as an artifact. The per-decision judgments stay on the runner unless you ask for them (`upload-evidence: "true"`). `min-safe-rate: "0.05:0.40"` fails the job unless at least 40 % of the labelled decisions is automated at a 5 % error target (inputs in the [Quickstart](#quickstart)). Outputs `accuracy`, `ece`, `zero-error-coverage`, `safe-automation-rate` (at the target), `safe-automation-rates` (every target), `drift` for anything downstream. Details in [docs/integrations.md](docs/integrations.md#github-action).
+One sticky PR comment that opens with the safe automation rate validated on held-out decisions (approximate), then the audit table (n, accuracy, ECE, cost, p99, verdict vs baseline) and, labelled as observed on all rows without a bound, the zero-error coverage; the report in the job summary, the report and result JSON as an artifact. The per-decision judgments stay on the runner unless you ask for them (`upload-evidence: "true"`). `min-safe-rate: "0.05:0.40"` fails the job unless at least 40 % of the labelled decisions is automated at a 5 % error target (inputs in the [Quickstart](#quickstart)). Outputs `accuracy`, `ece`, `zero-error-coverage`, `safe-automation-rate` (at the target), `safe-automation-rates` (every target), `drift` for anything downstream. Details in [docs/integrations.md](docs/integrations.md#github-action).
 
 **From inside an agent:** `pip install "kunko-judge-audit[mcp]"` then `claude mcp add judge-audit -- judge-audit-mcp` (or the equivalent in Cursor). The agent gets `run_audit`, `check_drift` and `list_judges` and can audit the judge it is about to rely on without leaving the session. See [docs/integrations.md](docs/integrations.md).
 
