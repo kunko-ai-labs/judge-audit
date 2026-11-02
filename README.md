@@ -7,7 +7,7 @@
 
 ## Turn AI confidence into a defensible decision boundary
 
-**Before an AI judge acts alone, show with evidence where autonomy is earned.** judge-audit replays decisions your people already made and tells you which share an AI judge can take over at the error you accept, with the confidence threshold to deploy, a held-out check and the bound attached (approximate). Open source, runs in CI, no LLM inside the measurement, and every published number recomputes from committed evidence.
+**Before an AI judge acts alone, show with evidence where autonomy is earned.** judge-audit replays decisions your people already made and tells you which share an AI judge can take over at the error you accept, with the confidence threshold to deploy, a held-out check and the bound attached (approximate, for traffic like the decisions you labelled). Open source, runs in CI, no LLM inside the measurement, and every published number recomputes from committed evidence.
 
 **What we contribute.**
 - **An independent audit, not a model.** judge-audit measures the confidence an AI judge declares against decisions people already made. It judges nothing itself.
