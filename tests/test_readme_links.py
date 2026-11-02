@@ -83,6 +83,7 @@ def test_the_action_snippet_passes_the_key_as_a_string(readme):
 def test_the_quickstart_clones_the_repo_before_using_its_examples(readme):
     quick = readme.split("## Quickstart", 1)[1].split("```", 2)[1]
     assert quick.index("git clone") < quick.index("examples/")
+    assert f"git clone --branch {TAG} " in quick  # the examples of the release being read
 
 
 @pytest.mark.parametrize("bad", ["[x](docs/a.md)", "![x](docs/a.png)", '<img src="docs/a.png">',
