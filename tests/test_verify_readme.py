@@ -529,7 +529,8 @@ def test_no_opposite_sign_test_does_not_read_as_worse(monkeypatch):
 @pytest.mark.parametrize(
     "old,new",
     [
-        ("| Jev 1.13.0, native probability | **41.0 %** |", "| Jev 1.13.0, native probability | **42.0 %** |"),
+        ("| Jev 1.13.0, native probability | **41.0 %** |",
+         "| Jev 1.13.0, native probability | **42.0 %** |"),
         ("| 27.0–45.1 % | 72.3 % (", "| 27.0–46.1 % | 72.3 % ("),
         ("| 7.6–30.0 % | 45.5 % (", "| 7.6–30.0 % | 46.5 % ("),
         ("45.5 % (bound 5.3 %)", "45.5 % (bound 5.2 %)"),
