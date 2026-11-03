@@ -29,7 +29,9 @@
 
 ## v0.6 findings
 
-**v0.6 in short.** 12 AI judges, the same 2,974 items of MASSIVE 1.1 in English, Spanish and Catalan, pre-registered before the first model call ([plan](https://github.com/kunko-ai-labs/judge-audit/blob/v0.6.2/docs/v06-plan.md), sha256 committed at the freeze; amendments A1–A5). Six pre-registered transfer tests asked whether a threshold validated (approximate) on English rows at a 5 % error target lets more than 5 % errors through on the same items in Spanish or Catalan: none was resolved at its Holm-corrected level, so no breach was shown; that is not a pass: the approximate one-sided 95 % upper bounds on the pooled target-language error run from 3.30 % (T6) to 8.65 % (T2), above 5 % in 5 of 6 tests, and 3 of the 6 came out as predicted. Demonstrated on this sample, and only on it (MASSIVE is translated public data, probably seen in pretraining): declared confidence does not always match accuracy; mean confidence minus accuracy is +0.080 to +0.085 for jev, −0.052 to −0.067 for gpt-6-luna and +0.063 to +0.099 for claude-sonnet-4.5 across the three languages. The differences between languages are 95 % intervals with no correction for multiplicity, so they are not called demonstrated ([§2](https://github.com/kunko-ai-labs/judge-audit/blob/v0.6.2/docs/v06/README.md#2-overconfidence-paired-across-locales)). The number to act on is the same audit on your own decisions.
+**v0.6 in short.** 12 AI judges, the same 2,974 items of MASSIVE 1.1 in English, Spanish and Catalan, pre-registered before the first model call ([plan](https://github.com/kunko-ai-labs/judge-audit/blob/v0.6.2/docs/v06-plan.md), sha256 committed at the freeze; amendments A1–A5). Six pre-registered transfer tests asked whether a threshold validated (approximate) on English rows at a 5 % error target lets more than 5 % errors through on the same items in Spanish or Catalan: none was resolved at its Holm-corrected level, so no breach was shown; that is not a pass: the approximate one-sided 95 % upper bounds on the pooled target-language error run from 3.30 % (T6) to 8.65 % (T2), above 5 % in 5 of 6 tests, and 3 of the 6 came out as predicted. Demonstrated on this sample, and only on it (MASSIVE is translated public data, probably seen in pretraining): declared confidence does not always match accuracy; mean confidence minus accuracy is +0.080 to +0.085 for jev (Jev 1.13.0), −0.052 to −0.067 for gpt-6-luna and +0.063 to +0.099 for claude-sonnet-4.5 across the three languages. The differences between languages are 95 % intervals with no correction for multiplicity, so they are not called demonstrated ([§2](https://github.com/kunko-ai-labs/judge-audit/blob/v0.6.2/docs/v06/README.md#2-overconfidence-paired-across-locales)). The number to act on is the same audit on your own decisions.
+
+**Jev version.** Every Jev figure of v0.6 was measured with Jev 1.13.0, the model the replies say they served. The alias `jev-latest` has pointed to `jev-1.14.0` since 2026-10-22, so a new run under the alias measures a different model and its figures are not comparable with these. Pin the version with `JEV_MODEL` ([how](https://github.com/kunko-ai-labs/judge-audit/blob/v0.6.2/docs/real-audits.md#pin-the-model-version)).
 
 **At a glance: v0.6, MASSIVE 1.1, 2,974 translated public items in English, Spanish and Catalan (not your traffic), 12 judges: the held-out share automated by thresholds chosen at a 5 % error target (the threshold chosen on one half of the items, applied to the other), with its approximate bound; met when that bound is within 5 %, at the study's split (seed 2026).**
 
@@ -37,7 +39,7 @@
 
 | Judge | en-US | es-ES | ca-ES |
 |---|---|---|---|
-| jev | 29.0 % (bound 5.8 %, not met; splits 30.7–55.6 %) | 25.3 % (bound 7.4 %, not met; splits 0.0–23.6 %) | none (splits 0.0–19.5 %) |
+| jev (Jev 1.13.0) | 29.0 % (bound 5.8 %, not met; splits 30.7–55.6 %) | 25.3 % (bound 7.4 %, not met; splits 0.0–23.6 %) | none (splits 0.0–19.5 %) |
 | gpt-6-luna | 18.2 % (bound 4.6 %, met; splits 21.8–39.4 %) | none (splits 0.0–13.3 %) | 5.3 % (bound 9.8 %, not met; splits 0.0–0.0 %) |
 | claude-sonnet-4.5 | 21.5 % (bound 2.9 %, met; splits 21.5–21.5 %) | 8.5 % (bound 5.7 %, not met; splits 0.0–8.8 %) | none (splits 0.0–6.9 %) |
 | clef-flash (exploratory) | 40.6 % (bound 5.0 %, met; splits 0.0–44.4 %) | 38.5 % (bound 5.7 %, not met; splits 4.0–44.2 %) | 39.0 % (bound 4.2 %, met; splits 18.0–60.0 %) |
@@ -151,6 +153,19 @@ Ships with fourteen: `jev` (TypeSafe Jev — and, via `JEV_ENDPOINT`, any Jev-co
 | **Contributing** | [CONTRIBUTING](https://github.com/kunko-ai-labs/judge-audit/blob/v0.6.2/CONTRIBUTING.md): what helps most and how review works |
 
 **Why calibration, not accuracy?** Accuracy tells you who wins a benchmark. Calibration tells you what you can automate safely. A judge that is confident on the decisions it gets wrong automates its own mistakes; one that flags its own doubt hands those to people. **Audit the honesty, not the score.**
+
+## Prior art
+
+The statistical method here is not new, and this project does not claim it. Choosing a confidence threshold so that the error among the automated decisions stays within a stated tolerance, with a stated probability, is selective prediction and risk control:
+
+- **Calibration:** Guo, Pleiss, Sun & Weinberger, *On Calibration of Modern Neural Networks*, ICML 2017 ([arXiv:1706.04599](https://arxiv.org/abs/1706.04599)).
+- **Selective prediction:** Geifman & El-Yaniv, *Selective Classification for Deep Neural Networks*, NeurIPS 2017 ([arXiv:1705.08500](https://arxiv.org/abs/1705.08500)): a threshold whose risk bound holds with high probability.
+- **Distribution-free risk control:** Angelopoulos, Bates, Candès, Jordan & Lei, *Learn then Test*, Annals of Applied Statistics 2025 ([arXiv:2110.01052](https://arxiv.org/abs/2110.01052)); Angelopoulos, Bates, Fisch, Lei & Schuster, *Conformal Risk Control*, ICLR 2024 ([arXiv:2208.02814](https://arxiv.org/abs/2208.02814)); Angelopoulos & Bates, *A Gentle Introduction to Conformal Prediction and Distribution-Free Uncertainty Quantification*, 2021 ([arXiv:2107.07511](https://arxiv.org/abs/2107.07511)).
+- **The same idea for AI judges:** Jung, Brahman & Choi, *Trust or Escalate* (LLM judges and agreement with humans), ICLR 2025 ([arXiv:2407.18370](https://arxiv.org/abs/2407.18370)): automate when the judge is confident, escalate otherwise.
+- **Confidence of language models:** Kadavath et al., *Language Models (Mostly) Know What They Know*, 2022 ([arXiv:2207.05221](https://arxiv.org/abs/2207.05221)); Tian et al., *Just Ask for Calibration*, EMNLP 2023 ([arXiv:2305.14975](https://arxiv.org/abs/2305.14975)); Xiong et al., *Can LLMs Express Their Uncertainty?*, ICLR 2024 ([arXiv:2306.13063](https://arxiv.org/abs/2306.13063)).
+- **LLM-as-judge:** Zheng et al., *Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena*, 2023 ([arXiv:2306.05685](https://arxiv.org/abs/2306.05685)).
+
+What this tool adds is not the statistics: it is the audit on your own decisions, the evidence trail (every figure recomputes from a committed checkpoint) and the reproducibility (pinned model versions, recorded provenance, a published protocol). The full list, with what each source was used for, is the [reading list](https://github.com/kunko-ai-labs/judge-audit/blob/v0.6.2/docs/v05/reading-list.md); the metrics are described in [docs/judges.md](https://github.com/kunko-ai-labs/judge-audit/blob/v0.6.2/docs/judges.md#related-work).
 
 ## FAQ
 
