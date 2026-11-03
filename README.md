@@ -31,7 +31,7 @@
 
 **v0.6 in short.** 12 AI judges, the same 2,974 items of MASSIVE 1.1 in English, Spanish and Catalan, pre-registered before the first model call ([plan](https://github.com/kunko-ai-labs/judge-audit/blob/v0.6.2/docs/v06-plan.md), sha256 committed at the freeze; amendments A1–A5). Six pre-registered transfer tests asked whether a threshold validated (approximate) on English rows at a 5 % error target lets more than 5 % errors through on the same items in Spanish or Catalan: none was resolved at its Holm-corrected level, so no breach was shown; that is not a pass: the approximate one-sided 95 % upper bounds on the pooled target-language error run from 3.30 % (T6) to 8.65 % (T2), above 5 % in 5 of 6 tests, and 3 of the 6 came out as predicted. Demonstrated on this sample, and only on it (MASSIVE is translated public data, probably seen in pretraining): declared confidence does not always match accuracy; mean confidence minus accuracy is +0.080 to +0.085 for jev (Jev 1.13.0), −0.052 to −0.067 for gpt-6-luna and +0.063 to +0.099 for claude-sonnet-4.5 across the three languages. The differences between languages are 95 % intervals with no correction for multiplicity, so they are not called demonstrated ([§2](https://github.com/kunko-ai-labs/judge-audit/blob/v0.6.2/docs/v06/README.md#2-overconfidence-paired-across-locales)). The number to act on is the same audit on your own decisions.
 
-**Jev version.** Every Jev figure of v0.6 was measured with Jev 1.13.0, the model the replies say they served. The alias `jev-latest` has pointed to `jev-1.14.0` since 2026-10-22, so a new run under the alias measures a different model and its figures are not comparable with these. Pin the version with `JEV_MODEL` ([how](https://github.com/kunko-ai-labs/judge-audit/blob/v0.6.2/docs/real-audits.md#pin-the-model-version)).
+**Jev version.** Every Jev figure of v0.6 was measured with Jev 1.13.0, the model the replies say they served. The alias `jev-latest` has pointed to `jev-1.14.0` since 2026-10-22, so a new run under the alias measures a different model and its figures are not comparable with these. Pin the version with `JEV_MODEL` (for example `JEV_MODEL=jev-1.13.0`; [how](https://github.com/kunko-ai-labs/judge-audit/blob/v0.6.2/docs/real-audits.md#pin-the-model-version)).
 
 **At a glance: v0.6, MASSIVE 1.1, 2,974 translated public items in English, Spanish and Catalan (not your traffic), 12 judges: the held-out share automated by thresholds chosen at a 5 % error target (the threshold chosen on one half of the items, applied to the other), with its approximate bound; met when that bound is within 5 %, at the study's split (seed 2026).**
 
@@ -62,13 +62,13 @@
 
 | Judge and confidence | Validated share at a 5 % error target (approximate) | 95 % upper bound on the error rate | Range over split seeds | At a 10 % error target |
 |---|---|---|---|---|
-| Jev, native probability | **41.0 %** | 3.9 % | 27.0–45.1 % | 72.3 % (bound 9.2 %) |
+| Jev 1.13.0, native probability | **41.0 %** | 3.9 % | 27.0–45.1 % | 72.3 % (bound 9.2 %) |
 | gemini-3.6-flash, verbalized | **14.3 %** | 2.7 % | 7.6–30.0 % | 45.5 % (bound 5.3 %) |
 | Qwen3-8B, token log-probability | **none** | — | 0.0–4.4 % | 12.5 % (bound 7.2 %) |
 
 *Validated:* the threshold is chosen on one half of the texts and applied to the other, both ways, and the 95 % upper bound on the held-out error rate is within the target. The bound is the one-sided Clopper–Pearson bound on the held-out errors of both halves pooled, rounded up; it treats the two held-out halves as independent draws, an approximation since each half's threshold depends on the other half. A share observed on all rows without a bound is not a basis for deployment.
 
-**Jev version (v0.5).** The Jev rows of v0.5 were run through the alias `jev-latest` on 2026-10-01; the exact Jev version was not recorded, so these figures cannot be compared with the Jev 1.13.0 figures of v0.6 or with any other version.
+**Jev version (v0.5).** The Jev rows of v0.5 were also measured with Jev 1.13.0: every one of the 3,080 BANKING77 replies in each of the three Jev runs says it was served by `jev-1.13.0`. Figures of another Jev version are not comparable with them.
 
 Teams are shipping judgment models — TypeSafe's Jev, LLM-as-judge, guardrails, routers — that return a confidence with each decision. The literature studies calibration (Guo et al. 2017; Shao 2026; Huang et al. 2026); what a team needs before automating is the same measurement on *its own* decisions. judge-audit runs any judge in **shadow mode** against decisions your humans already made and answers the four questions that matter before you automate:
 

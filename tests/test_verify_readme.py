@@ -529,7 +529,7 @@ def test_no_opposite_sign_test_does_not_read_as_worse(monkeypatch):
 @pytest.mark.parametrize(
     "old,new",
     [
-        ("| Jev, native probability | **41.0 %** |", "| Jev, native probability | **42.0 %** |"),
+        ("| Jev 1.13.0, native probability | **41.0 %** |", "| Jev 1.13.0, native probability | **42.0 %** |"),
         ("| 27.0–45.1 % | 72.3 % (", "| 27.0–46.1 % | 72.3 % ("),
         ("| 7.6–30.0 % | 45.5 % (", "| 7.6–30.0 % | 46.5 % ("),
         ("45.5 % (bound 5.3 %)", "45.5 % (bound 5.2 %)"),
@@ -557,8 +557,8 @@ def test_a_dropped_row_of_the_at_a_glance_table_is_caught():
          "| Range over split seeds | At a 20 % error target |"),
         ("decides alone at a 5 % error target, validated",
          "decides alone at a 10 % error target, validated"),
-        ("| Jev, native probability | **41.0 %** | 3.9 % |",
-         "| Jev, native probability | **41.0 %** | 3.8 % |"),
+        ("| Jev 1.13.0, native probability | **41.0 %** | 3.9 % |",
+         "| Jev 1.13.0, native probability | **41.0 %** | 3.8 % |"),
         ("| **none** | — |", "| **none** | 0.0 % |"),
     ],
 )

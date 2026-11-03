@@ -704,7 +704,7 @@ def v05_expected(d: dict) -> dict[str, list[str]]:
     }
 
 
-GLANCE_ROWS = {"Jev, native probability": "jev",
+GLANCE_ROWS = {"Jev 1.13.0, native probability": "jev",
                "gemini-3.6-flash, verbalized": "llm-gemini-3.6-flash",
                "Qwen3-8B, token log-probability": "logprob-qwen3-8b"}
 GLANCE_HEAD = ("| Judge and confidence | Validated share at a 5 % error target "
