@@ -68,6 +68,8 @@
 
 *Validated:* the threshold is chosen on one half of the texts and applied to the other, both ways, and the 95 % upper bound on the held-out error rate is within the target. The bound is the one-sided Clopper–Pearson bound on the held-out errors of both halves pooled, rounded up; it treats the two held-out halves as independent draws, an approximation since each half's threshold depends on the other half. A share observed on all rows without a bound is not a basis for deployment.
 
+**Jev version (v0.5).** The Jev rows of v0.5 were run through the alias `jev-latest` on 2026-10-01; the exact Jev version was not recorded, so these figures cannot be compared with the Jev 1.13.0 figures of v0.6 or with any other version.
+
 Teams are shipping judgment models — TypeSafe's Jev, LLM-as-judge, guardrails, routers — that return a confidence with each decision. The literature studies calibration (Guo et al. 2017; Shao 2026; Huang et al. 2026); what a team needs before automating is the same measurement on *its own* decisions. judge-audit runs any judge in **shadow mode** against decisions your humans already made and answers the four questions that matter before you automate:
 
 | Question | Metric | Why a buyer cares |
