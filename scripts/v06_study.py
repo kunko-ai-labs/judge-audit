@@ -120,6 +120,11 @@ SOURCE = "en-US"
 TARGET_LOCALES = ("ca-ES", "es-ES")
 LOCALES = ("en-US", "es-ES", "ca-ES")
 PRIMARY = ("jev", "gpt-6-luna", "claude-sonnet-4.5")
+# Every Jev checkpoint of the study says it was served by this model id (section 8); the
+# alias `jev-latest` it was requested under moves, so the label names the version.
+JEV_SERVED = "jev-1.13.0"
+JEV_LABEL = "jev (Jev 1.13.0)"
+_jev_versioned = False  # set by markdown(): only when the checkpoints say that id served them
 PAIRS = (("es-ES", "en-US"), ("ca-ES", "es-ES"))          # overconfidence, first − second
 OUTCOMES = ("resolved", "not resolved")
 # Where a vendor's own confidence field is kept in `raw`: `native_confidence`, except the
@@ -884,8 +889,13 @@ def compute(runs_dir: Path = RUNS_DIR, root: Path = ROOT, predictions: Path | No
 # --- the report -----------------------------------------------------------------------------
 
 
+def _name(slug: str) -> str:
+    """How a judge reads in a table: Jev carries the model version its rows were served by."""
+    return JEV_LABEL if slug == "jev" and _jev_versioned else slug
+
+
 def _who(key: str, role: str, partial: str | None = None) -> str:
-    s = key.split("/")[0]
+    s = _name(key.split("/")[0])
     return ((s if role == "primary" else f"{s} (exploratory)")
             + (f" — {partial}" if partial else ""))
 
@@ -945,7 +955,7 @@ def _transfer_table(add, T: dict, full: bool, plabels: dict[str, str]) -> None:
     for tid, v in T.items():
         p, c = v["pooled"], v["control"]
         th = " / ".join(f"{f['validated_on']} {_f(f['threshold'], 4)}" for f in v["folds"])
-        base = (f"| {tid} | {v['judge']}{_flag(v['partial'], plabels)} | "
+        base = (f"| {tid} | {_name(v['judge'])}{_flag(v['partial'], plabels)} | "
                 f"`{v['target_locale']}` | {th} | ")
         if full:
             pred = v["prediction"] or "—"
@@ -966,7 +976,7 @@ def _h2_table(add, H: dict, plabels: dict[str, str]) -> None:
     add("|---|---|---:|---:|---:|---:|---|---|---|")
     for j, pairs in H.items():
         for pair, v in pairs.items():
-            add(f"| {j}{_flag(v['partial'], plabels)} | `{pair.replace(' - ', '` − `')}` | "
+            add(f"| {_name(j)}{_flag(v['partial'], plabels)} | `{pair.replace(' - ', '` − `')}` | "
                 f"{v['items']} | {_s(v['a'])} | {_s(v['b'])} | {_s(v['difference'])} | "
                 f"{_iv(v['ci'], signed=True)} | {'yes' if v['resolved'] else 'no'} | "
                 f"{v['sign'] or '—'} |")
@@ -1011,6 +1021,18 @@ def markdown(r: dict) -> str:
     add("")
     add(DEGENERATE_NOTE)
     add("")
+    served = {m for k, c in r["inputs"]["checkpoints"].items() if k.split("/")[0] == "jev"
+              for m in c["served"]}
+    global _jev_versioned
+    _jev_versioned = served == {JEV_SERVED}
+    if _jev_versioned:
+        add("**Jev version.** Every Jev figure below was measured with Jev 1.13.0: the model "
+            "id each reply says it served (`jev-1.13.0`, 2,974 rows per language, section 8). "
+            "The study asked for the alias `jev-latest`, which has pointed to `jev-1.14.0` "
+            "since 2026-10-22, so a new run under the alias measures a different model. "
+            "Figures are comparable only within one model version; "
+            "[pin the version](../real-audits.md#pin-the-model-version) to reproduce them.")
+        add("")
 
     add("## 1. Transfer tests")
     add("")

@@ -62,6 +62,21 @@ system would act on. TypeSafe's separate `confidence` statistic is kept in the r
 record for comparison. Cost is input tokens × TypeSafe's published price
 ($0.042 / MTok input, output free); latency is wall-clock through the bridge.
 
+## Pin the model version
+
+With the direct API (below) the engine asks for the alias `jev-latest` unless you say otherwise. An alias moves: `jev-latest` pointed to Jev 1.13.0 when the v0.6 study ran and has pointed to `jev-1.14.0` since 2026-10-22 ([model list](https://docs.typesafe.ai/models.md)). A run under the alias therefore measures whichever model the alias names that day, and two runs weeks apart can be two different models.
+
+Pin the model version with `JEV_MODEL`; the engine sends it as given:
+
+```bash
+JEV_BACKEND=typesafe JEV_MODEL=jev-1.14.0 \
+  judge-audit run examples/email-routing/labels.jsonl --judge jev --json audits/jev-1.14.0.json
+```
+
+Results are comparable only within one model version, so a calibration, a threshold or a share automated measured with Jev 1.13.0 says nothing about Jev 1.14.0: audit the version you will run. The model you asked for goes into the report's provenance (`model`); on the direct API each checkpoint row also records the id the reply says it served (`raw.served`), so you can check that no alias moved in the middle of a run. The gateway does not report a served version, so there it stays recorded as unknown; use a gateway model id that names a version if the gateway offers one, and keep the date of the run.
+
+The v0.6 study figures are labelled "Jev 1.13.0" for this reason: every one of its 2,974 rows per language was served by `jev-1.13.0` ([section 8 of the results](v06/README.md#8-served-model)).
+
 ## The house rule
 
 `python scripts/verify_published.py` recomputes every `docs/audit-*.json` from its

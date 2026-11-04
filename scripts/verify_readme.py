@@ -704,7 +704,7 @@ def v05_expected(d: dict) -> dict[str, list[str]]:
     }
 
 
-GLANCE_ROWS = {"Jev, native probability": "jev",
+GLANCE_ROWS = {"Jev 1.13.0, native probability": "jev",
                "gemini-3.6-flash, verbalized": "llm-gemini-3.6-flash",
                "Qwen3-8B, token log-probability": "logprob-qwen3-8b"}
 GLANCE_HEAD = ("| Judge and confidence | Validated share at a 5 % error target "
@@ -972,6 +972,10 @@ def v06_cell(vc: dict) -> str:
             f"{'met' if met else 'not met'}; {splits})")
 
 
+# Jev's rows and sentences name the model version every one of its rows was served by
+V06_JEV = "jev (Jev 1.13.0)"
+
+
 def v06_expected(d: dict) -> dict:
     """What the README's v0.6 findings must say, rebuilt from docs/v06/results.json: the
     glance caption and rows, the transfer-test sentence and the overconfidence sentence."""
@@ -980,7 +984,8 @@ def v06_expected(d: dict) -> dict:
     judges = list(dict.fromkeys(k.split("/")[0] for k in M))
     rows = {}
     for j in judges:
-        label = j if M[f"{j}/en-US"]["role"] == "primary" else f"{j} (exploratory)"
+        name = V06_JEV if j == "jev" else j
+        label = name if M[f"{j}/en-US"]["role"] == "primary" else f"{name} (exploratory)"
         rows[label] = [v06_cell(M[f"{j}/{loc}"]["validated_coverage"]["0.05"])
                        for loc in V06_LOCALES]
     ups = {t: v["pooled"]["upper_95"] for t, v in T.items() if v["run"]}
@@ -1001,7 +1006,7 @@ def v06_expected(d: dict) -> dict:
     for j in d["parameters"]["primary"]:
         vals = [M[f"{j}/{loc}"]["overconfidence"] for loc in V06_LOCALES]
         lo, hi = sorted((min(vals), max(vals)), key=abs)
-        over.append(f"{_d3(lo)} to {_d3(hi)} for {j}")
+        over.append(f"{_d3(lo)} to {_d3(hi)} for {V06_JEV if j == 'jev' else j}")
     overconf = ("mean confidence minus accuracy is " + ", ".join(over[:-1]) + " and "
                 + over[-1] + " across the three languages")
     # met is per split: one met cell of the study's split, with its range over other seeds
