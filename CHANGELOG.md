@@ -5,7 +5,7 @@ All notable changes to this project are documented here. The format follows
 
 ## [0.6.3] — 2026-11-04
 
-A documentation patch. The installed package is unchanged (no change under `src/`); two repository scripts used by the README checks changed with #220. No result or checkpoint changes; the published numbers are the 0.6.0 ones.
+A documentation patch. The package code is unchanged apart from its version number; two repository scripts used by the README checks changed with #220. No result or checkpoint changes; the published numbers are the 0.6.0 ones.
 
 ### Documentation
 - **Model version.** Every Jev figure of v0.5 and v0.6 in the README and the v0.6 results is labelled **Jev 1.13.0**, the version the checkpoints record as served (2,974 rows per language in v0.6; 3,080 rows in each v0.5 BANKING77 run). The alias `jev-latest` now serves jev-1.14.0, so a run today is a different model. `docs/real-audits.md` shows how to pin the exact model with `JEV_MODEL` and why: results are comparable only within one model version.
