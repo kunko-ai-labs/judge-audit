@@ -3,6 +3,15 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow SemVer.
 
+## [0.6.3] — 2026-11-04
+
+A documentation patch. No code, result or checkpoint changes; the published numbers are the 0.6.0 ones.
+
+### Documentation
+- **Model version.** Every Jev figure of v0.5 and v0.6 in the README and the v0.6 results is labelled **Jev 1.13.0**, the version the checkpoints record as served (2,974 rows per language in v0.6; 3,080 rows in each v0.5 BANKING77 run). The alias `jev-latest` now serves jev-1.14.0, so a run today is a different model. `docs/real-audits.md` shows how to pin the exact model with `JEV_MODEL` and why: results are comparable only within one model version.
+- **Prior art.** The README and `docs/judges.md` cite the work this tool builds on (Trust or Escalate, ICLR 2025, arXiv:2407.18370; conformal risk control and selective prediction; the full list in `docs/v05/reading-list.md`), and say plainly that the statistical method is not new: what the tool adds is the audit, the evidence trail and the reproducibility (#93; the comparison with other public Jev audits is still open).
+- **README.** A new headline with its condition in the same sentence ("approximate, for traffic like the decisions you labelled"); the quickstart clones the release tag; `docs/RELEASING.md` says how to re-pin the README's URLs for a release.
+
 ## [0.6.2] — 2026-11-01
 
 A documentation patch and one small fix, so that the PyPI page and the quickstart work for someone who only ran `pip install`. No result or checkpoint changes; the published numbers are the 0.6.0 ones.
